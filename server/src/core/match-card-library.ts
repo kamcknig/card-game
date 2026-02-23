@@ -19,6 +19,12 @@ export class MatchCardLibrary {
     this._library.set(card.id, card);
   };
 
+  // Removes a card from the active match card library.
+  public removeCard = (cardId: CardId) => {
+    this.loggerService.debug(`[CARD LIBRARY] removing card ${cardId} from library`);
+    this._library.delete(cardId);
+  };
+
   public getCard = <M = unknown>(cardId: CardId): Card<M> => {
     const c = this._library.get(cardId);
     if (!c) throw new Error(`[CARD LIBRARY] unable to locate card ${cardId}`);

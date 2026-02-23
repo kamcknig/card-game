@@ -1155,6 +1155,29 @@ export class GameActionController implements GameActionDefinitionMap {
     return oldSource ? { location: oldSource?.sourceKey!, playerId: oldSource?.playerId } : undefined;
   }
 
+  // Removes a card from the match entirely (used by "to the box"/removed-from-game effects).
+  async removeCardFromGame(args: { cardId: CardId | Card }) {
+    const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
+
+    let oldSource: { sourceKey: CardLocation; source: CardId[]; index: number; playerId?: PlayerId } | null = null;
+    try {
+      oldSource = this.cardSourceController.findCardSource(card.id);
+    } catch {
+      oldSource = null;
+    }
+
+    if (oldSource) {
+      oldSource.source.splice(oldSource.index, 1);
+      if (oldSource.sourceKey === 'set-aside') {
+        this.clearSetAsideSource(card.id);
+      }
+    }
+
+    card.owner = null;
+    this.cardLibrary.removeCard(card.id);
+    this.loggerService.info(`[removeCardFromGame action] removed ${card} from game`);
+  }
+
   // Moves a landscape-like entry (boon/hex/event/landmark) between supported locations.
   async moveCardLike(args: {
     toPlayerId?: PlayerId;

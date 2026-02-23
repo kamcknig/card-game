@@ -13,7 +13,7 @@ export const configureBattlefield = (
   );
   if (!hasBattlefield) return;
 
-  registrar('onGameStart', async (args) => {
+  registrar('onGameStartSetup', async (args) => {
     // Battlefield setup: put 6 VP tokens per player on the landmark using the shared helper.
     await placeVictoryTokensPerPlayer(args, {
       landmarkKey: 'battlefield',

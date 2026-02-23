@@ -7,6 +7,7 @@ import { CardId, CardKey, ComputedMatchConfiguration, PlayerId, Trait } from 'sh
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getCurrentTurnHistoryIndex } from '../../utils/get-current-turn-history-index.ts';
+import { getOrderStartingFrom } from '../../utils/get-order-starting-from.ts';
 import { getPlayerSourceSafe } from '../../utils/get-player-source-safe.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { isCardStillAtGainedLocation } from '../../utils/is-card-still-at-gained-location.ts';
@@ -20,6 +21,7 @@ const FATED_TRAIT_CARD_KEY: CardKey = 'fated';
 const FAWNING_TRAIT_CARD_KEY: CardKey = 'fawning';
 const FRIENDLY_TRAIT_CARD_KEY: CardKey = 'friendly';
 const HASTY_TRAIT_CARD_KEY: CardKey = 'hasty';
+const INHERITED_TRAIT_CARD_KEY: CardKey = 'inherited';
 const INSPIRING_TRAIT_CARD_KEY: CardKey = 'inspiring';
 const NEARBY_TRAIT_CARD_KEY: CardKey = 'nearby';
 const PATIENT_TRAIT_CARD_KEY: CardKey = 'patient';
@@ -168,7 +170,7 @@ const registerCheapTraitEvents = (
     return;
   }
 
-  registrar('onGameStart', async (args) => {
+  registrar('onGameStartSetup', async (args) => {
     // Resolve runtime Cheap traits from match state so we use assigned pile keys.
     const cheapTraits = (args.match.traits ?? []).filter((trait) => trait.cardKey === CHEAP_TRAIT_CARD_KEY);
     if (cheapTraits.length < 1) {
@@ -310,7 +312,7 @@ const registerFatedTraitEvents = (
     return;
   }
 
-  registrar('onGameStart', async (args) => {
+  registrar('onGameStartSetup', async (args) => {
     const fatedTraits = getRuntimeTraitsByCardKey(args.match, FATED_TRAIT_CARD_KEY);
     if (fatedTraits.length < 1) {
       args.loggerService.warn('[plunder fated trait] no runtime Fated traits found at game start');
@@ -429,7 +431,7 @@ const registerFriendlyTraitEvents = (
     return;
   }
 
-  registrar('onGameStart', async (args) => {
+  registrar('onGameStartSetup', async (args) => {
     const friendlyTraits = getRuntimeTraitsByCardKey(args.match, FRIENDLY_TRAIT_CARD_KEY);
     if (friendlyTraits.length < 1) {
       args.loggerService.warn('[plunder friendly trait] no runtime Friendly traits found at game start');
@@ -501,7 +503,7 @@ const registerHastyTraitEvents = (
     return;
   }
 
-  registrar('onGameStart', async (args) => {
+  registrar('onGameStartSetup', async (args) => {
     const hastyTraits = getRuntimeTraitsByCardKey(args.match, HASTY_TRAIT_CARD_KEY);
     if (hastyTraits.length < 1) {
       args.loggerService.warn('[plunder hasty trait] no runtime Hasty traits found at game start');
@@ -651,7 +653,7 @@ const registerInspiringTraitEvents = (
     return;
   }
 
-  registrar('onGameStart', async (args) => {
+  registrar('onGameStartSetup', async (args) => {
     const inspiringTraits = getRuntimeTraitsByCardKey(args.match, INSPIRING_TRAIT_CARD_KEY);
     if (inspiringTraits.length < 1) {
       args.loggerService.warn('[plunder inspiring trait] no runtime Inspiring traits found at game start');
@@ -714,6 +716,93 @@ const registerInspiringTraitEvents = (
   });
 };
 
+// Registers Inherited: after setup swaps, each player starts with one card from each Inherited pile replacing a starting card.
+const registerInheritedTraitEvents = (
+  registrar: GameEventRegistrar,
+  config: ComputedMatchConfiguration,
+) => {
+  const hasInheritedTrait = (config.traits ?? []).some((trait) => trait.cardKey === INHERITED_TRAIT_CARD_KEY);
+  if (!hasInheritedTrait) {
+    return;
+  }
+
+  registrar('onGameStart', async (args) => {
+    const inheritedTraits = getRuntimeTraitsByCardKey(args.match, INHERITED_TRAIT_CARD_KEY);
+    if (inheritedTraits.length < 1) {
+      args.loggerService.warn('[plunder inherited trait] no runtime Inherited traits found at game start');
+      return;
+    }
+
+    const playerOrder = getOrderStartingFrom(args.match.players, args.match.currentPlayerTurnIndex);
+    for (const inheritedTrait of inheritedTraits) {
+      if (!inheritedTrait.pileKey) {
+        args.loggerService.warn(`[plunder inherited trait] Inherited trait ${inheritedTrait.id} has no assigned pile key`);
+        continue;
+      }
+
+      for (const player of playerOrder) {
+        const inheritedCard = args.findCardService.findTopSupplyCardForPileKey({
+          pileKey: inheritedTrait.pileKey,
+        });
+        if (!inheritedCard) {
+          args.loggerService.warn(
+            `[plunder inherited trait] no cards remain in pile '${inheritedTrait.pileKey}' for player ${player.id}`,
+          );
+          continue;
+        }
+
+        const replacementCandidates = [...args.cardSourceController.getSource('playerDeck', player.id)];
+        if (replacementCandidates.length < 1) {
+          args.loggerService.warn(
+            `[plunder inherited trait] player ${player.id} has no cards in deck to replace`,
+          );
+          continue;
+        }
+
+        const replacePrompt = await args.promptService.requestActionResult<CardId[]>({
+          playerId: player.id,
+          prompt: `Choose a starting card to replace with ${inheritedCard.cardName}`,
+          actionButtons: [{ label: 'REPLACE', action: 1 }],
+          content: {
+            type: 'select',
+            cardIds: replacementCandidates,
+            selectCount: 1,
+          },
+        });
+
+        const selectedReplacementId = replacePrompt?.result?.[0];
+        const replacementCardId = selectedReplacementId && replacementCandidates.includes(selectedReplacementId)
+          ? selectedReplacementId
+          : replacementCandidates[0];
+        const replacementCard = args.cardLibrary.getCard(replacementCardId);
+
+        if (replacementCard.cardKey === 'copper') {
+          await args.actionService.run('moveCard', {
+            cardId: replacementCardId,
+            to: { location: 'basicSupply' },
+          });
+          replacementCard.owner = null;
+        } else {
+          await args.actionService.run('removeCardFromGame', {
+            cardId: replacementCardId,
+          });
+        }
+
+        await args.actionService.run('moveCard', {
+          cardId: inheritedCard.id,
+          toPlayerId: player.id,
+          to: { location: 'playerDeck' },
+        });
+        inheritedCard.owner = player.id;
+
+        args.loggerService.info(
+          `[plunder inherited trait] player ${player.id} replaced ${replacementCard.cardKey} with ${inheritedCard.cardKey}`,
+        );
+      }
+    }
+  });
+};
+
 // Registers Nearby: each gain from a Nearby pile grants +1 Buy.
 const registerNearbyTraitEvents = (
   registrar: GameEventRegistrar,
@@ -754,7 +843,7 @@ const registerPatientTraitEvents = (
     return;
   }
 
-  registrar('onGameStart', async (args) => {
+  registrar('onGameStartSetup', async (args) => {
     const patientTraits = getRuntimeTraitsByCardKey(args.match, PATIENT_TRAIT_CARD_KEY);
     if (patientTraits.length < 1) {
       args.loggerService.warn('[plunder patient trait] no runtime Patient traits found at game start');
@@ -993,7 +1082,7 @@ const registerShyTraitEvents = (
     return;
   }
 
-  registrar('onGameStart', async (args) => {
+  registrar('onGameStartSetup', async (args) => {
     const shyTraits = getRuntimeTraitsByCardKey(args.match, SHY_TRAIT_CARD_KEY);
     if (shyTraits.length < 1) {
       args.loggerService.warn('[plunder shy trait] no runtime Shy traits found at game start');
@@ -1051,7 +1140,7 @@ const registerTirelessTraitEvents = (
     return;
   }
 
-  registrar('onGameStart', async (args) => {
+  registrar('onGameStartSetup', async (args) => {
     const tirelessTraits = getRuntimeTraitsByCardKey(args.match, TIRELESS_TRAIT_CARD_KEY);
     if (tirelessTraits.length < 1) {
       args.loggerService.warn('[plunder tireless trait] no runtime Tireless traits found at game start');
@@ -1206,6 +1295,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   registerFawningTraitEvents(registrar, config);
   registerFriendlyTraitEvents(registrar, config);
   registerHastyTraitEvents(registrar, config);
+  registerInheritedTraitEvents(registrar, config);
   registerInspiringTraitEvents(registrar, config);
   registerNearbyTraitEvents(registrar, config);
   registerPatientTraitEvents(registrar, config);

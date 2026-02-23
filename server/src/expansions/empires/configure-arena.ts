@@ -13,7 +13,7 @@ export const configureArena = (
     (landmark) => landmark.cardKey === 'arena',
   );
 
-  registrar('onGameStart', async (args) => {
+  registrar('onGameStartSetup', async (args) => {
     // Arena setup: put 6 VP tokens per player on the landmark using the shared helper.
     await placeVictoryTokensPerPlayer(args, {
       landmarkKey: 'arena',

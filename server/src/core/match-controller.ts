@@ -621,6 +621,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private async startMatch() {
     this.loggerService.log(`[match] starting match`);
 
+    // Run setup hooks first, then true game-start hooks.
+    await this.reactionManager.runGameLifecycleEvent('onGameStartSetup', { match: this.match });
     await this.reactionManager.runGameLifecycleEvent('onGameStart', { match: this.match });
 
     for (const socket of this.socketMap.values()) {

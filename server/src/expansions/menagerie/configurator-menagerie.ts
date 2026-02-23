@@ -384,7 +384,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     return;
   }
 
-  registrar('onGameStart', async (args) => {
+  registrar('onGameStartSetup', async (args) => {
     if (hasFisherman) {
       args.loggerService.info('[menagerie configurator] registering Fisherman cost rules');
       const fishermanCards = args.findCardService.findCards([

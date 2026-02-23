@@ -71,7 +71,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   registrar,
   config,
 ) => {
-  registrar('onGameStart', async (args) => {
+  registrar('onGameStartSetup', async (args) => {
     const projectCount = config.projects?.length ?? 0;
     if (projectCount < 1) {
       args.loggerService.debug('[renaissance configurator] no projects configured, skipping cube placement');

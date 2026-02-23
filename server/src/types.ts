@@ -290,6 +290,10 @@ export interface GameActionDefinitionMap {
     // Optional source metadata used when the destination is set-aside.
     setAsideSource?: SetAsideSourceInput;
   }) => Promise<{ location: CardLocation; playerId?: PlayerId } | undefined>;
+  // Removes a card from the active match (used for "remove from game" / "to the box" effects).
+  removeCardFromGame: (args: {
+    cardId: CardId | Card;
+  }) => Promise<void>;
   // Moves a landscape-like entry (boon/event/landmark) to a supported location.
   moveCardLike: (args: {
     toPlayerId?: PlayerId;
@@ -876,10 +880,12 @@ export type GameLifecycleCallback = (
 ) => Promise<CardLifecycleCallbackResult | void>;
 
 export type GameLifecycleEvent =
+  | 'onGameStartSetup'
   | 'onGameStart'
   | 'onCardGained';
 
 export type GameLifeCycleEventArgsMap = {
+  onGameStartSetup: { match: Match };
   onGameStart: { match: Match };
   onCardGained: { cardId: CardId; playerId: PlayerId; match: Match };
 };

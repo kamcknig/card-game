@@ -108,7 +108,7 @@ export const registerGameEvents: (
   registrar: GameEventRegistrar,
   config: ComputedMatchConfiguration,
 ) => void = (registrar) => {
-  registrar('onGameStart', async (args) => {
+  registrar('onGameStartSetup', async (args) => {
     const peddlerCardIds = args.findCardService.findCards([
       { location: 'kingdomSupply' },
       { cardKeys: 'peddler' },

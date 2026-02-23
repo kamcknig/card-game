@@ -271,7 +271,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   );
   const startingFavors = hasImporter ? 5 : 1;
 
-  registrar('onGameStart', async (args) => {
+  registrar('onGameStartSetup', async (args) => {
     args.loggerService.info(`[allies onGameStart] initializing Favor tokens to ${startingFavors}`);
     for (const player of args.match.players) {
       for (let index = 0; index < startingFavors; index += 1) {

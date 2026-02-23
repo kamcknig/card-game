@@ -15,7 +15,7 @@ export const configureDefiledShrine = (
   );
   if (!hasDefiledShrine) return;
 
-  registrar('onGameStart', async (args) => {
+  registrar('onGameStartSetup', async (args) => {
     // Defiled Shrine setup: put 2 VP tokens on each non-Gathering Action supply pile.
     const supplyPiles = [
       ...(config.basicSupply ?? []),

@@ -38,7 +38,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   if (config.kingdomSupply.some((supply) => supply.name === 'baker')) {
-    registrar('onGameStart', async (args) => {
+    registrar('onGameStartSetup', async (args) => {
       args.loggerService.info(`[baker onGameStart event] setting up baker - +1 coffer to each player on game start`);
       for (const player of args.match.players) {
         await args.actionService.run('gainCoffer', { playerId: player.id, count: 1 });

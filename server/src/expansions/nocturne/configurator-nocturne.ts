@@ -268,7 +268,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     (supply) => supply.cards.some((card) => getCardPileKey(card) === 'necromancer'),
   );
   if (hasCemetery) {
-    registrar('onGameStart', async (args) => {
+    registrar('onGameStartSetup', async (args) => {
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
         const deck = args.cardSourceController.getSource('playerDeck', player.id);
@@ -308,7 +308,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   if (hasFool) {
-    registrar('onGameStart', async (args) => {
+    registrar('onGameStartSetup', async (args) => {
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
         const deck = args.cardSourceController.getSource('playerDeck', player.id);
@@ -350,7 +350,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   if (hasPixie) {
-    registrar('onGameStart', async (args) => {
+    registrar('onGameStartSetup', async (args) => {
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
         const deck = args.cardSourceController.getSource('playerDeck', player.id);
@@ -387,7 +387,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   if (hasPooka) {
-    registrar('onGameStart', async (args) => {
+    registrar('onGameStartSetup', async (args) => {
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
         const deck = args.cardSourceController.getSource('playerDeck', player.id);
@@ -429,7 +429,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   if (hasSecretCave) {
-    registrar('onGameStart', async (args) => {
+    registrar('onGameStartSetup', async (args) => {
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
         const deck = args.cardSourceController.getSource('playerDeck', player.id);
@@ -471,7 +471,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   if (hasShepherd) {
-    registrar('onGameStart', async (args) => {
+    registrar('onGameStartSetup', async (args) => {
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
         const deck = args.cardSourceController.getSource('playerDeck', player.id);
@@ -511,7 +511,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   if (hasTracker) {
-    registrar('onGameStart', async (args) => {
+    registrar('onGameStartSetup', async (args) => {
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
         const deck = args.cardSourceController.getSource('playerDeck', player.id);
@@ -548,7 +548,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   if (hasDruid) {
-    registrar('onGameStart', async (args) => {
+    registrar('onGameStartSetup', async (args) => {
       if (!args.match.boons) {
         args.loggerService.warn('[nocturne onGameStart] no boons configured for Druid');
         return;
@@ -579,7 +579,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   if (hasNecromancer) {
-    registrar('onGameStart', async (args) => {
+    registrar('onGameStartSetup', async (args) => {
       // Create and place the three Zombies into the trash pile.
       const zombieKeys = ['zombie-apprentice', 'zombie-mason', 'zombie-spy'] as const;
       for (const zombieKey of zombieKeys) {
@@ -603,7 +603,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     return;
   }
 
-  registrar('onGameStart', async (args) => {
+  registrar('onGameStartSetup', async (args) => {
     for (const player of args.match.players) {
       // Listen for qualifying gains so the player can exchange for Changeling.
       args.reactionManager.registerReactionTemplate({
