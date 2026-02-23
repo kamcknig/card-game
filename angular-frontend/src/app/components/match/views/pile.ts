@@ -46,13 +46,13 @@ export class PileView extends Container {
     this._count = this._cards.length;
     this.draw();
   }
-  
+
   // Sets a stable pile key so tokens can be mapped to this pile.
   set pileKey(val: CardKey) {
     this._pileKey = val;
     this.drawHighlight();
   }
-  
+
   get pileKey(): CardKey | undefined {
     return this._pileKey;
   }
@@ -62,7 +62,7 @@ export class PileView extends Container {
     this._trait = value ?? null;
     this.drawTraitTag();
   }
-  
+
   // Updates the tokens rendered on top of the pile view.
   set tokenBadges(val: TokenBadgeData[]) {
     this._tokenBadges = [...val];
@@ -81,7 +81,7 @@ export class PileView extends Container {
     this._cardViewContainer = new Container({ label: 'cardView' });
     this.addChild(this._highlight);
     this.addChild(this._cardViewContainer);
-    
+
     // Token container sits above the card view for token indicators.
     this._tokenContainer = new Container({ label: 'tokenContainer' });
     this.addChild(this._tokenContainer);
@@ -90,7 +90,7 @@ export class PileView extends Container {
     this._traitTagContainer.addChild(this._traitTagText);
     this.addChild(this._traitTagContainer);
     this._traitTagContainer.eventMode = 'none';
-    this._traitTagContainer.cursor = 'pointer';
+    this._traitTagContainer.cursor = 'default';
     this._traitTagContainer.on('pointerdown', (event) => {
       if (event.button !== 2 || !this._trait) {
         return;
@@ -118,7 +118,7 @@ export class PileView extends Container {
       this.removeAllListeners();
       this.destroy();
     });
-    
+
     this._cleanup.push(selectablePileStore.subscribe(this.drawHighlight));
     this._cleanup.push(selectedPileStore.subscribe(this.drawHighlight));
   }
@@ -173,58 +173,58 @@ export class PileView extends Container {
       badge.x = 5;
       badge.y = 5;
     }
-    
+
     this.drawTokenBadges();
     this.drawTraitTag();
   }
-  
+
   // Draws highlight around the pile if selectable or selected.
   private drawHighlight = () => {
     if (!this._pileKey) {
       this._highlight.clear();
       return;
     }
-    
+
     const selectable = selectablePileStore.get();
     const selected = selectedPileStore.get();
-    
+
     this._highlight.clear();
-    
+
     const fallbackWidth = this._size === 'half' ? SMALL_CARD_WIDTH : CARD_WIDTH;
     const fallbackHeight = this._size === 'half' ? SMALL_CARD_HEIGHT : CARD_HEIGHT;
     const width = this._cardView?.width ?? fallbackWidth;
     const height = this._cardView?.height ?? fallbackHeight;
-    
+
     if (selectable.includes(this._pileKey)) {
       this._highlight
         .roundRect(-3, -3, width + 6, height + 6, 5)
         .fill(0xffaaaa);
     }
-    
+
     if (selected.includes(this._pileKey)) {
       this._highlight
         .roundRect(-3, -3, width + 6, height + 6, 5)
         .fill(0x6DFF8C);
     }
   }
-  
+
   // Renders token badges in the top-right corner of the pile.
   private drawTokenBadges() {
     const tokenSize = this._size === 'half' ? 25 : 35;
     const gap = 2;
     const baseX = (this._cardView?.width ?? this.width) - tokenSize - 4;
     const baseY = 4;
-    
+
     const orderedBadges = [...this._tokenBadges].sort((a, b) => a.id.localeCompare(b.id));
     const existing = new Set(orderedBadges.map(badge => `token:${badge.id}`));
-    
+
     // Remove any badges that are no longer present.
     for (const child of [...this._tokenContainer.children]) {
       if (!existing.has(child.label ?? '')) {
         child.removeFromParent();
       }
     }
-    
+
     orderedBadges.forEach((badge, idx) => {
       const label = `token:${badge.id}`;
       let view = this._tokenContainer.getChildByLabel(label) as TokenBadgeView;
@@ -255,21 +255,26 @@ export class PileView extends Container {
       return;
     }
 
-    const tagWidth = this._size === 'half' ? 22 : 30;
+    const tagWidth = this._size === 'half' ? 24 : 32;
+    const tagHeight = Math.max(24, height - 20);
+    const tagY = Math.floor((height - tagHeight) / 2);
     this._traitTagBackground.clear();
-    this._traitTagBackground.roundRect(0, 0, tagWidth, height, 4);
+    this._traitTagBackground.roundRect(0, tagY, tagWidth, tagHeight, 4);
     this._traitTagBackground.stroke({ color: 0xf3dfb4, width: 1.25 });
-    this._traitTagBackground.fill({ color: 0x3a2e1c, alpha: 0.95 });
+    this._traitTagBackground.fill({ color: 0xb9b4d4, alpha: 1 });
 
-    this._traitTagText.text = this._trait.cardName.toUpperCase().split('').join('\n');
+    this._traitTagText.text = this._trait.cardName.toUpperCase();
     this._traitTagText.style = {
-      fontSize: this._size === 'half' ? 8 : 10,
-      fill: 0xf9efda,
+      fontSize: this._size === 'half' ? 13 : 16,
+      fill: 0x2f2a4f,
       fontWeight: '700',
       align: 'center',
+      letterSpacing: 0.5,
+      padding: 4,
     };
     this._traitTagText.anchor.set(0.5);
-    this._traitTagText.x = Math.floor(tagWidth / 2);
+    this._traitTagText.rotation = Math.PI / 2;
+    this._traitTagText.x = Math.floor(tagWidth / 2) - 2;
     this._traitTagText.y = Math.floor(height / 2);
 
     // Align trait tag so its left edge is exactly on the pile's right edge.

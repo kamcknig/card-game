@@ -1,9 +1,11 @@
 .card-detail-panel {
+  position: relative;
   display: flex;
   gap: 16px;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
+  overflow: auto;
   max-width: calc(100vw - 64px);
   max-height: calc(100vh - 64px);
 }

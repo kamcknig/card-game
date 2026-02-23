@@ -4,7 +4,11 @@
     [backdropVariant]="'strong'"
     (close)="closeDetailDialog()"
   >
-    <div class="card-detail-panel" (contextmenu)="$event.preventDefault()">
+    <div
+      class="card-detail-panel"
+      (mousedown)="onPanelMouseDown($event)"
+      (contextmenu)="onPanelContextMenu($event)"
+    >
       @for (detailPath of detailImagePaths(); track detailPath) {
         <img class="card-detail-image" [src]="detailPath" alt="Card detail" draggable="false" />
       }

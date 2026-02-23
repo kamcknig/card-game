@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, computed, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
 import { cardDetailDialogStore, closeCardDetailDialog } from '../../state/card-detail-dialog-state';
@@ -24,5 +24,47 @@ export class CardDetailDialogComponent {
   // Closes the global detail dialog.
   closeDetailDialog() {
     closeCardDetailDialog();
+  }
+
+  // Closes the dialog on primary/secondary mouse clicks inside the detail panel.
+  onPanelMouseDown(event: MouseEvent) {
+    if (event.button !== 0 && event.button !== 2) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    this.closeDetailDialog();
+  }
+
+  // Prevents native context menu while still allowing right-click to close.
+  onPanelContextMenu(event: MouseEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  @HostListener('document:mousedown', ['$event'])
+  onDocumentMouseDown(event: MouseEvent) {
+    if (!this.isOpen() || event.button !== 2) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    this.closeDetailDialog();
+  }
+
+  @HostListener('document:contextmenu', ['$event'])
+  onDocumentContextMenu(event: MouseEvent) {
+    if (!this.isOpen()) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapeKey() {
+    if (this.isOpen()) {
+      this.closeDetailDialog();
+    }
   }
 }
