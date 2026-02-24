@@ -1864,15 +1864,19 @@ export class GameActionController implements GameActionDefinitionMap {
       return selectableCardIds.slice(0, count);
     }
 
-    // if there aren't enough cards, depending on the selection type, we might simply implicitly select cards
-    // because the player would be forced to select hem all anyway
-    if (typeof count === 'number' && !args.optional) {
+    // If selection is exact and the player has <= required cards, selection is forced and can auto-resolve.
+    const exactRequiredCount = typeof count === 'number'
+      ? count
+      : count.kind === 'exact'
+      ? count.count
+      : undefined;
+    if (exactRequiredCount !== undefined && !args.optional) {
       this.loggerService.debug(
-        `[selectCard action] selection count is an exact count ${count} checking if user has that many cards`,
+        `[selectCard action] selection count is exact (${exactRequiredCount}); checking for forced auto-selection`,
       );
 
       const keepPromptForWayChoice = playSelection &&
-        count === 1 &&
+        exactRequiredCount === 1 &&
         (this.match.ways?.length ?? 0) > 0;
       if (keepPromptForWayChoice) {
         this.loggerService.debug(
@@ -1880,7 +1884,7 @@ export class GameActionController implements GameActionDefinitionMap {
         );
       }
 
-      if (selectableCardIds.length <= count && !keepPromptForWayChoice) {
+      if (selectableCardIds.length <= exactRequiredCount && !keepPromptForWayChoice) {
         this.loggerService.debug(
           '[selectCard action] user does not have enough, or has exactly the amount of cards to select from, selecting all automatically',
         );

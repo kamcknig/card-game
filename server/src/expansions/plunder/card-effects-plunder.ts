@@ -995,6 +995,7 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainAction', { count: 2 });
 
       const landingPartyCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      let hasPendingTopdeckEffect = true;
       cardEffectArgs.registerDurationEffect(landingPartyCard, {
         playerId: cardEffectArgs.playerId,
         once: true,
@@ -1002,6 +1003,9 @@ const cardEffects: CardExpansionModule = {
         allowMultipleInstances: true,
         listeningFor: 'afterCardPlayed',
         condition: ({ trigger, match, cardLibrary }) => {
+          if (trigger.args.playerId !== cardEffectArgs.playerId) {
+            return false;
+          }
           const card = cardLibrary.getCard(trigger.args.cardId);
           if (!card.type.includes('TREASURE')) {
             return false;
@@ -1011,12 +1015,15 @@ const cardEffects: CardExpansionModule = {
           return playedIds.length === 1;
         },
         triggeredEffectFn: async (triggeredArgs) => {
+          hasPendingTopdeckEffect = false;
           await triggeredArgs.actionService.run('moveCard', {
             cardId: landingPartyCard.id,
             toPlayerId: cardEffectArgs.playerId,
             to: { location: 'playerDeck' },
           });
         },
+      }, {
+        hasActiveEffects: () => hasPendingTopdeckEffect,
       });
     },
   },
@@ -1041,7 +1048,6 @@ const cardEffects: CardExpansionModule = {
   'mapmaker': {
     registerLifeCycleMethods: () => ({
       onEnterHand: async (cardEffectArgs, eventArgs) => {
-        const sourceCard = cardEffectArgs.cardLibrary.getCard(eventArgs.cardId);
         cardEffectArgs.reactionManager.registerReactionTemplate({
           id: `mapmaker:${eventArgs.cardId}:cardGained`,
           listeningFor: 'cardGained',
@@ -1102,10 +1108,9 @@ const cardEffects: CardExpansionModule = {
 
       const selectedToHand = await cardEffectArgs.actionService.run('selectCard', {
         playerId,
-        prompt: `Put up to 2 of these cards into your hand`,
+        prompt: `Put ${Math.min(2, lookedAt.length)} of these cards into your hand`,
         restrict: lookedAt,
-        count: { kind: 'upTo', count: Math.min(2, lookedAt.length) },
-        optional: true,
+        count: { kind: 'exact', count: Math.min(2, lookedAt.length) },
       });
 
       for (const cardId of selectedToHand) {
@@ -1305,12 +1310,17 @@ const cardEffects: CardExpansionModule = {
           }) as { action: number };
 
           if (choice.action === 2 && setAside.length) {
-            const selectedSetAsideId = await triggeredArgs.actionService.run('selectSingleCard', {
-              playerId,
-              prompt: 'Put a card from this Quartermaster into your hand',
-              restrict: setAside,
-              count: 1,
-            });
+            const selectedSetAsideId = setAside.length === 1
+              ? setAside[0]
+              : await triggeredArgs.promptService.selectSingleCardFromPrompt({
+                playerId,
+                prompt: 'Put a card from this Quartermaster into your hand',
+                content: {
+                  type: 'select',
+                  cardIds: setAside,
+                  selectCount: 1,
+                },
+              });
 
             if (selectedSetAsideId) {
               await triggeredArgs.actionService.run('moveCard', {
