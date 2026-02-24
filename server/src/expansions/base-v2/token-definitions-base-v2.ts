@@ -10,4 +10,12 @@ export const registerBaseV2TokenDefinitions = (registerTokenDefinition: TokenDef
     duration: 'permanent',
     expansion: 'base-v2',
   });
+
+  registerTokenDefinition({
+    id: baseV2TokenIds.debt,
+    name: 'Debt token',
+    rulesText: 'A generic debt counter token that can be placed on piles by card effects.',
+    duration: 'permanent',
+    expansion: 'base-v2',
+  });
 };

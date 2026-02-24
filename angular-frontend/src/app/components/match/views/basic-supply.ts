@@ -3,10 +3,13 @@ import { SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../../core
 import { computed } from 'nanostores';
 import { basicSupplies } from '../../../state/match-logic';
 import { cardStore } from '../../../state/card-state';
-import { Card, CardKey } from 'shared/types';
+import { Card, CardKey, Match, TokenDefinition, TokenId } from 'shared/types';
 import { PileView } from './pile';
 import { getCardSourceStore } from '../../../state/card-source-store';
 import { createPanelShadowFilter } from './panel-shadow-filter';
+import { matchStore } from '../../../state/match-state';
+import { tokenDefinitionStore } from '../../../state/token-definition-state';
+import { getSupplyPileTokenVisualMap } from './token-utils';
 
 export class BasicSupplyView extends Container {
   private _background: Container;
@@ -57,6 +60,13 @@ export class BasicSupplyView extends Container {
           return ob;
         }
       ).subscribe((val => this.draw(val)))
+    );
+
+    this._cleanup.push(
+      computed(
+        [matchStore, tokenDefinitionStore],
+        (match, tokenDefinitions) => ({ match, tokenDefinitions }),
+      ).subscribe(({ match, tokenDefinitions }) => this.updatePileTokenVisuals(match, tokenDefinitions))
     );
 
     this.on('removed', this.onRemoved);
@@ -110,6 +120,8 @@ export class BasicSupplyView extends Container {
       p.pile = pile;
     }
 
+    this.updatePileTokenVisuals(matchStore.get(), tokenDefinitionStore.get());
+
     this._backgroundGraphics.clear();
     this._backgroundGraphics.roundRect(
       0,
@@ -122,5 +134,19 @@ export class BasicSupplyView extends Container {
         color: 0,
         alpha: .6
       });
+  }
+
+  // Updates generic pile token visuals (badges + debt chip overlays) for base supply piles.
+  private updatePileTokenVisuals(match: Match | null, tokenDefinitions: Record<TokenId, TokenDefinition>) {
+    const visualByPile = getSupplyPileTokenVisualMap(match, tokenDefinitions);
+    const pileViews = this._cardContainer.children
+      .filter((child) => typeof child.label === 'string' && child.label.startsWith('pile:'))
+      .map((child) => child as PileView);
+    for (const pile of pileViews) {
+      const key = pile.pileKey;
+      const visual = key ? visualByPile[key] : undefined;
+      pile.tokenBadges = visual?.tokenBadges ?? [];
+      pile.tokenChips = visual?.tokenChips ?? [];
+    }
   }
 }

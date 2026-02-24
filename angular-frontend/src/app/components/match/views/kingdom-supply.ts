@@ -3,13 +3,12 @@ import { PileView } from './pile';
 import { cardStore } from '../../../state/card-state';
 import { matchStore } from '../../../state/match-state';
 import { tokenDefinitionStore } from '../../../state/token-definition-state';
-import { Card, CardKey, Match, TokenDefinition, TokenId, TokenInstance, Trait } from 'shared/types';
+import { Card, CardKey, Match, TokenDefinition, TokenId, Trait } from 'shared/types';
 import { SMALL_CARD_HEIGHT, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
 import { kingdomSupplies } from '../../../state/match-logic';
 import { computed } from 'nanostores';
 import { getCardSourceStore } from '../../../state/card-source-store';
-import { TokenBadgeData } from './pile';
-import { getTokenShortLabel } from './token-utils';
+import { getSupplyPileTokenVisualMap } from './token-utils';
 import { createPanelShadowFilter } from './panel-shadow-filter';
 
 export class KingdomSupplyView extends Container {
@@ -70,7 +69,7 @@ export class KingdomSupplyView extends Container {
         (match, tokenDefinitions) => ({ match, tokenDefinitions })
       ).subscribe(({ match, tokenDefinitions }) => {
         this.updateTraitBadges(match);
-        this.updateTokenBadges(match, tokenDefinitions);
+        this.updatePileTokenVisuals(match, tokenDefinitions);
       })
     );
     this.off('removed', this.onRemoved);
@@ -161,47 +160,15 @@ export class KingdomSupplyView extends Container {
     }
   }
   
-  // Updates token badges on each pile based on match token state.
-  private updateTokenBadges(match: Match | null, tokenDefinitions: Record<TokenId, TokenDefinition>) {
+  // Updates generic pile token visuals (badges + debt chips) based on match token state.
+  private updatePileTokenVisuals(match: Match | null, tokenDefinitions: Record<TokenId, TokenDefinition>) {
     const piles = this.getPileViews();
-    if (!match) {
-      piles.forEach(pile => pile.tokenBadges = []);
-      return;
-    }
-    
-    const playerColorMap = new Map(match.players.map(player => [player.id, player.color]));
-    const tokensByPile: Record<CardKey, TokenBadgeData[]> = {};
-    const tokens = Object.values(match.tokens ?? {}) as TokenInstance[];
-    
-    for (const token of tokens) {
-      if (token.location.type !== 'supplyPile') continue;
-      // Render unowned tokens with a neutral color.
-      const cardKey = token.location.cardKey;
-      const tokenDefinition = tokenDefinitions[token.tokenId];
-      const label = getTokenShortLabel(token.tokenId, tokenDefinition);
-      const color = this.parseColor(
-        token.ownerId !== undefined && token.ownerId !== null
-          ? playerColorMap.get(token.ownerId) ?? '#ffffff'
-          : '#cccccc'
-      );
-      tokensByPile[cardKey] ??= [];
-      tokensByPile[cardKey].push({
-        id: token.id,
-        label,
-        color,
-      });
-    }
-    
+    const visualByPile = getSupplyPileTokenVisualMap(match, tokenDefinitions);
     piles.forEach(pile => {
       const key = pile.pileKey;
-      pile.tokenBadges = key ? (tokensByPile[key] ?? []) : [];
+      const visual = key ? visualByPile[key] : undefined;
+      pile.tokenBadges = visual?.tokenBadges ?? [];
+      pile.tokenChips = visual?.tokenChips ?? [];
     });
-  }
-  
-  // Parses a hex color string into a numeric color for Pixi.
-  private parseColor(color: string): number {
-    if (!color) return 0xffffff;
-    const normalized = color.replace('#', '');
-    return Number.parseInt(normalized, 16);
   }
 }

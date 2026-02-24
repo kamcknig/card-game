@@ -2,7 +2,6 @@
 
 - add pre commit to lint and or fmt
 - undo turn/steps
-- alchemy expansion - haven't built possession
 - when using overpay feature, you can overpay with potions. this matters for
   stone mason. don't know how to do the UI
   for this yet, and doesn't seem super important to get done right away
@@ -87,7 +86,18 @@ ferryman
 - hermit (madman kingdom)
 - urchin (mercenary kingdom)
 
-empires
 
+## cards yet to implement
+
+### empires
 - enchantress - need to replace a cards effects instead of just adding to them
   like we currently can.
+
+### rising sun
+- flourishing-trade
+- kind-emperor
+- rapid-expansion
+- divine-wind
+
+### alchemy
+- posession

@@ -1,4 +1,4 @@
-import { Container, Graphics, Text } from 'pixi.js';
+import { Assets, Container, Graphics, Sprite, Text } from 'pixi.js';
 import { createCardView } from '../../../core/card/create-card-view';
 import { CountBadgeView } from './count-badge-view';
 import { Card, CardFacing, CardKey, Trait } from 'shared/types';
@@ -24,6 +24,13 @@ export type TokenBadgeData = {
   color: number;
 };
 
+export type TokenChipData = {
+  id: string;
+  assetKey: string;
+  count: number;
+  textColor?: string;
+};
+
 export class PileView extends Container {
   private _cards: Card[] = [];
   private _count: number = 0;
@@ -31,6 +38,7 @@ export class PileView extends Container {
   private readonly _facing: CardFacing = 'front';
   private readonly _cardViewContainer: Container;
   private readonly _tokenContainer: Container;
+  private readonly _tokenChipContainer: Container;
   private readonly _highlight: Graphics = new Graphics({ label: 'pileHighlight' });
   private _cardView: CardView | undefined | null;
   private _pileKey: CardKey | undefined;
@@ -39,6 +47,7 @@ export class PileView extends Container {
   private readonly _traitTagBackground: Graphics = new Graphics({ label: 'traitTagBackground' });
   private readonly _traitTagText: Text = new Text({ label: 'traitTagText', text: '' });
   private _tokenBadges: TokenBadgeData[] = [];
+  private _tokenChips: TokenChipData[] = [];
   private _cleanup: (() => void)[] = [];
 
   set pile(val: Card[]) {
@@ -70,6 +79,13 @@ export class PileView extends Container {
     this.drawHighlight();
   }
 
+  // Updates icon+count token chips rendered on this pile.
+  set tokenChips(value: TokenChipData[]) {
+    this._tokenChips = value.filter((chip) => chip.count > 0);
+    this.drawTokenChips();
+    this.drawHighlight();
+  }
+
   constructor(args: PileArgs) {
     super();
 
@@ -85,6 +101,9 @@ export class PileView extends Container {
     // Token container sits above the card view for token indicators.
     this._tokenContainer = new Container({ label: 'tokenContainer' });
     this.addChild(this._tokenContainer);
+    // Token chip container sits above token badges so icon+count remains readable.
+    this._tokenChipContainer = new Container({ label: 'tokenChipContainer' });
+    this.addChild(this._tokenChipContainer);
     this._traitTagContainer = new Container({ label: 'traitTagContainer' });
     this._traitTagContainer.addChild(this._traitTagBackground);
     this._traitTagContainer.addChild(this._traitTagText);
@@ -175,6 +194,7 @@ export class PileView extends Container {
     }
 
     this.drawTokenBadges();
+    this.drawTokenChips();
     this.drawTraitTag();
   }
 
@@ -240,6 +260,46 @@ export class PileView extends Container {
       view.x = baseX;
       view.y = baseY + idx * (tokenSize + gap);
     });
+  }
+
+  // Draws icon+count chips for pile-level token visuals.
+  private drawTokenChips() {
+    this._tokenChipContainer.removeChildren();
+    if (this._tokenChips.length < 1) {
+      return;
+    }
+
+    const orderedChips = [...this._tokenChips].sort((a, b) => a.id.localeCompare(b.id));
+    const maxSide = this._size === 'half' ? 32 : 42;
+    const gap = 2;
+    let currentY = 6;
+
+    for (const chip of orderedChips) {
+      const iconTexture = Assets.get(chip.assetKey);
+      if (!iconTexture) {
+        continue;
+      }
+
+      const icon = Sprite.from(iconTexture);
+      icon.scale = Math.min(maxSide / icon.width, maxSide / icon.height);
+      icon.x = (this._cardView?.width ?? this.width) - icon.width - 6;
+      icon.y = currentY;
+      this._tokenChipContainer.addChild(icon);
+
+      const countText = new Text({
+        text: chip.count,
+        style: {
+          fill: chip.textColor ?? '#f4ebde',
+          fontSize: this._size === 'half' ? 15 : 20,
+          fontWeight: '700',
+        },
+        anchor: 0.5,
+      });
+      countText.x = icon.x + icon.width * 0.5;
+      countText.y = icon.y + icon.height * 0.5;
+      this._tokenChipContainer.addChild(countText);
+      currentY += icon.height + gap;
+    }
   }
 
   // Renders a vertical trait tag attached to the right edge of the pile.

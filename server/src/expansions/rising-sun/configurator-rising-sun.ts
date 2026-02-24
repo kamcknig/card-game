@@ -11,6 +11,8 @@ import {
 } from 'shared/types/index.ts';
 import { ExpansionConfiguratorContext, ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/index.ts';
 import { uniqueByProp } from '../../core/match-configurator.ts';
+import { baseV2TokenIds } from '../base-v2/token-ids-base-v2.ts';
+import { getConfiguredCardPileLocation } from '../../utils/get-configured-card-pile-location.ts';
 import { getAvailableKingdomRandomizerGroups } from '../../utils/get-available-kingdom-randomizer-groups.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
@@ -35,6 +37,7 @@ const APPROACHING_ARMY_SETUP_TAG = 'rising-sun:approaching-army-extra-pile';
 const BIDING_TIME_PROPHECY_KEY: CardKey = 'biding-time';
 const BUREAUCRACY_PROPHECY_KEY: CardKey = 'bureaucracy';
 const ENLIGHTENMENT_PROPHECY_KEY: CardKey = 'enlightenment';
+const HARSH_WINTER_PROPHECY_KEY: CardKey = 'harsh-winter';
 const GOOD_HARVEST_PROPHECY_KEY: CardKey = 'good-harvest';
 const GREAT_LEADER_PROPHECY_KEY: CardKey = 'great-leader';
 const GROWTH_PROPHECY_KEY: CardKey = 'growth';
@@ -452,6 +455,81 @@ const registerEnlightenmentReactions = (
   }
 };
 
+// Registers Harsh Winter: on your turn, gains either place 2 debt on gained-card pile or take all debt from that pile.
+const registerHarshWinterReactions = (
+  args: RisingSunGameEventContext,
+  prophecy: Prophecy,
+): void => {
+  for (const player of args.match.players) {
+    const playerId = player.id;
+    args.reactionManager.registerReactionTemplate(prophecy, 'cardGained', {
+      playerId,
+      compulsory: true,
+      condition: async ({ trigger, match, cardLibrary }) => {
+        if (trigger.args.playerId !== playerId) {
+          return false;
+        }
+        if (!isProphecyActive(match, HARSH_WINTER_PROPHECY_KEY)) {
+          return false;
+        }
+        if (getCurrentPlayer(match).id !== playerId) {
+          return false;
+        }
+
+        const gainedCard = cardLibrary.getCard(trigger.args.cardId);
+        return getConfiguredCardPileLocation(match, gainedCard) !== undefined;
+      },
+      triggeredEffectFn: async ({ trigger, match, cardLibrary, actionService, loggerService }) => {
+        const gainedCard = cardLibrary.getCard(trigger.args.cardId);
+        const pileLocation = getConfiguredCardPileLocation(match, gainedCard);
+        if (!pileLocation) {
+          loggerService.warn(
+            `[rising-sun prophecy:harsh-winter] gained card ${gainedCard.cardKey} had no configured pile at resolve-time`,
+          );
+          return;
+        }
+
+        const pileDebtTokens = Object.values(match.tokens ?? {})
+          .filter((token) =>
+            token.tokenId === baseV2TokenIds.debt &&
+            token.location.type === 'supplyPile' &&
+            token.location.cardKey === pileLocation.pileName
+          )
+          .sort((left, right) => left.id.localeCompare(right.id));
+
+        if (pileDebtTokens.length > 0) {
+          const debtToTake = pileDebtTokens
+            .reduce((sum, token) => sum + Math.max(1, token.counters ?? 1), 0);
+          loggerService.info(
+            `[rising-sun prophecy:harsh-winter] player ${trigger.args.playerId} gained from ${pileLocation.pileName}; taking ${debtToTake} debt from pile`,
+          );
+
+          for (const token of pileDebtTokens) {
+            await actionService.run('removeToken', {
+              tokenInstanceId: token.id,
+            });
+          }
+
+          await actionService.run('gainDebt', {
+            playerId: trigger.args.playerId,
+            count: debtToTake,
+          });
+          return;
+        }
+
+        loggerService.info(
+          `[rising-sun prophecy:harsh-winter] player ${trigger.args.playerId} gained from ${pileLocation.pileName}; placing 2 debt on pile`,
+        );
+        await actionService.run('placeToken', {
+          tokenId: baseV2TokenIds.debt,
+          counters: 2,
+          location: { type: 'supplyPile', cardKey: pileLocation.pileName },
+        });
+      },
+    });
+  }
+};
+
 // Registers Good Harvest: first time each differently named Treasure is played each turn, +1 Buy and +$1.
 const registerGoodHarvestReactions = (
   args: RisingSunGameEventContext,
@@ -819,6 +897,9 @@ const registerSelectedProphecyReactions = (
       break;
     case ENLIGHTENMENT_PROPHECY_KEY:
       registerEnlightenmentReactions(args, prophecy);
+      break;
+    case HARSH_WINTER_PROPHECY_KEY:
+      registerHarshWinterReactions(args, prophecy);
       break;
     case GOOD_HARVEST_PROPHECY_KEY:
       registerGoodHarvestReactions(args, prophecy);

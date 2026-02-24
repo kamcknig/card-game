@@ -1,12 +1,16 @@
 import { Container, Graphics, Text } from 'pixi.js';
-import { Card, CardNoId } from 'shared/types';
+import { Card, CardKey, CardNoId, Match, TokenDefinition, TokenId } from 'shared/types';
 import { PileView } from './pile';
 import { STANDARD_GAP } from '../../../core/app-contants';
 import { nonSupplyKingdomMapStore } from '../../../state/card-source-logic';
+import { matchStore } from '../../../state/match-state';
+import { tokenDefinitionStore } from '../../../state/token-definition-state';
 import { capitalize } from 'es-toolkit';
 import { concatMap, pipe, Subject, Subscription } from 'rxjs';
+import { computed } from 'nanostores';
 import { getPixiSceneTheme } from '../../../theme/pixi-theme';
 import { createPanelShadowFilter } from './panel-shadow-filter';
+import { getSupplyPileTokenVisualMap } from './token-utils';
 
 type KingdomMap = Record<string, {
   startingCards: CardNoId[],
@@ -31,9 +35,14 @@ export class NonSupplyKingdomView extends Container {
     const nonSupplyUnsub = nonSupplyKingdomMapStore.subscribe(async kingdomMap => {
       this._drawSubject.next(kingdomMap);
     });
+    const tokenVisualUnsub = computed(
+      [matchStore, tokenDefinitionStore],
+      (match, tokenDefinitions) => ({ match, tokenDefinitions }),
+    ).subscribe(({ match, tokenDefinitions }) => this.updatePileTokenVisuals(match, tokenDefinitions));
 
     this.on('removed', () => {
       nonSupplyUnsub();
+      tokenVisualUnsub();
       this._drawSub.unsubscribe();
     });
   }
@@ -139,6 +148,7 @@ export class NonSupplyKingdomView extends Container {
           facing: isLootPile ? 'back' : 'front',
         });
         pile.label = rowId;
+        pile.pileKey = kingdomName as CardKey;
         cardContainer.addChild(pile);
       }
 
@@ -149,6 +159,7 @@ export class NonSupplyKingdomView extends Container {
     }
 
     parent.addChild(container);
+    this.updatePileTokenVisuals(matchStore.get(), tokenDefinitionStore.get());
 
     return new Promise((resolve: (value: Container) => void) => {
       setTimeout(() => {
@@ -159,5 +170,24 @@ export class NonSupplyKingdomView extends Container {
         resolve(container);
       }, 50);
     });
+  }
+
+  // Updates generic pile token visuals for non-supply piles (first row only per pile).
+  private updatePileTokenVisuals(match: Match | null, tokenDefinitions: Record<TokenId, TokenDefinition>) {
+    const visualByPile = getSupplyPileTokenVisualMap(match, tokenDefinitions);
+    for (const [kingdomName, columnContainer] of this._kingdomContainerMap.entries()) {
+      const kingdomContainer = columnContainer.getChildByLabel(kingdomName) as Container | undefined;
+      const cardContainer = kingdomContainer?.getChildByLabel('cardContainer') as Container | undefined;
+      if (!cardContainer) {
+        continue;
+      }
+
+      const pileRows = cardContainer.children.filter((child) => child instanceof PileView) as PileView[];
+      const visual = visualByPile[kingdomName];
+      for (let i = 0; i < pileRows.length; i++) {
+        pileRows[i].tokenBadges = i === 0 ? (visual?.tokenBadges ?? []) : [];
+        pileRows[i].tokenChips = i === 0 ? (visual?.tokenChips ?? []) : [];
+      }
+    }
   }
 }

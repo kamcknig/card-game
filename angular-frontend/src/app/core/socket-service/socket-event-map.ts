@@ -182,6 +182,8 @@ export const socketToGameEventMap = (): SocketEventMap => {
       'debt-icon': '/assets/ui-icons/64px-debt.png',
       // Rising Sun sun token icon rendered on prophecy landscapes.
       'sun-token-icon': '/assets/ui-icons/sun-token.png',
+      // Shared debt pile token chip rendered on pile overlays.
+      'debt-token-chip': '/assets/ui-icons/debt-icon.png',
     };
 
     const finalBundle = Object.values(cardsById).reduce((prev, c) => {
