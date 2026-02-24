@@ -33,10 +33,10 @@ const expansion: CardExpansionModule = {
         },
         triggeredEffectFn: async ({ loggerService, actionService }) => {
           loggerService.debug(`[SEASIDE TRIGGERED EFFECT] gaining 1 treasure...`);
-          await actionService.run('gainTreasure', { count: 1 }, { loggingContext: { source: args.cardId } });
+          await actionService.run('gainTreasure', { count: 1 }, { source: args.cardId });
 
           loggerService.debug(`[SEASIDE TRIGGERED EFFECT] gaining 1 buy...`);
-          await actionService.run('gainBuy', { count: 1 }, { loggingContext: { source: args.cardId } });
+          await actionService.run('gainBuy', { count: 1 }, { source: args.cardId });
         },
       });
     },
@@ -988,7 +988,7 @@ const expansion: CardExpansionModule = {
           await triggerArgs.actionService.run('drawCard', {
             playerId: args.playerId,
             count: 2,
-          }, { loggingContext: { source: args.cardId } });
+          }, { source: args.cardId });
 
           loggerService.debug(`[sea-witch triggered effect] selecting discarding cards...`);
 
@@ -1332,7 +1332,7 @@ const expansion: CardExpansionModule = {
           }, { loggingContext: { source: args.cardId } });
 
           loggerService.debug(`[wharf triggered effect] gaining 1 buy`);
-          await triggerArgs.actionService.run('gainBuy', { count: 1 }, { loggingContext: { source: args.cardId } });
+          await triggerArgs.actionService.run('gainBuy', { count: 1 }, { source: args.cardId });
         },
       });
 

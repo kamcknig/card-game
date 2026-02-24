@@ -759,7 +759,49 @@ export class GameActionController implements GameActionDefinitionMap {
         return triggerIds;
       },
     });
+    const sourceAwareActions = new Set<GameActions>([
+      'gainTreasure',
+      'gainAction',
+      'gainBuy',
+      'gainPotion',
+      'gainVictoryToken',
+      'drawCard',
+      'drawHand',
+      'shuffle',
+      'shuffleDeck',
+      'shuffleCardLike',
+    ]);
+    context.actionService = {
+      run: async <K extends GameActions>(
+        action: K,
+        ...runArgs: Parameters<GameActionDefinitionMap[K]>
+      ): Promise<GameActionReturnTypeMap[K]> => {
+        const [actionArgs, actionContext] = runArgs;
+        if (!sourceAwareActions.has(action)) {
+          return await this.actionService.run(action, ...runArgs);
+        }
+        if (!actionArgs || typeof actionArgs !== 'object' || Array.isArray(actionArgs)) {
+          return await this.actionService.run(action, ...runArgs);
+        }
+        if (actionContext?.source !== undefined || actionContext?.loggingContext?.source !== undefined) {
+          return await this.actionService.run(action, ...runArgs);
+        }
+        return await this.actionService.run(
+          action,
+          actionArgs,
+          {
+            ...actionContext,
+            source: args.cardId as CardId,
+          },
+        );
+      },
+    };
     return context;
+  }
+
+  // Resolves action attribution source from context first, then legacy logging fallback.
+  private resolveActionSource(context?: GameActionContext): CardId | undefined {
+    return context?.source ?? context?.loggingContext?.source;
   }
 
   // Executes an effect with consistent logging and error reporting.
@@ -937,15 +979,24 @@ export class GameActionController implements GameActionDefinitionMap {
     });
   }
 
-  async gainPotion(args: { count: number }) {
+  async gainPotion(args: { count: number }, context?: GameActionContext) {
+    const source = this.resolveActionSource(context);
     this.loggerService.info(`[gainPotion action] gaining ${args.count} potions`);
     this.match.playerPotions += args.count;
     this.match.playerPotions = Math.max(0, this.match.playerPotions);
+
+    this.logManager.addLogEntry({
+      type: 'gainPotion',
+      count: args.count,
+      playerId: getCurrentPlayer(this.match).id,
+      source,
+    });
 
     this.loggerService.info(`[gainPotion action] setting player potions to ${this.match.playerPotions}`);
   }
 
   async gainBuy(args: { count: number }, context?: GameActionContext) {
+    const source = this.resolveActionSource(context);
     this.loggerService.info(`[gainBuy action] gaining ${args.count} buys`);
     this.match.playerBuys += args.count;
     this.match.playerBuys = Math.max(this.match.playerBuys, 0);
@@ -954,7 +1005,7 @@ export class GameActionController implements GameActionDefinitionMap {
       type: 'gainBuy',
       count: args.count,
       playerId: getCurrentPlayer(this.match).id,
-      source: context?.loggingContext?.source,
+      source,
     });
 
     this.loggerService.info(`[gainBuy action] setting player guys to ${this.match.playerBuys}`);
@@ -1508,12 +1559,13 @@ export class GameActionController implements GameActionDefinitionMap {
   }
 
   async gainAction(args: { count: number }, context?: GameActionContext) {
+    const source = this.resolveActionSource(context);
     let gainAmount = args.count;
     // Allow reactions to modify incoming action gains (e.g., Snowy Village lockout).
     const trigger = new ReactionTrigger('actionGain', {
       playerId: getCurrentPlayer(this.match).id,
       count: gainAmount,
-      source: context?.loggingContext?.source,
+      source,
     });
     await this.reactionManager.runTrigger({ trigger });
     gainAmount = Math.max(0, trigger.args.count);
@@ -1527,7 +1579,7 @@ export class GameActionController implements GameActionDefinitionMap {
       type: 'gainAction',
       playerId: getCurrentPlayer(this.match).id,
       count: gainAmount,
-      source: context?.loggingContext?.source,
+      source,
     });
 
     this.loggerService.info(`[gainAction action] setting player actions to ${this.match.playerActions}`);
@@ -3462,13 +3514,14 @@ export class GameActionController implements GameActionDefinitionMap {
 
   async gainTreasure(args: { count: number }, context?: GameActionContext) {
     const currentPlayer = getCurrentPlayer(this.match);
+    const source = this.resolveActionSource(context);
     let gainAmount = args.count;
     // Allow reactions to modify incoming treasure gains.
     // Include the source card so reactions can attribute token logs.
     const trigger = new ReactionTrigger('treasureGain', {
       playerId: currentPlayer.id,
       count: gainAmount,
-      source: context?.loggingContext?.source,
+      source,
     });
     await this.reactionManager.runTrigger({ trigger });
     gainAmount = Math.max(0, trigger.args.count);
@@ -3482,7 +3535,7 @@ export class GameActionController implements GameActionDefinitionMap {
         type: 'gainTreasure',
         playerId: currentPlayer.id,
         count: gainAmount,
-        source: context?.loggingContext?.source,
+        source,
       });
     }
   }
@@ -3511,6 +3564,7 @@ export class GameActionController implements GameActionDefinitionMap {
     args: { playerId: PlayerId; count?: number; suppressReactions?: boolean },
     context?: GameActionContext,
   ) {
+    const source = this.resolveActionSource(context);
     const { playerId, count } = args;
     const returnSingleResult = count === undefined || count === 1;
     this.loggerService.debug(`[drawCard action] player ${playerId} drawing ${count} card(s)`);
@@ -3527,7 +3581,7 @@ export class GameActionController implements GameActionDefinitionMap {
       const trigger = new ReactionTrigger('drawCards', {
         playerId,
         count: drawCount,
-        source: context?.loggingContext?.source,
+        source,
       });
       await this.reactionManager.runTrigger({ trigger });
       drawCount = Math.max(0, trigger.args.count);
@@ -3563,7 +3617,7 @@ export class GameActionController implements GameActionDefinitionMap {
         type: 'draw',
         playerId,
         cardId: drawnCardId,
-        source: context?.loggingContext?.source,
+        source,
       });
 
       this.loggerService.debug(`[drawCard action] Drew card ${drawnCardId}`);
@@ -3574,6 +3628,7 @@ export class GameActionController implements GameActionDefinitionMap {
 
   // Draws a full hand (default 5), allowing draw-hand reactions to adjust the count.
   async drawHand(args: { playerId: PlayerId; count?: number }, context?: GameActionContext) {
+    const source = this.resolveActionSource(context);
     const { playerId } = args;
     let drawCount = args.count ?? 5;
 
@@ -3583,13 +3638,13 @@ export class GameActionController implements GameActionDefinitionMap {
     this.logManager.addLogEntry({
       type: 'drawHand',
       playerId,
-      source: context?.loggingContext?.source,
+      source,
     });
 
     const trigger = new ReactionTrigger('drawHand', {
       playerId,
       count: drawCount,
-      source: context?.loggingContext?.source,
+      source,
     });
     await this.reactionManager.runTrigger({ trigger });
     drawCount = Math.max(0, trigger.args.count);
@@ -3842,6 +3897,7 @@ export class GameActionController implements GameActionDefinitionMap {
     args: { playerId?: PlayerId; cardIds?: CardId[]; cardLikeIds?: CardLikeId[] },
     context?: GameActionContext,
   ): Promise<void> {
+    const source = this.resolveActionSource(context);
     const cardIds = args.cardIds ?? [];
     const cardLikeIds = args.cardLikeIds ?? [];
 
@@ -3868,7 +3924,7 @@ export class GameActionController implements GameActionDefinitionMap {
       // Pass snapshots for reaction inspection/selection.
       cardIds: cardIds.length ? [...cardIds] : undefined,
       cardLikeIds: cardLikeIds.length ? [...cardLikeIds] : undefined,
-      source: context?.loggingContext?.source,
+      source,
     });
     await this.reactionManager.runTrigger({ trigger });
 
@@ -3896,7 +3952,7 @@ export class GameActionController implements GameActionDefinitionMap {
       playerId: args.playerId,
       cardIds: cardIds.length ? [...cardIds] : undefined,
       cardLikeIds: cardLikeIds.length ? [...cardLikeIds] : undefined,
-      source: context?.loggingContext?.source,
+      source,
     });
     await this.reactionManager.runTrigger({ trigger: postShuffleTrigger });
 
@@ -3916,6 +3972,7 @@ export class GameActionController implements GameActionDefinitionMap {
     args: { playerId: PlayerId; includeDiscard?: boolean },
     context?: GameActionContext,
   ): Promise<void> {
+    const source = this.resolveActionSource(context);
     const { playerId } = args;
     const includeDiscard = args.includeDiscard ?? true;
 
@@ -3943,7 +4000,7 @@ export class GameActionController implements GameActionDefinitionMap {
     this.logManager.addLogEntry({
       type: 'shuffleDeck',
       playerId: args.playerId,
-      source: context?.loggingContext?.source,
+      source,
     });
   }
 
@@ -3952,6 +4009,7 @@ export class GameActionController implements GameActionDefinitionMap {
     args: { kind: 'boon' | 'hex'; includeDiscard?: boolean; playerId?: PlayerId },
     context?: GameActionContext,
   ): Promise<void> {
+    const source = this.resolveActionSource(context);
     const includeDiscard = args.includeDiscard ?? false;
 
     // Resolve the target piles based on kind.
@@ -3972,7 +4030,10 @@ export class GameActionController implements GameActionDefinitionMap {
       return;
     }
 
-    await this.shuffle({ playerId: args.playerId, cardLikeIds: deck }, context);
+    await this.shuffle({ playerId: args.playerId, cardLikeIds: deck }, {
+      ...context,
+      source,
+    });
     this.loggerService.info(`[shuffleCardLike action] shuffled ${args.kind} deck (${deck.length} cards)`);
   }
 

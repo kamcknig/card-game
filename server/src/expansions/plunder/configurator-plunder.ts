@@ -831,7 +831,7 @@ const registerNearbyTraitEvents = (
     );
     for (const nearbyTrait of nearbyTraits) {
       args.loggerService.debug(`[plunder nearby trait] resolving trait ${nearbyTrait.id}`);
-      await args.actionService.run('gainBuy', { count: 1 }, { loggingContext: { source: eventArgs.cardId } });
+      await args.actionService.run('gainBuy', { count: 1 }, { source: eventArgs.cardId });
     }
   });
 };

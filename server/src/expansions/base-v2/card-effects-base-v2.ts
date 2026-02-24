@@ -9,17 +9,17 @@ const expansionModule: CardExpansionModule = {
   // Include the source card id for treasure gains so state effects can adjust values.
   'copper': {
     registerEffects: () => async ({ actionService, cardId }) => {
-      await actionService.run('gainTreasure', { count: 1 }, { loggingContext: { source: cardId } });
+      await actionService.run('gainTreasure', { count: 1 }, { source: cardId });
     },
   },
   'gold': {
     registerEffects: () => async ({ actionService, cardId }) => {
-      await actionService.run('gainTreasure', { count: 3 }, { loggingContext: { source: cardId } });
+      await actionService.run('gainTreasure', { count: 3 }, { source: cardId });
     },
   },
   'silver': {
     registerEffects: () => async ({ actionService, cardId }) => {
-      await actionService.run('gainTreasure', { count: 2 }, { loggingContext: { source: cardId } });
+      await actionService.run('gainTreasure', { count: 2 }, { source: cardId });
     },
   },
   'artisan': {

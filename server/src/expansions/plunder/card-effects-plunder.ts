@@ -1,4 +1,4 @@
-import { CardEffectFunctionContext, CardExpansionModule } from '@server-types/index.ts';
+import { CardEffectFunctionContext, CardExpansionModule, ReactionTrigger } from '@server-types/index.ts';
 import { CardId, CardKey } from 'shared/types/index.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
@@ -878,7 +878,7 @@ const cardEffects: CardExpansionModule = {
       const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: cardEffectArgs.match }) ?? 0;
       const playedCountAtRegistration = cardEffectArgs.match.stats.playedCardsByTurn[turnHistoryIndex]?.length ?? 0;
       let nextActionCardId: CardId | undefined;
-      let treasureBefore = 0;
+      const trackedTreasureGainTriggers: ReactionTrigger<'treasureGain'>[] = [];
 
       const beforeId = cardEffectArgs.reactionManager.registerReactionTemplate(harborVillage, 'beforePlayedCardEffect', {
         playerId: cardEffectArgs.playerId,
@@ -901,7 +901,21 @@ const cardEffects: CardExpansionModule = {
         },
         triggeredEffectFn: async (triggeredArgs) => {
           nextActionCardId = triggeredArgs.trigger.args.cardId;
-          treasureBefore = triggeredArgs.match.playerTreasure;
+        },
+      });
+
+      const treasureGainId = cardEffectArgs.reactionManager.registerReactionTemplate(harborVillage, 'treasureGain', {
+        playerId: cardEffectArgs.playerId,
+        once: false,
+        compulsory: true,
+        allowMultipleInstances: true,
+        condition: ({ trigger, match }) =>
+          trigger.args.playerId === cardEffectArgs.playerId &&
+          (getCurrentTurnHistoryIndex({ match }) ?? -1) === turnHistoryIndex &&
+          nextActionCardId !== undefined &&
+          trigger.args.source === nextActionCardId,
+        triggeredEffectFn: async (triggeredArgs) => {
+          trackedTreasureGainTriggers.push(triggeredArgs.trigger);
         },
       });
 
@@ -916,8 +930,13 @@ const cardEffects: CardExpansionModule = {
           nextActionCardId === trigger.args.cardId,
         triggeredEffectFn: async (triggeredArgs) => {
           triggeredArgs.reactionManager.unregisterTrigger(beforeId);
-          if (triggeredArgs.match.playerTreasure > treasureBefore) {
-            await triggeredArgs.actionService.run('gainTreasure', { count: 1 });
+          triggeredArgs.reactionManager.unregisterTrigger(treasureGainId);
+          const gainedTreasureFromPlayedAction = trackedTreasureGainTriggers.reduce(
+            (sum, trigger) => sum + Math.max(0, trigger.args.count),
+            0,
+          );
+          if (gainedTreasureFromPlayedAction > 0) {
+            await triggeredArgs.actionService.run('gainTreasure', { count: 1 }, { source: harborVillage.id });
           }
         },
       });
@@ -1964,7 +1983,7 @@ const cardEffects: CardExpansionModule = {
       },
     }),
     registerEffects: () => async (cardEffectArgs) => {
-      await cardEffectArgs.actionService.run('gainTreasure', { count: 3 }, { loggingContext: { source: cardEffectArgs.cardId } });
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 3 }, { source: cardEffectArgs.cardId });
     },
   },
   'endless-chalice': {
@@ -1990,7 +2009,7 @@ const cardEffects: CardExpansionModule = {
   },
   'figurehead': {
     registerEffects: () => async (cardEffectArgs) => {
-      await cardEffectArgs.actionService.run('gainTreasure', { count: 3 }, { loggingContext: { source: cardEffectArgs.cardId } });
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 3 }, { source: cardEffectArgs.cardId });
 
       const figureheadCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       cardEffectArgs.registerDurationEffect(figureheadCard, {
@@ -2013,7 +2032,7 @@ const cardEffects: CardExpansionModule = {
   },
   'hammer': {
     registerEffects: () => async (cardEffectArgs) => {
-      await cardEffectArgs.actionService.run('gainTreasure', { count: 3 }, { loggingContext: { source: cardEffectArgs.cardId } });
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 3 }, { source: cardEffectArgs.cardId });
 
       const gainableCardIds = cardEffectArgs.findCardService.findCards([
         { location: ['basicSupply', 'kingdomSupply'] },
@@ -2044,7 +2063,7 @@ const cardEffects: CardExpansionModule = {
   },
   'insignia': {
     registerEffects: () => async (cardEffectArgs) => {
-      await cardEffectArgs.actionService.run('gainTreasure', { count: 3 }, { loggingContext: { source: cardEffectArgs.cardId } });
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 3 }, { source: cardEffectArgs.cardId });
       registerThisTurnTopdeckOnGain(cardEffectArgs);
     },
   },

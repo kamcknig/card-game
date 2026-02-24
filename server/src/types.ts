@@ -150,8 +150,10 @@ export type SetAsideSourceInput = {
 };
 
 export type GameActionContext = {
+  source?: CardId;
   loggingContext?: {
     suppress?: boolean;
+    /** @deprecated Prefer GameActionContext.source for attribution. */
     source?: CardId;
   };
   suppressLifeCycle?: LifecycleSuppression;
@@ -213,7 +215,7 @@ export interface GameActionDefinitionMap {
     args: { playerId: PlayerId; to?: CardLocationSpec },
     context?: GameActionContext,
   ) => Promise<CardId | undefined>;
-  gainPotion: (args: { count: number }) => Promise<void>;
+  gainPotion: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   gainTreasure: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   // Spends treasure from the current player's pool (cannot go below zero).
   spendTreasure: (args: { count: number }, context?: GameActionContext) => Promise<void>;
