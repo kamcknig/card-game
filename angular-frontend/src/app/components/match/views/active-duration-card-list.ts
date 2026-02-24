@@ -8,9 +8,14 @@ import { applicationStore } from '../../../state/app-state';
 import { getCardSourceStore } from '../../../state/card-source-store';
 import { cardStore } from '../../../state/card-state';
 import { getPixiSceneTheme } from '../../../theme/pixi-theme';
+import { AppButton, createAppButton } from '../../../core/create-app-button';
 
 export class ActiveDurationCardList extends Container {
   private readonly _pixiTheme = getPixiSceneTheme();
+  private readonly _closeButton: AppButton = createAppButton({
+    text: 'X',
+    style: { fill: this._pixiTheme.ui.buttonText, fontSize: 18 }
+  });
   private _tabContainer: Container = new Container({
     label: 'tabContainer',
     eventMode: 'static',
@@ -53,6 +58,11 @@ export class ActiveDurationCardList extends Container {
     this._playersList.y = STANDARD_GAP;
     this._container.addChild(this._playersList);
 
+    // Close button mirrors the in-canvas modal close pattern used by other prompt overlays.
+    this._closeButton.button.on('pointerdown', () => this.hideCardList());
+    this._closeButton.button.on('removed', () => this._closeButton.button.removeAllListeners());
+    this._container.addChild(this._closeButton.button);
+
     this._tabContainer.on('pointerdown', () => this.toggleCardList());
 
     const cardsById = cardStore.get();
@@ -68,11 +78,16 @@ export class ActiveDurationCardList extends Container {
 
   private toggleCardList() {
     if (this._container.parent) {
-      this._container.removeFromParent();
+      this.hideCardList();
     }
     else {
       applicationStore.get()?.stage.addChild(this._container);
     }
+  }
+
+  // Hides the active duration cards modal if currently mounted on stage.
+  private hideCardList() {
+    this._container.removeFromParent();
   }
 
   private drawCards(cards: ReadonlyArray<Card>) {
@@ -120,6 +135,9 @@ export class ActiveDurationCardList extends Container {
     playersListBackground?.roundRect(0, 0, this._playersList.width + STANDARD_GAP * 2, this._playersList.height + STANDARD_GAP * 2, 5);
     playersListBackground?.stroke({ color: this._pixiTheme.ui.panelBorder, width: 1.5 });
     playersListBackground?.fill({ color: this._pixiTheme.overlay.color, alpha: this._pixiTheme.overlay.mediumAlpha });
+
+    this._closeButton.button.x = Math.floor(playersListBackground.width - this._closeButton.button.width - STANDARD_GAP);
+    this._closeButton.button.y = STANDARD_GAP;
 
     const app = applicationStore.get();
 
