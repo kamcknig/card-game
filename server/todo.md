@@ -39,7 +39,8 @@
   piles for this
 
 # Higher priority
-
+- stop following rule
+  - need to figure how to implement this across entire app rather than in each place.
 - logging is not nearly detailed enough
 - safety so that when a game or mtach crashes, the ret of the server doesn't
   crash and can recover
