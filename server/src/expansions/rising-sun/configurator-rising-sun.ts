@@ -12,7 +12,9 @@ import { ExpansionConfiguratorContext, ExpansionConfiguratorFactory, GameEventRe
 import { uniqueByProp } from '../../core/match-configurator.ts';
 import { getAvailableKingdomRandomizerGroups } from '../../utils/get-available-kingdom-randomizer-groups.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
+import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getDefaultKingdomSupplySize } from '../../utils/get-default-kingdom-supply-size.ts';
+import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { isCardStillAtGainedLocation } from '../../utils/is-card-still-at-gained-location.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
 import { returnCardToConfiguredPileTop } from '../../utils/return-card-to-configured-pile-top.ts';
@@ -29,6 +31,7 @@ const SUN_TOKEN_COUNT_BY_PLAYER_COUNT: Record<number, number> = {
 
 const APPROACHING_ARMY_PROPHECY_KEY: CardKey = 'approaching-army';
 const APPROACHING_ARMY_SETUP_TAG = 'rising-sun:approaching-army-extra-pile';
+const BIDING_TIME_PROPHECY_KEY: CardKey = 'biding-time';
 const BUREAUCRACY_PROPHECY_KEY: CardKey = 'bureaucracy';
 const GOOD_HARVEST_PROPHECY_KEY: CardKey = 'good-harvest';
 const GREAT_LEADER_PROPHECY_KEY: CardKey = 'great-leader';
@@ -186,6 +189,102 @@ const registerApproachingArmyReactions = (
           `[rising-sun prophecy:approaching-army] player ${trigger.args.playerId} played an Attack; gaining +$1`,
         );
         await actionService.run('gainTreasure', { count: 1 });
+      },
+    });
+  }
+};
+
+// Registers Biding Time: at cleanup start set aside hand; at next turn start put those cards into hand.
+const registerBidingTimeReactions = (
+  args: RisingSunGameEventContext,
+  prophecy: Prophecy,
+): void => {
+  for (const player of args.match.players) {
+    const playerId = player.id;
+
+    args.reactionManager.registerReactionTemplate(prophecy, 'startTurnPhase', {
+      playerId,
+      compulsory: true,
+      condition: async ({ trigger, match }) => {
+        if (!isProphecyActive(match, BIDING_TIME_PROPHECY_KEY)) {
+          return false;
+        }
+
+        if (getTurnPhase(trigger.args.phaseIndex) !== 'cleanup') {
+          return false;
+        }
+
+        return getCurrentPlayer(match).id === playerId;
+      },
+      triggeredEffectFn: async ({ cardSourceController, actionService, loggerService }) => {
+        // Capture the current hand snapshot so card movement during resolution does not alter selection.
+        const hand = [...cardSourceController.getSource('playerHand', playerId)];
+        if (hand.length < 1) {
+          loggerService.debug(`[rising-sun prophecy:biding-time] player ${playerId} has no hand cards to set aside`);
+          return;
+        }
+
+        loggerService.info(
+          `[rising-sun prophecy:biding-time] setting aside ${hand.length} hand card(s) for player ${playerId}`,
+        );
+
+        for (const cardId of hand) {
+          await actionService.run('moveCard', {
+            cardId,
+            toPlayerId: playerId,
+            to: { location: 'set-aside' },
+            facing: 'back',
+            setAsideSource: {
+              ownerPlayerId: playerId,
+              sourceKind: 'prophecy',
+              sourceCardLikeId: prophecy.id,
+              sourceCardKey: prophecy.cardKey,
+              sourceLabel: prophecy.cardName,
+            },
+          });
+        }
+      },
+    });
+
+    args.reactionManager.registerReactionTemplate(prophecy, 'startTurn', {
+      playerId,
+      compulsory: true,
+      condition: async ({ trigger, match }) => {
+        return trigger.args.playerId === playerId && isProphecyActive(match, BIDING_TIME_PROPHECY_KEY);
+      },
+      triggeredEffectFn: async ({ cardSourceController, actionService, loggerService, match }) => {
+        const setAside = cardSourceController.getSource('set-aside', playerId);
+        const bidingTimeCards = setAside.filter((cardId) => {
+          const source = match.setAsideSourceById?.[cardId];
+          return source?.ownerPlayerId === playerId &&
+            source.sourceKind === 'prophecy' &&
+            source.sourceCardLikeId === prophecy.id;
+        });
+
+        if (bidingTimeCards.length < 1) {
+          loggerService.debug(`[rising-sun prophecy:biding-time] player ${playerId} has no set-aside cards to return`);
+          return;
+        }
+
+        loggerService.info(
+          `[rising-sun prophecy:biding-time] returning ${bidingTimeCards.length} set-aside card(s) to hand for player ${playerId}`,
+        );
+
+        for (const cardId of bidingTimeCards) {
+          const currentSetAside = cardSourceController.getSource('set-aside', playerId);
+          if (!currentSetAside.includes(cardId)) {
+            loggerService.debug(
+              `[rising-sun prophecy:biding-time] set-aside card ${cardId} moved before return-to-hand step`,
+            );
+            continue;
+          }
+
+          await actionService.run('moveCard', {
+            cardId,
+            toPlayerId: playerId,
+            to: { location: 'playerHand' },
+          });
+        }
       },
     });
   }
@@ -575,6 +674,9 @@ const registerSelectedProphecyReactions = (
   switch (prophecy.cardKey) {
     case APPROACHING_ARMY_PROPHECY_KEY:
       registerApproachingArmyReactions(args, prophecy);
+      break;
+    case BIDING_TIME_PROPHECY_KEY:
+      registerBidingTimeReactions(args, prophecy);
       break;
     case BUREAUCRACY_PROPHECY_KEY:
       registerBureaucracyReactions(args, prophecy);
