@@ -29,9 +29,13 @@ const trashAndGainUpToMore = async (
   playerId: number,
   maxMore: number,
 ) => {
+  const loggerService = cardEffectArgs.loggerService;
   const hand = getPlayerSourceSafe(cardEffectArgs, 'playerHand', playerId);
+  loggerService.debug(
+    `[plunder helper] starting trash-and-gain flow for player ${playerId} with hand=${hand.length} and maxMore=${maxMore}`,
+  );
   if (!hand.length) {
-    cardEffectArgs.loggerService.debug('[plunder helper] no card in hand to trash for remodel effect');
+    loggerService.debug('[plunder helper] no card in hand to trash for remodel effect');
     return;
   }
 
@@ -42,11 +46,15 @@ const trashAndGainUpToMore = async (
     count: 1,
   });
   if (!selectedTrashCardId) {
+    loggerService.debug('[plunder helper] no card selected to trash');
     return;
   }
 
   const trashedCard = cardEffectArgs.cardLibrary.getCard(selectedTrashCardId);
   const trashedCost = cardEffectArgs.cardPriceController.applyRules(trashedCard, { playerId }).cost;
+  loggerService.info(
+    `[plunder helper] trashed ${trashedCard.cardName}; computing gain options up to +${maxMore} cost`,
+  );
 
   await cardEffectArgs.actionService.run('trashCard', {
     playerId,
@@ -65,6 +73,7 @@ const trashAndGainUpToMore = async (
   });
 
   if (!gainableCards.length) {
+    loggerService.debug('[plunder helper] no gainable cards after trash');
     return;
   }
 
@@ -75,14 +84,18 @@ const trashAndGainUpToMore = async (
     count: 1,
   });
   if (!selectedGainCardId) {
+    loggerService.debug('[plunder helper] no card selected to gain');
     return;
   }
+
+  const gainedCard = cardEffectArgs.cardLibrary.getCard(selectedGainCardId);
 
   await cardEffectArgs.actionService.run('gainCard', {
     playerId,
     cardId: selectedGainCardId,
     to: { location: 'playerDiscard' },
   });
+  loggerService.info(`[plunder helper] gained ${gainedCard.cardName} to discard`);
 };
 
 const registerThisTurnTopdeckOnGain = (cardEffectArgs: CardEffectFunctionContext) => {
@@ -108,6 +121,7 @@ const registerThisTurnTopdeckOnGain = (cardEffectArgs: CardEffectFunctionContext
       }) as { action: number };
 
       if (decision.action !== 2) {
+        loggerService.debug('[insignia effect] player declined topdecking gained card');
         return;
       }
 
@@ -127,8 +141,12 @@ const registerThisTurnTopdeckOnGain = (cardEffectArgs: CardEffectFunctionContext
         toPlayerId: cardEffectArgs.playerId,
         to: { location: 'playerDeck' },
       });
+      loggerService.info(`[insignia effect] moved gained card ${gainedCard.cardName} to deck`);
     },
   });
+  loggerService.debug(
+    `[insignia effect] registered topdeck-on-gain trigger ${triggerId} for turnHistoryIndex=${turnHistoryIndex}`,
+  );
 
   cardEffectArgs.reactionManager.registerSystemTemplate(sourceCard, 'endTurn', {
     playerId: cardEffectArgs.playerId,
@@ -140,6 +158,7 @@ const registerThisTurnTopdeckOnGain = (cardEffectArgs: CardEffectFunctionContext
       getCurrentTurnHistoryIndex({ match }) === turnHistoryIndex,
     triggeredEffectFn: async (triggeredArgs) => {
       triggeredArgs.reactionManager.unregisterTrigger(triggerId);
+      loggerService.debug(`[insignia effect] unregistered topdeck-on-gain trigger ${triggerId} at endTurn`);
     },
   }, {
     idSuffix: `insignia:${cardEffectArgs.cardId}:turn:${turnHistoryIndex}`,
@@ -1254,6 +1273,8 @@ const cardEffects: CardExpansionModule = {
   },
   'quartermaster': {
     registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.info(`[quartermaster effect] registering recurring duration for player ${cardEffectArgs.playerId}`);
       const quartermaster = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       cardEffectArgs.registerDurationEffect(quartermaster, {
         playerId: cardEffectArgs.playerId,
@@ -1269,6 +1290,9 @@ const cardEffects: CardExpansionModule = {
             const source = triggeredArgs.match.setAsideSourceById?.[cardId];
             return source?.ownerPlayerId === playerId && source.sourceCardId === quartermaster.id;
           });
+          loggerService.debug(
+            `[quartermaster duration] startTurn for player ${playerId}; setAside count=${setAside.length}`,
+          );
 
           const choice = await triggeredArgs.actionService.run('userPrompt', {
             playerId,
@@ -1278,6 +1302,7 @@ const cardEffects: CardExpansionModule = {
               { label: 'TAKE FROM QUARTERMASTER', action: 2 },
             ],
           }) as { action: number };
+          loggerService.debug(`[quartermaster duration] player ${playerId} selected action=${choice.action}`);
 
           if (choice.action === 2 && setAside.length) {
             const selectedSetAsideId = setAside.length === 1
@@ -1293,13 +1318,18 @@ const cardEffects: CardExpansionModule = {
               });
 
             if (selectedSetAsideId) {
+              const selectedSetAsideCard = triggeredArgs.cardLibrary.getCard(selectedSetAsideId);
               await triggeredArgs.actionService.run('moveCard', {
                 cardId: selectedSetAsideId,
                 toPlayerId: playerId,
                 to: { location: 'playerHand' },
               });
+              loggerService.info(
+                `[quartermaster duration] moved set-aside card ${selectedSetAsideCard.cardName} to hand`,
+              );
               return;
             }
+            loggerService.debug('[quartermaster duration] no set-aside card selected to move to hand');
           }
 
           const gainableCardIds = triggeredArgs.findCardService.findCards([
@@ -1308,6 +1338,7 @@ const cardEffects: CardExpansionModule = {
           ]).map((card) => card.id);
 
           if (!gainableCardIds.length) {
+            loggerService.debug('[quartermaster duration] no gainable cards costing up to $4');
             return;
           }
 
@@ -1318,8 +1349,11 @@ const cardEffects: CardExpansionModule = {
             count: 1,
           });
           if (!selectedGainCardId) {
+            loggerService.debug('[quartermaster duration] no card selected to gain');
             return;
           }
+
+          const selectedGainCard = triggeredArgs.cardLibrary.getCard(selectedGainCardId);
 
           await triggeredArgs.actionService.run('gainCard', {
             playerId,
@@ -1331,6 +1365,9 @@ const cardEffects: CardExpansionModule = {
             selectedGainCardId,
           );
           if (!gainedStillInDiscard) {
+            loggerService.debug(
+              `[quartermaster duration] gained card ${selectedGainCard.cardName} moved before set-aside step`,
+            );
             return;
           }
 
@@ -1345,9 +1382,11 @@ const cardEffects: CardExpansionModule = {
               sourceCardKey: quartermaster.cardKey,
             },
           });
+          loggerService.info(`[quartermaster duration] set aside gained card ${selectedGainCard.cardName}`);
         },
       }, {
-        cleanupCount: Number.MAX_SAFE_INTEGER,
+        // Quartermaster persists as an always-active duration while in play.
+        hasActiveEffects: () => true,
       });
     },
   },
@@ -1400,6 +1439,8 @@ const cardEffects: CardExpansionModule = {
   },
   'search': {
     registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.info(`[search effect] registering delayed Loot trigger for player ${cardEffectArgs.playerId}`);
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
       const searchCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
@@ -1414,11 +1455,15 @@ const cardEffects: CardExpansionModule = {
         }
 
         hasPendingSupplyEmptyTrigger = false;
+        loggerService.info(
+          `[search duration] supply pile emptied (${triggeredArgs.trigger.args.emptiedSupplyPileKey}); resolving Loot gain`,
+        );
         await triggeredArgs.actionService.run('trashCard', {
           playerId: cardEffectArgs.playerId,
           cardId: searchCard.id,
         });
         await triggeredArgs.actionService.run('gainLoot', { playerId: cardEffectArgs.playerId });
+        loggerService.debug('[search duration] trashed Search and granted Loot');
       };
 
       cardEffectArgs.registerDurationEffect(searchCard, {
@@ -1442,7 +1487,8 @@ const cardEffects: CardExpansionModule = {
         condition: () => true,
         triggeredEffectFn: resolveOnSupplyPileEmptied,
       }, {
-        cleanupCount: 0,
+        // Share Search duration liveness with the paired cardGained trigger.
+        hasActiveEffects: () => hasPendingSupplyEmptyTrigger,
       });
     },
   },
@@ -1990,6 +2036,8 @@ const cardEffects: CardExpansionModule = {
   },
   'endless-chalice': {
     registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.info(`[endless-chalice effect] registering permanent startTurn duration for player ${cardEffectArgs.playerId}`);
       await gainTreasureAndBuy({ actionService: cardEffectArgs.actionService, treasure: 1, buy: 1 });
 
       const chaliceCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
@@ -2001,11 +2049,12 @@ const cardEffects: CardExpansionModule = {
         listeningFor: 'startTurn',
         condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
         triggeredEffectFn: async (triggeredArgs) => {
+          loggerService.debug(`[endless-chalice duration] granting +$1 and +1 Buy to player ${cardEffectArgs.playerId}`);
           await gainTreasureAndBuy({ actionService: triggeredArgs.actionService, treasure: 1, buy: 1 });
         },
       }, {
-        // Endless Chalice repeats "for the rest of the game"; keep duration cleanup tracking effectively permanent.
-        cleanupCount: Number.MAX_SAFE_INTEGER,
+        // Endless Chalice repeats for the rest of the game.
+        hasActiveEffects: () => true,
       });
     },
   },

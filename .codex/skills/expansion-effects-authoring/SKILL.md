@@ -7,6 +7,12 @@ description: Implement or update Dominion expansion card and card-like effects (
 
 Implement expansion mechanics through existing engine abstractions while preserving deterministic gameplay and rule fidelity.
 
+## Required Companion Skills
+
+- Always apply `debug-logger` for implementation/refactor work done under this skill so logs are added or validated alongside behavior changes.
+- Apply `debug-openapi-maintainer` whenever the task adds, removes, or changes any `/debug/*` route, `server/src/core/debug-openapi-spec.ts`, debug docs endpoints, or `server/docs/README-debug-api.md`.
+- Do not ship debug-route behavior changes without matching OpenAPI/doc updates when `debug-openapi-maintainer` conditions are met.
+
 ## Inputs You Need
 
 1. Exact docs path(s) for the mechanic being implemented.
@@ -47,7 +53,8 @@ Implement expansion mechanics through existing engine abstractions while preserv
    - skipped branches
    - selected cards/targets
    - registration/unregistration points
-9. Validate with `deno check` on touched files.
+9. If any debug route or debug API documentation surface was touched, invoke `debug-openapi-maintainer` workflow and update behavior/spec/docs together.
+10. Validate with `deno check` on touched files.
 
 ## Shared Utility Reuse Gate
 
@@ -114,5 +121,7 @@ When changing multiple files, run checks for each touched module file directly.
 - Metadata is typed, not cast.
 - Config additions/removals remain stable.
 - Logs and comments are sufficient for debugging.
+- `debug-logger` companion requirements were satisfied.
+- `debug-openapi-maintainer` companion requirements were satisfied when debug API surfaces changed.
 - All touched files pass `deno check`.
 - Shared utility reuse was evaluated first, and no duplicate local helper behavior was introduced.

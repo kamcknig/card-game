@@ -536,7 +536,8 @@ const expansion: CardExpansionModule = {
           }
         },
       }, {
-        cleanupCount: setAsideTreasureIds.length,
+        // Keep Crypt in the duration zone while there are still set-aside Treasures to resolve.
+        hasActiveEffects: () => setAsideTreasureIds.length > 0,
       });
     },
   },

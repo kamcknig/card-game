@@ -269,8 +269,8 @@ const expansion: CardExpansionModule = {
           }
         },
       }, {
-        // Keep Archive in play through the next cleanup even after the last card is taken.
-        cleanupCount: setAsideCardIds.length + 1,
+        // Keep Archive in the duration zone while there are still set-aside cards to resolve.
+        hasActiveEffects: () => setAsideCardIds.length > 0,
       });
     },
   },
