@@ -686,8 +686,22 @@ export type TriggerEventTypeContext = {
   beforePlayedCardEffect: {
     cardId: CardId;
     playerId: PlayerId;
+    // Way chosen for this play path; null means normal instruction path.
+    wayId: CardLikeId | null;
     // Reactions can set true to skip this played card's on-play lifecycle/effects.
     skipPlayEffect: boolean;
+  };
+  // Triggered whenever a token's counters/location changes or the token is removed.
+  tokenChanged: {
+    tokenInstanceId: TokenInstanceId;
+    tokenId: TokenId;
+    ownerId?: PlayerId;
+    locationBefore: TokenLocation;
+    locationAfter: TokenLocation | null;
+    countersBefore?: number | null;
+    countersAfter?: number | null;
+    // Optional source card for token/log attribution.
+    source?: CardId;
   };
   treasureGain: {
     playerId: PlayerId;

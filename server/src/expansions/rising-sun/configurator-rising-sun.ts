@@ -1,4 +1,5 @@
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
+import { findWayInMatch } from '@shared/find-card-like-in-match.ts';
 import {
   Card,
   CardKey,
@@ -33,6 +34,7 @@ const APPROACHING_ARMY_PROPHECY_KEY: CardKey = 'approaching-army';
 const APPROACHING_ARMY_SETUP_TAG = 'rising-sun:approaching-army-extra-pile';
 const BIDING_TIME_PROPHECY_KEY: CardKey = 'biding-time';
 const BUREAUCRACY_PROPHECY_KEY: CardKey = 'bureaucracy';
+const ENLIGHTENMENT_PROPHECY_KEY: CardKey = 'enlightenment';
 const GOOD_HARVEST_PROPHECY_KEY: CardKey = 'good-harvest';
 const GREAT_LEADER_PROPHECY_KEY: CardKey = 'great-leader';
 const GROWTH_PROPHECY_KEY: CardKey = 'growth';
@@ -164,6 +166,26 @@ const isProphecyActive = (match: Match, prophecyKey: CardKey): boolean => {
     token.location.type === 'cardLike' &&
     token.location.cardLikeId === activeProphecy.id
   );
+};
+
+// Applies Enlightenment's global type mutation so Treasures are also Actions for all purposes.
+const applyEnlightenmentTreasureActionTypes = (
+  args: Pick<RisingSunGameEventContext, 'cardLibrary'>,
+): number => {
+  let addedCount = 0;
+  // Iterate in id order to keep type mutation deterministic.
+  const cards = args.cardLibrary.getAllCardsAsArray().sort((a, b) => a.id - b.id);
+  for (const card of cards) {
+    if (!card.type.includes('TREASURE')) {
+      continue;
+    }
+    if (card.type.includes('ACTION')) {
+      continue;
+    }
+    card.type.push('ACTION');
+    addedCount++;
+  }
+  return addedCount;
 };
 
 type RisingSunGameEventContext = Parameters<NonNullable<Parameters<GameEventRegistrar>[1]>>[0];
@@ -311,6 +333,120 @@ const registerGreatLeaderReactions = (
           `[rising-sun prophecy:great-leader] player ${trigger.args.playerId} played an Action; gaining +1 Action`,
         );
         await actionService.run('gainAction', { count: 1 });
+      },
+    });
+  }
+};
+
+// Registers Enlightenment: Treasures are Actions, and in Action phase Treasure play becomes +1 Card and +1 Action.
+const registerEnlightenmentReactions = (
+  args: RisingSunGameEventContext,
+  prophecy: Prophecy,
+): void => {
+  const activationOwnerPlayerId = args.match.players[0]?.id;
+  if (activationOwnerPlayerId === undefined) {
+    args.loggerService.warn('[rising-sun prophecy:enlightenment] no players found for activation trigger registration');
+    return;
+  }
+
+  args.reactionManager.registerSystemTemplate(prophecy, 'tokenChanged', {
+    playerId: activationOwnerPlayerId,
+    compulsory: true,
+    autoResolve: true,
+    allowMultipleInstances: false,
+    condition: ({ trigger, match }) => {
+      if (trigger.args.tokenId !== risingSunTokenIds.sun) {
+        return false;
+      }
+      if (trigger.args.locationBefore.type !== 'cardLike') {
+        return false;
+      }
+      if (trigger.args.locationBefore.cardLikeId !== prophecy.id) {
+        return false;
+      }
+      if (prophecy.cardKey !== ENLIGHTENMENT_PROPHECY_KEY) {
+        return false;
+      }
+      // Only activate once the prophecy actually becomes active.
+      return isProphecyActive(match, ENLIGHTENMENT_PROPHECY_KEY);
+    },
+    triggeredEffectFn: async ({ loggerService, cardLibrary }) => {
+      const addedCount = applyEnlightenmentTreasureActionTypes({ cardLibrary });
+      loggerService.info(
+        `[rising-sun prophecy:enlightenment] prophecy activated; added ACTION type to ${addedCount} Treasure card(s)`,
+      );
+    },
+  }, {
+    idSuffix: 'enlightenment:token-activation',
+  });
+
+  if (isProphecyActive(args.match, ENLIGHTENMENT_PROPHECY_KEY)) {
+    const addedCount = applyEnlightenmentTreasureActionTypes({ cardLibrary: args.cardLibrary });
+    args.loggerService.info(
+      `[rising-sun prophecy:enlightenment] prophecy already active at registration; added ACTION type to ${addedCount} Treasure card(s)`,
+    );
+  }
+
+  for (const player of args.match.players) {
+    args.reactionManager.registerReactionTemplate(prophecy, 'beforePlayedCardEffect', {
+      playerId: player.id,
+      compulsory: true,
+      condition: async ({ trigger, cardLibrary, match }) => {
+        if (trigger.args.playerId !== player.id) {
+          return false;
+        }
+        if (trigger.args.skipPlayEffect) {
+          return false;
+        }
+        if (!isProphecyActive(match, ENLIGHTENMENT_PROPHECY_KEY)) {
+          return false;
+        }
+        if (getTurnPhase(match.turnPhaseIndex) !== 'action') {
+          return false;
+        }
+
+        const playedCard = cardLibrary.getCard(trigger.args.cardId);
+        if (!playedCard.type.includes('TREASURE')) {
+          return false;
+        }
+
+        if (trigger.args.wayId === null) {
+          return true;
+        }
+
+        const selectedWay = findWayInMatch(match, trigger.args.wayId);
+        return selectedWay?.cardKey === 'way-of-the-chameleon';
+      },
+      triggeredEffectFn: async ({ trigger, actionService, loggerService }) => {
+        if (trigger.args.wayId !== null) {
+          const selectedChoice = await args.promptService.requestAction({
+            playerId: trigger.args.playerId,
+            prompt: 'Choose how this Treasure resolves',
+            actionButtons: [
+              { action: 1, label: 'WAY OF THE CHAMELEON' },
+              { action: 2, label: 'ENLIGHTENMENT' },
+            ],
+          });
+
+          if (selectedChoice !== 2) {
+            loggerService.info(
+              `[rising-sun prophecy:enlightenment] player ${trigger.args.playerId} chose Way of the Chameleon resolution`,
+            );
+            return;
+          }
+        }
+
+        trigger.args.skipPlayEffect = true;
+        loggerService.info(
+          `[rising-sun prophecy:enlightenment] replacing Treasure instructions for player ${trigger.args.playerId} with +1 Card and +1 Action`,
+        );
+        await actionService.run('drawCard', {
+          playerId: trigger.args.playerId,
+          count: 1,
+        });
+        await actionService.run('gainAction', {
+          count: 1,
+        });
       },
     });
   }
@@ -680,6 +816,9 @@ const registerSelectedProphecyReactions = (
       break;
     case BUREAUCRACY_PROPHECY_KEY:
       registerBureaucracyReactions(args, prophecy);
+      break;
+    case ENLIGHTENMENT_PROPHECY_KEY:
+      registerEnlightenmentReactions(args, prophecy);
       break;
     case GOOD_HARVEST_PROPHECY_KEY:
       registerGoodHarvestReactions(args, prophecy);

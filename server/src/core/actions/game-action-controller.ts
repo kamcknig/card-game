@@ -1066,10 +1066,25 @@ export class GameActionController implements GameActionDefinitionMap {
   }
 
   async removeToken(args: { tokenInstanceId: TokenInstanceId }, context?: GameActionContext): Promise<void> {
+    const source = this.resolveActionSource(context);
     // Ensure the token exists before removal for deterministic behavior.
     const token = this.getTokenInstance(args.tokenInstanceId);
+    const locationBefore = structuredClone(token.location);
+    const countersBefore = token.counters;
     delete this.match.tokens[args.tokenInstanceId];
     this.loggerService.debug(`[removeToken action] removed token ${args.tokenInstanceId}`);
+    await this.reactionManager.runTrigger({
+      trigger: new ReactionTrigger('tokenChanged', {
+        tokenInstanceId: token.id,
+        tokenId: token.tokenId,
+        ownerId: token.ownerId,
+        locationBefore,
+        locationAfter: null,
+        countersBefore,
+        countersAfter: 0,
+        source,
+      }),
+    });
     // Emit token consumption logs only when callers provide logging context.
     if (context && !context.loggingContext?.suppress) {
       const targetPlayerId = token.ownerId ?? getCurrentPlayer(this.match).id;
@@ -1103,7 +1118,7 @@ export class GameActionController implements GameActionDefinitionMap {
     );
 
     if (targetToken.counters !== undefined && targetToken.counters !== null && targetToken.counters > 1) {
-      await this.consumeToken({ tokenInstanceId: targetToken.id, amount: 1 });
+      await this.consumeToken({ tokenInstanceId: targetToken.id, amount: 1 }, context);
       this.loggerService.info(
         `[removeSunToken action] decremented Sun token on prophecy cardLikeId=${targetToken.location.type === 'cardLike' ? targetToken.location.cardLikeId : 'n/a'}`,
       );
@@ -1114,9 +1129,12 @@ export class GameActionController implements GameActionDefinitionMap {
     this.loggerService.info('[removeSunToken action] removed final Sun token instance from active prophecy');
   }
 
-  async consumeToken(args: { tokenInstanceId: TokenInstanceId; amount?: number }): Promise<void> {
+  async consumeToken(args: { tokenInstanceId: TokenInstanceId; amount?: number }, context?: GameActionContext): Promise<void> {
+    const source = this.resolveActionSource(context);
     // Resolve the token instance before modifying counters or removal.
     const token = this.getTokenInstance(args.tokenInstanceId);
+    const locationBefore = structuredClone(token.location);
+    const countersBefore = token.counters;
     const amount = args.amount ?? 1;
     // Tokens with null/undefined/0 counters are infinite and do not decrement.
     if (token.counters === undefined || token.counters === null || token.counters === 0) {
@@ -1128,9 +1146,33 @@ export class GameActionController implements GameActionDefinitionMap {
     if (token.counters === 0) {
       delete this.match.tokens[args.tokenInstanceId];
       this.loggerService.debug(`[consumeToken action] consumed token ${args.tokenInstanceId}`);
+      await this.reactionManager.runTrigger({
+        trigger: new ReactionTrigger('tokenChanged', {
+          tokenInstanceId: token.id,
+          tokenId: token.tokenId,
+          ownerId: token.ownerId,
+          locationBefore,
+          locationAfter: null,
+          countersBefore,
+          countersAfter: 0,
+          source,
+        }),
+      });
       return;
     }
     this.loggerService.debug(`[consumeToken action] decremented token ${args.tokenInstanceId} to ${token.counters}`);
+    await this.reactionManager.runTrigger({
+      trigger: new ReactionTrigger('tokenChanged', {
+        tokenInstanceId: token.id,
+        tokenId: token.tokenId,
+        ownerId: token.ownerId,
+        locationBefore,
+        locationAfter: structuredClone(token.location),
+        countersBefore,
+        countersAfter: token.counters,
+        source,
+      }),
+    });
   }
 
   async flipToken(args: { tokenInstanceId: TokenInstanceId; facing: TokenFacing }): Promise<void> {
@@ -3915,6 +3957,7 @@ export class GameActionController implements GameActionDefinitionMap {
     const beforePlayedCardEffectTrigger = new ReactionTrigger('beforePlayedCardEffect', {
       playerId,
       cardId,
+      wayId: selectedWay?.id ?? null,
       skipPlayEffect: false,
     });
     await this.reactionManager.runTrigger({ trigger: beforePlayedCardEffectTrigger, reactionContext });
