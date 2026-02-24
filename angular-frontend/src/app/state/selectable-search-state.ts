@@ -11,6 +11,7 @@ const EMPTY_SELECTABLE_SEARCH_CATALOG: SelectableSearchCatalog = {
   ways: [],
   traits: [],
   allies: [],
+  prophecies: [],
 };
 
 // Cached search dataset used by match-configuration landscape selection UI.

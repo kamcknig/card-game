@@ -17,6 +17,7 @@ import {
   ArtifactNoId,
   EventNoId,
   LandmarkNoId,
+  ProphecyNoId,
   ProjectNoId,
   SelectableSearchCatalog,
   TraitNoId,
@@ -34,7 +35,8 @@ export type SelectableCardLikeNoId =
   | ProjectNoId
   | WayNoId
   | TraitNoId
-  | AllyNoId;
+  | AllyNoId
+  | ProphecyNoId;
 export type SelectableSearchResult = CardNoId | SelectableCardLikeNoId;
 export type SearchCatalogKind = keyof SelectableSearchCatalog;
 
@@ -155,6 +157,8 @@ export class SelectCardLikeModalComponent implements AfterViewInit {
         return catalog.traits;
       case 'allies':
         return catalog.allies;
+      case 'prophecies':
+        return catalog.prophecies;
     }
     return [];
   }

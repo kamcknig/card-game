@@ -90,6 +90,8 @@ export interface MatchConfiguration {
   traits: TraitNoId[];
   // Allies are landscape card-likes that define Favor spend behavior.
   allies: AllyNoId[];
+  // Prophecies are Rising Sun landscapes that activate when Omen cards are present.
+  prophecies: ProphecyNoId[];
   // Boons available for Fate cards in this match.
   boons: BoonNoId[];
   // Hexes available for Doom cards in this match.
@@ -176,6 +178,7 @@ export type SetAsideSourceKind =
   | 'project'
   | 'way'
   | 'ally'
+  | 'prophecy'
   | 'boon'
   | 'hex'
   | 'state'
@@ -218,6 +221,8 @@ export interface Match {
   traits: Trait[];
   // Active ally landscape in the match (at most one in standard games).
   allies: Ally[];
+  // Active prophecy landscape in the match (at most one in standard games).
+  prophecies: Prophecy[];
   // Boon deck state for Fate cards in this match.
   boons: {
     cards: Boon[];
@@ -471,6 +476,7 @@ export type SelectableSearchCatalog = {
   ways: WayNoId[];
   traits: TraitNoId[];
   allies: AllyNoId[];
+  prophecies: ProphecyNoId[];
 };
 
 // Represents one persisted match-configuration save file visible to clients.
@@ -858,6 +864,34 @@ export class Ally extends CardLike {
 }
 
 export type AllyNoId = Omit<Ally, 'id'>;
+
+type ProphecyArgs = {
+  [p in keyof CardLike]: CardLike[p];
+} & {
+  randomizer?: string | null;
+};
+
+// Prophecies are Rising Sun landscapes selected during setup when Omen cards are present.
+export class Prophecy extends CardLike {
+  // Randomizer key used to group prophecies during setup selection.
+  randomizer: string | null;
+
+  constructor(args: ProphecyArgs) {
+    super(args);
+
+    this.id = args.id;
+    this.cardName = args.cardName;
+    this.fullImagePath = args.fullImagePath;
+    this.detailImagePath = args.detailImagePath;
+    this.randomizer = args.randomizer ?? null;
+  }
+
+  override toString() {
+    return `[PROPHECY ${this.id} - ${this.cardKey}]`;
+  }
+}
+
+export type ProphecyNoId = Omit<Prophecy, 'id'>;
 
 type LandmarkArgs = {
   [p in keyof CardLike]: CardLike[p];

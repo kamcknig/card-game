@@ -60,6 +60,7 @@ import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { prosperityTokenIds } from '@expansions/prosperity/token-prosperity-ids.ts';
 import { renaissanceTokenIds } from '@expansions/renaissance/token-ids-renaissance.ts';
 import { alliesTokenIds } from '@expansions/allies/token-ids-allies.ts';
+import { risingSunTokenIds } from '@expansions/rising-sun/token-ids-rising-sun.ts';
 import {
   findBoonInMatch,
   findCardLikeEntryInMatch,
@@ -1079,6 +1080,38 @@ export class GameActionController implements GameActionDefinitionMap {
         source: context.loggingContext?.source,
       });
     }
+  }
+
+  async removeSunToken(_args: {} = {}, context?: GameActionContext): Promise<void> {
+    const prophecyIdSet = new Set((this.match.prophecies ?? []).map((prophecy) => prophecy.id));
+    const sunTokens = Object.values(this.match.tokens ?? {})
+      .filter((token) =>
+        token.tokenId === risingSunTokenIds.sun
+        && token.location.type === 'cardLike'
+        && prophecyIdSet.has(token.location.cardLikeId)
+      )
+      .sort((a, b) => a.id.localeCompare(b.id));
+
+    if (sunTokens.length < 1) {
+      this.loggerService.info('[removeSunToken action] no Sun token found on active prophecy');
+      return;
+    }
+
+    const targetToken = sunTokens[0];
+    this.loggerService.debug(
+      `[removeSunToken action] removing Sun token from tokenInstance=${targetToken.id} counters=${targetToken.counters ?? 'inf'}`,
+    );
+
+    if (targetToken.counters !== undefined && targetToken.counters !== null && targetToken.counters > 1) {
+      await this.consumeToken({ tokenInstanceId: targetToken.id, amount: 1 });
+      this.loggerService.info(
+        `[removeSunToken action] decremented Sun token on prophecy cardLikeId=${targetToken.location.type === 'cardLike' ? targetToken.location.cardLikeId : 'n/a'}`,
+      );
+      return;
+    }
+
+    await this.removeToken({ tokenInstanceId: targetToken.id }, context);
+    this.loggerService.info('[removeSunToken action] removed final Sun token instance from active prophecy');
   }
 
   async consumeToken(args: { tokenInstanceId: TokenInstanceId; amount?: number }): Promise<void> {

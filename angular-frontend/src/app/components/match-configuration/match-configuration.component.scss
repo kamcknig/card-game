@@ -105,7 +105,8 @@ $match-config-single-column-breakpoint: 940px;
 .projects-section,
 .ways-section,
 .traits-section,
-.allies-section {
+.allies-section,
+.prophecies-section {
   flex: 0 0 280px;
 }
 
@@ -172,7 +173,8 @@ $match-config-single-column-breakpoint: 940px;
 .projects-section .projects-list,
 .ways-section .ways-list,
 .traits-section .traits-list,
-.allies-section .allies-list {
+.allies-section .allies-list,
+.prophecies-section .prophecies-list {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
@@ -187,7 +189,8 @@ $match-config-single-column-breakpoint: 940px;
 .projects-section .project-slot,
 .ways-section .way-slot,
 .traits-section .trait-slot,
-.allies-section .ally-slot {
+.allies-section .ally-slot,
+.prophecies-section .prophecy-slot {
   position: relative;
   display: flex;
   justify-content: center;
@@ -353,6 +356,21 @@ $match-config-single-column-breakpoint: 940px;
   height: 124px;
 
   .no-trait {
+    font-size: 32px;
+  }
+
+  .close-button {
+    font-size: 10px;
+  }
+}
+
+/* Prophecy slot styling mirrors event slots */
+.prophecy-slot {
+  border: 2px solid var(--theme-border-strong);
+  width: 280px;
+  height: 124px;
+
+  .no-prophecy {
     font-size: 32px;
   }
 

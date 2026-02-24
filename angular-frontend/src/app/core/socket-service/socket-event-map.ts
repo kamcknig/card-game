@@ -180,6 +180,8 @@ export const socketToGameEventMap = (): SocketEventMap => {
       'potion-icon': '/assets/ui-icons/potion.png',
       // Shared debt icon for Empires-style costs.
       'debt-icon': '/assets/ui-icons/64px-debt.png',
+      // Rising Sun sun token icon rendered on prophecy landscapes.
+      'sun-token-icon': '/assets/ui-icons/sun-token.png',
     };
 
     const finalBundle = Object.values(cardsById).reduce((prev, c) => {
@@ -216,6 +218,12 @@ export const socketToGameEventMap = (): SocketEventMap => {
     for (const trait of matchStore.get()?.traits ?? []) {
       finalBundle[`${trait.cardKey}-full`] ??= trait.fullImagePath;
       finalBundle[`${trait.cardKey}-detail`] ??= trait.detailImagePath;
+    }
+
+    // Ensure prophecy images are loaded for prophecy landscape rendering.
+    for (const prophecy of matchStore.get()?.prophecies ?? []) {
+      finalBundle[`${prophecy.cardKey}-full`] ??= prophecy.fullImagePath;
+      finalBundle[`${prophecy.cardKey}-detail`] ??= prophecy.detailImagePath;
     }
 
     // Ensure boon images are loaded for card-like selection prompts.

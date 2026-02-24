@@ -20,6 +20,7 @@ import {
   MatchConfigurationSaveNameCheckResult,
   MatchConfigurationSaveResult,
   MatchConfiguration,
+  ProphecyNoId,
   ProjectNoId,
   SavedMatchConfigurationEntry,
   TraitNoId,
@@ -58,7 +59,8 @@ type SelectionModalKind =
   | 'projects'
   | 'ways'
   | 'traits'
-  | 'allies';
+  | 'allies'
+  | 'prophecies';
 type SelectionModalState = {
   kind: SelectionModalKind;
   excludedItems: ({ cardKey: string; } | null)[];
@@ -142,7 +144,8 @@ export class MatchConfigurationComponent implements OnDestroy {
       || this.selectedProjects().length > 0
       || this.selectedWays().length > 0
       || this.selectedTraits().length > 0
-      || (this.matchConfiguration()?.allies?.length ?? 0) > 0;
+      || (this.matchConfiguration()?.allies?.length ?? 0) > 0
+      || (this.matchConfiguration()?.prophecies?.length ?? 0) > 0;
   });
 
   // Store-backed signals for template state.
@@ -196,15 +199,29 @@ export class MatchConfigurationComponent implements OnDestroy {
   readonly selectedTraits = computed(() => this.sortByCardKey(this.matchConfiguration()?.traits ?? []));
   // Allies are capped to one preselected card in UI.
   readonly selectedAllies = computed(() => this.sortByCardKey(this.matchConfiguration()?.allies ?? []).slice(0, 1));
+  // Prophecies are capped to one preselected card in UI.
+  readonly selectedProphecies = computed(() =>
+    this.sortByCardKey(this.matchConfiguration()?.prophecies ?? []).slice(0, 1)
+  );
   // Determines if the currently selected kingdom includes at least one Liaison card.
   readonly hasSelectedLiaisonKingdom = computed(() =>
     this.selectedKingdoms().some((card) => card.type.includes('LIAISON'))
   );
+  // Determines if the currently selected kingdom includes at least one Omen card.
+  readonly hasSelectedOmenKingdom = computed(() =>
+    this.selectedKingdoms().some((card) => card.type.includes('OMEN'))
+  );
   // Ally add slot is only interactive when Liaison is selected and no ally is currently preselected.
   readonly canAddAlly = computed(() => this.hasSelectedLiaisonKingdom() && this.selectedAllies().length < 1);
+  // Prophecy add slot is only interactive when Omen is selected and no prophecy is currently preselected.
+  readonly canAddProphecy = computed(() => this.hasSelectedOmenKingdom() && this.selectedProphecies().length < 1);
   // Shows users why ally selection is locked.
   readonly allySelectionDisabledReason = computed(() =>
     this.hasSelectedLiaisonKingdom() ? null : 'Select at least one Liaison kingdom card to add an Ally.'
+  );
+  // Shows users why prophecy selection is locked.
+  readonly prophecySelectionDisabledReason = computed(() =>
+    this.hasSelectedOmenKingdom() ? null : 'Select at least one Omen kingdom card to add a Prophecy.'
   );
 
   // UI lists that include trailing empty slots for add-buttons.
@@ -216,6 +233,7 @@ export class MatchConfigurationComponent implements OnDestroy {
   readonly preSelectedWays = computed(() => this.withTrailingEmptySlot(this.selectedWays()));
   readonly preSelectedTraits = computed(() => this.withTrailingEmptySlot(this.selectedTraits()));
   readonly preSelectedAllies = computed(() => this.withTrailingEmptySlot(this.selectedAllies()));
+  readonly preSelectedProphecies = computed(() => this.withTrailingEmptySlot(this.selectedProphecies()));
 
   // Banned-card stack height grows with card count for staggered overlap.
   readonly bannedKingdomStackHeight = computed(() => {
@@ -368,6 +386,7 @@ export class MatchConfigurationComponent implements OnDestroy {
       ways: [],
       traits: [],
       allies: [],
+      prophecies: [],
     });
   }
 
@@ -482,6 +501,18 @@ export class MatchConfigurationComponent implements OnDestroy {
           filterBasicCards: false,
         });
         return;
+      case 'prophecies':
+        if (!this.canAddProphecy()) {
+          return;
+        }
+        this.activeSelectionModal.set({
+          kind,
+          excludedItems: this.preSelectedProphecies(),
+          catalogKind: 'prophecies',
+          imageSize: 'full',
+          filterBasicCards: false,
+        });
+        return;
     }
   }
 
@@ -522,6 +553,9 @@ export class MatchConfigurationComponent implements OnDestroy {
         break;
       case 'traits':
         this.onTraitSelected(item as TraitNoId);
+        break;
+      case 'prophecies':
+        this.onProphecySelected(item as ProphecyNoId);
         break;
     }
 
@@ -584,6 +618,13 @@ export class MatchConfigurationComponent implements OnDestroy {
     this.emitMatchConfigurationUpdate({ allies: remainingAllies });
   }
 
+  // Removes a selected prophecy from the fixed prophecy list.
+  deleteProphecy(prophecy: ProphecyNoId) {
+    if (!this.isGameOwner()) return;
+    const remainingProphecies = this.selectedProphecies().filter((entry) => entry.cardKey !== prophecy.cardKey);
+    this.emitMatchConfigurationUpdate({ prophecies: remainingProphecies });
+  }
+
   // Adds one kingdom card selected from the search modal.
   onKingdomSelected(selectedCard: CardNoId) {
     if (!this.isGameOwner()) return;
@@ -637,6 +678,12 @@ export class MatchConfigurationComponent implements OnDestroy {
   onAllySelected(selectedAlly: AllyNoId) {
     if (!this.isGameOwner() || !this.canAddAlly()) return;
     this.emitMatchConfigurationUpdate({ allies: [selectedAlly] });
+  }
+
+  // Adds one prophecy selected from the search modal.
+  onProphecySelected(selectedProphecy: ProphecyNoId) {
+    if (!this.isGameOwner() || !this.canAddProphecy()) return;
+    this.emitMatchConfigurationUpdate({ prophecies: [selectedProphecy] });
   }
 
   // Adds one banned kingdom card if it is not already banned.

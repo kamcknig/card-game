@@ -355,6 +355,45 @@
           <p class="selection-helper">{{ reason }}</p>
         }
       </section>
+
+      <!-- ░░░  Prophecies  ░░░ -->
+      <section class="prophecies-section">
+        <h2 class="section-title">Prophecies</h2>
+        @let canAddProphecySelection = canAddProphecy();
+
+        <div class="prophecies-list">
+          @for (prophecy of preSelectedProphecies(); track prophecy?.cardKey ?? $index) {
+            <div
+              class="prophecy-slot"
+              [ngClass]="{'disabled-add-slot': prophecy === null && !canAddProphecySelection}"
+              [ngStyle]="{
+                'cursor': isOwner && prophecy === null ? (canAddProphecySelection ? 'pointer' : 'not-allowed') : 'default'
+              }"
+              (click)="prophecy === null && isOwner && canAddProphecySelection ? openSelectionModal('prophecies') : null"
+            >
+              @if (prophecy !== null && isOwner) {
+                <div (click)="deleteProphecy(prophecy)" class="close-button">X</div>
+              }
+              <div>
+                @if (prophecy !== null) {
+                  <img
+                    alt="{{prophecy.cardName}} image"
+                    ngSrc="{{prophecy.fullImagePath}}"
+                    height="124"
+                    width="280"
+                  />
+                } @else {
+                  <span class="no-prophecy">?</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        @if (prophecySelectionDisabledReason(); as reason) {
+          <p class="selection-helper">{{ reason }}</p>
+        }
+      </section>
       </section>
     </section>
   </section>

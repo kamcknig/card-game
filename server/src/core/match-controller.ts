@@ -244,6 +244,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this.matchSetupService.createEvents(this._matchConfiguration);
       // Allies are landscapes selected in Liaison games.
       this.matchSetupService.createAllies(this._matchConfiguration);
+      // Prophecies are landscapes selected when Omen cards are present.
+      this.matchSetupService.createProphecies(this._matchConfiguration);
       // Landmarks are landscapes that should be created alongside events.
       this.matchSetupService.createLandmarks(this._matchConfiguration);
       // Projects are landscapes that should be created alongside events.
@@ -310,6 +312,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this.match.skippedTurns ??= {};
     this.match.setAsideSourceById ??= {};
     this.match.allies ??= [];
+    this.match.prophecies ??= [];
     this.match.boons ??= {
       cards: [],
       deck: [],
@@ -355,6 +358,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this.match.fleetRound.nextFleetPlayerIndex ??= 0;
     this.match.config ??= {} as ComputedMatchConfiguration;
     this.match.config.allies ??= [];
+    this.match.config.prophecies ??= [];
     this.match.config.traits ??= [];
     this.match.traits ??= [];
   }

@@ -4,6 +4,7 @@ import {
   CardNoId,
   EventNoId,
   LandmarkNoId,
+  ProphecyNoId,
   ProjectNoId,
   SelectableSearchCatalog,
   TraitNoId,
@@ -24,6 +25,7 @@ export class ExpansionSearchService {
     ways: [],
     traits: [],
     allies: [],
+    prophecies: [],
   };
 
   private _cardFuse: Fuse<CardNoId> | undefined;
@@ -34,6 +36,7 @@ export class ExpansionSearchService {
   private _wayFuse: Fuse<WayNoId> | undefined;
   private _traitFuse: Fuse<TraitNoId> | undefined;
   private _allyFuse: Fuse<AllyNoId> | undefined;
+  private _prophecyFuse: Fuse<ProphecyNoId> | undefined;
   private _selectableCatalog: SelectableSearchCatalog = structuredClone(ExpansionSearchService.EMPTY_CATALOG);
 
   constructor(
@@ -56,6 +59,9 @@ export class ExpansionSearchService {
     const projects = Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.projects ?? {}));
     const traits = Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.traits ?? {}));
     const allies = Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.allies ?? {}));
+    const prophecies = Object.values(expansionLibrary).flatMap((expansion) =>
+      Object.values(expansion.prophecies ?? {})
+    );
     this._cardFuse = this.createFuse(cards);
     this._eventFuse = this.createFuse(events);
     this._landmarkFuse = this.createFuse(landmarks);
@@ -63,6 +69,7 @@ export class ExpansionSearchService {
     this._projectFuse = this.createFuse(projects);
     this._traitFuse = this.createFuse(traits);
     this._allyFuse = this.createFuse(allies);
+    this._prophecyFuse = this.createFuse(prophecies);
     const expansionWays = Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.ways ?? {}));
     // Fallback source: allow WAY-typed entries from raw card templates so search still works
     // while an expansion is transitioning to dedicated way-library files.
@@ -84,9 +91,10 @@ export class ExpansionSearchService {
       ways: this.sortByName(ways),
       traits: this.sortByName(traits),
       allies: this.sortByName(allies),
+      prophecies: this.sortByName(prophecies),
     };
     this.loggerService.debug(
-      `[expansion search] index sizes cards=${cards.length} events=${events.length} landmarks=${landmarks.length} artifacts=${artifacts.length} projects=${projects.length} ways=${ways.length} traits=${traits.length} allies=${allies.length}`,
+      `[expansion search] index sizes cards=${cards.length} events=${events.length} landmarks=${landmarks.length} artifacts=${artifacts.length} projects=${projects.length} ways=${ways.length} traits=${traits.length} allies=${allies.length} prophecies=${prophecies.length}`,
     );
     if (ways.length < 1) {
       // Surface empty-way index explicitly to make way-search diagnostics obvious.
@@ -159,6 +167,14 @@ export class ExpansionSearchService {
       return this._selectableCatalog.allies;
     }
     return this._allyFuse?.search(searchStr).map((result) => result.item) ?? [];
+  }
+
+  // Returns matching prophecies for a search term.
+  public searchProphecies(searchStr: string): ProphecyNoId[] {
+    if (searchStr.trim().length < 1) {
+      return this._selectableCatalog.prophecies;
+    }
+    return this._prophecyFuse?.search(searchStr).map((result) => result.item) ?? [];
   }
 
   // Returns a structured clone of the current searchable landscape catalog.

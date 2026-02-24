@@ -7,6 +7,7 @@ import type {
   Hex,
   Landmark,
   Match,
+  Prophecy,
   Project,
   State,
   Trait,
@@ -21,6 +22,7 @@ export type MatchCardLikeKind =
   | 'landmark'
   | 'project'
   | 'way'
+  | 'prophecy'
   | 'boon'
   | 'hex'
   | 'state'
@@ -34,6 +36,7 @@ export type MatchCardLike =
   | Landmark
   | Project
   | Way
+  | Prophecy
   | Boon
   | Hex
   | State
@@ -47,6 +50,7 @@ export type MatchCardLikeByKind = {
   landmark: Landmark;
   project: Project;
   way: Way;
+  prophecy: Prophecy;
   boon: Boon;
   hex: Hex;
   state: State;
@@ -78,6 +82,7 @@ const getCardLikeCollections = (match: Match): { kind: MatchCardLikeKind; cards:
     { kind: 'landmark', cards: match.landmarks ?? [] },
     { kind: 'project', cards: match.projects ?? [] },
     { kind: 'way', cards: match.ways ?? [] },
+    { kind: 'prophecy', cards: match.prophecies ?? [] },
     { kind: 'boon', cards: match.boons?.cards ?? [] },
     { kind: 'hex', cards: match.hexes?.cards ?? [] },
     { kind: 'state', cards: match.states?.cards ?? [] },
@@ -103,6 +108,8 @@ const getCardLikeCollectionByKind = <K extends MatchCardLikeKind>(
       return (match.projects ?? []) as MatchCardLikeByKind[K][];
     case 'way':
       return (match.ways ?? []) as MatchCardLikeByKind[K][];
+    case 'prophecy':
+      return (match.prophecies ?? []) as MatchCardLikeByKind[K][];
     case 'boon':
       return (match.boons?.cards ?? []) as MatchCardLikeByKind[K][];
     case 'hex':
@@ -185,6 +192,9 @@ export const findTraitInMatch = <M = unknown>(match: Match | null | undefined, c
 
 export const findProjectInMatch = <M = unknown>(match: Match | null | undefined, cardLikeId: CardLikeId) =>
   findCardLikeByKindInMatchWithMetadata<'project', M>(match, cardLikeId, 'project');
+
+export const findProphecyInMatch = <M = unknown>(match: Match | null | undefined, cardLikeId: CardLikeId) =>
+  findCardLikeByKindInMatchWithMetadata<'prophecy', M>(match, cardLikeId, 'prophecy');
 
 export const findWayInMatch = <M = unknown>(match: Match | null | undefined, cardLikeId: CardLikeId) =>
   findCardLikeByKindInMatchWithMetadata<'way', M>(match, cardLikeId, 'way');

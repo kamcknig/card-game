@@ -14,6 +14,8 @@ import {
   HexNoId,
   Landmark,
   LandmarkNoId,
+  Prophecy,
+  ProphecyNoId,
   Project,
   ProjectNoId,
   State,
@@ -64,6 +66,14 @@ export class CardInstanceFactoryService {
   public createAlly(ally: AllyNoId): Ally {
     return new Ally({
       ...ally,
+      id: ++this._cardCount,
+    });
+  }
+
+  // Creates a prophecy instance.
+  public createProphecy(prophecy: ProphecyNoId): Prophecy {
+    return new Prophecy({
+      ...prophecy,
       id: ++this._cardCount,
     });
   }

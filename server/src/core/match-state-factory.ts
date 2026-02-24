@@ -27,6 +27,8 @@ export function createInitialMatchState(): Match {
     traits: [],
     // Active ally landscapes in the match.
     allies: [],
+    // Active prophecy landscapes in the match.
+    prophecies: [],
     // Boon deck state for Fate cards.
     boons: {
       cards: [],

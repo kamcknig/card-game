@@ -1,11 +1,12 @@
 import { Container, ContainerOptions, Graphics } from 'pixi.js';
-import { events, landmarks, projects, ways } from '../../../state/match-logic';
-import { Event, Landmark, Project, Way } from 'shared/types';
+import { events, landmarks, projects, prophecies, ways } from '../../../state/match-logic';
+import { Event, Landmark, Project, Prophecy, Way } from 'shared/types';
 import { EVENT_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
 
 import { EventCard } from './event-card';
 import { LandmarkCard } from './landmark-card';
 import { ProjectCard } from './project-card';
+import { ProphecyCard } from './prophecy-card';
 import { WayCard } from './way-card';
 import { getPixiSceneTheme } from '../../../theme/pixi-theme';
 import { createPanelShadowFilter } from './panel-shadow-filter';
@@ -20,10 +21,12 @@ export class OtherCardLikeView extends Container {
   private landmarkContainer: Container = new Container({ label: 'landmarkContainer' });
   private projectContainer: Container = new Container({ label: 'projectContainer' });
   private wayContainer: Container = new Container({ label: 'wayContainer' });
+  private prophecyContainer: Container = new Container({ label: 'prophecyContainer' });
   private currentEvents: readonly Event[] = [];
   private currentLandmarks: readonly Landmark[] = [];
   private currentProjects: readonly Project[] = [];
   private currentWays: readonly Way[] = [];
+  private currentProphecies: readonly Prophecy[] = [];
 
   constructor(args: ContainerOptions) {
     super(args);
@@ -44,6 +47,10 @@ export class OtherCardLikeView extends Container {
       this.currentWays = wayList;
       this.draw();
     });
+    const propheciesSub = prophecies.subscribe(prophecyList => {
+      this.currentProphecies = prophecyList;
+      this.draw();
+    });
 
     this.addChild(this.background);
     // Landscape panel shadow matches other board-area containers.
@@ -55,6 +62,7 @@ export class OtherCardLikeView extends Container {
     this.cardContainer.addChild(this.landmarkContainer);
     this.cardContainer.addChild(this.projectContainer);
     this.cardContainer.addChild(this.wayContainer);
+    this.cardContainer.addChild(this.prophecyContainer);
     this.addChild(this.cardContainer);
 
     this.on('removed', () => {
@@ -62,6 +70,7 @@ export class OtherCardLikeView extends Container {
       landmarksSub();
       projectsSub();
       waysSub();
+      propheciesSub();
     });
   }
 
@@ -70,6 +79,7 @@ export class OtherCardLikeView extends Container {
     this.drawLandmarks(this.currentLandmarks);
     this.drawProjects(this.currentProjects);
     this.drawWays(this.currentWays);
+    this.drawProphecies(this.currentProphecies);
     this.layoutCardLikes();
 
     this.background.clear();
@@ -79,6 +89,7 @@ export class OtherCardLikeView extends Container {
       || this.currentLandmarks.length > 0
       || this.currentProjects.length > 0
       || this.currentWays.length > 0
+      || this.currentProphecies.length > 0
     ) {
       this.background.roundRect(0, 0, this.cardContainer.width + STANDARD_GAP * 2, this.cardContainer.height + STANDARD_GAP * 2, 5);
       this.background.stroke({ color: this._pixiTheme.ui.panelBorder, width: 1.5 });
@@ -150,6 +161,22 @@ export class OtherCardLikeView extends Container {
     }
   }
 
+  // Draws and syncs the prophecy cards in the landscape container.
+  private drawProphecies(prophecyList: readonly Prophecy[]) {
+    this.removeMissingCards(this.prophecyContainer, prophecyList.map(prophecy => prophecy.cardKey));
+
+    for (const prophecy of prophecyList) {
+      let cardContainer = this.prophecyContainer.getChildByLabel(prophecy.cardKey) as ProphecyCard;
+
+      if (!cardContainer) {
+        cardContainer = new ProphecyCard({ label: prophecy.cardKey, prophecy });
+        this.prophecyContainer.addChild(cardContainer);
+      }
+
+      cardContainer.prophecy = prophecy;
+    }
+  }
+
   // Removes landscape views when their source entries are no longer present.
   private removeMissingCards(cardContainer: Container, cardKeys: readonly string[]) {
     const sourceKeys = new Set(cardKeys);
@@ -166,7 +193,8 @@ export class OtherCardLikeView extends Container {
       ...this.currentEvents.map(event => this.eventContainer.getChildByLabel(event.cardKey)),
       ...this.currentLandmarks.map(landmark => this.landmarkContainer.getChildByLabel(landmark.cardKey)),
       ...this.currentProjects.map(project => this.projectContainer.getChildByLabel(project.cardKey)),
-      ...this.currentWays.map(way => this.wayContainer.getChildByLabel(way.cardKey))
+      ...this.currentWays.map(way => this.wayContainer.getChildByLabel(way.cardKey)),
+      ...this.currentProphecies.map(prophecy => this.prophecyContainer.getChildByLabel(prophecy.cardKey))
     ].filter((cardLike): cardLike is Container => cardLike != null);
 
     const rowHeight = (Math.max(0, ...allCardLikes.map(cardLike => cardLike.height))) + STANDARD_GAP;

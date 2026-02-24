@@ -68,5 +68,10 @@
     "title": "Plunder",
     "name": "plunder",
     "order": 14
+  },
+  {
+    "title": "Rising Sun",
+    "name": "rising-sun",
+    "order": 15
   }
 ]

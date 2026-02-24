@@ -28,3 +28,9 @@ export const ways = computed(
   matchStore,
   match => match?.ways ?? []
 );
+
+// Expose prophecies from the current match state for UI rendering.
+export const prophecies = computed(
+  matchStore,
+  match => match?.prophecies ?? []
+);

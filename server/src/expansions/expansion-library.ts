@@ -7,6 +7,7 @@ import {
   EventNoId,
   HexNoId,
   LandmarkNoId,
+  ProphecyNoId,
   ProjectNoId,
   TraitNoId,
   StateNoId,
@@ -41,6 +42,8 @@ export type ExpansionData = {
   ways: Record<CardKey, WayNoId>;
   // Traits are stored separately from supply cards.
   traits: Record<CardKey, TraitNoId>;
+  // Prophecies are stored separately from other landscapes.
+  prophecies: Record<CardKey, ProphecyNoId>;
   mutuallyExclusive?: string[];
 };
 
@@ -74,5 +77,7 @@ export const createEmptyExpansionData = (expansionName: string): ExpansionData =
     ways: {},
     // Traits live alongside other non-supply landscapes.
     traits: {},
+    // Prophecies live alongside other non-supply landscapes.
+    prophecies: {},
   };
 };

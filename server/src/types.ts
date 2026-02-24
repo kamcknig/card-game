@@ -273,6 +273,8 @@ export interface GameActionDefinitionMap {
   }, context?: GameActionContext) => Promise<void>;
   // Expansions use token actions to place and manage token instances.
   removeToken: (args: { tokenInstanceId: TokenInstanceId }, context?: GameActionContext) => Promise<void>;
+  // Removes one Sun token from the active prophecy, if present.
+  removeSunToken: (args?: {}, context?: GameActionContext) => Promise<void>;
   // Expansions use token actions to place and manage token instances.
   consumeToken: (args: {
     tokenInstanceId: TokenInstanceId;

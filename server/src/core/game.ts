@@ -64,6 +64,8 @@ const createDefaultMatchConfiguration = (): MatchConfiguration => ({
   traits: [],
   // Default ally selection for new lobbies.
   allies: [],
+  // Default prophecy selection for new lobbies.
+  prophecies: [],
   // Default boons selection for new lobbies.
   boons: [],
   // Default hexes selection for new lobbies.
@@ -338,6 +340,13 @@ export class Game {
       // Persist selected ally between sessions.
       this.configStore.persistAllies(newConfig.allies);
       this.defaultMatchConfiguration.allies = structuredClone(newConfig.allies);
+    }
+
+    const propheciesPatch = jsonPatch.compare(currentConfig.prophecies, newConfig.prophecies);
+    if (propheciesPatch.length) {
+      // Persist selected prophecy between sessions.
+      this.configStore.persistProphecies(newConfig.prophecies);
+      this.defaultMatchConfiguration.prophecies = structuredClone(newConfig.prophecies);
     }
 
     const patch = jsonPatch.compare(currentConfig, newConfig);

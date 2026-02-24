@@ -5,6 +5,7 @@ import {
   EventNoId,
   LandmarkNoId,
   MatchConfiguration,
+  ProphecyNoId,
   ProjectNoId,
   Supply,
   TraitNoId,
@@ -37,6 +38,8 @@ export interface GameConfigurationStore {
   persistTraits(traits: TraitNoId[]): void;
   // Persists the current preselected ally.
   persistAllies(allies: AllyNoId[]): void;
+  // Persists the current preselected prophecy.
+  persistProphecies(prophecies: ProphecyNoId[]): void;
 }
 
 // File-backed implementation used by the production server runtime.
@@ -201,6 +204,17 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
         preselectedAllies.map((ally) => ally.cardKey),
       );
     }
+
+    // Restore preselected prophecy when the file exists.
+    const preselectedProphecies = this.readJson<ProphecyNoId[]>('preselected-prophecy.json');
+    if (preselectedProphecies) {
+      defaultConfig.prophecies = preselectedProphecies;
+      this.logLoadedList(
+        'preselected prophecy(s)',
+        preselectedProphecies.length,
+        preselectedProphecies.map((prophecy) => prophecy.cardKey),
+      );
+    }
   }
 
   public persistPreselectedKingdoms(kingdomSupply: Supply[]): void {
@@ -246,5 +260,10 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
   public persistAllies(allies: AllyNoId[]): void {
     this.ensureMatchDirectory();
     Deno.writeTextFileSync(this.getFilePath('preselected-ally.json'), JSON.stringify(allies));
+  }
+
+  public persistProphecies(prophecies: ProphecyNoId[]): void {
+    this.ensureMatchDirectory();
+    Deno.writeTextFileSync(this.getFilePath('preselected-prophecy.json'), JSON.stringify(prophecies));
   }
 }

@@ -1,4 +1,4 @@
- // Card-like entities (events, allies, traits, landmarks, projects, ways, boons, hexes, states, artifacts).
+// Card-like entities (events, allies, prophecies, traits, landmarks, projects, ways, boons, hexes, states, artifacts).
 export {
   Ally,
   Artifact,
@@ -7,6 +7,7 @@ export {
   Event,
   Hex,
   Landmark,
+  Prophecy,
   Project,
   State,
   Trait,
@@ -21,6 +22,7 @@ export type {
   EventNoId,
   HexNoId,
   LandmarkNoId,
+  ProphecyNoId,
   ProjectNoId,
   StateNoId,
   TraitNoId,

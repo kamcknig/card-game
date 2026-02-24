@@ -231,6 +231,19 @@ export class MatchSetupService {
     }
   }
 
+  public createProphecies(config: ComputedMatchConfiguration): void {
+    const prophecies = config.prophecies ?? [];
+    if (prophecies.length < 1) {
+      this.loggerService.info('[match] no prophecy configured for this match');
+      return;
+    }
+
+    this.loggerService.info('[match] creating prophecy');
+    for (const prophecy of prophecies) {
+      this.match.prophecies.push(this.cardInstanceFactoryService.createProphecy(prophecy));
+    }
+  }
+
   // Returns true when a kingdom pile can receive a Trait (Action/Treasure piles only).
   private isTraitEligiblePile(cards: ReadonlyArray<{ type: string[]; kingdom: CardKey }>): boolean {
     return cards.some((card) => card.type.includes('ACTION') || card.type.includes('TREASURE'));

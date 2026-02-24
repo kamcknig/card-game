@@ -106,6 +106,8 @@ export class MatchConfigurator {
     this._config.traits ??= [];
     // Ensure ally array exists for downstream configuration logic.
     this._config.allies ??= [];
+    // Ensure prophecy array exists for downstream configuration logic.
+    this._config.prophecies ??= [];
     // Ensure states array exists for downstream configuration logic.
     this._config.states ??= [];
     // Ensure artifacts array exists for downstream configuration logic.
@@ -562,6 +564,7 @@ export class MatchConfigurator {
       if (
         expansionData.events[cardLikeKey] ||
         expansionData.allies[cardLikeKey] ||
+        expansionData.prophecies[cardLikeKey] ||
         expansionData.traits[cardLikeKey] ||
         expansionData.landmarks[cardLikeKey] ||
         expansionData.projects[cardLikeKey] ||
@@ -582,6 +585,7 @@ export class MatchConfigurator {
     const selectedCardLikeKeys = [
       ...(this._config.events ?? []).map((event) => event.cardKey),
       ...(this._config.allies ?? []).map((ally) => ally.cardKey),
+      ...(this._config.prophecies ?? []).map((prophecy) => prophecy.cardKey),
       ...(this._config.landmarks ?? []).map((landmark) => landmark.cardKey),
       ...(this._config.projects ?? []).map((project) => project.cardKey),
       ...(this._config.ways ?? []).map((way) => way.cardKey),
