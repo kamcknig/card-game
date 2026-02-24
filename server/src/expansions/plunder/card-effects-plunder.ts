@@ -85,36 +85,6 @@ const trashAndGainUpToMore = async (
   });
 };
 
-// Returns current empty Supply pile keys (basic + kingdom only).
-const getEmptySupplyPileKeys = (cardEffectArgs: CardEffectFunctionContext): Set<CardKey> => {
-  const pileKeys = new Set<CardKey>();
-  const supplyCards = cardEffectArgs.findCardService.findCards([{ location: ['basicSupply', 'kingdomSupply'] }]);
-  for (const card of supplyCards) {
-    pileKeys.add(getCardPileKey(card) as CardKey);
-  }
-
-  const allConfiguredPileKeys = [
-    ...cardEffectArgs.match.config.basicSupply,
-    ...cardEffectArgs.match.config.kingdomSupply,
-  ].map((pile) => pile.name as CardKey);
-
-  const emptyPileKeys = new Set<CardKey>();
-  for (const pileKey of allConfiguredPileKeys) {
-    const top = cardEffectArgs.findCardService.findTopSupplyCardForPileKey({ pileKey });
-    if (!top) {
-      emptyPileKeys.add(pileKey);
-      continue;
-    }
-
-    const topPileKey = getCardPileKey(top) as CardKey;
-    if (!pileKeys.has(topPileKey)) {
-      emptyPileKeys.add(pileKey);
-    }
-  }
-
-  return emptyPileKeys;
-};
-
 const registerThisTurnTopdeckOnGain = (cardEffectArgs: CardEffectFunctionContext) => {
   const loggerService = cardEffectArgs.loggerService;
   const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: cardEffectArgs.match }) ?? 0;
@@ -1433,30 +1403,22 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
       const searchCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const alreadyEmpty = getEmptySupplyPileKeys(cardEffectArgs);
+      let hasPendingSupplyEmptyTrigger = true;
 
-      const resolveIfNewEmptyOnGain = async (triggeredArgs: any) => {
-        const nowEmpty = getEmptySupplyPileKeys(triggeredArgs as CardEffectFunctionContext);
-        let foundNewEmpty = false;
-        for (const pileKey of nowEmpty) {
-          if (!alreadyEmpty.has(pileKey)) {
-            foundNewEmpty = true;
-            break;
-          }
-        }
-        if (!foundNewEmpty) {
+      const resolveOnSupplyPileEmptied = async (triggeredArgs: {
+        trigger: { args: { emptiedSupplyPileKey?: CardKey } };
+        actionService: CardEffectFunctionContext['actionService'];
+      }) => {
+        if (!triggeredArgs.trigger.args.emptiedSupplyPileKey) {
           return;
         }
 
+        hasPendingSupplyEmptyTrigger = false;
         await triggeredArgs.actionService.run('trashCard', {
           playerId: cardEffectArgs.playerId,
           cardId: searchCard.id,
         });
         await triggeredArgs.actionService.run('gainLoot', { playerId: cardEffectArgs.playerId });
-      };
-
-      const resolveIfNewEmptyOnTrash = async (triggeredArgs: any) => {
-        await resolveIfNewEmptyOnGain(triggeredArgs);
       };
 
       cardEffectArgs.registerDurationEffect(searchCard, {
@@ -1466,7 +1428,9 @@ const cardEffects: CardExpansionModule = {
         allowMultipleInstances: true,
         listeningFor: 'cardGained',
         condition: () => true,
-        triggeredEffectFn: resolveIfNewEmptyOnGain,
+        triggeredEffectFn: resolveOnSupplyPileEmptied,
+      }, {
+        hasActiveEffects: () => hasPendingSupplyEmptyTrigger,
       });
 
       cardEffectArgs.registerDurationEffect(searchCard, {
@@ -1476,7 +1440,9 @@ const cardEffects: CardExpansionModule = {
         allowMultipleInstances: true,
         listeningFor: 'cardTrashed',
         condition: () => true,
-        triggeredEffectFn: resolveIfNewEmptyOnTrash,
+        triggeredEffectFn: resolveOnSupplyPileEmptied,
+      }, {
+        cleanupCount: 0,
       });
     },
   },
@@ -1532,12 +1498,19 @@ const cardEffects: CardExpansionModule = {
         return;
       }
 
-      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
+      const selectedCardId = await cardEffectArgs.promptService.selectSingleCardFromPrompt({
         playerId: cardEffectArgs.playerId,
         prompt: 'You may trash a card from your hand',
-        restrict: hand,
-        count: { kind: 'upTo', count: 1 },
-        optional: true,
+        content: {
+          type: 'select',
+          cardIds: hand,
+          selectCount: 1,
+        },
+        actionButtons: [
+          { label: 'SKIP', action: 1 },
+          { label: 'TRASH', action: 2 },
+        ],
+        validationAction: 2,
       });
 
       if (!selectedCardId) {
@@ -1623,7 +1596,7 @@ const cardEffects: CardExpansionModule = {
           sourceInfo = null;
         }
 
-        if (sourceInfo?.sourceKey !== 'playerDiscard' || sourceInfo.playerId !== playerId) {
+        if (!sourceInfo || sourceInfo.sourceKey !== 'playerDiscard' || sourceInfo.playerId !== playerId) {
           return;
         }
 
@@ -1672,7 +1645,6 @@ const cardEffects: CardExpansionModule = {
   'stowaway': {
     registerLifeCycleMethods: () => ({
       onEnterHand: async (cardEffectArgs, eventArgs) => {
-        const stowaway = cardEffectArgs.cardLibrary.getCard(eventArgs.cardId);
         cardEffectArgs.reactionManager.registerReactionTemplate({
           id: `stowaway:${eventArgs.cardId}:cardGained`,
           listeningFor: 'cardGained',
@@ -1749,56 +1721,76 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
 
       const taskmaster = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: cardEffectArgs.match }) ?? 0;
-      let gainedCostFive = false;
+      let hasPendingStartTurnEffect = false;
 
-      const gainedListenerId = cardEffectArgs.reactionManager.registerReactionTemplate(taskmaster, 'cardGained', {
+      const armTaskmasterForTurn = (args: { match: typeof cardEffectArgs.match; reactionManager: typeof cardEffectArgs.reactionManager }) => {
+        const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: args.match }) ?? 0;
+        let gainedCostFiveThisTurn = false;
+
+        const gainedListenerId = args.reactionManager.registerReactionTemplate(taskmaster, 'cardGained', {
+          playerId: cardEffectArgs.playerId,
+          once: false,
+          compulsory: true,
+          allowMultipleInstances: true,
+          condition: ({ trigger, match }) =>
+            trigger.args.playerId === cardEffectArgs.playerId &&
+            (getCurrentTurnHistoryIndex({ match }) ?? -1) === turnHistoryIndex,
+          triggeredEffectFn: async (triggeredArgs) => {
+            const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
+            const gainedCost = triggeredArgs.cardPriceController.applyRules(gainedCard, {
+              playerId: cardEffectArgs.playerId,
+            }).cost;
+            if ((gainedCost.treasure ?? 0) !== 5 || !!gainedCost.debt || !!gainedCost.potion) {
+              return;
+            }
+
+            gainedCostFiveThisTurn = true;
+            // Mark duration liveness immediately so cleanup retention sees it,
+            // even though this engine resolves endTurn after cleanup starts.
+            hasPendingStartTurnEffect = true;
+          },
+        });
+
+        args.reactionManager.registerSystemTemplate(taskmaster, 'endTurn', {
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
+          triggeredEffectFn: async (triggeredArgs) => {
+            triggeredArgs.reactionManager.unregisterTrigger(gainedListenerId);
+            if (gainedCostFiveThisTurn) {
+              return;
+            }
+
+            hasPendingStartTurnEffect = false;
+          },
+        }, {
+          idSuffix: `taskmaster:${taskmaster.id}:${turnHistoryIndex}`,
+        });
+      };
+
+      armTaskmasterForTurn({ match: cardEffectArgs.match, reactionManager: cardEffectArgs.reactionManager });
+
+      cardEffectArgs.registerDurationEffect(taskmaster, {
         playerId: cardEffectArgs.playerId,
         once: false,
         compulsory: true,
         allowMultipleInstances: true,
-        condition: ({ trigger, match }) =>
-          trigger.args.playerId === cardEffectArgs.playerId &&
-          (getCurrentTurnHistoryIndex({ match }) ?? -1) === turnHistoryIndex,
-        triggeredEffectFn: async (triggeredArgs) => {
-          const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
-          const gainedCost = triggeredArgs.cardPriceController.applyRules(gainedCard, {
-            playerId: cardEffectArgs.playerId,
-          }).cost;
-          if ((gainedCost.treasure ?? 0) === 5 && !gainedCost.debt && !gainedCost.potion) {
-            gainedCostFive = true;
-          }
-        },
-      });
-
-      cardEffectArgs.reactionManager.registerSystemTemplate(taskmaster, 'endTurn', {
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
+        listeningFor: 'startTurn',
         condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
         triggeredEffectFn: async (triggeredArgs) => {
-          triggeredArgs.reactionManager.unregisterTrigger(gainedListenerId);
-          if (!gainedCostFive) {
+          if (!hasPendingStartTurnEffect) {
             return;
           }
 
-          triggeredArgs.reactionManager.registerSystemTemplate(taskmaster, 'startTurn', {
-            playerId: cardEffectArgs.playerId,
-            once: true,
-            compulsory: true,
-            allowMultipleInstances: true,
-            condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-            triggeredEffectFn: async (startTurnArgs) => {
-              await startTurnArgs.actionService.run('gainAction', { count: 1 });
-              await startTurnArgs.actionService.run('gainTreasure', { count: 1 });
-            },
-          }, {
-            idSuffix: `taskmaster:repeat:${taskmaster.id}:${turnHistoryIndex}`,
-          });
+          hasPendingStartTurnEffect = false;
+          await triggeredArgs.actionService.run('gainAction', { count: 1 });
+          await triggeredArgs.actionService.run('gainTreasure', { count: 1 });
+          armTaskmasterForTurn({ match: triggeredArgs.match, reactionManager: triggeredArgs.reactionManager });
         },
       }, {
-        idSuffix: `taskmaster:${taskmaster.id}:${turnHistoryIndex}`,
+        hasActiveEffects: () => hasPendingStartTurnEffect,
       });
     },
   },

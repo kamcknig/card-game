@@ -786,17 +786,26 @@ export class GameActionController implements GameActionDefinitionMap {
         if (actionContext?.source !== undefined || actionContext?.loggingContext?.source !== undefined) {
           return await this.actionService.run(action, ...runArgs);
         }
-        return await this.actionService.run(
-          action,
-          actionArgs,
+        const argsWithSource = [
+          actionArgs as Parameters<GameActionDefinitionMap[K]>[0],
           {
-            ...actionContext,
+            ...(actionContext ?? {}),
             source: args.cardId as CardId,
-          },
-        );
+          }
+        ] as unknown as Parameters<GameActionDefinitionMap[K]>;
+
+        return await this.runActionDirect(action, ...argsWithSource);
       },
     };
     return context;
+  }
+
+  // Executes actionService.run through one generic signature to avoid overload narrowing issues.
+  private async runActionDirect<K extends GameActions>(
+    action: K,
+    ...args: Parameters<GameActionDefinitionMap[K]>
+  ): Promise<GameActionReturnTypeMap[K]> {
+    return await this.actionService.run(action, ...args);
   }
 
   // Resolves action attribution source from context first, then legacy logging fallback.
@@ -979,18 +988,10 @@ export class GameActionController implements GameActionDefinitionMap {
     });
   }
 
-  async gainPotion(args: { count: number }, context?: GameActionContext) {
-    const source = this.resolveActionSource(context);
+  async gainPotion(args: { count: number }, _context?: GameActionContext) {
     this.loggerService.info(`[gainPotion action] gaining ${args.count} potions`);
     this.match.playerPotions += args.count;
     this.match.playerPotions = Math.max(0, this.match.playerPotions);
-
-    this.logManager.addLogEntry({
-      type: 'gainPotion',
-      count: args.count,
-      playerId: getCurrentPlayer(this.match).id,
-      source,
-    });
 
     this.loggerService.info(`[gainPotion action] setting player potions to ${this.match.playerPotions}`);
   }
@@ -1161,7 +1162,7 @@ export class GameActionController implements GameActionDefinitionMap {
     to: CardLocationSpec;
     facing?: CardFacing;
     setAsideSource?: SetAsideSourceInput;
-  }) {
+  }): Promise<{ location: CardLocation; playerId?: PlayerId; emptiedSupplyPileKey?: CardKey } | undefined> {
     // Ensure we are only moving actual cards with moveCard.
     let card: Card;
     if (args.cardId instanceof Card) {
@@ -1216,6 +1217,18 @@ export class GameActionController implements GameActionDefinitionMap {
     }
 
     oldSource?.source.splice(oldSource?.index, 1);
+    let emptiedSupplyPileKey: CardKey | undefined;
+    if (oldSource?.sourceKey === 'basicSupply' || oldSource?.sourceKey === 'kingdomSupply') {
+      const movedPileKey = getCardPileKey(card) as CardKey;
+      const isConfiguredSupplyPile = this.match.config.basicSupply.some((entry) => entry.name === movedPileKey) ||
+        this.match.config.kingdomSupply.some((entry) => entry.name === movedPileKey);
+      if (isConfiguredSupplyPile) {
+        const remainingTopCard = this.findCardService.findTopSupplyCardForPileKey({ pileKey: movedPileKey });
+        if (!remainingTopCard) {
+          emptiedSupplyPileKey = movedPileKey;
+        }
+      }
+    }
     if (oldSource?.sourceKey === 'set-aside') {
       this.clearSetAsideSource(cardId);
     }
@@ -1281,7 +1294,9 @@ export class GameActionController implements GameActionDefinitionMap {
       : `${args.to.location}:${destinationPlayerId}`;
     this.loggerService.debug(`[moveCard action] moved ${card} from ${oldSource?.sourceKey} to ${destinationLog}`);
 
-    return oldSource ? { location: oldSource?.sourceKey!, playerId: oldSource?.playerId } : undefined;
+    return oldSource
+      ? { location: oldSource.sourceKey, playerId: oldSource.playerId, emptiedSupplyPileKey }
+      : undefined;
   }
 
   // Removes a card from the match entirely (used by "to the box"/removed-from-game effects).
@@ -1626,6 +1641,7 @@ export class GameActionController implements GameActionDefinitionMap {
       playerId: args.playerId,
       bought: context?.bought ?? false,
       previousLocation,
+      emptiedSupplyPileKey: previousLocation?.emptiedSupplyPileKey,
       gainedLocation: Array.isArray(args.to.location) ? undefined : {
         location: args.to.location,
         playerId: (
@@ -1988,6 +2004,7 @@ export class GameActionController implements GameActionDefinitionMap {
         playerId: args.playerId,
         cardId: card.id,
         previousLocation: oldLocation,
+        emptiedSupplyPileKey: oldLocation?.emptiedSupplyPileKey,
         source: context?.loggingContext?.source,
       },
     };
@@ -3275,7 +3292,7 @@ export class GameActionController implements GameActionDefinitionMap {
     if (newPhase === 'action') {
       match.playerActions = 1;
       match.playerBuys = 1;
-      match.playerTreasure = 0;
+      match.playerTreasure = 10;
       match.playerPotions = 0;
 
       if (scheduledTurn) {

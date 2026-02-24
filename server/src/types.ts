@@ -291,7 +291,7 @@ export interface GameActionDefinitionMap {
     facing?: CardFacing;
     // Optional source metadata used when the destination is set-aside.
     setAsideSource?: SetAsideSourceInput;
-  }) => Promise<{ location: CardLocation; playerId?: PlayerId } | undefined>;
+  }) => Promise<{ location: CardLocation; playerId?: PlayerId; emptiedSupplyPileKey?: CardKey } | undefined>;
   // Removes a card from the active match (used for "remove from game" / "to the box" effects).
   removeCardFromGame: (args: {
     cardId: CardId | Card;
@@ -715,6 +715,8 @@ export type TriggerEventTypeContext = {
     cardId: CardId;
     playerId: PlayerId;
     previousLocation: { location: CardLocation; playerId?: PlayerId };
+    // Present when this trash emptied a configured Supply pile (basic/kingdom).
+    emptiedSupplyPileKey?: CardKey;
     // Optional source landscape for trigger attribution.
     source?: CardId;
   };
@@ -726,6 +728,8 @@ export type TriggerEventTypeContext = {
     cardId: CardId;
     bought: boolean;
     previousLocation?: { location: CardLocation; playerId?: PlayerId };
+    // Present when this gain emptied a configured Supply pile (basic/kingdom).
+    emptiedSupplyPileKey?: CardKey;
     // Destination where the card was gained before any cardGained reactions resolve.
     gainedLocation?: { location: CardLocation; playerId?: PlayerId };
   };
