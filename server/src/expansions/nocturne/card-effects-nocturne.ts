@@ -493,10 +493,6 @@ const expansion: CardExpansionModule = {
           loggerService.debug(`[crypt startTurn] remaining set aside: ${setAsideTreasureIds.length}`);
 
           // Bring Crypt back into play while it continues to resolve.
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: cryptCard.id,
-            to: { location: 'playArea' },
-          });
 
           let chosenTreasureId = setAsideTreasureIds[0];
           if (setAsideTreasureIds.length > 1) {
@@ -711,10 +707,6 @@ const expansion: CardExpansionModule = {
         condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
         triggeredEffectFn: async (triggeredArgs) => {
           // Return Guardian to the play area before resolving its next-turn effect.
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: guardianCard.id,
-            to: { location: 'playArea' },
-          });
 
           // Stop granting immunity after the start of the next turn.
           cardEffectArgs.reactionManager.unregisterTrigger(`guardian:${guardianCard.id}:cardPlayed`);
@@ -2459,10 +2451,6 @@ const expansion: CardExpansionModule = {
         condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
         triggeredEffectFn: async (triggeredArgs) => {
           // Bring Ghost back to play area for its next-turn effect.
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: ghostCard.id,
-            to: { location: 'playArea' },
-          });
 
           const actionCard = triggeredArgs.cardLibrary.getCard(actionCardId);
           loggerService.debug(`[ghost startTurn effect] playing ${actionCard} twice`);

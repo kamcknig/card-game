@@ -37,6 +37,11 @@ export type RemoveLobbyPlayerResult =
 export class GameLobbySessionCoordinatorService {
   // Shared lobby room name for returning resigned players to lobby updates.
   private static readonly LOBBY_ROOM_NAME = 'lobby';
+  // Tracks per-socket runtime handlers so re-joins replace handlers instead of stacking duplicates.
+  private readonly runtimeSocketHandlersBySocketId = new Map<string, {
+    disconnect: (disconnectReason: unknown) => void;
+    resignMatch: () => void;
+  }>();
 
   constructor(
     private readonly io: Server<ServerListenEvents, ServerEmitEvents>,
@@ -89,6 +94,10 @@ export class GameLobbySessionCoordinatorService {
     socket.join(state.roomName);
     player.connected = true;
     state.socketMap.set(player.id, socket);
+    // Re-joins can occur for the same socket/session while UI retries requests.
+    // Clear previously bound lobby handlers before rebinding to prevent duplicates.
+    this.lobbySocketBindings.unbindPlayerLobbyHandlers(socket);
+    this.lobbySocketBindings.unbindOwnerLobbyHandlers(socket);
 
     socket.emit('setPlayerList', state.players);
     this.io.in(state.roomName).emit('playerConnected', player);
@@ -128,25 +137,61 @@ export class GameLobbySessionCoordinatorService {
       });
     }
 
-    socket.on('disconnect', (disconnectReason) => {
-      this.onPlayerDisconnected(state, {
-        playerId: player.id,
-        socketId: socket.id,
-        reason: disconnectReason.toString(),
-        callbacks,
-      });
-    });
-
-    socket.on('resignMatch', () => {
-      this.onPlayerResigned(state, {
-        playerId: player.id,
-        socketId: socket.id,
-        callbacks,
-      });
-    });
+    this.bindRuntimeSocketHandlers(state, player.id, socket, callbacks);
 
     callbacks.onGameStateChanged?.();
     return { status: 'accepted', playerId: player.id };
+  }
+
+  // Binds per-socket runtime handlers, replacing previous bindings for this socket.
+  private bindRuntimeSocketHandlers(
+    state: GameRuntimeState,
+    playerId: PlayerId,
+    socket: AppSocket,
+    callbacks: GameLobbyCallbacks,
+  ): void {
+    const existingHandlers = this.runtimeSocketHandlersBySocketId.get(socket.id);
+    if (existingHandlers) {
+      socket.off('disconnect', existingHandlers.disconnect);
+      socket.off('resignMatch', existingHandlers.resignMatch);
+    }
+
+    const disconnectHandler = (disconnectReason: unknown) => {
+      this.onPlayerDisconnected(state, {
+        playerId,
+        socketId: socket.id,
+        reason: String(disconnectReason),
+        callbacks,
+      });
+      this.runtimeSocketHandlersBySocketId.delete(socket.id);
+    };
+
+    const resignMatchHandler = () => {
+      this.onPlayerResigned(state, {
+        playerId,
+        socketId: socket.id,
+        callbacks,
+      });
+    };
+
+    socket.on('disconnect', disconnectHandler);
+    socket.on('resignMatch', resignMatchHandler);
+    this.runtimeSocketHandlersBySocketId.set(socket.id, {
+      disconnect: disconnectHandler,
+      resignMatch: resignMatchHandler,
+    });
+  }
+
+  // Removes runtime handlers for one socket when the player leaves this game context.
+  private unbindRuntimeSocketHandlers(socket: AppSocket): void {
+    const existingHandlers = this.runtimeSocketHandlersBySocketId.get(socket.id);
+    if (!existingHandlers) {
+      return;
+    }
+
+    socket.off('disconnect', existingHandlers.disconnect);
+    socket.off('resignMatch', existingHandlers.resignMatch);
+    this.runtimeSocketHandlersBySocketId.delete(socket.id);
   }
 
   // Handles socket disconnect behavior for lobby and active-match contexts.
@@ -250,6 +295,7 @@ export class GameLobbySessionCoordinatorService {
     if (socket) {
       // Remove gameplay listeners first so any in-flight client events from the old match are ignored.
       state.matchController?.detachPlayerGameplaySocketListeners(player.id);
+      this.unbindRuntimeSocketHandlers(socket);
       this.lobbySocketBindings.unbindPlayerLobbyHandlers(socket);
       this.lobbySocketBindings.unbindOwnerLobbyHandlers(socket);
       socket.leave(state.roomName);
@@ -339,6 +385,7 @@ export class GameLobbySessionCoordinatorService {
 
     const socket = state.socketMap.get(player.id);
     if (socket) {
+      this.unbindRuntimeSocketHandlers(socket);
       this.lobbySocketBindings.unbindPlayerLobbyHandlers(socket);
       this.lobbySocketBindings.unbindOwnerLobbyHandlers(socket);
       socket.leave(state.roomName);

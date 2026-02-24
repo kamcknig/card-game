@@ -1049,10 +1049,6 @@ const cardEffects: CardExpansionModule = {
               loggerService.debug(
                 `[garrison startTurn effect] removing ${drawCount} token(s) for +${drawCount} Card(s)`,
               );
-              await triggeredArgs.actionService.run('moveCard', {
-                cardId: garrisonCard.id,
-                to: { location: 'playArea' },
-              });
 
               for (const tokenInstanceId of tokenInstanceIds) {
                 await triggeredArgs.actionService.run('removeToken', { tokenInstanceId }, {
@@ -1248,10 +1244,6 @@ const cardEffects: CardExpansionModule = {
                 allowMultipleInstances: true,
                 condition: ({ trigger }) => trigger.args.playerId === playerId,
                 triggeredEffectFn: async (triggeredArgs) => {
-                  await triggeredArgs.actionService.run('moveCard', {
-                    cardId: strongholdCard.id,
-                    to: { location: 'playArea' },
-                  });
                   await triggeredArgs.actionService.run('drawCard', { playerId, count: 3 });
                 },
               });
@@ -1448,10 +1440,6 @@ const cardEffects: CardExpansionModule = {
         triggeredEffectFn: async (triggeredArgs) => {
           unregisterPlayRestriction();
           loggerService.debug('[warlord effect] removed temporary Action play restriction');
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: warlordCard.id,
-            to: { location: 'playArea' },
-          });
           await triggeredArgs.actionService.run('drawCard', { playerId, count: 2 });
         },
       });
@@ -1908,10 +1896,6 @@ const cardEffects: CardExpansionModule = {
         allowMultipleInstances: true,
         condition: ({ trigger }) => trigger.args.playerId === playerId,
         triggeredEffectFn: async (triggeredArgs) => {
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: contractCard.id,
-            to: { location: 'playArea' },
-          });
 
           const setAside = triggeredArgs.cardSourceController.getSource('set-aside', playerId);
           if (!setAside.includes(selectedSetAsideCardId)) {
@@ -2270,10 +2254,6 @@ const cardEffects: CardExpansionModule = {
         system: true,
         condition: ({ trigger }) => trigger.args.playerId === playerId,
         triggeredEffectFn: async (triggeredArgs) => {
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: importerCard.id,
-            to: { location: 'playArea' },
-          });
 
           const gainableCards = triggeredArgs.findCardService.findCards([
             { location: ['basicSupply', 'kingdomSupply'] },
@@ -2590,10 +2570,6 @@ const cardEffects: CardExpansionModule = {
         allowMultipleInstances: true,
         condition: ({ trigger }) => trigger.args.playerId === playerId,
         triggeredEffectFn: async (triggeredArgs) => {
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: royalGalleryCard.id,
-            to: { location: 'playArea' },
-          });
 
           const setAside = triggeredArgs.cardSourceController.getSource('set-aside', playerId);
           if (!setAside.includes(selectedActionCardId)) {
@@ -3043,10 +3019,6 @@ const cardEffects: CardExpansionModule = {
         allowMultipleInstances: true,
         condition: ({ trigger }) => trigger.args.playerId === playerId,
         triggeredEffectFn: async (triggeredArgs) => {
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: voyageCard.id,
-            to: { location: 'playArea' },
-          });
 
           const currentTurnStats = triggeredArgs.match.stats.turns[triggeredArgs.match.stats.turns.length - 1];
           const isVoyageExtraTurn = currentTurnStats?.playerId === playerId && currentTurnStats?.sourceId === voyageCard.id;

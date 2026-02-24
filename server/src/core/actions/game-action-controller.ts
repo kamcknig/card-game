@@ -572,38 +572,116 @@ export class GameActionController implements GameActionDefinitionMap {
   ): string[] {
     // Track trigger ids to enable cleanup when a card leaves play.
     const registeredTriggerIds: string[] = [];
-    // Register cleanup handling to keep duration cards from being discarded.
+    // Register cleanup handling to keep duration cards from being discarded while future effects remain.
+    // `hasActiveEffects` is the new dynamic liveness contract: it is evaluated every owner cleanup.
+    // Legacy cards continue to use cleanupCount when hasActiveEffects is not provided.
+    const hasActiveEffects = options?.hasActiveEffects;
     const cleanupCount = Math.max(0, options?.cleanupCount ?? 1);
-    if (cleanupCount > 0) {
+    const useLegacyCleanupCount = hasActiveEffects === undefined;
+    // We need a cleanup-hold trigger whenever:
+    // 1) dynamic liveness is configured, or
+    // 2) legacy cleanup countdown indicates the card should stay at least one cleanup.
+    const shouldRegisterCleanupHandler = hasActiveEffects !== undefined || cleanupCount > 0;
+    if (shouldRegisterCleanupHandler) {
       let remainingCleanups = cleanupCount;
       const systemTriggerId = context.reactionManager.registerSystemTemplate(card, 'startTurnPhase', {
         playerId: context.playerId,
-        // Allow multi-turn duration cards to stay in play across multiple cleanups.
-        once: cleanupCount === 1,
+        // Legacy single-cleanup durations can use one-shot cleanup triggers.
+        // Dynamic liveness must re-evaluate each owner cleanup, so it cannot be one-shot.
+        once: useLegacyCleanupCount && cleanupCount === 1,
         allowMultipleInstances: true,
         condition: async (conditionArgs) => {
+          // This trigger listens to every phase start. Restrict to cleanup only.
           const isCleanup = getTurnPhase(conditionArgs.trigger.args.phaseIndex) === 'cleanup';
-          return isCleanup && remainingCleanups > 0;
+          if (!isCleanup) {
+            return false;
+          }
+
+          // Duration retention should only run during the duration owner's cleanup.
+          // Other players' cleanups must not change this card's retention state.
+          const currentPlayer = getCurrentPlayer(conditionArgs.match);
+          if (currentPlayer.id !== context.playerId) {
+            return false;
+          }
+
+          // Dynamic liveness always re-checks on each owner cleanup.
+          if (!useLegacyCleanupCount) {
+            return true;
+          }
+
+          // Legacy path: only continue while countdown has not exhausted.
+          return remainingCleanups > 0;
         },
         triggeredEffectFn: async (triggeredArgs) => {
-          this.loggerService.debug(
-            `[${card.cardKey} duration effect] moving to activeDuration zone`,
-          );
+          // Guard against stale triggers if the card already left play or changed owner.
+          // In that case, remove this hold trigger and stop.
+          let sourceInfo: { sourceKey: CardLocation; playerId?: PlayerId } | null = null;
+          try {
+            sourceInfo = triggeredArgs.cardSourceController.findCardSource(card.id);
+          } catch {
+            sourceInfo = null;
+          }
 
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: card.id,
-            to: { location: 'activeDuration' },
-          });
+          const isInPlayZone = sourceInfo?.sourceKey === 'playArea' || sourceInfo?.sourceKey === 'activeDuration';
+          if (!isInPlayZone || card.owner !== context.playerId) {
+            triggeredArgs.reactionManager.unregisterTrigger(triggeredArgs.reaction.id);
+            return;
+          }
 
-          // Decrement remaining cleanups and unregister when finished.
-          remainingCleanups = Math.max(0, remainingCleanups - 1);
-          if (remainingCleanups <= 0) {
-            if (options?.autoRemoveTriggersOnExhaust) {
+          // Resolve "does this duration still have future work?".
+          // Dynamic path uses hasActiveEffects; legacy path uses remaining cleanup count.
+          let shouldStayActive = false;
+          if (hasActiveEffects) {
+            shouldStayActive = await hasActiveEffects(context);
+          } else {
+            shouldStayActive = remainingCleanups > 0;
+          }
+
+          // If no future effects remain, stop duration retention.
+          // The normal cleanup flow will discard from playArea this turn.
+          if (!shouldStayActive) {
+            // If dynamic liveness is used, this cleanup-hold trigger is one of the duration triggers
+            // and we want centralized cleanup/unregistration consistency.
+            if (hasActiveEffects || options?.autoRemoveTriggersOnExhaust) {
               triggeredArgs.reactionManager.cleanupDurationTriggers(card.id);
             } else {
               triggeredArgs.reactionManager.unregisterTrigger(triggeredArgs.reaction.id);
             }
+            return;
           }
+
+          // Keep the card in the active-duration zone across cleanup boundaries.
+          // Skip move if it's already there to avoid unnecessary reordering/log noise.
+          if (sourceInfo?.sourceKey !== 'activeDuration') {
+            this.loggerService.debug(
+              `[${card.cardKey} duration effect] moving to activeDuration zone`,
+            );
+
+            await triggeredArgs.actionService.run('moveCard', {
+              cardId: card.id,
+              to: { location: 'activeDuration' },
+            });
+          }
+
+          // Dynamic liveness does not use countdown depletion.
+          // Card remains retained until hasActiveEffects returns false.
+          if (!useLegacyCleanupCount) {
+            return;
+          }
+
+          // Decrement legacy cleanup countdown and unregister when exhausted.
+          remainingCleanups = Math.max(0, remainingCleanups - 1);
+          if (remainingCleanups > 0) {
+            return;
+          }
+
+          if (options?.autoRemoveTriggersOnExhaust) {
+            triggeredArgs.reactionManager.cleanupDurationTriggers(card.id);
+            return;
+          }
+
+          // Legacy minimal cleanup: only remove this hold trigger.
+          triggeredArgs.reactionManager.unregisterTrigger(triggeredArgs.reaction.id);
         },
       }, {
         idSuffix: options?.idSuffix ? `${options.idSuffix}:durationCleanup` : undefined,
@@ -3182,6 +3260,9 @@ export class GameActionController implements GameActionDefinitionMap {
         `[nextPhase action] new round: ${match.roundNumber}, turn ${match.turnNumber} for ${currentPlayer}`,
       );
 
+      // Duration cards should be in play during their owner's turn while still active.
+      await this.restoreActiveDurationCardsToPlayArea(currentPlayer.id);
+
       const startTurnTrigger = new ReactionTrigger('startTurn', {
         playerId: match.players[match.currentPlayerTurnIndex].id,
         turnNumber: match.turnNumber,
@@ -3209,6 +3290,19 @@ export class GameActionController implements GameActionDefinitionMap {
   private async runStartTurnPhaseTrigger(phaseIndex: number) {
     const trigger = new ReactionTrigger('startTurnPhase', { phaseIndex });
     await this.reactionManager.runTrigger({ trigger });
+  }
+
+  // Moves active Duration cards for one player from activeDuration back to playArea.
+  private async restoreActiveDurationCardsToPlayArea(playerId: PlayerId) {
+    const activeDuration = this.cardSourceController.getSource('activeDuration')
+      .filter((cardId) => this.cardLibrary.getCard(cardId).owner === playerId);
+
+    for (const cardId of activeDuration) {
+      await this.moveCard({
+        cardId,
+        to: { location: 'playArea' },
+      });
+    }
   }
 
   private async handlePhaseEntryEffects(

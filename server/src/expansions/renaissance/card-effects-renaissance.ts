@@ -296,10 +296,6 @@ const expansion: CardExpansionModule = {
               condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
               triggeredEffectFn: async (startTurnArgs) => {
                 // Move Cargo Ship back to playArea so it discards normally in this turn's cleanup.
-                await startTurnArgs.actionService.run('moveCard', {
-                  cardId: cargoShipCard.id,
-                  to: { location: 'playArea' },
-                });
 
                 if (setAsideCardId === undefined) {
                   loggerService.debug('[cargo-ship startTurn effect] no card was set aside');
@@ -1072,10 +1068,6 @@ const expansion: CardExpansionModule = {
           condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
           triggeredEffectFn: async (triggeredArgs) => {
             loggerService.debug('[research startTurn effect] returning Research to play area');
-            await triggeredArgs.actionService.run('moveCard', {
-              cardId: researchCard.id,
-              to: { location: 'playArea' },
-            });
 
             for (const setAsideCardId of setAsideCardIds) {
               const setAside = triggeredArgs.cardSourceController.getSource('set-aside', cardEffectArgs.playerId);

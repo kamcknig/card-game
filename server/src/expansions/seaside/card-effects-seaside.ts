@@ -32,10 +32,6 @@ const expansion: CardExpansionModule = {
           return trigger.args.playerId === args.playerId;
         },
         triggeredEffectFn: async ({ loggerService, actionService }) => {
-          await actionService.run('moveCard', {
-            cardId: args.cardId,
-            to: { location: 'playArea' },
-          });
           loggerService.debug(`[SEASIDE TRIGGERED EFFECT] gaining 1 treasure...`);
           await actionService.run('gainTreasure', { count: 1 }, { loggingContext: { source: args.cardId } });
 
@@ -99,10 +95,6 @@ const expansion: CardExpansionModule = {
         compulsory: true,
         triggeredEffectFn: async (triggeredArgs) => {
           loggerService.debug(`[BLOCKADE TRIGGERED EFFECT] moving previously selected card to hand...`);
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: blockadeCard.id,
-            to: { location: 'playArea' },
-          });
           await triggeredArgs.actionService.run('moveCard', {
             cardId: gainedCardId,
             toPlayerId: args.playerId,
@@ -169,10 +161,6 @@ const expansion: CardExpansionModule = {
         listeningFor: 'startTurn',
         condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
         triggeredEffectFn: async (triggeredArgs) => {
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: caravanCard.id,
-            to: { location: 'playArea' },
-          });
           loggerService.debug(`[CARAVAN TRIGGERED EFFECT] drawing a card...`);
           await triggeredArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId }, {
             loggingContext: { source: cardEffectArgs.cardId },
@@ -203,10 +191,6 @@ const expansion: CardExpansionModule = {
         listeningFor: 'startTurn',
         condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
         triggeredEffectFn: async (triggeredArgs) => {
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: corsairCard.id,
-            to: { location: 'playArea' },
-          });
           loggerService.debug(`[CORSAIR TRIGGERED EFFECT] drawing card...`);
           await triggeredArgs.actionService.run('drawCard', {
             playerId: cardEffectArgs.playerId,
@@ -315,10 +299,6 @@ const expansion: CardExpansionModule = {
         listeningFor: 'startTurn',
         condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
         triggeredEffectFn: async (triggeredArgs) => {
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: fishingVillageCard.id,
-            to: { location: 'playArea' },
-          });
           loggerService.debug(`[fishing village triggered effect] gaining 1 action...`);
           await triggeredArgs.actionService.run('gainAction', { count: 1 }, {
             loggingContext: { source: cardEffectArgs.cardId },
@@ -372,10 +352,6 @@ const expansion: CardExpansionModule = {
         triggeredEffectFn: async (triggerEffectArgs) => {
           loggerService.debug(`[haven triggered effect] moving selected card to hand...`);
 
-          await triggerEffectArgs.actionService.run('moveCard', {
-            cardId: havenCard.id,
-            to: { location: 'playArea' },
-          });
           await triggerEffectArgs.actionService.run('moveCard', {
             cardId,
             toPlayerId: cardEffectArgs.playerId,
@@ -456,10 +432,6 @@ const expansion: CardExpansionModule = {
         allowMultipleInstances: true,
         compulsory: true,
         triggeredEffectFn: async (triggeredArgs) => {
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: lighthouseCard.id,
-            to: { location: 'playArea' },
-          });
           args.reactionManager.unregisterTrigger(`lighthouse:${args.cardId}:cardPlayed`);
           await triggeredArgs.actionService.run('gainTreasure', { count: 1 }, {
             loggingContext: { source: args.cardId },
@@ -587,10 +559,6 @@ const expansion: CardExpansionModule = {
         listeningFor: 'startTurn',
         condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
         triggeredEffectFn: async (triggeredArgs) => {
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: merchantShipCard.id,
-            to: { location: 'playArea' },
-          });
           loggerService.debug(`[merchant ship triggered effect] gaining 2 treasure...`);
           await triggeredArgs.actionService.run('gainTreasure', { count: 2 }, {
             loggingContext: { source: cardEffectArgs.cardId },
@@ -618,10 +586,6 @@ const expansion: CardExpansionModule = {
         listeningFor: 'startTurn',
         condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
         triggeredEffectFn: async (triggeredArgs) => {
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: monkeyCard.id,
-            to: { location: 'playArea' },
-          });
           loggerService.debug(`[monkey triggered effect] drawing card at start of turn...`);
           await triggeredArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId }, {
             loggingContext: { source: cardEffectArgs.cardId },
@@ -699,10 +663,6 @@ const expansion: CardExpansionModule = {
         allowMultipleInstances: true,
         condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
         triggeredEffectFn: async (triggeredArgs) => {
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: outpostCard.id,
-            to: { location: 'playArea' },
-          });
         },
       });
     },
@@ -752,10 +712,6 @@ const expansion: CardExpansionModule = {
             reaction,
           }) => trigger.args.playerId === playerId && reaction.id === id,
           triggeredEffectFn: async (triggeredArgs) => {
-            await triggeredArgs.actionService.run('moveCard', {
-              cardId: pirateCard.id,
-              to: { location: 'playArea' },
-            });
             loggerService.debug(`[pirate triggered effect] prompting user to select treasure costing up to 6...`);
             const selectedCardId = await triggeredArgs.actionService.run('selectSingleCard', {
               prompt: 'Gain card',
@@ -908,10 +864,6 @@ const expansion: CardExpansionModule = {
         allowMultipleInstances: true,
         condition: ({ trigger }) => trigger.args.playerId === args.playerId,
         triggeredEffectFn: async (triggeredArgs) => {
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: sailorCard.id,
-            to: { location: 'playArea' },
-          });
           loggerService.debug(`[sailor triggered effect] gaining 2 treasure...`);
           await triggeredArgs.actionService.run('gainTreasure', { count: 2 }, {
             loggingContext: { source: args.cardId },
@@ -1032,10 +984,6 @@ const expansion: CardExpansionModule = {
           return conditionArgs.trigger.args.playerId === args.playerId;
         },
         triggeredEffectFn: async (triggerArgs) => {
-          await triggerArgs.actionService.run('moveCard', {
-            cardId: seaWitchCard.id,
-            to: { location: 'playArea' },
-          });
           loggerService.debug(`[sea-witch triggered effect] drawing 2 cards...`);
           await triggerArgs.actionService.run('drawCard', {
             playerId: args.playerId,
@@ -1191,10 +1139,6 @@ const expansion: CardExpansionModule = {
           return conditionArgs.trigger.args.playerId === args.playerId;
         },
         triggeredEffectFn: async (triggerArgs) => {
-          await triggerArgs.actionService.run('moveCard', {
-            cardId: tacticianCard.id,
-            to: { location: 'playArea' },
-          });
           loggerService.warn(`[tactician triggered effect] drawing 5 cards`);
           await triggerArgs.actionService.run('drawCard', {
             count: 5,
@@ -1230,10 +1174,6 @@ const expansion: CardExpansionModule = {
         allowMultipleInstances: true,
         condition: (conditionArgs) => conditionArgs.trigger.args.playerId === args.playerId,
         triggeredEffectFn: async (triggerArgs) => {
-          await triggerArgs.actionService.run('moveCard', {
-            cardId: tidePoolsCard.id,
-            to: { location: 'playArea' },
-          });
           loggerService.debug(`[tide pools triggered effect] selecting two cards to discard`);
           const selectedCardIds = await triggerArgs.actionService.run('selectCard', {
             playerId: args.playerId,
@@ -1385,10 +1325,6 @@ const expansion: CardExpansionModule = {
           return conditionArgs.trigger.args.playerId === args.playerId;
         },
         triggeredEffectFn: async (triggerArgs) => {
-          await triggerArgs.actionService.run('moveCard', {
-            cardId: wharfCard.id,
-            to: { location: 'playArea' },
-          });
           loggerService.debug(`[wharf triggered effect] drawing 2 cards`);
           await triggerArgs.actionService.run('drawCard', {
             playerId: args.playerId,

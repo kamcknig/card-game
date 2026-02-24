@@ -32,6 +32,7 @@ const RICH_TRAIT_CARD_KEY: CardKey = 'rich';
 const SHY_TRAIT_CARD_KEY: CardKey = 'shy';
 const TIRELESS_TRAIT_CARD_KEY: CardKey = 'tireless';
 const PROVINCE_PILE_KEY: CardKey = 'province';
+const SHAMAN_CARD_KEY: CardKey = 'shaman';
 
 // Returns all runtime trait instances for the given trait key.
 const getRuntimeTraitsByCardKey = (
@@ -1358,6 +1359,66 @@ const registerTirelessTraitEvents = (
   });
 };
 
+// Registers Shaman's global setup rule: each player's start turn gains from trash up to $6.
+const registerShamanEvents = (
+  registrar: GameEventRegistrar,
+  config: ComputedMatchConfiguration,
+) => {
+  const hasShamanPile = config.kingdomSupply.some((supply) =>
+    supply.cards.some((card) => getCardPileKey(card) === SHAMAN_CARD_KEY)
+  );
+  if (!hasShamanPile) {
+    return;
+  }
+
+  registrar('onGameStartSetup', async (args) => {
+    const shamanCardInMatch = args.findCardService.findCards([{ location: 'kingdomSupply' }]).find((card) =>
+      card.cardKey === SHAMAN_CARD_KEY
+    );
+    if (!shamanCardInMatch) {
+      return;
+    }
+
+    for (const player of args.match.players) {
+      args.reactionManager.registerSystemTemplate(shamanCardInMatch, 'startTurn', {
+        playerId: player.id,
+        once: false,
+        compulsory: true,
+        allowMultipleInstances: false,
+        condition: ({ trigger }) => trigger.args.playerId === player.id,
+        triggeredEffectFn: async (triggeredArgs) => {
+          const gainableFromTrash = triggeredArgs.findCardService.findCards([{ location: 'trash' }]).filter((card) => {
+            const cost = triggeredArgs.cardPriceController.applyRules(card, { playerId: player.id }).cost;
+            return (cost.treasure ?? 0) <= 6 && !cost.debt && !cost.potion;
+          });
+
+          if (!gainableFromTrash.length) {
+            return;
+          }
+
+          const selectedCardId = await triggeredArgs.actionService.run('selectSingleCard', {
+            playerId: player.id,
+            prompt: 'Gain a card from the trash costing up to $6 (Shaman)',
+            restrict: gainableFromTrash.map((card) => card.id),
+            count: 1,
+          });
+          if (!selectedCardId) {
+            return;
+          }
+
+          await triggeredArgs.actionService.run('gainCard', {
+            playerId: player.id,
+            cardId: selectedCardId,
+            to: { location: 'playerDiscard' },
+          });
+        },
+      }, {
+        idSuffix: `shaman:startTurn:${player.id}`,
+      });
+    }
+  });
+};
+
 const configurator: ExpansionConfiguratorFactory = () => {
   return async (args) => {
     const hasLootPile = args.config.nonSupply?.some((supply) => supply.name === LOOT_PILE_NAME) ?? false;
@@ -1412,6 +1473,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   registerRecklessTraitEvents(registrar, config);
   registerRichTraitEvents(registrar, config);
   registerShyTraitEvents(registrar, config);
+  registerShamanEvents(registrar, config);
   registerTirelessTraitEvents(registrar, config);
 };
 

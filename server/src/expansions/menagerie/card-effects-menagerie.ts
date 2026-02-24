@@ -110,10 +110,6 @@ const expansion: CardExpansionModule = {
           trigger.args.playerId === cardEffectArgs.playerId && reaction.id === delayedTriggerId,
         triggeredEffectFn: async (triggeredArgs) => {
           // Move the duration card back into play as its next-turn effect resolves.
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: bargeCard.id,
-            to: { location: 'playArea' },
-          });
 
           await triggeredArgs.actionService.run('drawCard', {
             playerId: cardEffectArgs.playerId,
@@ -827,10 +823,6 @@ const expansion: CardExpansionModule = {
         condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
         triggeredEffectFn: async (triggeredArgs) => {
           triggeredArgs.reactionManager.unregisterTrigger(gainAttackTriggerId);
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: gatekeeperCard.id,
-            to: { location: 'playArea' },
-          });
           await triggeredArgs.actionService.run('gainTreasure', { count: 3 });
         },
       });
@@ -1271,10 +1263,6 @@ const expansion: CardExpansionModule = {
           loggerService.debug('[mastermind startTurn effect] resolving delayed triple-play');
 
           // Return Mastermind to play area while resolving its start-turn effect.
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: mastermindCard.id,
-            to: { location: 'playArea' },
-          });
 
           const actionCardIdsInHand = triggeredArgs.cardSourceController.getSource(
             'playerHand',
@@ -1969,10 +1957,6 @@ const expansion: CardExpansionModule = {
         allowMultipleInstances: true,
         condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
         triggeredEffectFn: async (triggeredArgs) => {
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: villageGreenCard.id,
-            to: { location: 'playArea' },
-          });
 
           await triggeredArgs.actionService.run('drawCard', {
             playerId: cardEffectArgs.playerId,

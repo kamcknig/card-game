@@ -289,6 +289,14 @@ export class ReactionManager {
             );
             const systemContext = this.buildTriggeredEffectContext(trigger, systemReaction);
             await this.runReaction(systemReaction, systemContext, reactionContext);
+
+            // System reactions are still single-pass for a given trigger dispatch.
+            // Without this, non-once system reactions can be selected again by the
+            // next while-loop iteration and loop forever inside the same trigger run.
+            usedReactionIds.add(systemReaction.id);
+            if (!systemReaction.allowMultipleInstances) {
+              blockedCardKeys.add(systemReaction.getSourceKey());
+            }
           }
 
           continue;

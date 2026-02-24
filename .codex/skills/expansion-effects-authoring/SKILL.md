@@ -66,6 +66,8 @@ Before introducing any new helper function, apply this gate in order:
 - No hidden state mutation outside approved controllers/actions.
 - Do not create reaction/trigger IDs manually unless absolutely necessary.
 - Follow Dominion Lose Track and Stop-Moving rules.
+- NEVER use `select*` actions (`selectSingleCard`, `selectCard`, etc.) when the player would be unable to see the candidate cards on the board (for example, cards currently in deck/hidden zones).
+- In hidden/invisible-card cases, use a prompt-based action (`userPrompt` / `promptService`) that explicitly displays the candidate cards and choice UI.
 - Prefer pile-key semantics over card-key semantics for supply-top effects (split pile safe).
 - Keep comments for all new code.
 - Do not remove pre-existing comments.

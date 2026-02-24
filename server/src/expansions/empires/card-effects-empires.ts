@@ -257,10 +257,6 @@ const expansion: CardExpansionModule = {
           loggerService.debug(
             `[archive triggered effect] moving Archive back to play area...`,
           );
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId,
-            to: { location: 'playArea' },
-          });
 
           await moveSetAsideCardToHand(triggeredArgs);
 

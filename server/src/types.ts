@@ -543,6 +543,9 @@ export type DurationReactionTemplate<T extends TriggerEventType> =
 
 // Options for duration cards that persist across multiple cleanup phases.
 export type DurationEffectOptions = {
+  // Dynamic liveness predicate: return true when the Duration still has future effects.
+  hasActiveEffects?: (context: CardEffectFunctionContext) => boolean | Promise<boolean>;
+  /** @deprecated Prefer hasActiveEffects for dynamic duration liveness. */
   cleanupCount?: number;
   // When true, remove all registered duration triggers once cleanup is exhausted.
   autoRemoveTriggersOnExhaust?: boolean;

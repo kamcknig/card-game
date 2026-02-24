@@ -203,10 +203,6 @@ const expansion: CardExpansionModule = {
         triggeredEffectFn: async (triggeredArgs) => {
           loggerService.debug(`[amulet startTurn effect] re-running decision fn`);
 
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: card.id,
-            to: { location: 'playArea' },
-          });
 
           await decision();
         },
@@ -377,10 +373,6 @@ const expansion: CardExpansionModule = {
         },
         triggeredEffectFn: async (triggeredArgs) => {
           // Move the duration card back to play and apply the next-turn bonuses.
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: card.id,
-            to: { location: 'playArea' },
-          });
           loggerService.debug(`[bridge-troll startTurn effect] gaining 1 buy`);
           await triggeredArgs.actionService.run('gainBuy', { count: 1 });
           loggerService.debug(
@@ -504,10 +496,6 @@ const expansion: CardExpansionModule = {
           return true;
         },
         triggeredEffectFn: async (triggeredArgs) => {
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: card.id,
-            to: { location: 'playArea' },
-          });
           loggerService.debug(`[caravan-guard startTurn effect] gaining 1 treasure`);
           await triggeredArgs.actionService.run('gainTreasure', {
             count: 1,
@@ -812,10 +800,6 @@ const expansion: CardExpansionModule = {
         },
         triggeredEffectFn: async (triggeredArgs) => {
           loggerService.debug(`[dungeon startTurn effect] running`);
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: card.id,
-            to: { location: 'playArea' },
-          });
           await effects();
         },
       });
@@ -1014,10 +998,6 @@ const expansion: CardExpansionModule = {
             `[gear startTurn effect] moving ${selectedCardIds.length} to hand`,
           );
 
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: thisCard.id,
-            to: { location: 'playArea' },
-          });
 
           for (const selectedCardId of selectedCardIds) {
             await cardEffectArgs.actionService.run('moveCard', {
@@ -1356,10 +1336,6 @@ const expansion: CardExpansionModule = {
           return true;
         },
         triggeredEffectFn: async (triggeredArgs) => {
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: thisCard.id,
-            to: { location: 'playArea' },
-          });
 
           triggeredArgs.reactionManager.unregisterTrigger(
             `haunted-woods:${cardEffectArgs.cardId}:cardGained`,
@@ -2121,10 +2097,6 @@ const expansion: CardExpansionModule = {
                   loggerService.debug(
                     `[royal-carriage duration effect] returning ${thisCard} to playArea`,
                   );
-                  await durationArgs.actionService.run('moveCard', {
-                    cardId: thisCard.id,
-                    to: { location: 'playArea' },
-                  });
                 },
               });
             }
@@ -2317,10 +2289,6 @@ const expansion: CardExpansionModule = {
             cardEffectArgs.playerId;
         },
         triggeredEffectFn: async (triggeredArgs) => {
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: thisCard.id,
-            to: { location: 'playArea' },
-          });
 
           for (const id of ids) {
             triggeredArgs.reactionManager.unregisterTrigger(id);

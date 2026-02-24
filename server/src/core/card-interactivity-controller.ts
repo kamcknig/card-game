@@ -68,8 +68,19 @@ export class CardInteractivityController {
     }
 
     const match = this.match;
+    if (match.players.length < 1) {
+      this.loggerService.debug('[card interactivity] no players in match, skipping interactivity recompute');
+      match.selectableCards = {};
+      return;
+    }
 
     const currentPlayer = match.players[match.currentPlayerTurnIndex];
+    if (!currentPlayer) {
+      this.loggerService.debug('[card interactivity] current player missing, skipping interactivity recompute');
+      match.selectableCards = {};
+      return;
+    }
+
     const turnPhase = TurnPhaseOrderValues[match.turnPhaseIndex];
     // Debt prevents buying but should not block treasure play.
     const currentDebt = match.debt?.[currentPlayer.id] ?? 0;
