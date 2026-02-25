@@ -109,6 +109,7 @@
       "ACTION",
       "ATTACK"
     ],
+    "targetScheme": "ALL_OTHER",
     "abilityText": "+3 Cards\nEach other player gains a Curse and may trash a Curse from their hand."
   },
   "patron": {
@@ -232,6 +233,7 @@
       "ACTION",
       "ATTACK"
     ],
+    "targetScheme": "ALL_OTHER",
     "abilityText": "+2 Coffers\nEach other player with 5 or more cards in hand discards one costing $2 or more (or reveals they can't)."
   },
   "scepter": {
@@ -250,7 +252,9 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["ARTIFACT"],
+    "type": [
+      "ARTIFACT"
+    ],
     "abilityText": "When drawing your hand, +1 Card."
   },
   "horn": {
@@ -258,7 +262,9 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["ARTIFACT"],
+    "type": [
+      "ARTIFACT"
+    ],
     "abilityText": "Once per turn, when you discard a Border Guard from play, you may put it onto your deck."
   },
   "key": {
@@ -266,7 +272,9 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["ARTIFACT"],
+    "type": [
+      "ARTIFACT"
+    ],
     "abilityText": "At the start of your turn, +$1."
   },
   "lantern": {
@@ -274,7 +282,9 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["ARTIFACT"],
+    "type": [
+      "ARTIFACT"
+    ],
     "abilityText": "Border Guards you play reveal 3 cards and discard 2. (It takes all 3 being Actions to take the Horn.)"
   },
   "treasure-chest": {
@@ -282,7 +292,9 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["ARTIFACT"],
+    "type": [
+      "ARTIFACT"
+    ],
     "abilityText": "At the start of your Buy phase, gain a Gold."
   }
 }

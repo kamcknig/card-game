@@ -124,7 +124,7 @@
   },
   "gatekeeper": {
     "cost": {
-      "treasure": 6
+      "treasure": 5
     },
     "type": [
       "ACTION",

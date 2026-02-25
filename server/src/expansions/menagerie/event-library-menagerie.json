@@ -25,7 +25,7 @@
   },
   "delay": {
     "cost": {
-      "treasure": 2
+      "treasure": 0
     },
     "abilityText": "You may set aside an Action card from your hand. At the start of your next turn, play it."
   },

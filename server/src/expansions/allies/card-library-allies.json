@@ -118,6 +118,7 @@
           "VICTORY",
           "CLASH"
         ],
+        "victoryPoints": 0,
         "abilityText": "Worth 1VP per differently named Victory card you have.\nWhen you gain this, gain a Gold per empty Supply pile."
       }
     ]

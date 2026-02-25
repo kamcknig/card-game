@@ -11,7 +11,7 @@
   },
   "capital": {
     "cost": {
-      "treasure": 6
+      "treasure": 5
     },
     "type": [
       "TREASURE"
@@ -186,6 +186,15 @@
     ],
     "abilityText": "Choose one: +1 Buy and +2 Treasure; or the next time you gain a card this turn, you may also gain a differently named card with the same cost."
   },
+  "city-quarter": {
+    "cardName": "City Quarter",
+    "abilityText": "Reveal your hand. +1 Card per Action card revealed",
+    "cost": {
+      "treasure": 0,
+      "debt": 8
+    },
+    "type": ["ACTION"]
+  },
   "crown": {
     "type": [
       "ACTION",
@@ -273,7 +282,9 @@
   "gladiator/fortune": {
     "pile": {
       "randomizer": "gladiator/fortune",
-      "type": ["ACTION"],
+      "type": [
+        "ACTION"
+      ],
       "cost": {
         "treasure": 3
       }
@@ -281,7 +292,9 @@
     "cards": [
       {
         "cardKey": "gladiator",
-        "type": ["ACTION"],
+        "type": [
+          "ACTION"
+        ],
         "cost": {
           "treasure": 3
         },
@@ -289,7 +302,9 @@
       },
       {
         "cardKey": "fortune",
-        "type": ["TREASURE"],
+        "type": [
+          "TREASURE"
+        ],
         "cost": {
           "treasure": 8,
           "debt": 8

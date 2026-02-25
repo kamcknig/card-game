@@ -1,0 +1,63 @@
+{
+  "amass": {
+    "cost": {
+      "treasure": 2
+    },
+    "abilityText": "If you have no Action cards in play, gain an Action card costing up to $5."
+  },
+  "asceticism": {
+    "cost": {
+      "treasure": 2
+    },
+    "abilityText": "Pay any amount of $ to trash that many cards from your hand."
+  },
+  "continue": {
+    "cost": {
+      "treasure": 0,
+      "debt": 8
+    },
+    "abilityText": "Once per turn: Gain a non-Attack Action card costing up to $4. Return to your Action phase and play it. +1 Action and +1 Buy."
+  },
+  "credit": {
+    "cost": {
+      "treasure": 2
+    },
+    "abilityText": "Gain an Action or Treasure costing up to $8. +D equal to its cost."
+  },
+  "foresight": {
+    "cost": {
+      "treasure": 2
+    },
+    "abilityText": "Reveal cards from your deck until revealing an Action. Set it aside and discard the rest. Put it into your hand at end of turn."
+  },
+  "gather": {
+    "cost": {
+      "treasure": 7
+    },
+    "abilityText": "Gain a card costing exactly $3, a card costing exactly $4, and a card costing exactly $5."
+  },
+  "kintsugi": {
+    "cost": {
+      "treasure": 3
+    },
+    "abilityText": "Trash a card from your hand. If you've gained a Gold this game, gain a card costing up to $2 more than the trashed card."
+  },
+  "practice": {
+    "cost": {
+      "treasure": 3
+    },
+    "abilityText": "You may play an Action card from your hand twice."
+  },
+  "receive-tribute": {
+    "cost": {
+      "treasure": 5
+    },
+    "abilityText": "If you've gained at least 3 cards this turn, gain up to 3 differently named Action cards you don't have copies of in play."
+  },
+  "sea-trade": {
+    "cost": {
+      "treasure": 4
+    },
+    "abilityText": "+1 Card per Action card you have in play. Trash up to that many cards from your hand."
+  }
+}
