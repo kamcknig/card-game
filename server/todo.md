@@ -38,6 +38,7 @@
   piles for this
 
 # Higher priority
+
 - stop following rule
   - need to figure how to implement this across entire app rather than in each place.
 - logging is not nearly detailed enough
@@ -86,15 +87,22 @@ ferryman
 - hermit (madman kingdom)
 - urchin (mercenary kingdom)
 
-
 ## cards yet to implement
 
 ### empires
+
 - enchantress - need to replace a cards effects instead of just adding to them
   like we currently can.
 
 ### rising sun
-- divine-wind
+
+- divine-wind (prophecy)
+- alley
+- fishmonger
+- ninja
+- ronin
+- tanuki
 
 ### alchemy
-- posession
+
+- possession
