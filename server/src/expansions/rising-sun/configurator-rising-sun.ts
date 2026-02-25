@@ -17,6 +17,7 @@ import { getConfiguredSupplyPileKeys } from '../../utils/get-configured-supply-p
 import { getAvailableKingdomRandomizerGroups } from '../../utils/get-available-kingdom-randomizer-groups.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
+import { getCurrentTurnHistoryIndex } from '../../utils/get-current-turn-history-index.ts';
 import { getDefaultKingdomSupplySize } from '../../utils/get-default-kingdom-supply-size.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { isCardStillAtGainedLocation } from '../../utils/is-card-still-at-gained-location.ts';
@@ -45,6 +46,7 @@ const GROWTH_PROPHECY_KEY: CardKey = 'growth';
 const KIND_EMPEROR_PROPHECY_KEY: CardKey = 'kind-emperor';
 const PANIC_PROPHECY_KEY: CardKey = 'panic';
 const PROGRESS_PROPHECY_KEY: CardKey = 'progress';
+const RAPID_EXPANSION_PROPHECY_KEY: CardKey = 'rapid-expansion';
 const SICKNESS_PROPHECY_KEY: CardKey = 'sickness';
 
 // Returns true when at least one selected kingdom pile contains an Omen card.
@@ -915,6 +917,122 @@ const registerProgressReactions = (
   }
 };
 
+// Registers Rapid Expansion: when you gain an Action or Treasure, set it aside and play it at the start of your next turn.
+const registerRapidExpansionReactions = (
+  args: RisingSunGameEventContext,
+  prophecy: Prophecy,
+): void => {
+  for (const player of args.match.players) {
+    const playerId = player.id;
+    args.reactionManager.registerReactionTemplate(prophecy, 'cardGained', {
+      playerId,
+      compulsory: true,
+      condition: async ({ trigger, match, cardLibrary }) => {
+        if (trigger.args.playerId !== playerId || !isProphecyActive(match, RAPID_EXPANSION_PROPHECY_KEY)) {
+          return false;
+        }
+
+        const gainedCard = cardLibrary.getCard(trigger.args.cardId);
+        return gainedCard.type.includes('ACTION') || gainedCard.type.includes('TREASURE');
+      },
+      triggeredEffectFn: async ({ trigger, actionService, loggerService, cardSourceController, cardLibrary, reactionManager }) => {
+        const gainedCardId = trigger.args.cardId;
+        const gainedCard = cardLibrary.getCard(gainedCardId);
+        if (
+          !isCardStillAtGainedLocation(
+            cardSourceController,
+            gainedCardId,
+            trigger.args.gainedLocation,
+          )
+        ) {
+          loggerService.debug(
+            `[rising-sun prophecy:rapid-expansion] gained card ${gainedCardId} moved before set-aside redirect`,
+          );
+          return;
+        }
+
+        loggerService.info(
+          `[rising-sun prophecy:rapid-expansion] setting aside gained ${gainedCard.cardKey} (${gainedCardId}) for player ${playerId}`,
+        );
+        await actionService.run('moveCard', {
+          cardId: gainedCardId,
+          toPlayerId: playerId,
+          to: { location: 'set-aside' },
+          setAsideSource: {
+            ownerPlayerId: playerId,
+            sourceKind: 'prophecy',
+            sourceCardLikeId: prophecy.id,
+            sourceCardKey: prophecy.cardKey,
+            sourceLabel: prophecy.cardName,
+          },
+        });
+
+        // Register one start-turn reaction per queued card so the player can order each play.
+        reactionManager.registerReactionTemplate(prophecy, 'startTurn', {
+          playerId,
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          sourceId: gainedCardId,
+          sourceKey: gainedCard.cardKey,
+          sourceName: gainedCard.cardName,
+          sourceType: 'card',
+          condition: async ({ trigger: startTurnTrigger, match, cardSourceController: startTurnCardSourceController }) => {
+            if (startTurnTrigger.args.playerId !== playerId || !isProphecyActive(match, RAPID_EXPANSION_PROPHECY_KEY)) {
+              return false;
+            }
+
+            // Prevent immediate replay during the same startTurn trigger chain if this card was just gained.
+            const currentTurnHistoryIndex = getCurrentTurnHistoryIndex({ match }, { fallbackToZero: false });
+            const gainTurnHistoryIndex = match.stats.cardsGained[gainedCardId]?.turnHistoryIndex;
+            if (
+              currentTurnHistoryIndex !== undefined &&
+              gainTurnHistoryIndex !== undefined &&
+              gainTurnHistoryIndex === currentTurnHistoryIndex
+            ) {
+              return false;
+            }
+
+            const setAside = startTurnCardSourceController.getSource('set-aside', playerId);
+            if (!setAside.includes(gainedCardId)) {
+              return false;
+            }
+
+            const source = match.setAsideSourceById?.[gainedCardId];
+            return source?.ownerPlayerId === playerId &&
+              source.sourceKind === 'prophecy' &&
+              source.sourceCardLikeId === prophecy.id;
+          },
+          triggeredEffectFn: async ({ actionService, loggerService, cardSourceController: startTurnCardSourceController }) => {
+            const setAside = startTurnCardSourceController.getSource('set-aside', playerId);
+            if (!setAside.includes(gainedCardId)) {
+              loggerService.debug(
+                `[rising-sun prophecy:rapid-expansion] queued card ${gainedCardId} moved before start-turn play`,
+              );
+              return;
+            }
+
+            loggerService.info(
+              `[rising-sun prophecy:rapid-expansion] player ${playerId} playing set-aside ${gainedCard.cardKey} (${gainedCardId})`,
+            );
+            await actionService.run('playCard', {
+              playerId,
+              cardId: gainedCardId,
+              overrides: { actionCost: 0 },
+            });
+          },
+        }, {
+          idSuffix: `rapid-expansion:${playerId}:${gainedCardId}:startTurn`,
+        });
+
+        loggerService.debug(
+          `[rising-sun prophecy:rapid-expansion] registered deferred start-turn play for card ${gainedCardId} and player ${playerId}`,
+        );
+      },
+    });
+  }
+};
+
 // Registers Sickness: at start of turn choose to gain Curse to deck or discard 3 cards.
 const registerSicknessReactions = (
   args: RisingSunGameEventContext,
@@ -1037,6 +1155,9 @@ const registerSelectedProphecyReactions = (
       break;
     case PROGRESS_PROPHECY_KEY:
       registerProgressReactions(args, prophecy);
+      break;
+    case RAPID_EXPANSION_PROPHECY_KEY:
+      registerRapidExpansionReactions(args, prophecy);
       break;
     case SICKNESS_PROPHECY_KEY:
       registerSicknessReactions(args, prophecy);

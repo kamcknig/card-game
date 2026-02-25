@@ -95,7 +95,6 @@ ferryman
 
 ### rising sun
 - flourishing-trade
-- rapid-expansion
 - divine-wind
 
 ### alchemy
