@@ -303,12 +303,14 @@ export const registerScoringFunctions = (registrar: PlayerScoreDecoratorRegistra
       return;
     }
 
-    // Count all cards the player owns with printed cost exactly $2.
+    // Count all cards the player owns with effective cost exactly $2.
+    // Non-turn-limited reducers like Flourishing Trade apply during scoring.
     const exactTwoCostSpec: CostSpec = { kind: 'exact', playerId, amount: EXACT_TWO_COST };
     const playerCards = cardLibrary.getCardsByOwner(playerId);
     let costTwoCardCount = 0;
     for (const card of playerCards) {
-      if (!validateCostSpec(exactTwoCostSpec, card.cost)) {
+      const effectiveCost = match.cardOverrides[playerId]?.[card.id]?.cost ?? card.cost;
+      if (!validateCostSpec(exactTwoCostSpec, effectiveCost)) {
         continue;
       }
       costTwoCardCount++;

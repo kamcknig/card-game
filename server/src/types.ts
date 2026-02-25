@@ -196,6 +196,8 @@ export interface GameActionDefinitionMap {
   exileCard: (args: { cardId: CardId | Card; playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
   gainAction: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   gainBuy: (args: { count: number }, context?: GameActionContext) => Promise<void>;
+  // Converts remaining action plays into buys for the active player's buy phase.
+  convertActionsToBuys: (args: { playerId: PlayerId; count?: number }, context?: GameActionContext) => Promise<void>;
   gainCoffer: (args: { playerId: PlayerId; count: number }, context?: GameActionContext) => Promise<void>;
   // Adds or removes Favor tokens for a player (Allies).
   gainFavor: (args: { playerId: PlayerId; count?: number }, context?: GameActionContext) => Promise<void>;

@@ -94,7 +94,6 @@ ferryman
   like we currently can.
 
 ### rising sun
-- flourishing-trade
 - divine-wind
 
 ### alchemy

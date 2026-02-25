@@ -39,6 +39,7 @@ const APPROACHING_ARMY_SETUP_TAG = 'rising-sun:approaching-army-extra-pile';
 const BIDING_TIME_PROPHECY_KEY: CardKey = 'biding-time';
 const BUREAUCRACY_PROPHECY_KEY: CardKey = 'bureaucracy';
 const ENLIGHTENMENT_PROPHECY_KEY: CardKey = 'enlightenment';
+const FLOURISHING_TRADE_PROPHECY_KEY: CardKey = 'flourishing-trade';
 const HARSH_WINTER_PROPHECY_KEY: CardKey = 'harsh-winter';
 const GOOD_HARVEST_PROPHECY_KEY: CardKey = 'good-harvest';
 const GREAT_LEADER_PROPHECY_KEY: CardKey = 'great-leader';
@@ -193,6 +194,22 @@ const applyEnlightenmentTreasureActionTypes = (
     addedCount++;
   }
   return addedCount;
+};
+
+// Applies Flourishing Trade's permanent global cost reduction to all cards in the match library.
+const registerFlourishingTradeCostReductionRules = (
+  args: Pick<RisingSunGameEventContext, 'cardLibrary' | 'cardPriceController'>,
+): number => {
+  let registeredCount = 0;
+  // Iterate in id order to keep rule registration deterministic.
+  const cards = args.cardLibrary.getAllCardsAsArray().sort((a, b) => a.id - b.id);
+  for (const card of cards) {
+    args.cardPriceController.registerRule(card, () => {
+      return { restricted: false, cost: { treasure: -1 } };
+    });
+    registeredCount++;
+  }
+  return registeredCount;
 };
 
 type RisingSunGameEventContext = Parameters<NonNullable<Parameters<GameEventRegistrar>[1]>>[0];
@@ -577,6 +594,110 @@ const registerEnlightenmentReactions = (
         });
         await actionService.run('gainAction', {
           count: 1,
+        });
+      },
+    });
+  }
+};
+
+// Registers Flourishing Trade: cards cost $1 less globally, and buy-phase entry converts remaining Actions into Buys.
+const registerFlourishingTradeReactions = (
+  args: RisingSunGameEventContext,
+  prophecy: Prophecy,
+): void => {
+  // Prevent duplicate persistent registration when prophecy is already active and also later receives tokenChanged events.
+  let costRulesRegistered = false;
+
+  // Applies the global reduction once while preserving deterministic card ordering and consistent logging.
+  const applyCostReductionOnce = (
+    applyArgs: Pick<RisingSunGameEventContext, 'cardLibrary' | 'cardPriceController' | 'loggerService'>,
+    reason: 'token-activation' | 'already-active',
+  ): void => {
+    if (costRulesRegistered) {
+      applyArgs.loggerService.debug(
+        `[rising-sun prophecy:flourishing-trade] cost reduction already registered; skipping duplicate apply (${reason})`,
+      );
+      return;
+    }
+
+    const registeredCount = registerFlourishingTradeCostReductionRules({
+      cardLibrary: applyArgs.cardLibrary,
+      cardPriceController: applyArgs.cardPriceController,
+    });
+    costRulesRegistered = true;
+    applyArgs.loggerService.info(
+      `[rising-sun prophecy:flourishing-trade] registered permanent -$1 cost reduction for ${registeredCount} card(s) via ${reason}`,
+    );
+  };
+
+  args.reactionManager.registerGlobalSystemTemplate(prophecy, 'tokenChanged', {
+    compulsory: true,
+    autoResolve: true,
+    allowMultipleInstances: false,
+    condition: ({ trigger, match }) => {
+      if (trigger.args.tokenId !== risingSunTokenIds.sun) {
+        return false;
+      }
+      if (trigger.args.locationBefore.type !== 'cardLike') {
+        return false;
+      }
+      if (trigger.args.locationBefore.cardLikeId !== prophecy.id) {
+        return false;
+      }
+      if (prophecy.cardKey !== FLOURISHING_TRADE_PROPHECY_KEY) {
+        return false;
+      }
+      // Only activate once the prophecy actually becomes active.
+      return isProphecyActive(match, FLOURISHING_TRADE_PROPHECY_KEY);
+    },
+    triggeredEffectFn: async ({ loggerService, cardLibrary, cardPriceController }) => {
+      applyCostReductionOnce({
+        loggerService,
+        cardLibrary,
+        cardPriceController,
+      }, 'token-activation');
+    },
+  }, {
+    idSuffix: 'flourishing-trade:token-activation',
+  });
+
+  if (isProphecyActive(args.match, FLOURISHING_TRADE_PROPHECY_KEY)) {
+    applyCostReductionOnce({
+      loggerService: args.loggerService,
+      cardLibrary: args.cardLibrary,
+      cardPriceController: args.cardPriceController,
+    }, 'already-active');
+  }
+
+  for (const player of args.match.players) {
+    const playerId = player.id;
+    args.reactionManager.registerReactionTemplate(prophecy, 'startTurnPhase', {
+      playerId,
+      compulsory: true,
+      condition: async ({ trigger, match }) => {
+        if (!isProphecyActive(match, FLOURISHING_TRADE_PROPHECY_KEY)) {
+          return false;
+        }
+        if (getCurrentPlayer(match).id !== playerId) {
+          return false;
+        }
+        return getTurnPhase(trigger.args.phaseIndex) === 'buy';
+      },
+      triggeredEffectFn: async ({ match, actionService, loggerService }) => {
+        const actionsToConvert = Math.max(0, match.playerActions);
+        if (actionsToConvert < 1) {
+          loggerService.debug(
+            `[rising-sun prophecy:flourishing-trade] player ${playerId} entered buy phase with no actions to convert`,
+          );
+          return;
+        }
+
+        loggerService.info(
+          `[rising-sun prophecy:flourishing-trade] player ${playerId} entered buy phase; converting ${actionsToConvert} action(s) into buy(s)`,
+        );
+        await actionService.run('convertActionsToBuys', {
+          playerId,
+          count: actionsToConvert,
         });
       },
     });
@@ -1134,6 +1255,9 @@ const registerSelectedProphecyReactions = (
       break;
     case ENLIGHTENMENT_PROPHECY_KEY:
       registerEnlightenmentReactions(args, prophecy);
+      break;
+    case FLOURISHING_TRADE_PROPHECY_KEY:
+      registerFlourishingTradeReactions(args, prophecy);
       break;
     case HARSH_WINTER_PROPHECY_KEY:
       registerHarshWinterReactions(args, prophecy);

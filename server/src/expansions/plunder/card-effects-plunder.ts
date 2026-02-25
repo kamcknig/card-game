@@ -2368,9 +2368,9 @@ const cardEffects: CardExpansionModule = {
             const sourceCardId = reaction.getSourceId();
             await actionService.run('revealCard', {
               cardId: sourceCardId,
-              playerId: reaction.playerId,
+              playerId: reaction?.playerId!,
             });
-            markPlayerImmune(reaction.playerId, reactionContext);
+            markPlayerImmune(reaction?.playerId!, reactionContext);
           },
         });
       },

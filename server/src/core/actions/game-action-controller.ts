@@ -1013,6 +1013,37 @@ export class GameActionController implements GameActionDefinitionMap {
     this.loggerService.info(`[gainBuy action] setting player guys to ${this.match.playerBuys}`);
   }
 
+  // Converts action plays to buys in-place for effects that allow action-space to be spent in the buy phase.
+  async convertActionsToBuys(args: { playerId: PlayerId; count?: number }, _context?: GameActionContext) {
+    const currentPlayerId = getCurrentPlayer(this.match).id;
+    if (currentPlayerId !== args.playerId) {
+      this.loggerService.warn(
+        `[convertActionsToBuys action] player ${args.playerId} is not current player ${currentPlayerId}; skipping conversion`,
+      );
+      return;
+    }
+
+    const requestedCount = args.count ?? this.match.playerActions;
+    const actionsToConvert = Math.max(0, Math.min(requestedCount, this.match.playerActions));
+    if (actionsToConvert < 1) {
+      this.loggerService.debug(
+        `[convertActionsToBuys action] no actions available to convert for player ${args.playerId}`,
+      );
+      return;
+    }
+
+    const previousActionCount = this.match.playerActions;
+    const previousBuyCount = this.match.playerBuys;
+    this.match.playerActions -= actionsToConvert;
+    this.match.playerBuys += actionsToConvert;
+    this.loggerService.info(
+      `[convertActionsToBuys action] converted ${actionsToConvert} action(s) to buy(s) for player ${args.playerId}`,
+    );
+    this.loggerService.debug(
+      `[convertActionsToBuys action] player ${args.playerId} actions ${previousActionCount}->${this.match.playerActions}, buys ${previousBuyCount}->${this.match.playerBuys}`,
+    );
+  }
+
   async placeToken(args: {
     tokenId: TokenId;
     location: TokenLocation;
