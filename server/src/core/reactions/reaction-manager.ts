@@ -150,6 +150,25 @@ export class ReactionManager {
     return this.registerReactionTemplate(cardLike, event, systemTemplate);
   }
 
+  registerGlobalSystemTemplate<T extends TriggerEventType>(
+    cardLike: CardLike,
+    event: T,
+    reactionTemplate: Omit<ReactionTemplate<T>, 'id' | 'listeningFor' | 'playerId'>,
+    templateOptions?: ReactionTemplateOptions,
+  ): string {
+    // Global system reactions are evaluated outside player-scoped ownership loops.
+    const idSuffix = templateOptions?.idSuffix;
+    const globalSystemTemplate = {
+      ...reactionTemplate,
+      id: `${cardLike.cardKey}:${cardLike.id}:${event}:system` +
+        (idSuffix ? `:${idSuffix}` : ''),
+      system: true,
+      playerId: undefined,
+    };
+
+    return this.registerReactionTemplate(cardLike, event, globalSystemTemplate);
+  }
+
   registerReactionTemplate<T extends TriggerEventType>(
     cardLike: CardLike,
     event: T,
@@ -239,6 +258,35 @@ export class ReactionManager {
     reactionContext ??= {};
     // Track immunity scope to ensure context is not reused across triggers.
     initImmunityScope(reactionContext, trigger, this.loggerService);
+
+    const globalSystemReactions = (await this.getReactions(
+      trigger,
+      this._reactions.filter((reaction) => reaction.system && reaction.playerId === undefined),
+    )).sort((left, right) => left.id.localeCompare(right.id));
+
+    const usedGlobalSystemReactionIds = new Set<string>();
+    const blockedGlobalSystemSourceKeys = new Set<string>();
+
+    for (const globalSystemReaction of globalSystemReactions) {
+      const sourceKey = globalSystemReaction.getSourceKey();
+      if (usedGlobalSystemReactionIds.has(globalSystemReaction.id)) {
+        continue;
+      }
+      if (!globalSystemReaction.allowMultipleInstances && blockedGlobalSystemSourceKeys.has(sourceKey)) {
+        continue;
+      }
+
+      this.loggerService.info(
+        `[REACTION MANAGER] running global system reaction ${globalSystemReaction.id} for trigger ${trigger.eventType}`,
+      );
+      const globalSystemContext = this.buildTriggeredEffectContext(trigger, globalSystemReaction);
+      await this.runReaction(globalSystemReaction, globalSystemContext, reactionContext);
+
+      usedGlobalSystemReactionIds.add(globalSystemReaction.id);
+      if (!globalSystemReaction.allowMultipleInstances) {
+        blockedGlobalSystemSourceKeys.add(sourceKey);
+      }
+    }
 
     // now we get the order of players that could be affected by the play (including the current player),
     // then get reactions for them and run them

@@ -11,6 +11,7 @@ import {
 } from 'shared/types/index.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
+import { getConfiguredSupplyPileKeys } from '../../utils/get-configured-supply-pile-keys.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { isCardStillAtGainedLocation } from '../../utils/is-card-still-at-gained-location.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
@@ -100,13 +101,9 @@ const getTopSupplyCards = (
     match: Match;
   },
 ): Card[] => {
-  const supplyPileKeys = new Set<CardKey>([
-    ...(args.match.config.basicSupply ?? []).map((supply) => supply.name),
-    ...(args.match.config.kingdomSupply ?? []).map((supply) => supply.name),
-  ]);
   const topCards: Card[] = [];
 
-  for (const pileKey of supplyPileKeys) {
+  for (const pileKey of getConfiguredSupplyPileKeys(args.match)) {
     const topCard = args.findCardService.findTopSupplyCardForPileKey({ pileKey });
     if (!topCard) {
       continue;

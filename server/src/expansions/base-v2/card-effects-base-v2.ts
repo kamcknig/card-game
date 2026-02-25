@@ -1,4 +1,5 @@
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
+import { getConfiguredSupplyPileKeys } from '../../utils/get-configured-supply-pile-keys.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
@@ -840,9 +841,7 @@ const expansionModule: CardExpansionModule = {
       loggerService.debug(`[POACHER EFFECT] gaining 1 treasure...`);
       await actionService.run('gainTreasure', { count: 1 });
 
-      const allSupplyCardKeys = match.config.basicSupply.concat(
-        match.config.kingdomSupply,
-      );
+      const allSupplyCardKeys = getConfiguredSupplyPileKeys(match);
 
       loggerService.debug(`[POACHER EFFECT] original supply card piles ${allSupplyCardKeys}`);
 

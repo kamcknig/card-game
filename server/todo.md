@@ -95,7 +95,6 @@ ferryman
 
 ### rising sun
 - flourishing-trade
-- kind-emperor
 - rapid-expansion
 - divine-wind
 

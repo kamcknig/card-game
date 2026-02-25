@@ -791,7 +791,7 @@ export class Reaction<T extends TriggerEventType = TriggerEventType> {
   public id: string;
 
   // the player's ID who owns this reaction - the one that can decide to do it.
-  public playerId: number;
+  public playerId?: number;
 
   public listeningFor: T;
 
@@ -890,7 +890,7 @@ export class Reaction<T extends TriggerEventType = TriggerEventType> {
   }
 
   toString() {
-    return `[REACTION ${this.id} - owner {${this.playerId}}]`;
+    return `[REACTION ${this.id} - owner {${this.playerId ?? 'global'}}]`;
   }
 
   [Symbol.for('Deno.customInspect')]() {

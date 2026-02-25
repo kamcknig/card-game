@@ -7,6 +7,7 @@ import {
 } from '@server-types/index.ts';
 import { configureSplitPile } from '../../utils/configure-split-pile.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
+import { getConfiguredSupplyPileKeys } from '../../utils/get-configured-supply-pile-keys.ts';
 import { configureAqueduct } from './configure-aqueduct.ts';
 import { configureArena } from './configure-arena.ts';
 import { configureBattlefield } from './configure-battlefield.ts';
@@ -463,14 +464,7 @@ export const registerScoringFunctions = (
     if (!hasTower) return;
 
     // Collect all supply pile keys in the match.
-    const supplyPiles = [
-      ...(match.config.basicSupply ?? []),
-      ...(match.config.kingdomSupply ?? []),
-    ];
-    const supplyPileKeys = new Set<CardKey>();
-    for (const supply of supplyPiles) {
-      supplyPileKeys.add(supply.name as CardKey);
-    }
+    const supplyPileKeys = new Set<CardKey>(getConfiguredSupplyPileKeys(match));
 
     if (!supplyPileKeys.size) {
       return;

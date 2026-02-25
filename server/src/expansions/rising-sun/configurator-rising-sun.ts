@@ -13,6 +13,7 @@ import { ExpansionConfiguratorContext, ExpansionConfiguratorFactory, GameEventRe
 import { uniqueByProp } from '../../core/match-configurator.ts';
 import { baseV2TokenIds } from '../base-v2/token-ids-base-v2.ts';
 import { getConfiguredCardPileLocation } from '../../utils/get-configured-card-pile-location.ts';
+import { getConfiguredSupplyPileKeys } from '../../utils/get-configured-supply-pile-keys.ts';
 import { getAvailableKingdomRandomizerGroups } from '../../utils/get-available-kingdom-randomizer-groups.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
@@ -41,6 +42,7 @@ const HARSH_WINTER_PROPHECY_KEY: CardKey = 'harsh-winter';
 const GOOD_HARVEST_PROPHECY_KEY: CardKey = 'good-harvest';
 const GREAT_LEADER_PROPHECY_KEY: CardKey = 'great-leader';
 const GROWTH_PROPHECY_KEY: CardKey = 'growth';
+const KIND_EMPEROR_PROPHECY_KEY: CardKey = 'kind-emperor';
 const PANIC_PROPHECY_KEY: CardKey = 'panic';
 const PROGRESS_PROPHECY_KEY: CardKey = 'progress';
 const SICKNESS_PROPHECY_KEY: CardKey = 'sickness';
@@ -341,19 +343,143 @@ const registerGreatLeaderReactions = (
   }
 };
 
+// Resolves Kind Emperor's mandatory gain by choosing a top-of-supply Action and gaining it to hand.
+const resolveKindEmperorGainToHand = async (
+  args: {
+    playerId: PlayerId;
+    match: Match;
+    findCardService: RisingSunGameEventContext['findCardService'];
+    actionService: RisingSunGameEventContext['actionService'];
+    cardLibrary: RisingSunGameEventContext['cardLibrary'];
+    loggerService: RisingSunGameEventContext['loggerService'];
+  },
+): Promise<void> => {
+  const gainableActionCards: Card[] = [];
+  for (const pileKey of getConfiguredSupplyPileKeys(args.match)) {
+    const topCard = args.findCardService.findTopSupplyCardForPileKey({ pileKey });
+    if (!topCard) {
+      continue;
+    }
+    if (!topCard.type.includes('ACTION')) {
+      continue;
+    }
+    gainableActionCards.push(topCard);
+  }
+
+  if (gainableActionCards.length < 1) {
+    args.loggerService.debug(`[rising-sun prophecy:kind-emperor] no top-of-pile Action cards available for player ${args.playerId}`);
+    return;
+  }
+
+  args.loggerService.debug(
+    `[rising-sun prophecy:kind-emperor] player ${args.playerId} has ${gainableActionCards.length} top-of-pile Action candidate(s)`,
+  );
+  const selectedGainId = await args.actionService.run('selectSingleCard', {
+    playerId: args.playerId,
+    prompt: 'Gain an Action card',
+    restrict: gainableActionCards.map((card) => card.id),
+    count: 1,
+  });
+
+  if (!selectedGainId) {
+    args.loggerService.warn(
+      `[rising-sun prophecy:kind-emperor] no Action selected for mandatory gain by player ${args.playerId}; skipping gain`,
+    );
+    return;
+  }
+
+  const selectedCard = args.cardLibrary.getCard(selectedGainId);
+  args.loggerService.info(
+    `[rising-sun prophecy:kind-emperor] player ${args.playerId} selected ${selectedCard.cardKey}; gaining to hand`,
+  );
+  await args.actionService.run('gainCard', {
+    playerId: args.playerId,
+    cardId: selectedGainId,
+    to: { location: 'playerHand' },
+  });
+};
+
+// Registers Kind Emperor: at each start of turn, and on final Sun removal, gain an Action card to hand.
+const registerKindEmperorReactions = (
+  args: RisingSunGameEventContext,
+  prophecy: Prophecy,
+): void => {
+  args.reactionManager.registerGlobalSystemTemplate(prophecy, 'tokenChanged', {
+    compulsory: true,
+    autoResolve: true,
+    allowMultipleInstances: false,
+    condition: ({ trigger, match }) => {
+      if (trigger.args.tokenId !== risingSunTokenIds.sun) {
+        return false;
+      }
+      if (trigger.args.locationBefore.type !== 'cardLike') {
+        return false;
+      }
+      if (trigger.args.locationBefore.cardLikeId !== prophecy.id) {
+        return false;
+      }
+      if (prophecy.cardKey !== KIND_EMPEROR_PROPHECY_KEY) {
+        return false;
+      }
+      // Only trigger when this token change activated the prophecy.
+      return isProphecyActive(match, KIND_EMPEROR_PROPHECY_KEY);
+    },
+    triggeredEffectFn: async ({ trigger, match, findCardService, actionService, cardLibrary, loggerService }) => {
+      let beneficiaryPlayerId = getCurrentPlayer(match).id;
+      if (trigger.args.source !== undefined) {
+        const sourceCardInPlay = findCardService.getCardsInPlay().find((card) => card.id === trigger.args.source);
+        if (sourceCardInPlay?.owner !== undefined && sourceCardInPlay.owner !== null) {
+          beneficiaryPlayerId = sourceCardInPlay.owner;
+        }
+      }
+
+      loggerService.info(
+        `[rising-sun prophecy:kind-emperor] final Sun removed; resolving immediate gain for player ${beneficiaryPlayerId}`,
+      );
+      await resolveKindEmperorGainToHand({
+        playerId: beneficiaryPlayerId,
+        match,
+        findCardService,
+        actionService,
+        cardLibrary,
+        loggerService,
+      });
+    },
+  }, {
+    idSuffix: 'kind-emperor:token-activation',
+  });
+
+  for (const player of args.match.players) {
+    const playerId = player.id;
+    args.reactionManager.registerReactionTemplate(prophecy, 'startTurn', {
+      playerId,
+      compulsory: true,
+      condition: async ({ trigger, match }) => {
+        return trigger.args.playerId === playerId && isProphecyActive(match, KIND_EMPEROR_PROPHECY_KEY);
+      },
+      triggeredEffectFn: async ({ match, findCardService, actionService, cardLibrary, loggerService }) => {
+        loggerService.info(
+          `[rising-sun prophecy:kind-emperor] start of turn for player ${playerId}; resolving Action gain`,
+        );
+        await resolveKindEmperorGainToHand({
+          playerId,
+          match,
+          findCardService,
+          actionService,
+          cardLibrary,
+          loggerService,
+        });
+      },
+    });
+  }
+};
+
 // Registers Enlightenment: Treasures are Actions, and in Action phase Treasure play becomes +1 Card and +1 Action.
 const registerEnlightenmentReactions = (
   args: RisingSunGameEventContext,
   prophecy: Prophecy,
 ): void => {
-  const activationOwnerPlayerId = args.match.players[0]?.id;
-  if (activationOwnerPlayerId === undefined) {
-    args.loggerService.warn('[rising-sun prophecy:enlightenment] no players found for activation trigger registration');
-    return;
-  }
-
-  args.reactionManager.registerSystemTemplate(prophecy, 'tokenChanged', {
-    playerId: activationOwnerPlayerId,
+  args.reactionManager.registerGlobalSystemTemplate(prophecy, 'tokenChanged', {
     compulsory: true,
     autoResolve: true,
     allowMultipleInstances: false,
@@ -652,14 +778,7 @@ const registerGrowthReactions = (
         const gainedCardCost = cardPriceController.applyRules(gainedCard, { playerId }).cost;
 
         // Build the current top card candidates for each configured Supply pile.
-        const supplyPileKeys = Array.from(new Set(
-          [
-            ...(match.config.basicSupply ?? []),
-            ...(match.config.kingdomSupply ?? []),
-          ].map((supply) => supply.name),
-        ));
-
-        const gainableCards = supplyPileKeys
+        const gainableCards = getConfiguredSupplyPileKeys(match)
           .map((pileKey) => findCardService.findTopSupplyCardForPileKey({ pileKey }))
           .filter((candidate): candidate is Card => {
             if (!candidate) {
@@ -909,6 +1028,9 @@ const registerSelectedProphecyReactions = (
       break;
     case GROWTH_PROPHECY_KEY:
       registerGrowthReactions(args, prophecy);
+      break;
+    case KIND_EMPEROR_PROPHECY_KEY:
+      registerKindEmperorReactions(args, prophecy);
       break;
     case PANIC_PROPHECY_KEY:
       registerPanicReactions(args, prophecy);
