@@ -41,7 +41,7 @@ type WayOfTheMouseWayMetadata = {
   setAsideCardKey?: string;
   setAsideCardExpansion?: string;
   setAsidePileKey?: string;
-  setupProxyPileKey?: string;
+  proxyPileKey?: string;
   runtimeSetAsidePileKey?: string;
 };
 
@@ -55,7 +55,7 @@ type WayOfTheMouseCardMetadata = BaseCardMetadata & {
   menagerie?: {
     wayOfTheMouse?: {
       setupProxy?: true;
-      setupProxyPileKey?: string;
+      proxyPileKey?: string;
       runtimeSetAsideCard?: true;
       runtimeSetAsidePileKey?: string;
       selectedPileKey?: string;
@@ -91,7 +91,7 @@ const isWayOfTheMouseSetupProxySupply = (supply: Supply, expectedPileKey?: strin
   }
   return supply.cards.every((card) => {
     const metadata = card.metadata as WayOfTheMouseCardMetadata | undefined;
-    if (metadata?.base?.setupProxyKingdomPile !== true) {
+    if (metadata?.base?.isSetupProxyKingdomPile !== true) {
       return false;
     }
     const wayOfTheMouse = metadata?.menagerie?.wayOfTheMouse;
@@ -101,7 +101,7 @@ const isWayOfTheMouseSetupProxySupply = (supply: Supply, expectedPileKey?: strin
     if (!expectedPileKey) {
       return true;
     }
-    return wayOfTheMouse.setupProxyPileKey === expectedPileKey;
+    return wayOfTheMouse.proxyPileKey === expectedPileKey;
   });
 };
 
@@ -126,12 +126,12 @@ const isWayOfTheMouseRuntimeSetAsideSupply = (supply: Supply, expectedPileKey?: 
 // Removes setup/runtime synthetic piles created for Way of the Mouse.
 const cleanupWayOfTheMouseSyntheticPiles = (
   args: ExpansionConfiguratorContext,
-  keep?: { setupProxyPileKey?: string },
+  keep?: { proxyPileKey?: string },
 ): void => {
   const config = args.config;
   const nextKingdomSupply = config.kingdomSupply.filter((supply) =>
     !isWayOfTheMouseSetupProxySupply(supply) ||
-    (keep?.setupProxyPileKey !== undefined && isWayOfTheMouseSetupProxySupply(supply, keep.setupProxyPileKey))
+    (keep?.proxyPileKey !== undefined && isWayOfTheMouseSetupProxySupply(supply, keep.proxyPileKey))
   );
   const removedSetupProxyCount = config.kingdomSupply.length - nextKingdomSupply.length;
   if (removedSetupProxyCount > 0) {
@@ -242,7 +242,7 @@ const configureWayOfTheMouse = (args: ExpansionConfiguratorContext): void => {
     wayMetadata.setAsideCardKey = chosenCard.cardKey;
     wayMetadata.setAsideCardExpansion = chosenCard.expansionName;
     wayMetadata.setAsidePileKey = chosenGroup.pileKey;
-    wayMetadata.setupProxyPileKey = chosenGroup.pileKey;
+    wayMetadata.proxyPileKey = chosenGroup.pileKey;
     wayMetadata.runtimeSetAsidePileKey = `${WAY_OF_THE_MOUSE_RUNTIME_SET_ASIDE_PREFIX}${chosenGroup.pileKey}`;
     args.loggerService.info(
       `[menagerie configurator] Way of the Mouse selected set-aside card ${chosenCard.cardKey} (${chosenGroup.pileKey})`,
@@ -250,7 +250,7 @@ const configureWayOfTheMouse = (args: ExpansionConfiguratorContext): void => {
     selectedCard = chosenCard;
   }
 
-  if (!selectedCard || !wayMetadata.setupProxyPileKey || !wayMetadata.runtimeSetAsidePileKey) {
+  if (!selectedCard || !wayMetadata.proxyPileKey || !wayMetadata.runtimeSetAsidePileKey) {
     args.loggerService.warn('[menagerie configurator] Way of the Mouse metadata is incomplete after selection');
     config.ways = config.ways.filter((way) => way.cardKey !== WAY_OF_THE_MOUSE_CARD_KEY);
     cleanupWayOfTheMouseSyntheticPiles(args);
@@ -258,11 +258,11 @@ const configureWayOfTheMouse = (args: ExpansionConfiguratorContext): void => {
   }
 
   cleanupWayOfTheMouseSyntheticPiles(args, {
-    setupProxyPileKey: wayMetadata.setupProxyPileKey,
+    proxyPileKey: wayMetadata.proxyPileKey,
   });
 
   const hasSetupProxy = config.kingdomSupply.some((supply) =>
-    isWayOfTheMouseSetupProxySupply(supply, wayMetadata.setupProxyPileKey)
+    isWayOfTheMouseSetupProxySupply(supply, wayMetadata.proxyPileKey)
   );
   if (!hasSetupProxy) {
     const proxyCard = structuredClone(selectedCard);
@@ -270,10 +270,10 @@ const configureWayOfTheMouse = (args: ExpansionConfiguratorContext): void => {
     proxyMetadata.menagerie ??= {};
     proxyMetadata.menagerie.wayOfTheMouse ??= {};
     proxyMetadata.menagerie.wayOfTheMouse.setupProxy = true;
-    proxyMetadata.menagerie.wayOfTheMouse.setupProxyPileKey = wayMetadata.setupProxyPileKey;
+    proxyMetadata.menagerie.wayOfTheMouse.proxyPileKey = wayMetadata.proxyPileKey;
     proxyMetadata.menagerie.wayOfTheMouse.selectedPileKey = wayMetadata.setAsidePileKey;
     proxyMetadata.base ??= {};
-    proxyMetadata.base.setupProxyKingdomPile = true;
+    proxyMetadata.base.isSetupProxyKingdomPile = true;
     proxyCard.metadata = proxyMetadata;
     proxyCard.kingdomSelectable = false;
 

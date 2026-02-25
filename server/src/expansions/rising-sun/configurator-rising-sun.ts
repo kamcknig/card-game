@@ -1,7 +1,9 @@
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { findWayInMatch } from '@shared/find-card-like-in-match.ts';
 import {
+  BaseCardMetadata,
   Card,
+  CardNoId,
   CardKey,
   ComputedMatchConfiguration,
   Match,
@@ -49,10 +51,31 @@ const PANIC_PROPHECY_KEY: CardKey = 'panic';
 const PROGRESS_PROPHECY_KEY: CardKey = 'progress';
 const RAPID_EXPANSION_PROPHECY_KEY: CardKey = 'rapid-expansion';
 const SICKNESS_PROPHECY_KEY: CardKey = 'sickness';
+const RIVERBOAT_CARD_KEY: CardKey = 'riverboat';
+const RIVERBOAT_RUNTIME_SET_ASIDE_PREFIX = 'riverboat-set-aside:';
 
 // Returns true when at least one selected kingdom pile contains an Omen card.
 const hasOmenInKingdom = (config: ComputedMatchConfiguration): boolean => {
-  return config.kingdomSupply.some((supply) => supply.cards.some((card) => card.type.includes('OMEN')));
+  return config.kingdomSupply.some((supply) => supply.cards.some((card) => {
+    const metadata = card.metadata as BaseCardMetadata | undefined;
+    if (metadata?.base?.isSetupProxyKingdomPile === true) {
+      return false;
+    }
+    return card.type.includes('OMEN');
+  }));
+};
+
+// Resolves expansion data selected in the current match configuration.
+const getConfiguredExpansionData = (args: ExpansionConfiguratorContext): typeof args.expansionData[] => {
+  return args.config.expansions.reduce((expansions, configuredExpansion) => {
+    const expansionData = args.expansionCatalog[configuredExpansion.name];
+    if (!expansionData) {
+      args.loggerService.warn(`[rising-sun configurator] expansion ${configuredExpansion.name} not found`);
+      return expansions;
+    }
+    expansions.push(expansionData);
+    return expansions;
+  }, [] as typeof args.expansionData[]);
 };
 
 // Returns true when the configured prophecy matches the provided key.
@@ -106,15 +129,7 @@ const configureApproachingArmySetupPile = (args: ExpansionConfiguratorContext): 
     return;
   }
 
-  const selectedExpansions = args.config.expansions.reduce((expansions, configuredExpansion) => {
-    const expansionData = args.expansionCatalog[configuredExpansion.name];
-    if (!expansionData) {
-      args.loggerService.warn(`[rising-sun configurator] expansion ${configuredExpansion.name} not found`);
-      return expansions;
-    }
-    expansions.push(expansionData);
-    return expansions;
-  }, [] as typeof args.expansionData[]);
+  const selectedExpansions = getConfiguredExpansionData(args);
 
   const existingPileKeys = Array.from(
     new Set(
@@ -154,6 +169,330 @@ const configureApproachingArmySetupPile = (args: ExpansionConfiguratorContext): 
 
   args.loggerService.info(
     `[rising-sun configurator] Approaching Army added Attack pile ${selectedGroup.pileKey}`,
+  );
+};
+
+type RiverboatSelectionMetadata = {
+  setAsideCardKey?: CardKey;
+  setAsideCardExpansion?: string;
+  setAsidePileKey?: string;
+  proxyPileKey?: string;
+  runtimeSetAsidePileKey?: string;
+};
+
+type RiverboatCardMetadata = BaseCardMetadata & {
+  risingSun?: {
+    riverboat?: RiverboatSelectionMetadata & {
+      setupProxy?: true;
+      runtimeSetAsideCard?: true;
+    };
+  };
+};
+
+// Reads and creates Riverboat metadata on kingdom card entries.
+const getRiverboatMetadata = (card: CardNoId): RiverboatSelectionMetadata => {
+  const metadata = (card.metadata as RiverboatCardMetadata | undefined) ?? {};
+  metadata.risingSun ??= {};
+  metadata.risingSun.riverboat ??= {};
+  card.metadata = metadata;
+  return metadata.risingSun.riverboat;
+};
+
+// Synchronizes Riverboat setup metadata across all configured Riverboat cards.
+const copyRiverboatSelectionMetadataToConfiguredRiverboats = (
+  args: ExpansionConfiguratorContext,
+  metadata: RiverboatSelectionMetadata,
+): void => {
+  for (const supply of args.config.kingdomSupply) {
+    for (const card of supply.cards) {
+      if (card.cardKey !== RIVERBOAT_CARD_KEY) {
+        continue;
+      }
+      const cardMetadata = getRiverboatMetadata(card);
+      cardMetadata.setAsideCardKey = metadata.setAsideCardKey;
+      cardMetadata.setAsideCardExpansion = metadata.setAsideCardExpansion;
+      cardMetadata.setAsidePileKey = metadata.setAsidePileKey;
+      cardMetadata.proxyPileKey = metadata.proxyPileKey;
+      cardMetadata.runtimeSetAsidePileKey = metadata.runtimeSetAsidePileKey;
+    }
+  }
+};
+
+// Clears Riverboat setup metadata from configured Riverboat cards.
+const clearRiverboatSelectionMetadata = (args: ExpansionConfiguratorContext): void => {
+  for (const supply of args.config.kingdomSupply) {
+    for (const card of supply.cards) {
+      if (card.cardKey !== RIVERBOAT_CARD_KEY) {
+        continue;
+      }
+      const cardMetadata = getRiverboatMetadata(card);
+      cardMetadata.setAsideCardKey = undefined;
+      cardMetadata.setAsideCardExpansion = undefined;
+      cardMetadata.setAsidePileKey = undefined;
+      cardMetadata.proxyPileKey = undefined;
+      cardMetadata.runtimeSetAsidePileKey = undefined;
+    }
+  }
+};
+
+// Returns true when a card is a legal Riverboat setup candidate.
+const isRiverboatCandidate = (card: CardNoId): boolean => {
+  const resolvedType = card.randomizerData?.type ?? card.type;
+  const resolvedCost = card.randomizerData?.cost ?? card.cost;
+  const treasureCost = resolvedCost.treasure ?? 0;
+  return resolvedType.includes('ACTION') &&
+    !resolvedType.includes('DURATION') &&
+    (resolvedCost.potion ?? 0) === 0 &&
+    (resolvedCost.debt ?? 0) === 0 &&
+    treasureCost === 5;
+};
+
+// Returns true when a supply pile is a synthetic Riverboat setup proxy.
+const isRiverboatSetupProxySupply = (supply: Supply, expectedPileKey?: string): boolean => {
+  if (supply.cards.length < 1) {
+    return false;
+  }
+  return supply.cards.every((card) => {
+    const metadata = card.metadata as RiverboatCardMetadata | undefined;
+    if (metadata?.base?.isSetupProxyKingdomPile !== true) {
+      return false;
+    }
+    const riverboat = metadata?.risingSun?.riverboat;
+    if (!riverboat || riverboat.setupProxy !== true) {
+      return false;
+    }
+    if (!expectedPileKey) {
+      return true;
+    }
+    return riverboat.proxyPileKey === expectedPileKey;
+  });
+};
+
+// Returns true when a non-supply pile is the runtime set-aside source for Riverboat.
+const isRiverboatRuntimeSetAsideSupply = (supply: Supply, expectedPileKey?: string): boolean => {
+  if (supply.cards.length < 1) {
+    return false;
+  }
+  return supply.cards.every((card) => {
+    const metadata = card.metadata as RiverboatCardMetadata | undefined;
+    const riverboat = metadata?.risingSun?.riverboat;
+    if (!riverboat || riverboat.runtimeSetAsideCard !== true) {
+      return false;
+    }
+    if (!expectedPileKey) {
+      return true;
+    }
+    return riverboat.runtimeSetAsidePileKey === expectedPileKey;
+  });
+};
+
+// Removes stale synthetic setup/runtime piles created for Riverboat setup.
+const cleanupRiverboatSyntheticPiles = (
+  args: ExpansionConfiguratorContext,
+  keep?: { proxyPileKey?: string; runtimeSetAsidePileKey?: string },
+): void => {
+  const config = args.config;
+  const nextKingdomSupply = config.kingdomSupply.filter((supply) =>
+    !isRiverboatSetupProxySupply(supply) ||
+    (keep?.proxyPileKey !== undefined && isRiverboatSetupProxySupply(supply, keep.proxyPileKey))
+  );
+  const removedSetupProxyCount = config.kingdomSupply.length - nextKingdomSupply.length;
+  if (removedSetupProxyCount > 0) {
+    args.loggerService.info(
+      `[rising-sun configurator] removed ${removedSetupProxyCount} stale Riverboat setup proxy pile(s)`,
+    );
+  }
+  config.kingdomSupply = nextKingdomSupply;
+
+  const existingNonSupply = config.nonSupply;
+  if (!existingNonSupply) {
+    return;
+  }
+
+  const nextNonSupply = existingNonSupply.filter((supply) =>
+    !isRiverboatRuntimeSetAsideSupply(supply) ||
+    (keep?.runtimeSetAsidePileKey !== undefined &&
+      isRiverboatRuntimeSetAsideSupply(supply, keep.runtimeSetAsidePileKey))
+  );
+  const removedRuntimeSetAsideCount = existingNonSupply.length - nextNonSupply.length;
+  if (removedRuntimeSetAsideCount > 0) {
+    args.loggerService.info(
+      `[rising-sun configurator] removed ${removedRuntimeSetAsideCount} stale Riverboat runtime set-aside pile(s)`,
+    );
+  }
+  config.nonSupply = nextNonSupply;
+};
+
+// Resolves the selected Riverboat set-aside card from saved metadata.
+const resolveRiverboatSelectedCard = (args: ExpansionConfiguratorContext, card: CardNoId): CardNoId | null => {
+  const metadata = getRiverboatMetadata(card);
+  const setAsideCardExpansion = metadata.setAsideCardExpansion;
+  const setAsideCardKey = metadata.setAsideCardKey;
+
+  if (!setAsideCardExpansion || !setAsideCardKey) {
+    return null;
+  }
+
+  const selectedCard = args.expansionCatalog[setAsideCardExpansion]?.cardData.kingdomSupply[setAsideCardKey];
+  if (!selectedCard) {
+    args.loggerService.warn(
+      `[rising-sun configurator] unable to resolve Riverboat set-aside card ${setAsideCardExpansion}:${setAsideCardKey}`,
+    );
+    return null;
+  }
+  return selectedCard;
+};
+
+// Adds/updates Riverboat setup metadata, setup proxy pile, and runtime set-aside card source.
+const configureRiverboatSetAsideCard = (args: ExpansionConfiguratorContext): void => {
+  const config = args.config;
+  const riverboatCards = config.kingdomSupply
+    .flatMap((supply) => supply.cards)
+    .filter((card) => card.cardKey === RIVERBOAT_CARD_KEY);
+
+  if (riverboatCards.length < 1) {
+    cleanupRiverboatSyntheticPiles(args);
+    return;
+  }
+
+  const riverboatCard = riverboatCards[0];
+  if (!riverboatCard) {
+    cleanupRiverboatSyntheticPiles(args);
+    return;
+  }
+
+  const riverboatMetadata = getRiverboatMetadata(riverboatCard);
+  const usedPileKeys = new Set(
+    config.kingdomSupply
+      .filter((supply) => !isRiverboatSetupProxySupply(supply))
+      .flatMap((supply) => supply.cards.map((card) => getCardPileKey(card))),
+  );
+  const bannedPileKeys = config.bannedKingdoms.map((card) => getCardPileKey(card));
+
+  let selectedCard = resolveRiverboatSelectedCard(args, riverboatCard);
+  const currentSelectionValid = !!selectedCard &&
+    isRiverboatCandidate(selectedCard) &&
+    !!riverboatMetadata.setAsidePileKey &&
+    !usedPileKeys.has(riverboatMetadata.setAsidePileKey);
+
+  if (!currentSelectionValid) {
+    const selectedExpansions = getConfiguredExpansionData(args);
+    const availableGroups = getAvailableKingdomRandomizerGroups({
+      expansions: selectedExpansions,
+      excludedPileKeys: Array.from(usedPileKeys),
+      bannedPileKeys,
+      cardFilter: (candidateCard) => isRiverboatCandidate(candidateCard),
+    });
+
+    if (availableGroups.length < 1) {
+      args.loggerService.warn('[rising-sun configurator] no legal Riverboat set-aside candidates available');
+      clearRiverboatSelectionMetadata(args);
+      cleanupRiverboatSyntheticPiles(args);
+      return;
+    }
+
+    const chosenGroup = availableGroups[args.rngService.nextIndex(availableGroups.length)];
+    const chosenCards = chosenGroup.cards.filter((candidateCard) => isRiverboatCandidate(candidateCard));
+    const chosenCard = chosenCards[args.rngService.nextIndex(chosenCards.length)];
+
+    if (!chosenCard) {
+      args.loggerService.warn('[rising-sun configurator] selected Riverboat candidate group has no legal card');
+      clearRiverboatSelectionMetadata(args);
+      cleanupRiverboatSyntheticPiles(args);
+      return;
+    }
+
+    const selectedRiverboatCard = structuredClone(chosenCard);
+    riverboatMetadata.setAsideCardKey = selectedRiverboatCard.cardKey;
+    riverboatMetadata.setAsideCardExpansion = selectedRiverboatCard.expansionName;
+    riverboatMetadata.setAsidePileKey = chosenGroup.pileKey;
+    riverboatMetadata.proxyPileKey = chosenGroup.pileKey;
+    riverboatMetadata.runtimeSetAsidePileKey =
+      `${RIVERBOAT_RUNTIME_SET_ASIDE_PREFIX}${chosenGroup.pileKey}:${selectedRiverboatCard.cardKey}`;
+    args.loggerService.info(
+      `[rising-sun configurator] Riverboat selected set-aside card ${selectedRiverboatCard.cardKey} (${chosenGroup.pileKey})`,
+    );
+    selectedCard = selectedRiverboatCard;
+  }
+
+  if (
+    !selectedCard ||
+    !riverboatMetadata.proxyPileKey ||
+    !riverboatMetadata.runtimeSetAsidePileKey ||
+    !riverboatMetadata.setAsideCardKey ||
+    !riverboatMetadata.setAsideCardExpansion ||
+    !riverboatMetadata.setAsidePileKey
+  ) {
+    args.loggerService.warn('[rising-sun configurator] Riverboat metadata is incomplete after selection');
+    clearRiverboatSelectionMetadata(args);
+    cleanupRiverboatSyntheticPiles(args);
+    return;
+  }
+
+  copyRiverboatSelectionMetadataToConfiguredRiverboats(args, riverboatMetadata);
+  cleanupRiverboatSyntheticPiles(args, {
+    proxyPileKey: riverboatMetadata.proxyPileKey,
+    runtimeSetAsidePileKey: riverboatMetadata.runtimeSetAsidePileKey,
+  });
+
+  const hasSetupProxy = config.kingdomSupply.some((supply) =>
+    isRiverboatSetupProxySupply(supply, riverboatMetadata.proxyPileKey)
+  );
+  if (!hasSetupProxy) {
+    const proxyCard = structuredClone(selectedCard);
+    const proxyMetadata = (proxyCard.metadata as RiverboatCardMetadata | undefined) ?? {};
+    proxyMetadata.base ??= {};
+    proxyMetadata.base.isSetupProxyKingdomPile = true;
+    proxyMetadata.risingSun ??= {};
+    proxyMetadata.risingSun.riverboat ??= {};
+    proxyMetadata.risingSun.riverboat.setupProxy = true;
+    proxyMetadata.risingSun.riverboat.proxyPileKey = riverboatMetadata.proxyPileKey;
+    proxyMetadata.risingSun.riverboat.setAsideCardKey = riverboatMetadata.setAsideCardKey;
+    proxyMetadata.risingSun.riverboat.setAsideCardExpansion = riverboatMetadata.setAsideCardExpansion;
+    proxyMetadata.risingSun.riverboat.setAsidePileKey = riverboatMetadata.setAsidePileKey;
+    proxyMetadata.risingSun.riverboat.runtimeSetAsidePileKey = riverboatMetadata.runtimeSetAsidePileKey;
+    proxyCard.metadata = proxyMetadata;
+    proxyCard.kingdomSelectable = false;
+
+    config.kingdomSupply.push({
+      // Keep normal pile naming so setup-dependent configurators can detect this candidate naturally.
+      name: proxyCard.kingdom,
+      cards: new Array(getDefaultKingdomSupplySize(proxyCard, config)).fill(proxyCard),
+    });
+    args.loggerService.info(
+      `[rising-sun configurator] added Riverboat setup proxy pile for ${proxyCard.cardKey}`,
+    );
+  }
+
+  const hasRuntimeSetAsidePile = (config.nonSupply ?? []).some((supply) =>
+    isRiverboatRuntimeSetAsideSupply(supply, riverboatMetadata.runtimeSetAsidePileKey)
+  );
+  if (hasRuntimeSetAsidePile) {
+    return;
+  }
+
+  const runtimeSetAsideCard = structuredClone(selectedCard);
+  runtimeSetAsideCard.kingdom = riverboatMetadata.runtimeSetAsidePileKey;
+  runtimeSetAsideCard.partOfSupply = false;
+  runtimeSetAsideCard.kingdomSelectable = false;
+  const runtimeMetadata = (runtimeSetAsideCard.metadata as RiverboatCardMetadata | undefined) ?? {};
+  runtimeMetadata.base ??= {};
+  runtimeMetadata.risingSun ??= {};
+  runtimeMetadata.risingSun.riverboat ??= {};
+  runtimeMetadata.risingSun.riverboat.runtimeSetAsideCard = true;
+  runtimeMetadata.risingSun.riverboat.runtimeSetAsidePileKey = riverboatMetadata.runtimeSetAsidePileKey;
+  runtimeMetadata.risingSun.riverboat.setAsideCardKey = riverboatMetadata.setAsideCardKey;
+  runtimeMetadata.risingSun.riverboat.setAsideCardExpansion = riverboatMetadata.setAsideCardExpansion;
+  runtimeMetadata.risingSun.riverboat.setAsidePileKey = riverboatMetadata.setAsidePileKey;
+  runtimeSetAsideCard.metadata = runtimeMetadata;
+
+  config.nonSupply ??= [];
+  config.nonSupply.push({
+    name: riverboatMetadata.runtimeSetAsidePileKey,
+    cards: [runtimeSetAsideCard],
+  });
+  args.loggerService.info(
+    `[rising-sun configurator] added Riverboat runtime set-aside source for ${runtimeSetAsideCard.cardKey}`,
   );
 };
 
@@ -1305,6 +1644,9 @@ const configurator: ExpansionConfiguratorFactory = () => {
       args.loggerService.debug('[rising-sun configurator] registered sun token definitions');
     }
 
+    // Riverboat setup does not depend on omen/prophecy state and should be stable across recomputations.
+    configureRiverboatSetAsideCard(args);
+
     const hasOmen = hasOmenInKingdom(args.config);
     if (!hasOmen) {
       if ((args.config.prophecies ?? []).length > 0) {
@@ -1364,16 +1706,93 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
 export default configurator;
 
-// Seeds Sun tokens on the active prophecy when Omen cards are present.
+// Seeds Riverboat set-aside state and Sun tokens at game start.
 export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (
   registrar,
   config,
 ) => {
-  if (!hasOmenInKingdom(config)) {
+  const hasOmen = hasOmenInKingdom(config);
+  const hasRiverboat = config.kingdomSupply.some((supply) =>
+    supply.cards.some((card) => card.cardKey === RIVERBOAT_CARD_KEY)
+  );
+
+  if (!hasOmen && !hasRiverboat) {
     return;
   }
 
   registrar('onGameStartSetup', async (args) => {
+    if (hasRiverboat) {
+      const riverboatCard = args.findCardService.findCards([
+        { location: 'kingdomSupply' },
+        { cardKeys: RIVERBOAT_CARD_KEY },
+      ])[0];
+
+      if (!riverboatCard) {
+        args.loggerService.warn('[rising-sun onGameStart] Riverboat configured but no runtime Riverboat card found');
+      } else {
+        const riverboatMetadata = (riverboatCard.metadata as RiverboatCardMetadata | undefined)?.risingSun?.riverboat;
+        const runtimeSetAsidePileKey = riverboatMetadata?.runtimeSetAsidePileKey;
+        if (!runtimeSetAsidePileKey) {
+          args.loggerService.warn('[rising-sun onGameStart] Riverboat metadata missing runtime set-aside pile key');
+        } else {
+          const runtimeSetAsideCard = args.findCardService.findTopNonSupplyCardForPileName({
+            pileName: runtimeSetAsidePileKey,
+          });
+
+          if (runtimeSetAsideCard) {
+            args.loggerService.info(
+              `[rising-sun onGameStart] moving Riverboat set-aside card ${runtimeSetAsideCard.cardKey} to shared set-aside`,
+            );
+            await args.actionService.run('moveCard', {
+              cardId: runtimeSetAsideCard.id,
+              to: { location: 'set-aside' },
+              setAsideSource: {
+                sourceKind: 'card',
+                sourceCardId: riverboatCard.id,
+                sourceCardKey: riverboatCard.cardKey,
+                sourceLabel: riverboatCard.cardName,
+              },
+            });
+
+            // Riverboat set-aside card must stay set aside even when played.
+            const movedSetAsideCard = args.cardLibrary.getCard(runtimeSetAsideCard.id);
+            const movedMetadata = (movedSetAsideCard.metadata as RiverboatCardMetadata | undefined) ?? {};
+            movedMetadata.base ??= {};
+            movedMetadata.base.immovable = true;
+            movedMetadata.risingSun ??= {};
+            movedMetadata.risingSun.riverboat ??= {};
+            movedMetadata.risingSun.riverboat.runtimeSetAsideCard = true;
+            movedMetadata.risingSun.riverboat.runtimeSetAsidePileKey = runtimeSetAsidePileKey;
+            movedSetAsideCard.metadata = movedMetadata;
+          } else {
+            const existingSetAsideCard = args.cardSourceController.getSource('set-aside')
+              .map((cardId) => args.cardLibrary.getCard(cardId))
+              .find((card) => card.kingdom === runtimeSetAsidePileKey);
+
+            if (!existingSetAsideCard) {
+              args.loggerService.warn(
+                `[rising-sun onGameStart] no runtime Riverboat set-aside card found for pile ${runtimeSetAsidePileKey}`,
+              );
+            } else {
+              const existingMetadata = (existingSetAsideCard.metadata as RiverboatCardMetadata | undefined) ?? {};
+              existingMetadata.base ??= {};
+              existingMetadata.base.immovable = true;
+              existingMetadata.risingSun ??= {};
+              existingMetadata.risingSun.riverboat ??= {};
+              existingMetadata.risingSun.riverboat.runtimeSetAsideCard = true;
+              existingMetadata.risingSun.riverboat.runtimeSetAsidePileKey = runtimeSetAsidePileKey;
+              existingSetAsideCard.metadata = existingMetadata;
+              args.loggerService.debug('[rising-sun onGameStart] Riverboat set-aside card already initialized');
+            }
+          }
+        }
+      }
+    }
+
+    if (!hasOmen) {
+      return;
+    }
+
     const prophecy = args.match.prophecies?.[0];
     if (!prophecy) {
       args.loggerService.warn('[rising-sun onGameStart] Omen present but no active prophecy instance was created');
@@ -1395,6 +1814,10 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
       `[rising-sun onGameStart] prophecy=${prophecy.cardKey} cardLikeId=${prophecy.id} counters=${startingSunTokens}`,
     );
   });
+
+  if (!hasOmen) {
+    return;
+  }
 
   // Register runtime trigger behavior once match setup has finished creating prophecy instances.
   registrar('onGameStart', async (args) => {

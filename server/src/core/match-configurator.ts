@@ -177,7 +177,7 @@ export class MatchConfigurator {
     }
     return supply.cards.every((card) => {
       const metadata = card.metadata as BaseCardMetadata | undefined;
-      return metadata?.base?.setupProxyKingdomPile === true;
+      return metadata?.base?.isSetupProxyKingdomPile === true;
     });
   }
 
