@@ -641,7 +641,7 @@ const expansion: CardExpansionModule = {
             });
 
             // If a card was trashed, gaining exactly $1 more is mandatory when possible.
-            const gainCandidates = triggeredArgs.findCardService.findCards([
+            const gainCandidates = triggeredArgs.findCardService.findCards({ all: [
               { location: ['basicSupply', 'kingdomSupply'] },
               {
                 playerId: cardEffectArgs.playerId,
@@ -652,7 +652,7 @@ const expansion: CardExpansionModule = {
                   debt: cost.debt,
                 },
               },
-            ]);
+            ] });
 
             if (!gainCandidates.length) {
               loggerService.debug('[improve cleanup effect] no cards costing exactly $1 more');
@@ -1138,6 +1138,7 @@ const expansion: CardExpansionModule = {
         playerId: cardEffectArgs.playerId,
         prompt: 'Choose an Action card to replay',
         restrict: uniquePlayedActionIds,
+        selectionIntent: { kind: 'play-card', cardTypes: ['ACTION'] },
         count: 1,
       }) as CardId | null;
       if (!selectedActionId) {
@@ -1267,10 +1268,10 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
       // Sculptor gains a card to hand costing up to $4.
-      const gainableCards = cardEffectArgs.findCardService.findCards([
+      const gainableCards = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
         { playerId: cardEffectArgs.playerId, kind: 'upTo', amount: { treasure: 4 } },
-      ]);
+      ] });
 
       if (!gainableCards.length) {
         loggerService.debug('[sculptor effect] no cards in supply costing up to 4');

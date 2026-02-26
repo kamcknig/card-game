@@ -97,10 +97,10 @@ function isColonyPileEmpty(
   if (!colonyPresent) {
     return false;
   }
-  const colonyCards = findCardService.findCards([
+  const colonyCards = findCardService.findCards({ all: [
     { location: 'basicSupply' },
     { cardKeys: 'colony' },
-  ]);
+  ] });
   return colonyCards.length === 0;
 }
 
@@ -109,10 +109,10 @@ export const registerGameEvents: (
   config: ComputedMatchConfiguration,
 ) => void = (registrar) => {
   registrar('onGameStartSetup', async (args) => {
-    const peddlerCardIds = args.findCardService.findCards([
+    const peddlerCardIds = args.findCardService.findCards({ all: [
       { location: 'kingdomSupply' },
       { cardKeys: 'peddler' },
-    ]).map((card) => card.id);
+    ] }).map((card) => card.id);
 
     if (peddlerCardIds.length === 0) {
       return;

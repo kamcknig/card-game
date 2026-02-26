@@ -50,18 +50,18 @@ export const configureArena = (
               return false;
             }
             // Only offer the reaction if the player has an Action to discard.
-            const actionCards = conditionArgs.findCardService.findCards([
+            const actionCards = conditionArgs.findCardService.findCards({ all: [
               { location: 'playerHand', playerId: player.id },
               { cardType: 'ACTION' },
-            ]);
+            ] });
             return actionCards.length > 0;
           },
           triggeredEffectFn: async (triggeredArgs) => {
             // Find Action cards in hand for the discard choice.
-            const actionCards = triggeredArgs.findCardService.findCards([
+            const actionCards = triggeredArgs.findCardService.findCards({ all: [
               { location: 'playerHand', playerId: player.id },
               { cardType: 'ACTION' },
-            ]);
+            ] });
             if (!actionCards.length) {
               return;
             }

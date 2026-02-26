@@ -551,28 +551,27 @@ const effectMap: CardExpansionModule = {
       const playerId = cardEffectArgs.playerId;
 
       // Invasion first optionally plays an Attack from hand.
-      const hand = getPlayerSourceSafe(cardEffectArgs, 'playerHand', playerId);
-      const attackCardIdsInHand = hand.filter((cardId) => {
-        const card = cardEffectArgs.cardLibrary.getCard(cardId);
-        return card.type.includes('ATTACK');
+      const selectedAttackCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
+        playerId,
+        prompt: 'You may play an Attack from your hand',
+        // Canonical filter keeps play eligibility serializable for Shadow-aware selection handling.
+        restrict: {
+          all: [
+            { location: 'playerHand', playerId },
+            { cardType: ['ATTACK'] },
+          ],
+        },
+        selectionIntent: { kind: 'play-card', cardTypes: ['ACTION', 'NIGHT', 'TREASURE'] },
+        count: { kind: 'upTo', count: 1 },
+        optional: true,
       });
 
-      if (attackCardIdsInHand.length) {
-        const selectedAttackCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
+      if (selectedAttackCardId) {
+        await cardEffectArgs.actionService.run('playCard', {
           playerId,
-          prompt: 'You may play an Attack from your hand',
-          restrict: attackCardIdsInHand,
-          count: { kind: 'upTo', count: 1 },
-          optional: true,
+          cardId: selectedAttackCardId,
+          overrides: { actionCost: 0 },
         });
-
-        if (selectedAttackCardId) {
-          await cardEffectArgs.actionService.run('playCard', {
-            playerId,
-            cardId: selectedAttackCardId,
-            overrides: { actionCost: 0 },
-          });
-        }
       }
 
       // Invasion then gains a Duchy.
@@ -585,10 +584,10 @@ const effectMap: CardExpansionModule = {
       });
 
       // Invasion then gains an Action card onto deck.
-      const actionCardsInSupply = cardEffectArgs.findCardService.findCards([
+      const actionCardsInSupply = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
         { cardType: ['ACTION'] },
-      ]);
+      ] });
       if (actionCardsInSupply.length) {
         const selectedActionCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
           playerId,
@@ -1046,10 +1045,10 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      const estateCardsInTrash = cardEffectArgs.findCardService.findCards([
+      const estateCardsInTrash = cardEffectArgs.findCardService.findCards({ all: [
         { location: 'trash' },
         { cardKeys: 'estate' },
-      ]);
+      ] });
 
       const estateCardFromTrash = estateCardsInTrash.slice(-1)[0];
       if (!estateCardFromTrash) {
@@ -1063,10 +1062,10 @@ const effectMap: CardExpansionModule = {
         to: { location: 'playerDiscard' },
       });
 
-      const gainableCards = cardEffectArgs.findCardService.findCards([
+      const gainableCards = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
         { kind: 'upTo', playerId, amount: { treasure: 5 } },
-      ]);
+      ] });
 
       if (!gainableCards.length) {
         return;

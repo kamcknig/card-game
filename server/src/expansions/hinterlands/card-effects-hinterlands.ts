@@ -39,14 +39,14 @@ const expansion: CardExpansionModule = {
         { playerId: cardEffectArgs.playerId },
       );
 
-      const cardIds = cardEffectArgs.findCardService.findCards([
+      const cardIds = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
         {
           playerId: cardEffectArgs.playerId,
           kind: 'upTo',
           amount: { treasure: cost.treasure - 1 },
         },
-      ]);
+      ] });
 
       if (cardIds.length === 0) {
         loggerService.debug(`[berserker effect] no cards costing less than ${cost.treasure - 1}`);
@@ -111,10 +111,10 @@ const expansion: CardExpansionModule = {
           { playerId: eventArgs.playerId },
         );
 
-        const cardIds = args.findCardService.findCards([
+        const cardIds = args.findCardService.findCards({ all: [
           { location: ['basicSupply', 'kingdomSupply'] },
           { playerId: eventArgs.playerId, kind: 'upTo', amount: { treasure: cost.treasure - 1 } },
-        ]);
+        ] });
 
         if (!cardIds.length) {
           loggerService.debug(`[border-village onGained effect] no cards costing less than ${cost.treasure - 1}`);
@@ -270,10 +270,10 @@ const expansion: CardExpansionModule = {
           }).filter((playerId) => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
 
           for (const targetPlayerId of targetPlayerIds) {
-            const curseIds = cardEffectArgs.findCardService.findCards([
+            const curseIds = cardEffectArgs.findCardService.findCards({ all: [
               { location: 'basicSupply' },
               { cardKeys: 'curse' },
-            ]);
+            ] });
 
             if (!curseIds.length) {
               loggerService.debug(`[cauldron triggered effect] no curse cards in supply`);
@@ -371,15 +371,15 @@ const expansion: CardExpansionModule = {
         { playerId: cardEffectArgs.playerId },
       );
 
-      const oneLessCards = cardEffectArgs.findCardService.findCards([
+      const oneLessCards = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
         { playerId: cardEffectArgs.playerId, kind: 'exact', amount: { treasure: cost.treasure - 1 } },
-      ]);
+      ] });
 
-      const oneMoreCards = cardEffectArgs.findCardService.findCards([
+      const oneMoreCards = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
         { playerId: cardEffectArgs.playerId, kind: 'exact', amount: { treasure: cost.treasure + 1 } },
-      ]);
+      ] });
 
       let combined = oneLessCards.concat(oneMoreCards);
 
@@ -472,10 +472,10 @@ const expansion: CardExpansionModule = {
           playerId: rest.playerId,
         });
 
-        const nonFarmlandCards = args.findCardService.findCards([
+        const nonFarmlandCards = args.findCardService.findCards({ all: [
           { location: ['basicSupply', 'kingdomSupply'] },
           { playerId: rest.playerId, kind: 'exact', amount: { treasure: cost.treasure + 2 } },
-        ])
+        ] })
           .filter((card) => card.cardKey !== 'farmland');
 
         if (!nonFarmlandCards) {
@@ -536,10 +536,10 @@ const expansion: CardExpansionModule = {
               cardId: eventArgs.cardId,
             });
 
-            const goldCardIds = triggeredEffectArgs.findCardService.findCards([
+            const goldCardIds = triggeredEffectArgs.findCardService.findCards({ all: [
               { location: 'basicSupply' },
               { cardKeys: 'gold' },
-            ]);
+            ] });
 
             if (!goldCardIds.length) {
               loggerService.debug(`[fools-gold triggered effect] no gold cards in supply`);
@@ -655,14 +655,14 @@ const expansion: CardExpansionModule = {
             playerId: cardEffectArgs.playerId,
           });
 
-          const cards = cardEffectArgs.findCardService.findCards([
+          const cards = cardEffectArgs.findCardService.findCards({ all: [
             { location: ['basicSupply', 'kingdomSupply'] },
             {
               playerId: cardEffectArgs.playerId,
               kind: 'upTo',
               amount: { treasure: cost.treasure - 1, potion: cost.potion },
             },
-          ])
+          ] })
             .filter((card) => !card.type.includes('VICTORY'));
 
           if (cards.length === 0) {
@@ -823,10 +823,10 @@ const expansion: CardExpansionModule = {
   'jack-of-all-trades': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
-      const silverCardIds = cardEffectArgs.findCardService.findCards([
+      const silverCardIds = cardEffectArgs.findCardService.findCards({ all: [
         { location: 'basicSupply' },
         { cardKeys: 'silver' },
-      ]);
+      ] });
 
       if (!silverCardIds.length) {
         loggerService.debug(`[jack-of-all-trades effect] no silver cards in supply`);
@@ -1237,10 +1237,10 @@ const expansion: CardExpansionModule = {
               loggerService.warn(`[trader onEnterHand event] gained ${gainedCard} has no previous location`);
             }
 
-            const silverCardIds = triggerArgs.findCardService.findCards([
+            const silverCardIds = triggerArgs.findCardService.findCards({ all: [
               { location: 'basicSupply' },
               { cardKeys: 'silver' },
-            ]);
+            ] });
 
             if (!silverCardIds.length) {
               loggerService.debug(`[trader onEnterHand event] no silvers in supply`);
@@ -1292,10 +1292,10 @@ const expansion: CardExpansionModule = {
         { playerId: cardEffectArgs.playerId },
       );
 
-      const silverCardIds = cardEffectArgs.findCardService.findCards([
+      const silverCardIds = cardEffectArgs.findCardService.findCards({ all: [
         { location: 'basicSupply' },
         { cardKeys: 'silver' },
-      ]);
+      ] });
 
       if (!silverCardIds.length) {
         loggerService.debug(`[trader effect] no silver cards in supply`);
@@ -1397,10 +1397,10 @@ const expansion: CardExpansionModule = {
           playerId: eventArgs.playerId,
         });
 
-        const goldCardIds = args.findCardService.findCards([
+        const goldCardIds = args.findCardService.findCards({ all: [
           { location: 'basicSupply' },
           { cardKeys: 'gold' },
-        ]);
+        ] });
 
         if (!goldCardIds.length) {
           loggerService.debug(`[tunnel onDiscarded event] no gold cards in supply`);
@@ -1464,10 +1464,10 @@ const expansion: CardExpansionModule = {
       if (action === 1) {
         loggerService.debug(`[weaver effect] choosing silvers`);
 
-        const silverCardIds = cardEffectArgs.findCardService.findCards([
+        const silverCardIds = cardEffectArgs.findCardService.findCards({ all: [
           { location: 'basicSupply' },
           { cardKeys: 'silver' },
-        ]);
+        ] });
 
         if (!silverCardIds.length) {
           loggerService.debug(`[weaver effect] no silver cards in supply`);
@@ -1491,10 +1491,10 @@ const expansion: CardExpansionModule = {
         const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
           playerId: cardEffectArgs.playerId,
           prompt: `Gain card`,
-          restrict: [
+          restrict: { all: [
             { location: ['basicSupply', 'kingdomSupply'] },
             { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: 4 } },
-          ],
+          ] },
           count: 1,
         });
 
@@ -1541,7 +1541,7 @@ const expansion: CardExpansionModule = {
         playerId: cardEffectArgs.playerId,
       });
 
-      const actionCardIds = cardEffectArgs.findCardService.findCards([
+      const actionCardIds = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['kingdomSupply'] },
         { cardType: 'ACTION' },
         {
@@ -1549,7 +1549,7 @@ const expansion: CardExpansionModule = {
           playerId: cardEffectArgs.playerId,
           amount: { treasure: cost.treasure, potion: cost.potion },
         },
-      ]);
+      ] });
 
       if (!actionCardIds) {
         loggerService.debug(`[wheelwright effect] no action cards in kingdom`);
@@ -1617,10 +1617,10 @@ const expansion: CardExpansionModule = {
           }).filter((playerId) => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
 
           for (const targetPlayerId of targetPlayerIds) {
-            const curseCardIds = cardEffectArgs.findCardService.findCards([
+            const curseCardIds = cardEffectArgs.findCardService.findCards({ all: [
               { location: 'basicSupply' },
               { cardKeys: 'curse' },
-            ]);
+            ] });
 
             if (!curseCardIds.length) {
               loggerService.debug(`[witchs-hut effect] no curse cards in supply`);

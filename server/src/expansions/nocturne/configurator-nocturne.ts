@@ -639,10 +639,10 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           }
 
           // Ensure there is at least one Changeling in the supply pile.
-          const changelingCards = conditionArgs.findCardService.findCards([
+          const changelingCards = conditionArgs.findCardService.findCards({ all: [
             { location: 'kingdomSupply' },
             { cardKeys: 'changeling' },
-          ]);
+          ] });
 
           if (!changelingCards.length) {
             args.loggerService.debug('[changeling exchange condition] no changelings in supply');
@@ -694,10 +694,10 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           }
 
           // Move the top Changeling to the player's discard (exchange is not a gain).
-          const changelingCards = triggeredArgs.findCardService.findCards([
+          const changelingCards = triggeredArgs.findCardService.findCards({ all: [
             { location: 'kingdomSupply' },
             { cardKeys: 'changeling' },
-          ]);
+          ] });
 
           if (!changelingCards.length) {
             args.loggerService.warn('[changeling exchange] no changelings available to exchange');

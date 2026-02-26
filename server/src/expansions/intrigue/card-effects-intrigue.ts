@@ -21,7 +21,7 @@ const expansionModule: CardExpansionModule = {
 
       const handEstateIdx = hand.findLast((cId) => cardLibrary.getCard(cId).cardKey === 'estate');
 
-      const supplyEstateIdx = args.findCardService.findCards([{ location: 'basicSupply' }, { cardKeys: 'estate' }])
+      const supplyEstateIdx = args.findCardService.findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'estate' }] })
         ?.slice(-1)?.[0].id;
 
       if (!handEstateIdx) {
@@ -230,7 +230,7 @@ const expansionModule: CardExpansionModule = {
             label: 'Gain a gold',
             action: 4,
             resolve: async () => {
-              const goldCardId = args.findCardService.findCards([{ location: 'basicSupply' }, { cardKeys: 'gold' }])
+              const goldCardId = args.findCardService.findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }] })
                 ?.slice(-1)?.[0].id;
 
               if (!goldCardId) {
@@ -306,7 +306,7 @@ const expansionModule: CardExpansionModule = {
 
             await actionService.run('revealCard', {
               cardId: sourceId,
-              playerId: reaction.playerId,
+              playerId,
             });
 
             await actionService.run('drawCard', { playerId });
@@ -351,7 +351,7 @@ const expansionModule: CardExpansionModule = {
   },
   'duke': {
     registerScoringFunction: () => ({ match, cardLibrary, ownerId, ...args }) => {
-      const duchies = args.findCardService.findCards([{ owner: ownerId }, { cardKeys: 'duchy' }]);
+      const duchies = args.findCardService.findCards({ all: [{ owner: ownerId }, { cardKeys: 'duchy' }] });
 
       args.loggerService.debug(`[DUKE SCORING] player ${getPlayerById(match, ownerId)} has ${duchies.length} Duchies`);
 
@@ -377,10 +377,10 @@ const expansionModule: CardExpansionModule = {
       const cardId = await actionService.run('selectSingleCard', {
         prompt: 'Choose card',
         count: 1,
-        restrict: [
+        restrict: { all: [
           { location: ['basicSupply', 'kingdomSupply'] },
           { playerId, amount: { treasure: 4 }, kind: 'upTo' },
-        ],
+        ] },
         playerId,
       }) as number | null;
       if (!cardId) {
@@ -449,10 +449,10 @@ const expansionModule: CardExpansionModule = {
                 prompt: 'Confirm trash',
                 playerId,
                 count: 1,
-                restrict: [
+                restrict: { all: [
                   { location: ['basicSupply', 'kingdomSupply'] },
                   { cardType: 'ACTION' },
-                ],
+                ] },
               }) as number | null;
               if (!cardId) {
                 loggerService.debug('[LURKER EFFECT] no action card selected to trash');
@@ -993,10 +993,10 @@ const expansionModule: CardExpansionModule = {
       cardId = await actionService.run('selectSingleCard', {
         prompt: 'Gain card',
         playerId,
-        restrict: [
+        restrict: { all: [
           { location: ['basicSupply', 'kingdomSupply'] },
           { playerId, kind: 'upTo', amount: { treasure: cardCost.treasure + 2, potion: cardCost.potion } },
-        ],
+        ] },
         count: 1,
       }) as number | null;
       if (!cardId) {
@@ -1024,7 +1024,7 @@ const expansionModule: CardExpansionModule = {
         }).filter((id) => !isPlayerImmune(reactionContext, id));
 
         for (const targetId of targets) {
-          const curseCardId = args.findCardService.findCards([{ location: 'basicSupply' }, { cardKeys: 'curse' }])
+          const curseCardId = args.findCardService.findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }] })
             ?.slice(-1)?.[0].id;
 
           if (!curseCardId) {
@@ -1264,10 +1264,10 @@ const expansionModule: CardExpansionModule = {
         const cardIdToGain = await actionService.run('selectSingleCard', {
           prompt: 'Choose card',
           playerId,
-          restrict: [
+          restrict: { all: [
             { location: ['basicSupply', 'kingdomSupply'] },
             { playerId, kind: 'exact', amount: cost },
-          ],
+          ] },
           count: 1,
         }) as number | null;
         if (!cardIdToGain) {
@@ -1342,7 +1342,7 @@ const expansionModule: CardExpansionModule = {
             return;
           }
 
-          const curseCardId = args.findCardService.findCards([{ location: 'basicSupply' }, { cardKeys: 'curse' }])
+          const curseCardId = args.findCardService.findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }] })
             ?.slice(-1)?.[0]?.id;
 
           if (!curseCardId) {
@@ -1391,7 +1391,7 @@ const expansionModule: CardExpansionModule = {
       }
 
       if (cardIds.length === 2) {
-        const silverCardId = args.findCardService.findCards([{ location: 'basicSupply' }, { cardKeys: 'silver' }])
+        const silverCardId = args.findCardService.findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'silver' }] })
           ?.slice(-1)?.[0].id;
         if (!silverCardId) {
           loggerService.debug(`[TRADING POST EFFECT] no silver in supply`);
@@ -1462,10 +1462,10 @@ const expansionModule: CardExpansionModule = {
         const cardId = await actionService.run('selectSingleCard', {
           prompt: 'Gain card',
           playerId,
-          restrict: [
+          restrict: { all: [
             { location: ['basicSupply', 'kingdomSupply'] },
             { playerId, kind: 'exact', amount: { treasure: cardCost.treasure + 1, potion: cardCost.potion } },
-          ],
+          ] },
           count: 1,
         }) as number | null;
         if (!cardId) {

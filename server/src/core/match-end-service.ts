@@ -89,7 +89,7 @@ export class MatchEndService {
           playerId,
           turnsTaken,
           score: this.match.scores[playerId],
-          deck: this.findCardService.findCards([{ owner: playerId }]).map((card) => card.id),
+          deck: this.findCardService.findCards({ all: [{ owner: playerId }] }).map((card) => card.id),
         });
         return prev;
       }, [] as MatchSummary['playerSummary'])

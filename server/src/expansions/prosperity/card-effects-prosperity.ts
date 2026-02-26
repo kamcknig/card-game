@@ -15,10 +15,10 @@ const expansion: CardExpansionModule = {
       const selectedCardToDiscardId = await effectArgs.actionService.run('selectSingleCard', {
         playerId: effectArgs.playerId,
         prompt: `Discard treasure`,
-        restrict: [
+        restrict: { all: [
           { location: 'playerHand', playerId: effectArgs.playerId },
           { cardType: 'TREASURE' },
-        ],
+        ] },
         count: 1,
         optional: true,
       }) as CardId | null;
@@ -38,10 +38,10 @@ const expansion: CardExpansionModule = {
       const selectedCardToGainId = await effectArgs.actionService.run('selectSingleCard', {
         playerId: effectArgs.playerId,
         prompt: `Gain card`,
-        restrict: [
+        restrict: { all: [
           { location: ['basicSupply', 'kingdomSupply'] },
           { playerId: effectArgs.playerId, kind: 'upTo', amount: { treasure: 4 } },
-        ],
+        ] },
         count: 1,
       }) as CardId | null;
 
@@ -170,10 +170,10 @@ const expansion: CardExpansionModule = {
       loggerService.debug(`[charlatan effect] targets ${targetPlayerIds} gaining a curse`);
 
       for (const targetPlayerId of targetPlayerIds) {
-        const curseCards = effectArgs.findCardService.findCards([
+        const curseCards = effectArgs.findCardService.findCards({ all: [
           { location: 'basicSupply' },
           { cardKeys: 'curse' },
-        ]);
+        ] });
 
         if (!curseCards.length) {
           loggerService.debug(`[charlatan effect] no curse cards in supply`);
@@ -389,14 +389,14 @@ const expansion: CardExpansionModule = {
       const selectedToGainId = await effectArgs.actionService.run('selectSingleCard', {
         playerId: effectArgs.playerId,
         prompt: `Gain card`,
-        restrict: [
+        restrict: { all: [
           { location: ['basicSupply', 'kingdomSupply'] },
           {
             kind: 'upTo',
             playerId: effectArgs.playerId,
             amount: { treasure: effectCost.treasure + 3, potion: effectCost.potion },
           },
-        ],
+        ] },
         count: 1,
       }) as CardId | null;
 
@@ -451,14 +451,14 @@ const expansion: CardExpansionModule = {
       const selectedCardId = await effectArgs.actionService.run('selectSingleCard', {
         playerId: effectArgs.playerId,
         prompt: `Gain card`,
-        restrict: [
+        restrict: { all: [
           { location: ['basicSupply', 'kingdomSupply'] },
           {
             kind: 'exact',
             amount: { treasure: cost.treasure, potion: 0 },
             playerId: effectArgs.playerId,
           },
-        ],
+        ] },
         count: 1,
       });
 
@@ -523,10 +523,10 @@ const expansion: CardExpansionModule = {
           return true;
         },
         triggeredEffectFn: async (triggeredEffectArgs) => {
-          const goldCardIds = effectArgs.findCardService.findCards([
+          const goldCardIds = effectArgs.findCardService.findCards({ all: [
             { location: 'basicSupply' },
             { cardKeys: 'gold' },
-          ]);
+          ] });
 
           if (!goldCardIds.length) {
             loggerService.debug(`[hoard triggered effect] no gold in supply`);
@@ -605,10 +605,10 @@ const expansion: CardExpansionModule = {
       const selectedCardId = await effectArgs.actionService.run('selectSingleCard', {
         playerId: effectArgs.playerId,
         prompt: `Choose action`,
-        restrict: [
+        restrict: { all: [
           { location: 'playerHand', playerId: effectArgs.playerId },
           { cardType: 'ACTION' },
-        ],
+        ] },
         count: 1,
         optional: true,
       }) as CardId | null;
@@ -718,10 +718,10 @@ const expansion: CardExpansionModule = {
         playerId: effectArgs.playerId,
       });
 
-      const cardsInSupply = effectArgs.findCardService.findCards([
+      const cardsInSupply = effectArgs.findCardService.findCards({ all: [
         { location: selectedCard.isBasic ? 'basicSupply' : 'kingdomSupply' },
         { cardKeys: selectedCard.cardKey },
-      ]);
+      ] });
 
       if (cardsInSupply.length === 0) {
         loggerService.debug(`[mint effect] no copies of ${selectedCard} in supply`);
@@ -920,10 +920,10 @@ const expansion: CardExpansionModule = {
       const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Play treasure`,
-        restrict: [
+        restrict: { all: [
           { location: 'playerHand', playerId: cardEffectArgs.playerId },
           { cardType: 'TREASURE' },
-        ],
+        ] },
         count: 1,
         optional: true,
       }) as CardId | null;
@@ -1046,10 +1046,10 @@ const expansion: CardExpansionModule = {
         cardsNamedByTurn[turnStatsIndex] ??= [];
         cardsNamedByTurn[turnStatsIndex].push(cardKey);
 
-        const cardIds = cardEffectArgs.findCardService.findCards([
+        const cardIds = cardEffectArgs.findCardService.findCards({ all: [
           { location: ['basicSupply', 'kingdomSupply'] },
           { kind: 'upTo', amount: { treasure: 5 }, playerId: cardEffectArgs.playerId },
-        ])
+        ] })
           .filter((card) => !cardsNamedByTurn[turnStatsIndex].includes(card.cardKey))
           .map((card) => card.id);
 

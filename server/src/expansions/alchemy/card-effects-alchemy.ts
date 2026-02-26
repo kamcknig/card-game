@@ -199,7 +199,7 @@ const expansion: CardExpansionModule = {
       }).filter((id) => !isPlayerImmune(args.reactionContext, id));
 
       for (const targetId of targets) {
-        const curseCardId = args.findCardService.findCards([{ location: 'basicSupply' }, { cardKeys: 'curse' }])?.slice(
+        const curseCardId = args.findCardService.findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }] })?.slice(
           -1,
         )?.[0]?.id;
 
@@ -483,10 +483,10 @@ const expansion: CardExpansionModule = {
 
       let cards: Card[] = [];
       if (selectedCard.type.includes('ACTION')) {
-        cards = args.findCardService.findCards([
+        cards = args.findCardService.findCards({ all: [
           { location: ['basicSupply'] },
           { cardKeys: 'duchy' },
-        ]);
+        ] });
 
         const card = cards.slice(-1)[0];
         if (card) {
@@ -501,10 +501,10 @@ const expansion: CardExpansionModule = {
       }
 
       if (selectedCard.type.includes('TREASURE')) {
-        cards = args.findCardService.findCards([
+        cards = args.findCardService.findCards({ all: [
           { location: 'kingdomSupply' },
           { cardKeys: 'transmute' },
-        ]);
+        ] });
 
         const card = cards.slice(-1)[0];
         if (card) {
@@ -520,10 +520,10 @@ const expansion: CardExpansionModule = {
 
       if (selectedCard.type.includes('VICTORY')) {
         cards = args.findCardService.findCards(
-          [
+          { all: [
             { location: 'basicSupply' },
             { cardKeys: 'gold' },
-          ],
+          ] },
         );
 
         const card = cards.slice(-1)[0];
@@ -547,11 +547,11 @@ const expansion: CardExpansionModule = {
       const selectedCardId = await args.actionService.run('selectSingleCard', {
         playerId: args.playerId,
         prompt: `Gain card`,
-        restrict: [
+        restrict: { all: [
           { location: 'kingdomSupply' },
           { cardType: 'ACTION' },
           { kind: 'upTo', amount: { treasure: 5 }, playerId: args.playerId },
-        ],
+        ] },
         count: 1,
         optional: true,
       }) as CardId | null;

@@ -28,10 +28,10 @@ const gainHorse = async (
   playerId: PlayerId,
   to: { location: 'playerDiscard' | 'playerDeck' },
 ) => {
-  const horseCards = args.findCardService.findCards([
+  const horseCards = args.findCardService.findCards({ all: [
     { location: 'nonSupplyCards' },
     { cardKeys: 'horse' },
-  ]);
+  ] });
 
   if (!horseCards.length) {
     args.loggerService.debug('[menagerie event helper] no Horse cards remain to gain');
@@ -161,10 +161,10 @@ const effectMap: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
       // Bargain gains a non-Victory card up to $5.
-      const gainableCards = cardEffectArgs.findCardService.findCards([
+      const gainableCards = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
         { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: 5 } },
-      ]).filter((card) => !card.type.includes('VICTORY'));
+      ] }).filter((card) => !card.type.includes('VICTORY'));
 
       if (gainableCards.length) {
         const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
@@ -231,10 +231,10 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      const goldCards = cardEffectArgs.findCardService.findCards([
+      const goldCards = cardEffectArgs.findCardService.findCards({ all: [
         { location: 'basicSupply' },
         { cardKeys: 'gold' },
-      ]);
+      ] });
       const goldGainCount = Math.min(uniqueCardKeys.size, goldCards.length);
 
       if (goldGainCount === 0) {
@@ -322,10 +322,10 @@ const effectMap: CardExpansionModule = {
       // Demand gains a Horse onto deck before choosing the second gain.
       await gainHorse(cardEffectArgs, cardEffectArgs.playerId, { location: 'playerDeck' });
 
-      const gainableCards = cardEffectArgs.findCardService.findCards([
+      const gainableCards = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
         { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: 4 } },
-      ]);
+      ] });
 
       if (!gainableCards.length) {
         loggerService.debug('[demand effect] no card costing up to $4 to gain');
@@ -398,10 +398,10 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      const curseCards = cardEffectArgs.findCardService.findCards([
+      const curseCards = cardEffectArgs.findCardService.findCards({ all: [
         { location: 'basicSupply' },
         { cardKeys: 'curse' },
-      ]);
+      ] });
 
       if (!curseCards.length) {
         loggerService.debug('[desperation effect] no Curse in Supply; no bonus granted');
@@ -430,10 +430,10 @@ const effectMap: CardExpansionModule = {
         logTag: 'enclave effect',
       });
 
-      const duchyCards = cardEffectArgs.findCardService.findCards([
+      const duchyCards = cardEffectArgs.findCardService.findCards({ all: [
         { location: 'basicSupply' },
         { cardKeys: 'duchy' },
-      ]);
+      ] });
 
       if (!duchyCards.length) {
         loggerService.debug('[enclave effect] no Duchy in Supply to Exile');
@@ -489,10 +489,10 @@ const effectMap: CardExpansionModule = {
         debt: trashedCardCost.debt ?? 0,
       };
 
-      const gainableCards = cardEffectArgs.findCardService.findCards([
+      const gainableCards = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
         { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: maxGainCost },
-      ]);
+      ] });
 
       if (!gainableCards.length) {
         loggerService.debug('[enhance effect] no card available to gain after trashing');
@@ -588,10 +588,10 @@ const effectMap: CardExpansionModule = {
       }
 
       // Invest Exiles an Action card from the Supply.
-      const actionCards = cardEffectArgs.findCardService.findCards([
+      const actionCards = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
         { cardType: ['ACTION'] },
-      ]);
+      ] });
 
       if (!actionCards.length) {
         loggerService.debug('[invest effect] no Action card in Supply to Exile');
@@ -696,6 +696,7 @@ const effectMap: CardExpansionModule = {
         playerId: cardEffectArgs.playerId,
         prompt: 'Play an Action card from your discard?',
         restrict: actionCardsInDiscard.map((card) => card.id),
+        selectionIntent: { kind: 'play-card', cardTypes: ['ACTION'] },
         count: 1,
         optional: true,
       });
@@ -841,10 +842,10 @@ const effectMap: CardExpansionModule = {
       }
 
       // Reap gains a Gold and sets it aside to auto-play at next turn start.
-      const goldCards = cardEffectArgs.findCardService.findCards([
+      const goldCards = cardEffectArgs.findCardService.findCards({ all: [
         { location: 'basicSupply' },
         { cardKeys: 'gold' },
-      ]);
+      ] });
 
       if (!goldCards.length) {
         loggerService.debug('[reap effect] no Gold in Supply to gain');
@@ -931,10 +932,10 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      const horseCards = cardEffectArgs.findCardService.findCards([
+      const horseCards = cardEffectArgs.findCardService.findCards({ all: [
         { location: 'nonSupplyCards' },
         { cardKeys: 'horse' },
-      ]);
+      ] });
       const horseGainCount = Math.min(5, horseCards.length);
 
       if (horseGainCount === 0) {
@@ -958,20 +959,16 @@ const effectMap: CardExpansionModule = {
       // Toil grants +1 Buy and may play an Action card from hand.
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
 
-      const hand = getPlayerSourceSafe(cardEffectArgs, 'playerHand', cardEffectArgs.playerId);
-      const actionCardsInHand = hand
-        .map((cardId) => cardEffectArgs.cardLibrary.getCard(cardId))
-        .filter((card) => card.type.includes('ACTION'));
-
-      if (!actionCardsInHand.length) {
-        loggerService.debug('[toil effect] no Action cards in hand');
-        return;
-      }
-
       const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Play an Action card from your hand?',
-        restrict: actionCardsInHand.map((card) => card.id),
+        restrict: {
+          all: [
+            { location: 'playerHand', playerId: cardEffectArgs.playerId },
+            { cardType: ['ACTION'] },
+          ],
+        },
+        selectionIntent: { kind: 'play-card', cardTypes: ['ACTION'] },
         count: 1,
         optional: true,
       });
@@ -992,10 +989,10 @@ const effectMap: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
       // Transport can either Exile an Action from Supply or topdeck an Action from Exile.
-      const supplyActionCards = cardEffectArgs.findCardService.findCards([
+      const supplyActionCards = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
         { cardType: ['ACTION'] },
-      ]);
+      ] });
       const exileActionCards = getPlayerSourceSafe(cardEffectArgs, 'exile', cardEffectArgs.playerId)
         .map((cardId) => cardEffectArgs.cardLibrary.getCard(cardId))
         .filter((card) => card.type.includes('ACTION'));

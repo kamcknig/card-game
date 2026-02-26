@@ -304,9 +304,9 @@ const registerLocusts = (registerHexEffect: HexEffectRegistrar) => {
       }
 
       const trashedCost = cardPriceController.applyRules(trashedCard, { playerId }).cost;
-      const eligibleCards = findCardService.findCards([
+      const eligibleCards = findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
-      ]).filter((card) => {
+      ] }).filter((card) => {
         if (!card.type.some((type) => trashedCard.type.includes(type))) {
           return false;
         }

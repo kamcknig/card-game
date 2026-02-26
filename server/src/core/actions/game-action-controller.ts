@@ -1,9 +1,11 @@
 import {
   Card,
+  CardFilterExpr,
   CardCost,
   CardFacing,
   CardId,
   CardKey,
+  CardType,
   CardLikeId,
   CardLocation,
   CardLocationSpec,
@@ -359,30 +361,187 @@ export class GameActionController implements GameActionDefinitionMap {
     );
   }
 
-  // Infers whether a selection prompt is intended to choose a card to play.
-  private inferPromptIsPlaySelection(prompt?: string): boolean {
-    if (!prompt) {
+  // Returns true when selection intent is explicitly marked as a "select to play" flow.
+  private isPlayCardSelectionIntent(
+    selectionIntent: SelectActionCardArgs['selectionIntent'],
+  ): selectionIntent is { kind: 'play-card'; cardTypes: CardType[]; } {
+    if (!selectionIntent || typeof selectionIntent !== 'object') {
       return false;
     }
-    const normalizedPrompt = prompt.toLowerCase();
-    if (normalizedPrompt === 'choose action' || normalizedPrompt.startsWith('choose action ')) {
-      return true;
+    if (selectionIntent.kind !== 'play-card') {
+      return false;
     }
-    if (normalizedPrompt.includes('replay')) {
-      return true;
+    return Array.isArray(selectionIntent.cardTypes) &&
+      selectionIntent.cardTypes.every((cardType) => typeof cardType === 'string');
+  }
+
+  // Returns true when the explicit play intent includes one target card type.
+  private playIntentIncludesType(
+    selectionIntent: SelectActionCardArgs['selectionIntent'],
+    cardType: CardType,
+  ): boolean {
+    return this.isPlayCardSelectionIntent(selectionIntent) && selectionIntent.cardTypes.includes(cardType);
+  }
+
+  // Returns deck-resident Shadow Action card ids in stable deck order.
+  private getShadowActionCardIdsInDeck(playerId: PlayerId): CardId[] {
+    const playerDeck = this.cardSourceController.getSource('playerDeck', playerId);
+    const shadowActionCardIds = playerDeck.filter((cardId) => {
+      const card = this.cardLibrary.getCard(cardId);
+      return card.type.includes('ACTION') && card.type.includes('SHADOW');
+    });
+    if (shadowActionCardIds.length < 1) {
+      this.loggerService.debug(`[selectCard action] no Shadow Action cards in deck for player ${playerId}`);
+      return [];
+    }
+    this.loggerService.debug(
+      `[selectCard action] found ${shadowActionCardIds.length} Shadow Action card(s) in deck for player ${playerId}`,
+    );
+    return shadowActionCardIds;
+  }
+
+  // Applies a play-selection filter to deck Shadow candidates using "as if in hand" source semantics.
+  private filterShadowActionCardsForPlaySelection(args: {
+    playerId: PlayerId;
+    cardFilter?: CardFilterExpr;
+    shadowActionCardIds: CardId[];
+  }): CardId[] {
+    const { cardFilter } = args;
+    if (!cardFilter) {
+      this.loggerService.debug('[selectCard action] skipping Shadow augmentation because no cardFilter was supplied');
+      return [];
     }
 
-    if (
-      normalizedPrompt.includes(' to play') &&
-      !normalizedPrompt.includes('next turn') &&
-      !normalizedPrompt.includes('set aside')
-    ) {
-      return true;
+    const matchingShadowCardIds = args.shadowActionCardIds.filter((shadowCardId) =>
+      this.findCardService.matchesFilter({
+        cardId: shadowCardId,
+        filter: cardFilter,
+        sourceOverride: {
+          location: 'playerHand',
+          playerId: args.playerId,
+        },
+      })
+    );
+
+    this.loggerService.debug(
+      `[selectCard action] matched ${matchingShadowCardIds.length}/${args.shadowActionCardIds.length} Shadow card(s) against play filter`,
+    );
+    return matchingShadowCardIds;
+  }
+
+  // Appends deck Shadow Action cards for explicit Action-play selections.
+  private appendShadowActionCardsForPlaySelection(args: {
+    playerId: PlayerId;
+    selectableCardIds: CardId[];
+    selectionIntent: SelectActionCardArgs['selectionIntent'];
+    cardFilter?: CardFilterExpr;
+  }): CardId[] {
+    if (!this.playIntentIncludesType(args.selectionIntent, 'ACTION')) {
+      return args.selectableCardIds;
     }
 
-    return normalizedPrompt.startsWith('play ') ||
-      normalizedPrompt.includes('choose to play') ||
-      normalizedPrompt.includes('you may play ');
+    const player = getPlayerById(this.match, args.playerId);
+    if (player?.isComputer) {
+      this.loggerService.debug(
+        `[selectCard action] skipping Shadow augmentation for computer player ${args.playerId}`,
+      );
+      return args.selectableCardIds;
+    }
+
+    const shadowActionCardIds = this.getShadowActionCardIdsInDeck(args.playerId);
+    if (shadowActionCardIds.length < 1) {
+      return args.selectableCardIds;
+    }
+
+    const matchingShadowCardIds = this.filterShadowActionCardsForPlaySelection({
+      playerId: args.playerId,
+      cardFilter: args.cardFilter,
+      shadowActionCardIds,
+    });
+    if (matchingShadowCardIds.length < 1) {
+      return args.selectableCardIds;
+    }
+
+    const selectableCardSet = new Set(args.selectableCardIds);
+    const augmentedSelectableIds = [...args.selectableCardIds];
+    for (const shadowCardId of matchingShadowCardIds) {
+      if (selectableCardSet.has(shadowCardId)) {
+        continue;
+      }
+      selectableCardSet.add(shadowCardId);
+      augmentedSelectableIds.push(shadowCardId);
+    }
+    this.loggerService.debug(
+      `[selectCard action] augmented action-play selection with ${augmentedSelectableIds.length - args.selectableCardIds.length} Shadow card(s)`,
+    );
+    return augmentedSelectableIds;
+  }
+
+  // Adds Shadow Action deck cards to prompt select payloads that explicitly choose an Action card to play.
+  private augmentPromptSelectWithShadowCards(args: UserPromptActionArgs): UserPromptActionArgs {
+    if (args.content?.type !== 'select') {
+      return args;
+    }
+
+    if (!this.playIntentIncludesType(args.content.selectionIntent, 'ACTION')) {
+      return args;
+    }
+
+    const player = getPlayerById(this.match, args.playerId);
+    if (player?.isComputer) {
+      this.loggerService.debug(
+        `[userPrompt] skipping Shadow prompt augmentation for computer player ${args.playerId}`,
+      );
+      return args;
+    }
+
+    const shadowActionCardIds = this.getShadowActionCardIdsInDeck(args.playerId);
+    if (shadowActionCardIds.length < 1) {
+      return args;
+    }
+
+    const matchingShadowCardIds = this.filterShadowActionCardsForPlaySelection({
+      playerId: args.playerId,
+      cardFilter: args.content.cardFilter,
+      shadowActionCardIds,
+    });
+    if (matchingShadowCardIds.length < 1) {
+      return args;
+    }
+
+    const mergedCardIds = [...args.content.cardIds];
+    const mergedCardIdSet = new Set(mergedCardIds);
+    for (const shadowCardId of matchingShadowCardIds) {
+      if (mergedCardIdSet.has(shadowCardId)) {
+        continue;
+      }
+      mergedCardIdSet.add(shadowCardId);
+      mergedCardIds.push(shadowCardId);
+    }
+
+    const baseSelectableCardIds = args.content.selectableCardIds ?? mergedCardIds;
+    const mergedSelectableCardIds = [...baseSelectableCardIds];
+    const mergedSelectableSet = new Set(mergedSelectableCardIds);
+    for (const shadowCardId of matchingShadowCardIds) {
+      if (mergedSelectableSet.has(shadowCardId)) {
+        continue;
+      }
+      mergedSelectableSet.add(shadowCardId);
+      mergedSelectableCardIds.push(shadowCardId);
+    }
+
+    this.loggerService.debug(
+      `[userPrompt] augmented select prompt with ${mergedCardIds.length - args.content.cardIds.length} Shadow card(s)`,
+    );
+
+    return {
+      ...args,
+      content: {
+        ...args.content,
+        cardIds: mergedCardIds,
+        selectableCardIds: mergedSelectableCardIds,
+      },
+    };
   }
 
   // Consumes and returns a queued Way choice for one selected card, when still in the same turn.
@@ -1845,9 +2004,10 @@ export class GameActionController implements GameActionDefinitionMap {
   }
 
   async userPrompt(args: UserPromptActionArgs) {
-    const { playerId } = args;
+    const resolvedArgs = this.augmentPromptSelectWithShadowCards(args);
+    const { playerId } = resolvedArgs;
     // Default prompt behavior waits for input unless explicitly marked display-only.
-    const waitForInput = args.waitForInput ?? true;
+    const waitForInput = resolvedArgs.waitForInput ?? true;
 
     const signalId = `userPrompt:${playerId}:${Date.now()}`;
 
@@ -1863,28 +2023,28 @@ export class GameActionController implements GameActionDefinitionMap {
         return null;
       }
       this.loggerService.debug(`[userPrompt] dispatching display-only prompt to player ${playerId}`);
-      socket.emit('userPrompt', signalId, args);
+      socket.emit('userPrompt', signalId, resolvedArgs);
       return null;
     }
 
     if (player?.isComputer) {
       // Computer players always pick the first available action button when prompted.
-      if (args.content?.type === 'select-pile') {
-        const pileNames = args.content.pileNames ?? [];
+      if (resolvedArgs.content?.type === 'select-pile') {
+        const pileNames = resolvedArgs.content.pileNames ?? [];
         return { result: pileNames.length ? [pileNames[0]] : [] };
       }
-      if (args.content?.type === 'number-input') {
+      if (resolvedArgs.content?.type === 'number-input') {
         // Provide a deterministic numeric answer for AI prompts.
         // Resolve bounds with infinite defaults when min/max are omitted.
-        const minValue = args.content.min ?? Number.NEGATIVE_INFINITY;
-        const maxValue = args.content.max ?? Number.POSITIVE_INFINITY;
+        const minValue = resolvedArgs.content.min ?? Number.NEGATIVE_INFINITY;
+        const maxValue = resolvedArgs.content.max ?? Number.POSITIVE_INFINITY;
         // Prefer the provided value, otherwise use the min if finite or 0 as a fallback.
-        const requestedValue = args.content.value ?? (Number.isFinite(minValue) ? minValue : 0);
+        const requestedValue = resolvedArgs.content.value ?? (Number.isFinite(minValue) ? minValue : 0);
         // Clamp into the allowed range.
         const clamped = Math.min(Math.max(requestedValue, minValue), maxValue);
         return { action: 1, result: clamped };
       }
-      const actionButtons = args.actionButtons ?? [];
+      const actionButtons = resolvedArgs.actionButtons ?? [];
       const firstAction = actionButtons.find((button) => button.action !== 0)?.action ?? 0;
       return { action: firstAction };
     }
@@ -1919,7 +2079,10 @@ export class GameActionController implements GameActionDefinitionMap {
           });
         }
 
-        if (args.content?.type === 'select' && args.content.playCard) {
+        if (
+          resolvedArgs.content?.type === 'select' &&
+          this.isPlayCardSelectionIntent(resolvedArgs.content.selectionIntent)
+        ) {
           const parsedSelection = this.parsePlayCardSelectionResult(response);
           if (!parsedSelection) {
             this.loggerService.warn('[userPrompt] invalid play-card selection payload');
@@ -1936,33 +2099,32 @@ export class GameActionController implements GameActionDefinitionMap {
       };
 
       socket.on('userInputReceived', onInput);
-      socket.emit('userPrompt', signalId, args);
+      socket.emit('userPrompt', signalId, resolvedArgs);
     });
   }
 
   async selectCard(args: SelectActionCardArgs) {
     args.count ??= 1;
-    const playSelection = args.playCard ?? this.inferPromptIsPlaySelection(args.prompt);
+    const playSelection = this.isPlayCardSelectionIntent(args.selectionIntent);
     this.loggerService.debug(
-      `[selectCard action] play-selection=${playSelection} prompt='${args.prompt}' explicit=${args.playCard}`,
+      `[selectCard action] play-selection=${playSelection} prompt='${args.prompt}' selectionIntent='${JSON.stringify(args.selectionIntent)}'`,
     );
 
     let selectableCardIds: CardId[] = [];
 
     const { count, playerId, restrict } = args;
+    const usesCardIdRestriction = this.isCardIdRestriction(restrict);
+    // Preserve the canonical filter for Shadow "as-if-in-hand" matching when caller passed explicit ids.
+    const cardFilter = usesCardIdRestriction ? args.cardFilter : restrict;
 
-    if (Array.isArray(restrict)) {
-      if (this.isCardIdRestriction(restrict)) {
-        this.loggerService.debug(`[selectCard action] restricted to set of cards ${restrict}`);
-        selectableCardIds = restrict;
-      } else {
-        selectableCardIds = this.findCardService.findCards(restrict).map((card) => card.id);
-      }
+    if (usesCardIdRestriction) {
+      this.loggerService.debug(`[selectCard action] restricted to set of cards ${restrict}`);
+      selectableCardIds = restrict;
     } else if (restrict !== undefined) {
       selectableCardIds = this.findCardService.findCards(restrict).map((card) => card.id);
     }
 
-    if (!this.isCardIdRestriction(restrict)) {
+    if (!usesCardIdRestriction) {
       const originalSelectableCount = selectableCardIds.length;
       selectableCardIds = this.collapseSupplySelectableCards(selectableCardIds);
       if (selectableCardIds.length !== originalSelectableCount) {
@@ -1971,6 +2133,14 @@ export class GameActionController implements GameActionDefinitionMap {
         );
       }
     }
+
+    // Shadow rule: explicit Action-play selections may also choose Shadow Actions from deck.
+    selectableCardIds = this.appendShadowActionCardsForPlaySelection({
+      playerId,
+      selectableCardIds,
+      selectionIntent: args.selectionIntent,
+      cardFilter,
+    });
 
     this.loggerService.debug(`[selectCard action] found ${selectableCardIds.length} selectable cards`);
 
@@ -2068,7 +2238,7 @@ export class GameActionController implements GameActionDefinitionMap {
       };
 
       socket.on('userInputReceived', onInput);
-      socket.emit('selectCard', signalId, { ...args, playCard: playSelection, selectableCardIds });
+      socket.emit('selectCard', signalId, { ...args, selectableCardIds });
     });
   }
 
@@ -3398,7 +3568,7 @@ export class GameActionController implements GameActionDefinitionMap {
     if (newPhase === 'action') {
       match.playerActions = 1;
       match.playerBuys = 1;
-      match.playerTreasure = 10;
+      match.playerTreasure = 0;
       match.playerPotions = 0;
 
       if (scheduledTurn) {
@@ -4123,6 +4293,23 @@ export class GameActionController implements GameActionDefinitionMap {
       deck.unshift(...discardCardsToShuffle);
     } else {
       await this.shuffle({ playerId, cardIds: deck }, context);
+    }
+
+    // Deck cards must always be face-down after shuffling.
+    // Discard cards carry front-facing state, so normalize all deck cards here.
+    let flippedToBackCount = 0;
+    for (const deckCardId of deck) {
+      const deckCard = this.cardLibrary.getCard(deckCardId);
+      if (deckCard.facing === 'back') {
+        continue;
+      }
+      deckCard.facing = 'back';
+      flippedToBackCount++;
+    }
+    if (flippedToBackCount > 0) {
+      this.loggerService.debug(
+        `[shuffleDeck action] reset ${flippedToBackCount} deck card(s) to face-down for player ${playerId}`,
+      );
     }
 
     this.logManager.addLogEntry({

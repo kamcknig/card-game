@@ -560,22 +560,17 @@ const effectMap: CardExpansionModule = {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.log('[practice effect] resolving event');
 
-      const hand = getPlayerSourceSafe(cardEffectArgs, 'playerHand', cardEffectArgs.playerId);
-      const actionCardsInHand = hand
-        .map((cardId) => cardEffectArgs.cardLibrary.getCard(cardId))
-        .filter((card) => card.type.includes('ACTION'));
-
-      if (actionCardsInHand.length < 1) {
-        loggerService.debug('[practice effect] no Action cards in hand to play');
-        return;
-      }
-
       const selectedActionCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'You may play an Action card from your hand twice',
-        playCard: true,
+        selectionIntent: { kind: 'play-card', cardTypes: ['ACTION'] },
         optional: true,
-        restrict: actionCardsInHand.map((card) => card.id),
+        restrict: {
+          all: [
+            { location: 'playerHand', playerId: cardEffectArgs.playerId },
+            { cardType: ['ACTION'] },
+          ],
+        },
       });
 
       if (!selectedActionCardId) {

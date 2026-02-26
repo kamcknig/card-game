@@ -24,10 +24,10 @@ const expansion: CardExpansionModule = {
         const selectedCardId = await actionService.run('selectSingleCard', {
           playerId,
           prompt: 'Choose an Action card from your hand to trash for Animal Fair',
-          restrict: [
+          restrict: { all: [
             { location: 'playerHand', playerId },
             { cardType: 'ACTION' },
-          ],
+          ] },
           count: 1,
         });
 
@@ -309,9 +309,9 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
       // Camel Train exiles exactly one non-Victory card from supply when possible.
-      const exileCandidates = cardEffectArgs.findCardService.findCards([
+      const exileCandidates = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
-      ]).filter((card) => !card.type.includes('VICTORY'));
+      ] }).filter((card) => !card.type.includes('VICTORY'));
 
       if (!exileCandidates.length) {
         loggerService.debug('[camel-train effect] no non-Victory supply cards to exile');
@@ -449,10 +449,10 @@ const expansion: CardExpansionModule = {
       const loggerService = cardEffectArgs.loggerService;
       // Cavalry gains two Horses from the Horse non-supply pile.
       for (let index = 0; index < 2; index++) {
-        const horseCards = cardEffectArgs.findCardService.findCards([
+        const horseCards = cardEffectArgs.findCardService.findCards({ all: [
           { location: 'nonSupplyCards' },
           { cardKeys: 'horse' },
-        ]);
+        ] });
 
         if (!horseCards.length) {
           loggerService.debug('[cavalry effect] no Horse cards remain to gain');
@@ -483,10 +483,10 @@ const expansion: CardExpansionModule = {
       }).filter((targetPlayerId) => !isPlayerImmune(cardEffectArgs.reactionContext, targetPlayerId));
 
       for (const targetPlayerId of targetPlayerIds) {
-        const curseCards = cardEffectArgs.findCardService.findCards([
+        const curseCards = cardEffectArgs.findCardService.findCards({ all: [
           { location: 'basicSupply' },
           { cardKeys: 'curse' },
-        ]);
+        ] });
 
         if (curseCards.length) {
           const curseCard = curseCards.slice(-1)[0];
@@ -559,7 +559,7 @@ const expansion: CardExpansionModule = {
       });
 
       // Gain a differently named card costing up to $2 more than the exiled card.
-      const gainCandidates = cardEffectArgs.findCardService.findCards([
+      const gainCandidates = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
         {
           kind: 'upTo',
@@ -570,7 +570,7 @@ const expansion: CardExpansionModule = {
             debt: exiledCardCost.debt,
           },
         },
-      ]).filter((card) => card.cardKey !== exiledCard.cardKey);
+      ] }).filter((card) => card.cardKey !== exiledCard.cardKey);
 
       if (!gainCandidates.length) {
         loggerService.debug('[displace effect] no differently named cards are gainable');
@@ -670,9 +670,9 @@ const expansion: CardExpansionModule = {
       });
 
       // Falconer gains from Supply only, and only cards costing less than Falconer.
-      const gainCandidates = cardEffectArgs.findCardService.findCards([
+      const gainCandidates = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
-      ]).filter((candidateCard) => {
+      ] }).filter((candidateCard) => {
         const { cost: candidateCost } = cardEffectArgs.cardPriceController.applyRules(candidateCard, {
           playerId: cardEffectArgs.playerId,
         });
@@ -902,10 +902,10 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
       // Groom gains one card from the Supply costing up to $4.
-      const gainableCards = cardEffectArgs.findCardService.findCards([
+      const gainableCards = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
         { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: 4 } },
-      ]);
+      ] });
 
       if (!gainableCards.length) {
         loggerService.debug('[groom effect] no gainable cards in supply costing up to 4');
@@ -933,10 +933,10 @@ const expansion: CardExpansionModule = {
 
       // Groom bonuses are cumulative when a gained card has multiple relevant types.
       if (selectedCard.type.includes('ACTION')) {
-        const horseCards = cardEffectArgs.findCardService.findCards([
+        const horseCards = cardEffectArgs.findCardService.findCards({ all: [
           { location: 'nonSupplyCards' },
           { cardKeys: 'horse' },
-        ]);
+        ] });
 
         if (!horseCards.length) {
           loggerService.debug('[groom effect] no Horse cards remain to gain for Action bonus');
@@ -1023,10 +1023,10 @@ const expansion: CardExpansionModule = {
 
         // Gain one Horse per discarded Treasure from the Horse pile.
         for (let index = 0; index < selectedTreasureIds.length; index++) {
-          const horseCards = cardEffectArgs.findCardService.findCards([
+          const horseCards = cardEffectArgs.findCardService.findCards({ all: [
             { location: 'nonSupplyCards' },
             { cardKeys: 'horse' },
-          ]);
+          ] });
 
           if (!horseCards.length) {
             loggerService.debug('[hostelry onGained effect] no Horse cards remain to gain');
@@ -1116,10 +1116,10 @@ const expansion: CardExpansionModule = {
           condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
           triggeredEffectFn: async (triggeredArgs) => {
             const playedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
-            const copyCandidates = triggeredArgs.findCardService.findCards([
+            const copyCandidates = triggeredArgs.findCardService.findCards({ all: [
               { location: ['basicSupply', 'kingdomSupply'] },
               { cardKeys: playedCard.cardKey },
-            ]);
+            ] });
 
             if (!copyCandidates.length) {
               loggerService.debug(`[kiln effect] no supply copy available for ${playedCard}`);
@@ -1204,10 +1204,10 @@ const expansion: CardExpansionModule = {
             return cost.treasure >= 4;
           },
           triggeredEffectFn: async (triggeredArgs) => {
-            const horseCards = triggeredArgs.findCardService.findCards([
+            const horseCards = triggeredArgs.findCardService.findCards({ all: [
               { location: 'nonSupplyCards' },
               { cardKeys: 'horse' },
-            ]);
+            ] });
 
             if (!horseCards.length) {
               loggerService.debug('[livery effect] no Horse cards remain to gain');
@@ -1264,21 +1264,16 @@ const expansion: CardExpansionModule = {
 
           // Return Mastermind to play area while resolving its start-turn effect.
 
-          const actionCardIdsInHand = triggeredArgs.cardSourceController.getSource(
-            'playerHand',
-            cardEffectArgs.playerId,
-          )
-            .filter((cardId) => triggeredArgs.cardLibrary.getCard(cardId).type.includes('ACTION'));
-
-          if (!actionCardIdsInHand.length) {
-            loggerService.debug('[mastermind startTurn effect] no Action cards in hand to play');
-            return;
-          }
-
           const selectedActionId = await triggeredArgs.actionService.run('selectSingleCard', {
             playerId: cardEffectArgs.playerId,
             prompt: 'You may play an Action card from your hand three times',
-            restrict: actionCardIdsInHand,
+            restrict: {
+              all: [
+                { location: 'playerHand', playerId: cardEffectArgs.playerId },
+                { cardType: ['ACTION'] },
+              ],
+            },
+            selectionIntent: { kind: 'play-card', cardTypes: ['ACTION'] },
             count: 1,
             optional: true,
           }) as CardId | null;
@@ -1405,10 +1400,10 @@ const expansion: CardExpansionModule = {
 
       // Gain 2 Horses from the Horse pile.
       for (let index = 0; index < 2; index++) {
-        const horseCards = cardEffectArgs.findCardService.findCards([
+        const horseCards = cardEffectArgs.findCardService.findCards({ all: [
           { location: 'nonSupplyCards' },
           { cardKeys: 'horse' },
-        ]);
+        ] });
 
         if (!horseCards.length) {
           loggerService.debug('[paddock effect] no Horse cards remain to gain');
@@ -1562,10 +1557,10 @@ const expansion: CardExpansionModule = {
           return;
         }
 
-        const horseCards = cardEffectArgs.findCardService.findCards([
+        const horseCards = cardEffectArgs.findCardService.findCards({ all: [
           { location: 'nonSupplyCards' },
           { cardKeys: 'horse' },
-        ]);
+        ] });
 
         if (!horseCards.length) {
           loggerService.debug('[scrap effect] no Horse cards remain to gain');
@@ -1759,10 +1754,10 @@ const expansion: CardExpansionModule = {
       const loggerService = cardEffectArgs.loggerService;
       // Sleigh gains 2 Horses from the Horse pile.
       for (let index = 0; index < 2; index++) {
-        const horseCards = cardEffectArgs.findCardService.findCards([
+        const horseCards = cardEffectArgs.findCardService.findCards({ all: [
           { location: 'nonSupplyCards' },
           { cardKeys: 'horse' },
-        ]);
+        ] });
 
         if (!horseCards.length) {
           loggerService.debug('[sleigh effect] no Horse cards remain to gain');
@@ -1862,10 +1857,10 @@ const expansion: CardExpansionModule = {
       const loggerService = cardEffectArgs.loggerService;
       await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
 
-      const horseCards = cardEffectArgs.findCardService.findCards([
+      const horseCards = cardEffectArgs.findCardService.findCards({ all: [
         { location: 'nonSupplyCards' },
         { cardKeys: 'horse' },
-      ]);
+      ] });
 
       if (!horseCards.length) {
         loggerService.debug('[supplies effect] no Horse cards remain to gain');

@@ -32,10 +32,10 @@ const expansionModule: CardExpansionModule = {
       let selectedCardId = await actionService.run('selectSingleCard', {
         prompt: 'Choose card to gain',
         playerId: playerId,
-        restrict: [
+        restrict: { all: [
           { location: ['kingdomSupply', 'basicSupply'] },
           { playerId, kind: 'upTo', amount: { treasure: 5 } },
-        ],
+        ] },
       });
 
       if (!selectedCardId) {
@@ -86,7 +86,7 @@ const expansionModule: CardExpansionModule = {
         //Gain a Gold. Each other player reveals the top 2 cards of their deck,
         // trashes a revealed Treasure other than Copper, and discards the rest.
 
-        const goldCardId = args.findCardService.findCards([{ location: 'basicSupply' }, { cardKeys: 'gold' }])
+        const goldCardId = args.findCardService.findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }] })
           ?.slice(-1)?.[0].id;
 
         if (goldCardId) {
@@ -227,7 +227,7 @@ const expansionModule: CardExpansionModule = {
       () => async ({ loggerService, reactionContext, match, cardLibrary, actionService, playerId, ...args }) => {
         // Gain a Silver onto your deck. Each other player reveals a Victory card
         // from their hand and puts it onto their deck (or reveals a hand with no Victory cards).
-        const silverCardId = args.findCardService.findCards([{ location: 'basicSupply' }, { cardKeys: 'silver' }])
+        const silverCardId = args.findCardService.findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'silver' }] })
           ?.slice(-1)?.[0].id;
 
         if (!silverCardId) {
@@ -281,13 +281,13 @@ const expansionModule: CardExpansionModule = {
                 prompt: 'Reveal victory card',
                 playerId: targetPlayerId,
                 count: 1,
-                restrict: [
+                restrict: { all: [
                   {
                     location: 'playerHand',
                     playerId,
                   },
                   { cardType: 'VICTORY' },
-                ],
+                ] },
               });
               if (!selectedCardId) {
                 loggerService.debug('[BUREAUCRAT EFFECT] no victory card selected to reveal');
@@ -686,13 +686,13 @@ const expansionModule: CardExpansionModule = {
           prompt: 'Confirm trash',
           playerId: playerId,
           count: { kind: 'upTo', count: 1 },
-          restrict: [
+          restrict: { all: [
             {
               location: 'playerHand',
               playerId,
             },
             { cardType: ['TREASURE'] },
-          ],
+          ] },
         });
 
         if (!cardId) {
@@ -719,11 +719,11 @@ const expansionModule: CardExpansionModule = {
           prompt: 'Confirm gain card',
           playerId: playerId,
           count: 1,
-          restrict: [
+          restrict: { all: [
             { location: ['kingdomSupply', 'basicSupply'] },
             { cardType: ['TREASURE'] },
             { playerId, kind: 'upTo', amount: { treasure: cardCost.treasure + 3, potion: cardCost.potion } },
-          ],
+          ] },
         });
 
         if (!cardId) {
@@ -759,15 +759,20 @@ const expansionModule: CardExpansionModule = {
           },
           triggeredEffectFn: async function ({ actionService, reaction, reactionContext }) {
             const sourceId = reaction.getSourceId();
+            const reactionPlayerId = reaction.playerId;
+            if (reactionPlayerId === undefined) {
+              loggerService.warn('[MOAT REACTION] missing reaction player id, skipping immunity grant');
+              return;
+            }
 
             await actionService.run('revealCard', {
               cardId: sourceId,
-              playerId: reaction.playerId,
+              playerId: reactionPlayerId,
             });
 
             // Record immunity so downstream attacks skip this player.
-            loggerService.debug(`[MOAT REACTION] granting immunity to player ${reaction.playerId}`);
-            markPlayerImmune(reaction.playerId, reactionContext);
+            loggerService.debug(`[MOAT REACTION] granting immunity to player ${reactionPlayerId}`);
+            markPlayerImmune(reactionPlayerId, reactionContext);
           },
         });
       },
@@ -940,10 +945,10 @@ const expansionModule: CardExpansionModule = {
           prompt: 'Gain card',
           playerId,
           count: 1,
-          restrict: [
+          restrict: { all: [
             { location: ['basicSupply', 'kingdomSupply'] },
             { playerId, kind: 'upTo', amount: { treasure: cardCost.treasure + 2, potion: card.cost.potion } },
-          ],
+          ] },
         });
         if (!cardId) {
           loggerService.debug('[REMODEL EFFECT] no gain card selected');
@@ -1138,16 +1143,16 @@ const expansionModule: CardExpansionModule = {
         optional: true,
         prompt: 'Play an Action card',
         // Throne Room selection immediately plays the chosen Action card.
-        playCard: true,
+        selectionIntent: { kind: 'play-card', cardTypes: ['ACTION'] },
         playerId,
         count: { kind: 'upTo', count: 1 },
-        restrict: [
+        restrict: { all: [
           {
             location: 'playerHand',
             playerId,
           },
           { cardType: ['ACTION'] },
-        ],
+        ] },
       });
 
       if (!cardId) {
@@ -1258,7 +1263,7 @@ const expansionModule: CardExpansionModule = {
         loggerService.debug(`[WITCH EFFECT] targets ${playerIds.map((id) => getPlayerById(match, id))}`);
 
         for (const playerId of playerIds) {
-          const curseCards = args.findCardService.findCards([{ location: 'basicSupply' }, { cardKeys: 'curse' }]);
+          const curseCards = args.findCardService.findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }] });
           if (!curseCards.length) {
             loggerService.debug(`[WITCH EFFECT] no curse cards in supply`);
             return;
@@ -1280,10 +1285,10 @@ const expansionModule: CardExpansionModule = {
         prompt: 'Gain card',
         playerId: playerId,
         count: 1,
-        restrict: [
+        restrict: { all: [
           { location: ['basicSupply', 'kingdomSupply'] },
           { playerId, kind: 'upTo', amount: { treasure: 4 } },
-        ],
+        ] },
       });
       if (!cardId) {
         loggerService.debug('[WORKSHOP EFFECT] no gain card selected');

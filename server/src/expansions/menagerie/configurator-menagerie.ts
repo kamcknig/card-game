@@ -387,10 +387,10 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   registrar('onGameStartSetup', async (args) => {
     if (hasFisherman) {
       args.loggerService.info('[menagerie configurator] registering Fisherman cost rules');
-      const fishermanCards = args.findCardService.findCards([
+      const fishermanCards = args.findCardService.findCards({ all: [
         { location: 'kingdomSupply' },
         { cardKeys: 'fisherman' },
-      ]);
+      ] });
 
       for (const fishermanCard of fishermanCards) {
         args.cardPriceController.registerRule(fishermanCard, (_card, context) => {
@@ -411,10 +411,10 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
     if (hasDestrier) {
       args.loggerService.info('[menagerie configurator] registering Destrier cost rules');
-      const destrierCards = args.findCardService.findCards([
+      const destrierCards = args.findCardService.findCards({ all: [
         { location: 'kingdomSupply' },
         { cardKeys: 'destrier' },
-      ]);
+      ] });
 
       for (const destrierCard of destrierCards) {
         args.cardPriceController.registerRule(destrierCard, (_card, context) => {
@@ -446,10 +446,10 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
     if (hasWayfarer) {
       args.loggerService.info('[menagerie configurator] registering Wayfarer cost rules');
-      const wayfarerCards = args.findCardService.findCards([
+      const wayfarerCards = args.findCardService.findCards({ all: [
         { location: 'kingdomSupply' },
         { cardKeys: 'wayfarer' },
-      ]);
+      ] });
 
       for (const wayfarerCard of wayfarerCards) {
         args.cardPriceController.registerRule(wayfarerCard, (_card, context) => {

@@ -446,22 +446,12 @@ export class MatchScene extends Scene {
     return MatchScene.DEFAULT_TOOLTIP_CLOSE_DELAY_MS;
   }
 
-  // Infers whether a select-card prompt is expected to immediately play the chosen card.
-  private inferPromptIsPlaySelection(prompt?: string): boolean {
-    if (!prompt) {
+  // Returns true when a select-card payload explicitly represents an Action-play choice.
+  private supportsActionPlaySelectionIntent(intent?: SelectCardArgs['selectionIntent']): boolean {
+    if (!intent || intent.kind !== 'play-card') {
       return false;
     }
-    const normalizedPrompt = prompt.toLowerCase();
-    if (normalizedPrompt === 'choose action' || normalizedPrompt.startsWith('choose action ')) {
-      return true;
-    }
-    return normalizedPrompt.includes('replay') ||
-      normalizedPrompt.startsWith('play ') ||
-      normalizedPrompt.includes('choose to play') ||
-      normalizedPrompt.includes('you may play ') ||
-      (normalizedPrompt.includes(' to play') &&
-        !normalizedPrompt.includes('next turn') &&
-        !normalizedPrompt.includes('set aside'));
+    return intent.cardTypes.includes('ACTION');
   }
 
   // Reuses the standard card-tap lock flow for both normal and Way plays.
@@ -865,12 +855,12 @@ export class MatchScene extends Scene {
     const isSingleSelection = resolvedCountSpec.kind === 'fixed'
       ? resolvedCountSpec.count === 1
       : resolvedCountSpec.min === 1 && resolvedCountSpec.max === 1;
-    const promptAllowsWaySelection = Boolean(arg.playCard) || this.inferPromptIsPlaySelection(arg.prompt);
+    const promptAllowsWaySelection = this.supportsActionPlaySelectionIntent(arg.selectionIntent);
     // Way selection in select-card prompts only applies when there are active Ways in this match.
     const activeWayCount = matchStore.get()?.ways?.length ?? 0;
     const supportsWaySelection = promptAllowsWaySelection && isSingleSelection && activeWayCount > 0;
     console.debug(
-      `[selectCard ui] prompt='${arg.prompt}' playCard=${String(arg.playCard)} supportsWaySelection=${supportsWaySelection} activeWays=${activeWayCount} selectable=${cardIds.length}`,
+      `[selectCard ui] prompt='${arg.prompt}' selectionIntent=${JSON.stringify(arg.selectionIntent)} supportsWaySelection=${supportsWaySelection} activeWays=${activeWayCount} selectable=${cardIds.length}`,
     );
 
     // Some selections target cards not rendered on the board (e.g., set-aside revealed cards).
@@ -887,7 +877,7 @@ export class MatchScene extends Scene {
             cardIds,
             selectableCardIds: [...cardIds],
             selectCount: arg.count ?? 1,
-            playCard: supportsWaySelection,
+            selectionIntent: arg.selectionIntent,
           },
         };
 

@@ -1,8 +1,8 @@
 import { Socket } from 'socket.io';
 import {
   Card,
+  CardFilterExpr,
   CardCost,
-  CardDataFindCardsFilter,
   CardFacing,
   CardId,
   CardKey,
@@ -11,11 +11,8 @@ import {
   CardLocationSpec,
   CardNoId,
   ComputedMatchConfiguration,
-  CostFindCardsFilter,
   ExtraTurn,
-  FindCardsFnInput,
   Match,
-  NonLocationFilters,
   PlayerId,
   SelectSingleCardPromptArgs,
   SelectActionCardArgs,
@@ -23,7 +20,6 @@ import {
   SetAsideSourceKind,
   ServerEmitEvents,
   ServerListenEvents,
-  SourceFindCardsFilter,
   TokenDefinition,
   TokenFacing,
   TokenId,
@@ -52,12 +48,12 @@ export type DistributiveOmit<T, K extends PropertyKey> = T extends any ? Omit<T,
 
 // Re-export shared find-card filter types used by server consumers.
 export type {
+  CardFilterExpr,
   CardDataFindCardsFilter,
   CostFindCardsFilter,
-  FindCardsFnInput,
   NonLocationFilters,
   SourceFindCardsFilter,
-};
+} from 'shared/types/index.ts';
 
 /**
  * A base match configuration that can be used to spread default values.
@@ -462,9 +458,18 @@ export interface AppContext {
   promptService: PromptService;
 }
 
-export type FindCardsFn = (filters: FindCardsFnInput) => Card[];
+/**
+ * Finds cards that satisfy a {@link CardFilterExpr}.
+ * Use logical expressions (`all` / `any` / `not`) to compose source, card-data, and cost constraints.
+ */
+export type FindCardsFn = (filters: CardFilterExpr) => Card[];
 export type FindCardService = {
   findCards: FindCardsFn;
+  matchesFilter: (args: {
+    cardId: CardId | Card;
+    filter: CardFilterExpr;
+    sourceOverride?: { location?: CardLocation; playerId?: PlayerId };
+  }) => boolean;
   getCardsInPlay: () => Card[];
   getRemainingSupplyCount: () => number;
   findTopSupplyCardForPileKey: (args: {
@@ -493,37 +498,6 @@ export type SupplyGainService = {
     logTag?: string;
   }) => Promise<CardId | undefined>;
 };
-
-export function isSourceFindCardsFilter(filter: unknown): filter is SourceFindCardsFilter {
-  return (
-    typeof filter === 'object' &&
-    filter !== null &&
-    'location' in filter
-  );
-}
-
-export function isCostFindCardsFilter(filter: unknown): filter is CostFindCardsFilter {
-  return (
-    typeof filter === 'object' &&
-    filter !== null &&
-    'kind' in filter &&
-    'playerId' in filter &&
-    'amount' in filter
-  );
-}
-
-export function isCardDataFindCardsFilter(filter: unknown): filter is CardDataFindCardsFilter {
-  return (
-    typeof filter === 'object' &&
-    filter !== null &&
-    (
-      'tags' in filter ||
-      'cardKeys' in filter ||
-      'cardType' in filter ||
-      'owner' in filter
-    )
-  );
-}
 
 export interface CardEffectFunctionContext extends AppContext {
   playerId: PlayerId;

@@ -65,10 +65,10 @@ const expansion: CardExpansionModule = {
       const gainedCardId = await args.actionService.run('selectSingleCard', {
         prompt: 'Gain card',
         playerId: args.playerId,
-        restrict: [
+        restrict: { all: [
           { location: ['basicSupply', 'kingdomSupply'] },
           { kind: 'upTo', amount: { treasure: 4 }, playerId: args.playerId },
-        ],
+        ] },
         count: 1,
       }) as number | null;
       if (!gainedCardId) {
@@ -122,10 +122,10 @@ const expansion: CardExpansionModule = {
         listeningFor: 'cardGained',
         triggeredEffectFn: async (args) => {
           const loggerService = args.loggerService;
-          const curseCardIds = args.findCardService.findCards([
+          const curseCardIds = args.findCardService.findCards({ all: [
             { location: 'basicSupply' },
             { cardKeys: 'curse' },
-          ]);
+          ] });
 
           if (!curseCardIds.length) {
             loggerService.debug(`[BLOCKADE TRIGGERED EFFECT] no curse cards in supply...`);
@@ -717,11 +717,11 @@ const expansion: CardExpansionModule = {
               prompt: 'Gain card',
               validPrompt: '',
               playerId,
-              restrict: [
+              restrict: { all: [
                 { location: ['basicSupply', 'kingdomSupply'] },
                 { cardType: 'TREASURE' },
                 { kind: 'upTo', amount: { treasure: 6 }, playerId },
-              ],
+              ] },
               count: 1,
             });
             if (!selectedCardId) {
@@ -1018,10 +1018,10 @@ const expansion: CardExpansionModule = {
       }).filter((playerId) => !isPlayerImmune(args.reactionContext, playerId));
 
       for (const targetPlayerId of targetPlayerIds) {
-        const curseCardIds = args.findCardService.findCards([
+        const curseCardIds = args.findCardService.findCards({ all: [
           { location: 'basicSupply' },
           { cardKeys: 'curse' },
-        ]);
+        ] });
 
         if (curseCardIds.length === 0) {
           loggerService.debug(`[sea witch effect] no curses in supply...`);
@@ -1222,7 +1222,7 @@ const expansion: CardExpansionModule = {
         cardId: inHand,
       });
 
-      const goldCardIds = args.findCardService.findCards([{ location: 'basicSupply' }, { cardKeys: 'gold' }]);
+      const goldCardIds = args.findCardService.findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }] });
 
       for (let i = 0; i < Math.min(goldCardIds.length, 4); i++) {
         await actionService.run('gainCard', {

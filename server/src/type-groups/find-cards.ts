@@ -1,10 +1,9 @@
-// Card lookup function contracts and shared filter guards.
-export { isCardDataFindCardsFilter, isCostFindCardsFilter, isSourceFindCardsFilter } from '../types.ts';
+// Card lookup function contracts and shared filter types.
 
 export type {
+  CardFilterExpr,
   FindCardService,
   FindCardsFn,
-  FindCardsFnInput,
   NonLocationFilters,
   SourceFindCardsFilter,
   SupplyGainService,

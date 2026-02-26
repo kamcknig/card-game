@@ -36,10 +36,10 @@ const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     'the-earths-gift',
     async ({ loggerService, playerId, actionService, cardLibrary, findCardService }) => {
       // Determine if the player has any Treasures to discard.
-      const treasuresInHand = findCardService.findCards([
+      const treasuresInHand = findCardService.findCards({ all: [
         { location: 'playerHand', playerId },
         { cardType: ['TREASURE'] },
-      ]);
+      ] });
 
       if (treasuresInHand.length < 1) {
         loggerService.info('[the-earths-gift boon] no Treasures in hand, skipping discard');
@@ -52,10 +52,10 @@ const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
         playerId: playerId,
         count: 1,
         optional: true,
-        restrict: [
+        restrict: { all: [
           { location: 'playerHand', playerId },
           { cardType: ['TREASURE'] },
-        ],
+        ] },
       }) as CardId | null;
       if (!discardedTreasureId) {
         loggerService.debug('[the-earths-gift boon] player declined to discard a Treasure');
@@ -74,10 +74,10 @@ const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
         prompt: 'Gain a card costing up to $4',
         playerId: playerId,
         count: 1,
-        restrict: [
+        restrict: { all: [
           { location: ['basicSupply', 'kingdomSupply'] },
           { playerId, kind: 'upTo', amount: { treasure: 4 } },
-        ],
+        ] },
       }) as CardId | null;
       if (!gainCardId) {
         loggerService.info('[the-earths-gift boon] no eligible cards to gain');
@@ -153,9 +153,9 @@ const registerFlamesGift = (registerBoonEffect: BoonEffectRegistrar) => {
         playerId: playerId,
         count: 1,
         optional: true,
-        restrict: [
+        restrict: { all: [
           { location: 'playerHand', playerId },
-        ],
+        ] },
       }) as CardId | null;
       if (!selectedCardId) {
         loggerService.debug('[the-flames-gift boon] player declined to trash a card');
@@ -458,10 +458,10 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 // Registers The Swamp's Gift boon effect logic.
 const registerSwampsGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect('the-swamps-gift', async ({ loggerService, playerId, actionService, findCardService }) => {
-    const willOWispCards = findCardService.findCards([
+    const willOWispCards = findCardService.findCards({ all: [
       { location: 'nonSupplyCards' },
       { cardKeys: 'will-o-wisp' },
-    ]);
+    ] });
 
     if (willOWispCards.length < 1) {
       loggerService.info("[the-swamps-gift boon] no Will-o'-Wisps available to gain");

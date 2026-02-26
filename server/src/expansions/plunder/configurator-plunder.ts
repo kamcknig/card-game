@@ -190,7 +190,7 @@ const registerCheapTraitEvents = (
       }
 
       // Collect all cards in the affected kingdom pile (split-pile safe via pile key matching).
-      const pileCards = args.findCardService.findCards([{ location: 'kingdomSupply' }]).filter((card) =>
+      const pileCards = args.findCardService.findCards({ all: [{ location: 'kingdomSupply' }] }).filter((card) =>
         getCardPileKey(card) === pileKey
       );
       if (pileCards.length < 1) {
@@ -683,22 +683,19 @@ const registerInspiringTraitEvents = (
               .filter((card) => card.owner === player.id)
               .map((card) => card.cardKey),
           );
-          const hand = getPlayerSourceSafe(triggeredArgs, 'playerHand', player.id);
-          const playableActionIds = hand.filter((cardId) => {
-            const card = triggeredArgs.cardLibrary.getCard(cardId);
-            return card.type.includes('ACTION') && !inPlayCardKeys.has(card.cardKey);
-          });
-          if (playableActionIds.length < 1) {
-            triggeredArgs.loggerService.debug(
-              '[plunder inspiring trait] no eligible Action in hand that is not already in play',
-            );
-            return;
-          }
 
           const selectedActionCardId = await triggeredArgs.actionService.run('selectSingleCard', {
             playerId: player.id,
             prompt: 'You may play an Action from your hand that you do not have a copy of in play',
-            restrict: playableActionIds,
+            // Keep this as a canonical filter so Shadow injection respects the "not already in play" rule.
+            restrict: {
+              all: [
+                { location: 'playerHand', playerId: player.id },
+                { cardType: ['ACTION'] },
+                ...(inPlayCardKeys.size > 0 ? [{ not: { cardKeys: [...inPlayCardKeys] } }] : []),
+              ],
+            },
+            selectionIntent: { kind: 'play-card', cardTypes: ['ACTION'] },
             count: { kind: 'upTo', count: 1 },
             optional: true,
           });
@@ -1372,7 +1369,7 @@ const registerShamanEvents = (
   }
 
   registrar('onGameStartSetup', async (args) => {
-    const shamanCardInMatch = args.findCardService.findCards([{ location: 'kingdomSupply' }]).find((card) =>
+    const shamanCardInMatch = args.findCardService.findCards({ all: [{ location: 'kingdomSupply' }] }).find((card) =>
       card.cardKey === SHAMAN_CARD_KEY
     );
     if (!shamanCardInMatch) {
@@ -1387,7 +1384,7 @@ const registerShamanEvents = (
         allowMultipleInstances: false,
         condition: ({ trigger }) => trigger.args.playerId === player.id,
         triggeredEffectFn: async (triggeredArgs) => {
-          const gainableFromTrash = triggeredArgs.findCardService.findCards([{ location: 'trash' }]).filter((card) => {
+          const gainableFromTrash = triggeredArgs.findCardService.findCards({ all: [{ location: 'trash' }] }).filter((card) => {
             const cost = triggeredArgs.cardPriceController.applyRules(card, { playerId: player.id }).cost;
             return (cost.treasure ?? 0) <= 6 && !cost.debt && !cost.potion;
           });

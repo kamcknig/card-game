@@ -328,13 +328,18 @@ export type LogEntry =
 export interface SelectActionCardArgs {
   count?: CountSpec | number;
   playerId: PlayerId;
-  restrict: FindCardsFnInput | CardId[];
+  restrict: CardFilterExpr | CardId[];
+  // Optional canonical filter for play-selection semantics when restrict is an explicit card-id list.
+  cardFilter?: CardFilterExpr;
   optional?: boolean;
   prompt: string;
   validPrompt?: string;
   cancelPrompt?: string;
-  // Marks selections that will immediately invoke playCard for the chosen card.
-  playCard?: boolean;
+  // Explicitly marks "select to play" flows and what card types are legal to play.
+  selectionIntent?: {
+    kind: 'play-card';
+    cardTypes: CardType[];
+  };
 }
 
 // Single-card selection only allows one-card count shapes.
@@ -380,8 +385,13 @@ export type UserPromptKinds =
     cardIds: CardId[];
     selectCount: CountSpec;
     selectableCardIds?: CardId[];
-    // Marks selections that will immediately invoke playCard for the chosen card.
-    playCard?: boolean;
+    // Canonical filter used to derive/select these cards.
+    cardFilter?: CardFilterExpr;
+    // Explicitly marks "select to play" flows and what card types are legal to play.
+    selectionIntent?: {
+      kind: 'play-card';
+      cardTypes: CardType[];
+    };
     // Optional card-like entries to include in the selection prompt.
     cardLikeIds?: CardLikeId[];
     selectableCardLikeIds?: CardLikeId[];
@@ -686,11 +696,13 @@ export type CostSpec =
 export type CostFindCardsFilter = CostSpec;
 
 export interface CardDataFindCardsFilter {
+  cardIds?: CardId | CardId[];
   tags?: string | string[];
   cardKeys?: CardKey | CardKey[];
   cardType?: CardType | CardType[];
+  excludedCardType?: CardType | CardType[];
   owner?: PlayerId;
-  kingdom?: string;
+  kingdom?: string | string[];
 }
 
 export interface SourceFindCardsFilter {
@@ -700,11 +712,18 @@ export interface SourceFindCardsFilter {
 
 export type NonLocationFilters = CostFindCardsFilter | CardDataFindCardsFilter;
 
-export type FindCardsFnInput =
-  | NonLocationFilters[]
+export type CardFilterExpr =
   | SourceFindCardsFilter
   | NonLocationFilters
-  | [SourceFindCardsFilter, ...NonLocationFilters[]];
+  | {
+    all: CardFilterExpr[];
+  }
+  | {
+    any: CardFilterExpr[];
+  }
+  | {
+    not: CardFilterExpr;
+  };
 
 export type PlayerArgs = {
   id: PlayerId;

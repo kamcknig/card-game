@@ -80,7 +80,11 @@ export const cardSelectionView = (app: Application, args: UserPromptKinds) => {
   );
   const match = matchStore.get();
   const activeWays = match?.ways ?? [];
-  const playCardSelectionEnabled = !displayOnly && args.type === 'select' && args.playCard === true && singleSelect;
+  const playCardSelectionEnabled = !displayOnly &&
+    args.type === 'select' &&
+    args.selectionIntent?.kind === 'play-card' &&
+    args.selectionIntent.cardTypes.includes('ACTION') &&
+    singleSelect;
   const showWayPicker = playCardSelectionEnabled && activeWays.length > 0;
   let selectedWayId: CardLikeId | null = null;
   let selectedWaySelectionId: NewCardId | null = null;

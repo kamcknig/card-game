@@ -50,14 +50,14 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      const cards = cardEffectArgs.findCardService.findCards([
+      const cards = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
         {
           kind: 'upTo',
           playerId: cardEffectArgs.playerId,
           amount: { treasure: 4 },
         },
-      ]);
+      ] });
 
       if (!cards.length) {
         loggerService.debug(`[alms effect] no cards to gain`);
@@ -121,14 +121,14 @@ const effectMap: CardExpansionModule = {
         }, { loggingContext: { source: event.id } });
       }
 
-      const cards = cardEffectArgs.findCardService.findCards([
+      const cards = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
         {
           kind: 'upTo',
           playerId: cardEffectArgs.playerId,
           amount: { treasure: 4 },
         },
-      ]);
+      ] });
 
       if (!cards.length) {
         loggerService.debug(`[ball effect] no cards to gain`);
@@ -404,7 +404,7 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      const eligibleCards = cardEffectArgs.findCardService.findCards([
+      const eligibleCards = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
         { cardType: ['ACTION'] },
         {
@@ -412,7 +412,7 @@ const effectMap: CardExpansionModule = {
           playerId: cardEffectArgs.playerId,
           amount: { treasure: 4, potion: 0 },
         },
-      ]).filter((card) => !card.type.includes('DURATION') && !card.type.includes('COMMAND'));
+      ] }).filter((card) => !card.type.includes('DURATION') && !card.type.includes('COMMAND'));
 
       if (!eligibleCards.length) {
         loggerService.warn(`[inheritance effect] no eligible Action cards in supply`);
@@ -1108,7 +1108,7 @@ const effectMap: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
       // Gather Action cards in the Supply costing up to $4 with no potion cost.
-      const actionCards = cardEffectArgs.findCardService.findCards([
+      const actionCards = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
         { cardType: ['ACTION'] },
         {
@@ -1116,7 +1116,7 @@ const effectMap: CardExpansionModule = {
           playerId: cardEffectArgs.playerId,
           amount: { treasure: 4, potion: 0 },
         },
-      ]);
+      ] });
 
       if (!actionCards.length) {
         loggerService.warn(`[seaway effect] no Action cards costing up to $4`);

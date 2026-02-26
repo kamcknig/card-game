@@ -194,6 +194,9 @@ export class CardInteractivityController {
         }
       }
     } else if (turnPhase === 'action') {
+      // Use a set to avoid duplicates when cards can be discovered through multiple action-play paths.
+      const selectableCardIdSet = new Set<CardId>();
+
       for (const card of hand) {
         const canPlayResult = this.playOptionsResolver.resolveCanPlay({
           cardId: card,
@@ -201,7 +204,10 @@ export class CardInteractivityController {
           phase: turnPhase,
         });
         if (canPlayResult.canPlay) {
-          selectableCards.push(card.id);
+          if (!selectableCardIdSet.has(card.id)) {
+            selectableCards.push(card.id);
+            selectableCardIdSet.add(card.id);
+          }
           continue;
         }
 
@@ -211,6 +217,42 @@ export class CardInteractivityController {
           );
         }
       }
+
+      // Shadow rule: while in Action phase, Action+Shadow cards in deck are playable "as if in hand".
+      const shadowActionCardsInDeck = this.cardSourceController.getSource('playerDeck', currentPlayer.id)
+        .map((id) => this.cardLibrary.getCard(id))
+        .filter((card) => card.type.includes('ACTION') && card.type.includes('SHADOW'));
+      this.loggerService.debug(
+        `[card interactivity] ${currentPlayer} has ${shadowActionCardsInDeck.length} Shadow Action card(s) in deck`,
+      );
+
+      let shadowCardsAddedToSelectable = 0;
+      for (const shadowCard of shadowActionCardsInDeck) {
+        const canPlayResult = this.playOptionsResolver.resolveCanPlay({
+          cardId: shadowCard,
+          playerId: currentPlayer.id,
+          phase: turnPhase,
+        });
+
+        if (canPlayResult.canPlay) {
+          if (!selectableCardIdSet.has(shadowCard.id)) {
+            selectableCards.push(shadowCard.id);
+            selectableCardIdSet.add(shadowCard.id);
+            shadowCardsAddedToSelectable++;
+          }
+          continue;
+        }
+
+        if (canPlayResult.reasons.length > 0) {
+          this.loggerService.debug(
+            `[card interactivity] ${currentPlayer} cannot play deck Shadow ${shadowCard}: ${canPlayResult.reasons.join('; ')}`,
+          );
+        }
+      }
+
+      this.loggerService.debug(
+        `[card interactivity] added ${shadowCardsAddedToSelectable} deck Shadow card(s) to action-phase selectable list`,
+      );
     } else if (turnPhase === 'night') {
       // Allow playing any Night cards during the Night phase.
       for (const card of hand) {

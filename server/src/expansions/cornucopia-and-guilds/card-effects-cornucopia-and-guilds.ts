@@ -111,7 +111,7 @@ const expansion: CardExpansionModule = {
         playerId: cardEffectArgs.playerId,
       });
 
-      const cards = cardEffectArgs.findCardService.findCards([
+      const cards = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
         {
           kind: 'upTo',
@@ -121,7 +121,7 @@ const expansion: CardExpansionModule = {
             potion: cost.potion,
           },
         },
-      ]);
+      ] });
 
       if (!cards) {
         loggerService.debug(`[butcher effect] no cards in supply that match cost`);
@@ -346,7 +346,7 @@ const expansion: CardExpansionModule = {
             break;
           case 4: {
             const silverCardIds = cardEffectArgs.findCardService.findCards(
-              [{ location: 'basicSupply' }, { cardKeys: 'silver' }],
+              { all: [{ location: 'basicSupply' }, { cardKeys: 'silver' }] },
             );
 
             const numToGain = Math.min(4, silverCardIds.length);
@@ -367,7 +367,7 @@ const expansion: CardExpansionModule = {
   'demesne': {
     registerScoringFunction: () => (args) => {
       const ownedGoldCards = args.findCardService.findCards(
-        [{ owner: args.ownerId }],
+        { all: [{ owner: args.ownerId }] },
       )
         .filter((card) => card.cardKey === 'gold');
       return ownedGoldCards.length;
@@ -379,7 +379,7 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainBuy', { count: 2 });
 
       const goldCardIds = cardEffectArgs.findCardService.findCards(
-        [{ location: 'basicSupply' }, { cardKeys: 'gold' }],
+        { all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }] },
       );
 
       if (!goldCardIds.length) {
@@ -425,10 +425,10 @@ const expansion: CardExpansionModule = {
           playerId: eventArgs.playerId,
           optional: true,
           count: 1,
-          restrict: [
+          restrict: { all: [
             { location: 'playerHand', playerId: eventArgs.playerId },
             { cardType: ['ACTION', 'TREASURE'] },
-          ],
+          ] },
         });
 
         if (result) {
@@ -524,7 +524,7 @@ const expansion: CardExpansionModule = {
       onGained: async (cardEffectArgs, eventArgs) => {
         const loggerService = cardEffectArgs.loggerService;
         const cardIds = cardEffectArgs.findCardService.findCards(
-          [{ location: 'kingdomSupply' }, { tags: 'ferryman' }],
+          { all: [{ location: 'kingdomSupply' }, { tags: 'ferryman' }] },
         );
 
         if (!cardIds.length) {
@@ -775,10 +775,10 @@ const expansion: CardExpansionModule = {
           .map((card) => card.cardName),
       ).size;
 
-      const cards = cardEffectArgs.findCardService.findCards([
+      const cards = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
         { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: uniquelyNamesCardsInPlay } },
-      ]);
+      ] });
 
       if (!cards.length) {
         loggerService.debug(`[horn of plenty effect] no cards in supply costing up to ${uniquelyNamesCardsInPlay}`);
@@ -1025,7 +1025,7 @@ const expansion: CardExpansionModule = {
         if (card.type.includes('VICTORY')) {
           loggerService.debug(`[jester effect] card is a victory card, gaining curse`);
           const curseCardIds = cardEffectArgs.findCardService.findCards(
-            [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+            { all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }] },
           );
 
           if (!curseCardIds.length) {
@@ -1040,7 +1040,7 @@ const expansion: CardExpansionModule = {
           });
         } else {
           const copyIds = cardEffectArgs.findCardService.findCards(
-            [{ location: ['basicSupply', 'kingdomSupply'] }, { cardKeys: card.cardKey }],
+            { all: [{ location: ['basicSupply', 'kingdomSupply'] }, { cardKeys: card.cardKey }] },
           );
 
           if (!copyIds.length) {
@@ -1188,10 +1188,10 @@ const expansion: CardExpansionModule = {
         },
       });
 
-      const rewardCardIds = cardEffectArgs.findCardService.findCards([
+      const rewardCardIds = cardEffectArgs.findCardService.findCards({ all: [
         { location: 'nonSupplyCards' },
         { cardType: 'REWARD' },
-      ]);
+      ] });
 
       if (!rewardCardIds.length) {
         loggerService.debug(`[joust effect] no reward cards in supply`);
@@ -1317,10 +1317,10 @@ const expansion: CardExpansionModule = {
       const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Discard treasure`,
-        restrict: [
+        restrict: { all: [
           { location: 'playerHand', playerId: cardEffectArgs.playerId },
           { cardType: 'TREASURE' },
-        ],
+        ] },
         count: 1,
         optional: true,
       });
@@ -1372,14 +1372,14 @@ const expansion: CardExpansionModule = {
           playerId: cardEffectArgs.playerId,
         });
 
-        const availableCardIds = cardEffectArgs.findCardService.findCards([
+        const availableCardIds = cardEffectArgs.findCardService.findCards({ all: [
           { location: ['basicSupply', 'kingdomSupply'] },
           {
             kind: 'exact',
             playerId: cardEffectArgs.playerId,
             amount: { ...cost, treasure: cost.treasure + 1 },
           },
-        ]);
+        ] });
 
         if (!availableCardIds) {
           loggerService.debug(`[remake effect] no cards in supply with cost ${cost}`);
@@ -1500,7 +1500,7 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
       const goldCardIds = cardEffectArgs.findCardService.findCards(
-        [{ location: 'basicSupply' }, { cardKeys: 'gold' }],
+        { all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }] },
       );
 
       if (!goldCardIds.length) {
@@ -1523,7 +1523,7 @@ const expansion: CardExpansionModule = {
 
       for (const targetPlayerId of targetPlayerIds) {
         const curseCardIds = cardEffectArgs.findCardService.findCards(
-          [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+          { all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }] },
         );
 
         if (!curseCardIds.length) {
@@ -1562,7 +1562,7 @@ const expansion: CardExpansionModule = {
           return;
         }
 
-        const cardIds = cardEffectArgs.findCardService.findCards([
+        const cardIds = cardEffectArgs.findCardService.findCards({ all: [
           { location: ['basicSupply', 'kingdomSupply'] },
           { cardType: 'ACTION' },
           {
@@ -1570,7 +1570,7 @@ const expansion: CardExpansionModule = {
             kind: 'exact',
             amount: { treasure: overpaid },
           },
-        ]);
+        ] });
 
         if (!cardIds.length) {
           loggerService.debug(`[stonemason triggered effect] no cards in supply with cost ${overpaid}`);
@@ -1640,7 +1640,7 @@ const expansion: CardExpansionModule = {
         playerId: cardEffectArgs.playerId,
       });
 
-      const cardIds = cardEffectArgs.findCardService.findCards([
+      const cardIds = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
         {
           kind: 'upTo',
@@ -1650,7 +1650,7 @@ const expansion: CardExpansionModule = {
             potion: 1,
           },
         },
-      ]);
+      ] });
 
       if (!cardIds.length) {
         loggerService.debug(`[stonemason effect] no cards in supply with cost ${cost} or less to gain`);
@@ -1731,7 +1731,7 @@ const expansion: CardExpansionModule = {
         const baneCards = handCards.filter((card) => card.tags?.includes('bane'));
 
         const curseCardIds = cardEffectArgs.findCardService.findCards(
-          [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+          { all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }] },
         );
 
         if (!curseCardIds.length) {

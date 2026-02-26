@@ -36,10 +36,10 @@ export const configureColonnade = (
     if (!gainedCard.type.includes('ACTION')) return;
 
     // Check for a copy of the gained Action in the player's play area.
-    const copyInPlay = args.findCardService.findCards([
+    const copyInPlay = args.findCardService.findCards({ all: [
       { location: 'playArea', playerId: eventArgs.playerId },
       { cardKeys: gainedCard.cardKey },
-    ]).length > 0;
+    ] }).length > 0;
 
     if (!copyInPlay) {
       return;

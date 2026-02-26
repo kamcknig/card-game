@@ -1722,10 +1722,10 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
   registrar('onGameStartSetup', async (args) => {
     if (hasRiverboat) {
-      const riverboatCard = args.findCardService.findCards([
+      const riverboatCard = args.findCardService.findCards({ all: [
         { location: 'kingdomSupply' },
         { cardKeys: RIVERBOAT_CARD_KEY },
-      ])[0];
+      ] })[0];
 
       if (!riverboatCard) {
         args.loggerService.warn('[rising-sun onGameStart] Riverboat configured but no runtime Riverboat card found');

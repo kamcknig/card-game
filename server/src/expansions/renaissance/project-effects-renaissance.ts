@@ -675,10 +675,10 @@ const effectMap: CardExpansionModule = {
           return owned;
         },
         triggeredEffectFn: async (triggeredArgs) => {
-          const victoryCards = triggeredArgs.findCardService.findCards([
+          const victoryCards = triggeredArgs.findCardService.findCards({ all: [
             { location: 'playerHand', playerId: cardEffectArgs.playerId },
             { cardType: ['VICTORY'] },
-          ]);
+          ] });
 
           if (!victoryCards.length) {
             loggerService.debug('[crop-rotation project] no Victory cards in hand to discard');

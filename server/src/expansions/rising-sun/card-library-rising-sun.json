@@ -1,4 +1,14 @@
 {
+  "alley": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION",
+      "SHADOW"
+    ],
+    "abilityText": "+1 Card\n+1 Action\nDiscard a card.\nYou can play this from your deck as if in your hand."
+  },
   "aristocrat": {
     "cost": {
       "treasure": 3

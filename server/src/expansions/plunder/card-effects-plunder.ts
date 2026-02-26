@@ -61,9 +61,9 @@ const trashAndGainUpToMore = async (
     cardId: selectedTrashCardId,
   });
 
-  const gainableCards = cardEffectArgs.findCardService.findCards([
+  const gainableCards = cardEffectArgs.findCardService.findCards({ all: [
     { location: ['basicSupply', 'kingdomSupply'] },
-  ]).filter((card) => {
+  ] }).filter((card) => {
     const gainedCost = cardEffectArgs.cardPriceController.applyRules(card, { playerId }).cost;
     return compareCardCosts(gainedCost, {
       treasure: (trashedCost.treasure ?? 0) + maxMore,
@@ -247,9 +247,9 @@ const cardEffects: CardExpansionModule = {
             cardId: cabinBoyCard.id,
           });
 
-          const durationCards = triggeredArgs.findCardService.findCards([
+          const durationCards = triggeredArgs.findCardService.findCards({ all: [
             { location: ['basicSupply', 'kingdomSupply'] },
-          ]).filter((card) => card.type.includes('DURATION'));
+          ] }).filter((card) => card.type.includes('DURATION'));
 
           if (!durationCards.length) {
             return;
@@ -504,8 +504,12 @@ const cardEffects: CardExpansionModule = {
       const actionCardsInHand = getPlayerSourceSafe(cardEffectArgs, 'playerHand', playerId)
         .map((cardId) => cardEffectArgs.cardLibrary.getCard(cardId))
         .filter((card) => card.type.includes('ACTION'));
+      // Also treat Shadow Actions in deck as legal candidates for this Action-play opportunity.
+      const shadowActionsInDeck = getPlayerSourceSafe(cardEffectArgs, 'playerDeck', playerId)
+        .map((cardId) => cardEffectArgs.cardLibrary.getCard(cardId))
+        .filter((card) => card.type.includes('ACTION') && card.type.includes('SHADOW'));
 
-      if (!actionCardsInHand.length) {
+      if (!actionCardsInHand.length && !shadowActionsInDeck.length) {
         await drawUpToSix();
         return;
       }
@@ -520,6 +524,14 @@ const cardEffects: CardExpansionModule = {
         content: {
           type: 'select',
           cardIds: actionCardsInHand.map((card) => card.id),
+          // Preserve the exact server-side play restriction used for Shadow injection from deck.
+          cardFilter: {
+            all: [
+              { location: 'playerHand', playerId },
+              { cardType: ['ACTION'] },
+            ],
+          },
+          selectionIntent: { kind: 'play-card', cardTypes: ['ACTION'] },
           selectCount: 1,
         },
       }) as { action?: number; result?: CardId[] } | null;
@@ -632,6 +644,7 @@ const cardEffects: CardExpansionModule = {
           content: {
             type: 'select',
             cardIds: treasureIds,
+            selectionIntent: { kind: 'play-card', cardTypes: ['TREASURE'] },
             selectCount: 1,
           },
         }) as { action?: number; result?: CardId[] } | null;
@@ -738,15 +751,25 @@ const cardEffects: CardExpansionModule = {
         const actionsInHand = getPlayerSourceSafe(cardEffectArgs, 'playerHand', playerId)
           .map((cardId) => cardEffectArgs.cardLibrary.getCard(cardId))
           .filter((card) => card.type.includes('ACTION'));
+        // Gondola can still offer this prompt when only Shadow Actions are in deck.
+        const shadowActionsInDeck = getPlayerSourceSafe(cardEffectArgs, 'playerDeck', playerId)
+          .map((cardId) => cardEffectArgs.cardLibrary.getCard(cardId))
+          .filter((card) => card.type.includes('ACTION') && card.type.includes('SHADOW'));
 
-        if (!actionsInHand.length) {
+        if (!actionsInHand.length && !shadowActionsInDeck.length) {
           return;
         }
 
         const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
           playerId,
           prompt: 'You may play an Action card from your hand',
-          restrict: actionsInHand.map((card) => card.id),
+          restrict: {
+            all: [
+              { location: 'playerHand', playerId },
+              { cardType: ['ACTION'] },
+            ],
+          },
+          selectionIntent: { kind: 'play-card', cardTypes: ['ACTION'] },
           count: { kind: 'upTo', count: 1 },
           optional: true,
         });
@@ -958,6 +981,7 @@ const cardEffects: CardExpansionModule = {
         playerId: cardEffectArgs.playerId,
         prompt: 'You may play a Treasure from your hand 3 times',
         restrict: treasuresInHand.map((card) => card.id),
+        selectionIntent: { kind: 'play-card', cardTypes: ['TREASURE'] },
         count: { kind: 'upTo', count: 1 },
         optional: true,
       });
@@ -1332,10 +1356,10 @@ const cardEffects: CardExpansionModule = {
             loggerService.debug('[quartermaster duration] no set-aside card selected to move to hand');
           }
 
-          const gainableCardIds = triggeredArgs.findCardService.findCards([
+          const gainableCardIds = triggeredArgs.findCardService.findCards({ all: [
             { location: ['basicSupply', 'kingdomSupply'] },
             { kind: 'upTo', playerId, amount: { treasure: 4 } },
-          ]).map((card) => card.id);
+          ] }).map((card) => card.id);
 
           if (!gainableCardIds.length) {
             loggerService.debug('[quartermaster duration] no gainable cards costing up to $4');
@@ -1573,9 +1597,9 @@ const cardEffects: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       const sourceCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       const sourceCost = cardEffectArgs.cardPriceController.applyRules(sourceCard, { playerId: cardEffectArgs.playerId }).cost;
-      const gainableTreasures = cardEffectArgs.findCardService.findCards([
+      const gainableTreasures = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
-      ]).filter((card) => {
+      ] }).filter((card) => {
         if (!card.type.includes('TREASURE')) {
           return false;
         }
@@ -2013,10 +2037,10 @@ const cardEffects: CardExpansionModule = {
   'doubloons': {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
-        const goldCards = cardEffectArgs.findCardService.findCards([
+        const goldCards = cardEffectArgs.findCardService.findCards({ all: [
           { location: 'basicSupply' },
           { cardKeys: 'gold' },
-        ]);
+        ] });
         const goldCard = goldCards.slice(-1)[0];
         if (!goldCard) {
           return;
@@ -2085,10 +2109,10 @@ const cardEffects: CardExpansionModule = {
     registerEffects: () => async (cardEffectArgs) => {
       await cardEffectArgs.actionService.run('gainTreasure', { count: 3 }, { source: cardEffectArgs.cardId });
 
-      const gainableCardIds = cardEffectArgs.findCardService.findCards([
+      const gainableCardIds = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
         { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: 4 } },
-      ]).map((card) => card.id);
+      ] }).map((card) => card.id);
 
       if (!gainableCardIds.length) {
         return;
@@ -2182,6 +2206,7 @@ const cardEffects: CardExpansionModule = {
         content: {
           type: 'select',
           cardIds: discardPlayable,
+          selectionIntent: { kind: 'play-card', cardTypes: ['ACTION', 'TREASURE'] },
           selectCount: 1,
         },
       }) as { action?: number; result?: CardId[] } | null;
@@ -2393,9 +2418,9 @@ const cardEffects: CardExpansionModule = {
         cardId: cardEffectArgs.cardId,
       });
 
-      const gainableCards = cardEffectArgs.findCardService.findCards([
+      const gainableCards = cardEffectArgs.findCardService.findCards({ all: [
         { location: ['basicSupply', 'kingdomSupply'] },
-      ]).filter((card) => compareCardCosts(cardEffectArgs.cardPriceController.applyRules(card, { playerId }).cost, sourceCost) === -1);
+      ] }).filter((card) => compareCardCosts(cardEffectArgs.cardPriceController.applyRules(card, { playerId }).cost, sourceCost) === -1);
 
       if (!gainableCards.length) {
         return;
@@ -2449,15 +2474,25 @@ const cardEffects: CardExpansionModule = {
       const actionCardsInHand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId)
         .map((cardId) => cardEffectArgs.cardLibrary.getCard(cardId))
         .filter((card) => card.type.includes('ACTION'));
+      // Keep the optional Staff replay prompt available when only Shadow Actions remain in deck.
+      const shadowActionsInDeck = getPlayerSourceSafe(cardEffectArgs, 'playerDeck', cardEffectArgs.playerId)
+        .map((cardId) => cardEffectArgs.cardLibrary.getCard(cardId))
+        .filter((card) => card.type.includes('ACTION') && card.type.includes('SHADOW'));
 
-      if (!actionCardsInHand.length) {
+      if (!actionCardsInHand.length && !shadowActionsInDeck.length) {
         return;
       }
 
       const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'You may play an Action from your hand',
-        restrict: actionCardsInHand.map((card) => card.id),
+        restrict: {
+          all: [
+            { location: 'playerHand', playerId: cardEffectArgs.playerId },
+            { cardType: ['ACTION'] },
+          ],
+        },
+        selectionIntent: { kind: 'play-card', cardTypes: ['ACTION'] },
         count: { kind: 'upTo', count: 1 },
         optional: true,
       });

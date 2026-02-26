@@ -1211,16 +1211,27 @@ const registerMarketTowns = (args: AlliesGameContext, ally: Ally): void => {
         }
 
         const hand = conditionArgs.cardSourceController.getSource('playerHand', playerId);
-        const hasActionInHand = hand.some((cardId) => conditionArgs.cardLibrary.getCard(cardId).type.includes('ACTION'));
-        return hasActionInHand && getPlayerFavorCount(conditionArgs.match, playerId) > 0;
+        const deck = conditionArgs.cardSourceController.getSource('playerDeck', playerId);
+        // Market Towns can be satisfied by normal Actions in hand or Shadow Actions in deck.
+        const hasPlayableAction = hand.some((cardId) => conditionArgs.cardLibrary.getCard(cardId).type.includes('ACTION')) ||
+          deck.some((cardId) => {
+            const deckCard = conditionArgs.cardLibrary.getCard(cardId);
+            return deckCard.type.includes('ACTION') && deckCard.type.includes('SHADOW');
+          });
+        return hasPlayableAction && getPlayerFavorCount(conditionArgs.match, playerId) > 0;
       },
       triggeredEffectFn: async (triggeredArgs) => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
         while (getPlayerFavorCount(triggeredArgs.match, playerId) > 0) {
-          const actionCardsInHand = [...triggeredArgs.cardSourceController.getSource('playerHand', playerId)]
-            .filter((cardId) => triggeredArgs.cardLibrary.getCard(cardId).type.includes('ACTION'));
-
-          if (!actionCardsInHand.length) {
+          const hand = triggeredArgs.cardSourceController.getSource('playerHand', playerId);
+          const deck = triggeredArgs.cardSourceController.getSource('playerDeck', playerId);
+          // Re-check each loop so mid-loop card movement can terminate the prompt sequence safely.
+          const hasPlayableAction = hand.some((cardId) => triggeredArgs.cardLibrary.getCard(cardId).type.includes('ACTION')) ||
+            deck.some((cardId) => {
+              const deckCard = triggeredArgs.cardLibrary.getCard(cardId);
+              return deckCard.type.includes('ACTION') && deckCard.type.includes('SHADOW');
+            });
+          if (!hasPlayableAction) {
             return;
           }
 
@@ -1245,7 +1256,13 @@ const registerMarketTowns = (args: AlliesGameContext, ally: Ally): void => {
           const selectedCardId = await triggeredArgs.actionService.run('selectSingleCard', {
             playerId,
             prompt: 'Play an Action card from your hand',
-            restrict: actionCardsInHand,
+            restrict: {
+              all: [
+                { location: 'playerHand', playerId },
+                { cardType: ['ACTION'] },
+              ],
+            },
+            selectionIntent: { kind: 'play-card', cardTypes: ['ACTION'] },
             count: 1,
           });
           if (!selectedCardId) {

@@ -39,7 +39,15 @@ export class PlayOptionsResolver {
       return { card, canPlay: false, reasons };
     }
 
-    if (sourceLocation !== 'playerHand' || sourcePlayerId !== args.playerId) {
+    // Shadow Action cards can be played from deck whenever an Action can be played.
+    const playableFromHand = sourceLocation === 'playerHand' && sourcePlayerId === args.playerId;
+    const playableShadowFromDeck = phase === 'action' &&
+      sourceLocation === 'playerDeck' &&
+      sourcePlayerId === args.playerId &&
+      card.type.includes('ACTION') &&
+      card.type.includes('SHADOW');
+
+    if (!playableFromHand && !playableShadowFromDeck) {
       reasons.push('Card is not in the current player hand.');
     }
 
@@ -62,10 +70,12 @@ export class PlayOptionsResolver {
       reasons.push(`Cards cannot be played during the ${phase} phase.`);
     }
 
+    // "As if in hand" keeps play rules consistent for Shadow deck plays.
+    const playRuleSourceLocation = playableShadowFromDeck ? 'playerHand' : sourceLocation;
     const playRuleResult = this.playRulesController.applyRules(card, {
       playerId: args.playerId,
       phase,
-      sourceLocation,
+      sourceLocation: playRuleSourceLocation,
       sourcePlayerId,
     });
     if (!playRuleResult.canPlay) {

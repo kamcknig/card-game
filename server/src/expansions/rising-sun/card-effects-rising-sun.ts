@@ -174,6 +174,43 @@ const getRiverboatSetAsideCardId = (
 };
 
 const cards: CardExpansionModule = {
+  'alley': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.log('[alley effect] resolving card');
+
+      // Alley is a cantrip: draw one card and gain one action first.
+      await cardEffectArgs.actionService.run('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: 1,
+      });
+      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
+
+      // Alley then forces a discard from hand; if hand is empty there is nothing to discard.
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      if (hand.length < 1) {
+        loggerService.debug('[alley effect] no cards in hand to discard');
+        return;
+      }
+
+      const selectedDiscardCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Discard a card',
+        restrict: hand,
+        count: 1,
+      }) ?? hand[0];
+
+      if (!selectedDiscardCardId) {
+        loggerService.warn('[alley effect] no card selected to discard');
+        return;
+      }
+
+      await cardEffectArgs.actionService.run('discardCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedDiscardCardId,
+      });
+    },
+  },
   'aristocrat': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
@@ -934,7 +971,7 @@ const cards: CardExpansionModule = {
               prompt: 'Play the Riverboat set-aside card',
               restrict: [setAsideCardId],
               count: { kind: 'exact', count: 1 },
-              playCard: true,
+              selectionIntent: { kind: 'play-card', cardTypes: ['ACTION'] },
             });
             const resolvedSetAsideCardId = selectedPlayCardIds[0] ?? setAsideCardId;
             if (selectedPlayCardIds.length !== 1) {

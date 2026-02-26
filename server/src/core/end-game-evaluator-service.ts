@@ -66,10 +66,10 @@ export class EndGameEvaluatorService {
 
   public shouldEndGame(): boolean {
     if (
-      this.findCardService.findCards([
+      this.findCardService.findCards({ all: [
         { location: 'basicSupply' },
         { cardKeys: 'province' },
-      ]).length === 0
+      ] }).length === 0
     ) {
       this.loggerService.info('[match] supply has no more provinces');
       return true;

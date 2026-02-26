@@ -201,10 +201,10 @@ const expansion: CardExpansionModule = {
       const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Gain a card costing exactly $1 more',
-        restrict: [
+        restrict: { all: [
           { location: ['basicSupply', 'kingdomSupply'] },
           { kind: 'exact', playerId: cardEffectArgs.playerId, amount: targetCost },
-        ],
+        ] },
         count: 1,
         optional: true,
       });
