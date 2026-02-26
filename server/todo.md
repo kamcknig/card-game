@@ -97,11 +97,12 @@ ferryman
 ### rising sun
 
 - divine-wind (prophecy)
-- alley
 - fishmonger
 - ninja
 - ronin
 - tanuki
+
+Work on UI for shadow cards
 
 ### alchemy
 
