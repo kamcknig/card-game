@@ -14,11 +14,15 @@
 }
 
 @if (gamePaused()) {
-  <div class="match-status-overlay pause-overlay">
-    <div class="match-status-chip pause-chip">
+  <app-ui-dialog
+    [zIndex]="4000"
+    [closeOnBackdrop]="false"
+    [backdropVariant]="'soft'"
+  >
+    <div class="pause-dialog-card">
       PLAYER DISCONNECTED
     </div>
-  </div>
+  </app-ui-dialog>
 }
 
 <div class="mat-tab-content">

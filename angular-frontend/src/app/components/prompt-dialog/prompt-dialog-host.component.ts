@@ -8,6 +8,7 @@ import { PromptNameCardContentComponent } from './content/prompt-name-card-conte
 import { PromptOverpayContentComponent } from './content/prompt-overpay-content.component';
 import { PromptRearrangeContentComponent } from './content/prompt-rearrange-content.component';
 import { PromptBlindRearrangeContentComponent } from './content/prompt-blind-rearrange-content.component';
+import { PromptSelectPileContentComponent } from './content/prompt-select-pile-content.component';
 
 @Component({
   selector: 'app-prompt-dialog-host',
@@ -19,6 +20,7 @@ import { PromptBlindRearrangeContentComponent } from './content/prompt-blind-rea
     PromptOverpayContentComponent,
     PromptRearrangeContentComponent,
     PromptBlindRearrangeContentComponent,
+    PromptSelectPileContentComponent,
   ],
   templateUrl: './prompt-dialog-host.component.html',
   styleUrl: './prompt-dialog-host.component.scss',

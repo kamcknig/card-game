@@ -76,6 +76,15 @@
                 (resultsUpdated)="onResultsUpdated($event)"
               ></app-prompt-blind-rearrange-content>
             }
+
+            @case ('select-pile') {
+              <app-prompt-select-pile-content
+                [content]="promptContent"
+                (validationUpdated)="onValidationUpdated($event)"
+                (resultsUpdated)="onResultsUpdated($event)"
+                (finished)="onContentFinished()"
+              ></app-prompt-select-pile-content>
+            }
           }
         </div>
       }

@@ -72,6 +72,7 @@ export class PromptDialogCoordinatorService {
       case 'overpay':
       case 'rearrange':
       case 'blind-rearrange':
+      case 'select-pile':
         return true;
       default:
         return false;

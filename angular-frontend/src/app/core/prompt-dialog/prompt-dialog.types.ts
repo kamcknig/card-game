@@ -8,7 +8,8 @@ export type SupportedPromptContentType =
   | 'name-card'
   | 'overpay'
   | 'rearrange'
-  | 'blind-rearrange';
+  | 'blind-rearrange'
+  | 'select-pile';
 
 // Union of prompt payload shapes supported by the Angular prompt host.
 export type SupportedPromptContent = Extract<UserPromptKinds, { type: SupportedPromptContentType }>;

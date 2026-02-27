@@ -210,10 +210,9 @@ export class PileView extends Container {
 
     this._highlight.clear();
 
-    const fallbackWidth = this._size === 'half' ? SMALL_CARD_WIDTH : CARD_WIDTH;
-    const fallbackHeight = this._size === 'half' ? SMALL_CARD_HEIGHT : CARD_HEIGHT;
-    const width = this._cardView?.width ?? fallbackWidth;
-    const height = this._cardView?.height ?? fallbackHeight;
+    // Use canonical card dimensions so pile highlights stay visually consistent across card textures.
+    const width = this._size === 'half' ? SMALL_CARD_WIDTH : CARD_WIDTH;
+    const height = this._size === 'half' ? SMALL_CARD_HEIGHT : CARD_HEIGHT;
 
     if (selectable.includes(this._pileKey)) {
       this._highlight

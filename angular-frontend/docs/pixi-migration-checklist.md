@@ -23,7 +23,7 @@ templates/CSS.
 
 - [x] Create migration tracker document
 - [x] Chunk 1: waiting/pause/dialog-style transient overlays moved to Angular
-- [ ] Chunk 2: remaining transient prompt-adjacent overlays moved to Angular
+- [x] Chunk 2: remaining transient prompt-adjacent overlays moved to Angular
 - [ ] Chunk 3: turn action controls moved to Angular
 - [ ] Chunk 4: Way picker moved to Angular
 - [ ] Chunk 5: supply area family converted (`basic-supply`, `kingdom-supply`)
@@ -58,3 +58,21 @@ templates/CSS.
   - `angular-frontend/src/app/components/match/match-hud/match-hud.component.html`
   - `angular-frontend/src/app/components/match/match-hud/match-hud.component.scss`
   - `angular-frontend/src/app/components/match/views/scenes/match-scene.ts`
+
+### Chunk 2 notes
+
+- Goal: migrate remaining transient prompt-adjacent Pixi overlays to Angular prompt dialogs.
+- Scope:
+  - select-card confirm/cancel prompt controls
+  - select-pile confirm/cancel prompt controls
+  - pile-selection prompt content component in Angular host
+- Status: completed
+- Files:
+  - `angular-frontend/src/app/components/match/views/scenes/match-scene.ts`
+  - `angular-frontend/src/app/components/prompt-dialog/prompt-dialog-host.component.ts`
+  - `angular-frontend/src/app/components/prompt-dialog/prompt-dialog-host.component.html`
+  - `angular-frontend/src/app/core/prompt-dialog/prompt-dialog.types.ts`
+  - `angular-frontend/src/app/core/prompt-dialog/prompt-dialog-coordinator.service.ts`
+  - `angular-frontend/src/app/components/prompt-dialog/content/prompt-select-pile-content.component.ts`
+  - `angular-frontend/src/app/components/prompt-dialog/content/prompt-select-pile-content.component.html`
+  - `angular-frontend/src/app/components/prompt-dialog/content/prompt-select-pile-content.component.scss`

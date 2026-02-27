@@ -23,7 +23,6 @@ import {validateCountSpec} from 'shared/validate-count-spec';
 import {CardStackView} from '../card-stack';
 import {DeckStackView} from '../deck-stack';
 import {currentPlayerTurnIdStore, turnPhaseStore} from '../../../../state/turn-state';
-import {isNumber, isUndefined} from 'es-toolkit/compat';
 import {AppList} from '../app-list';
 import {SocketService} from '../../../../core/socket-service/socket.service';
 import {selectableCardStore, waySelectableCardStore} from '../../../../state/interactive-logic';
@@ -31,7 +30,7 @@ import {selectablePileStore} from '../../../../state/interactive-pile-logic';
 import {SelectCardArgs} from '../../../../../types';
 import {BasicSupplyView} from '../basic-supply';
 import {NonSupplyKingdomView} from '../non-supply-kingdom-view';
-import {cardSourceStore, getCardSourceStore} from '../../../../state/card-source-store';
+import {getCardSourceStore} from '../../../../state/card-source-store';
 import {OtherCardLikeView} from '../other-card-like-view';
 import {CardLikeView} from '../card-like-view';
 import {PileView} from '../pile';
@@ -686,58 +685,6 @@ export class MatchScene extends Scene {
     }
   }
 
-  // Collects all currently rendered card ids in this scene by traversing CardView instances.
-  private collectRenderedCardIds(root: Container, renderedCardIds: Set<CardId>) {
-    for (const child of root.children) {
-      if (child instanceof CardView) {
-        renderedCardIds.add(child.card.id);
-      }
-
-      if (child instanceof Container && child.children.length > 0) {
-        this.collectRenderedCardIds(child, renderedCardIds);
-      }
-    }
-  }
-
-  // Determines whether select-card should use modal fallback because some selectable cards are not currently rendered.
-  private shouldUsePromptCardSelectionModal(selectableCardIds: CardId[]): boolean {
-    if (selectableCardIds.length < 1) {
-      return false;
-    }
-
-    // Set-aside selections are often context-specific reveals and can be hard to discover on the board.
-    // Force modal selection for these prompts so the player always gets an explicit chooser.
-    const setAsideCardIds = new Set<CardId>();
-    for (const [sourceKey, sourceCardIds] of Object.entries(cardSourceStore.get())) {
-      if (!sourceKey.startsWith('set-aside')) {
-        continue;
-      }
-      for (const sourceCardId of sourceCardIds ?? []) {
-        setAsideCardIds.add(sourceCardId);
-      }
-    }
-    const setAsideSelectableIds = selectableCardIds.filter((cardId) => setAsideCardIds.has(cardId));
-    if (setAsideSelectableIds.length > 0) {
-      console.debug(
-        `[selectCard ui] using modal fallback for set-aside selectable cards: ${setAsideSelectableIds.join(',')}`,
-      );
-      return true;
-    }
-
-    const renderedCardIds = new Set<CardId>();
-    this.collectRenderedCardIds(this, renderedCardIds);
-
-    const nonRenderedSelectableIds = selectableCardIds.filter((cardId) => !renderedCardIds.has(cardId));
-    if (nonRenderedSelectableIds.length < 1) {
-      return false;
-    }
-
-    console.debug(
-      `[selectCard ui] using modal fallback for non-rendered selectable cards: ${nonRenderedSelectableIds.join(',')}`,
-    );
-    return true;
-  }
-
   // Normalizes modal prompt responses to card-selection payloads used by server selectCard flow.
   private parsePromptSelectionResult(response: unknown): PlayCardSelectionResult {
     if (Array.isArray(response)) {
@@ -785,300 +732,68 @@ export class MatchScene extends Scene {
     this.resetPromptPlaySelectionState();
     const cardIds = arg.selectableCardIds ?? [];
 
-    let doSelectButtonContainer: Container | null;
-
-    // no more selectable cards, remove the done selecting button if it exists
-    if (cardIds.length === 0 && this.getChildByLabel('doSelectButtonContainer')) {
-      doSelectButtonContainer = this.getChildByLabel('doSelectButtonContainer');
-      doSelectButtonContainer?.removeChildren().forEach(c => c.destroy());
+    // no more selectable cards, clean up local prompt-selection state and return.
+    if (cardIds.length === 0) {
       this._selecting = false;
       promptInteractionLockStore.set(false);
+      selectedCardStore.set([]);
+      clientSelectableCardsOverrideStore.set(null);
       this.resetPromptPlaySelectionState();
       return;
     }
 
-    // Resolve the selection count when it is a fixed number (range selections have no single count).
-    const resolvedCountSpec = resolveCountSpec(arg.count);
-    const count = resolvedCountSpec.kind === 'fixed'
-      ? resolvedCountSpec.count
-      : undefined;
+    // Resolve whether prompt payload should include play-as-way output semantics.
+    const resolvedCountSpec = resolveCountSpec(arg.count ?? 1);
     const isSingleSelection = resolvedCountSpec.kind === 'fixed'
       ? resolvedCountSpec.count === 1
       : resolvedCountSpec.min === 1 && resolvedCountSpec.max === 1;
     const promptAllowsWaySelection = this.supportsActionPlaySelectionIntent(arg.selectionIntent);
-    // Way selection in select-card prompts only applies when there are active Ways in this match.
     const activeWayCount = matchStore.get()?.ways?.length ?? 0;
     const supportsWaySelection = promptAllowsWaySelection && isSingleSelection && activeWayCount > 0;
-    console.debug(
-      `[selectCard ui] prompt='${arg.prompt}' selectionIntent=${JSON.stringify(arg.selectionIntent)} supportsWaySelection=${supportsWaySelection} activeWays=${activeWayCount} selectable=${cardIds.length}`,
-    );
-
-    // Some selections target cards not rendered on the board (e.g., set-aside revealed cards).
-    // Use the existing modal selector for those cases so selection remains possible.
-    if (this.shouldUsePromptCardSelectionModal(cardIds)) {
-      this._selecting = true;
-      promptInteractionLockStore.set(true);
-      try {
-        const modalArgs: UserPromptActionArgs = {
-          playerId: this._selfId,
-          prompt: arg.prompt,
-          content: {
-            type: 'select',
-            cardIds,
-            selectableCardIds: [...cardIds],
-            selectCount: arg.count ?? 1,
-            selectionIntent: arg.selectionIntent,
-          },
-        };
-
-        if (arg.optional) {
-          modalArgs.actionButtons = [
-            { label: arg.cancelPrompt ?? 'Cancel', action: 0 },
-            { label: arg.validPrompt ?? arg.prompt, action: 1 },
-          ];
-          modalArgs.validationAction = 1;
-        }
-
-        const modalResult = await this.openPromptUi(modalArgs);
-        const parsedSelection = this.parsePromptSelectionResult(modalResult);
-        const payload: CardId[] | PlayCardSelectionResult = supportsWaySelection
-          ? {
-            selectedCardIds: parsedSelection.selectedCardIds,
-            selectedWayId: parsedSelection.selectedWayId ?? null,
-          }
-          : parsedSelection.selectedCardIds;
-
-        selectedCardStore.set([]);
-        clientSelectableCardsOverrideStore.set(null);
-        this.resetPromptPlaySelectionState();
-        this._socketService.emit('userInputReceived', signalId, payload);
-      } finally {
-        this._selecting = false;
-        promptInteractionLockStore.set(false);
-      }
-      return;
-    }
-
-    if (currentPlayerTurnIdStore.get() !== this._selfId) {
-      try {
-        const s = new Audio(`./assets/sounds/your-turn.mp3`);
-        s.volume = .4;
-        await s?.play();
-      } catch {
-        console.error('Could not play start turn sound');
-      }
-    }
-
-    doSelectButtonContainer = new AppList({
-      type: 'horizontal',
-      elementsMargin: STANDARD_GAP,
-      padding: STANDARD_GAP
-    });
-
-    const doneSelectingBtn = new Container();
-    const button = createAppButton({
-      text: arg.prompt,
-      style: {
-        fill: this._theme.text.onOverlay,
-        fontSize: 36,
-      },
-    });
-    button.button.label = 'doneSelectingButton';
-    doneSelectingBtn.eventMode = 'static';
-    doneSelectingBtn.on('removed', () => doneSelectingBtn.removeAllListeners());
-    doneSelectingBtn.addChild(button.button);
-
-    doSelectButtonContainer.addChild(doneSelectingBtn);
-
-    if (arg.optional) {
-      const cancelButton = createAppButton({
-        text: arg.cancelPrompt ?? 'Cancel',
-        style: {
-          fill: this._theme.text.onOverlay,
-          fontSize: 36,
-        },
-      });
-      doSelectButtonContainer.addChildAt(cancelButton.button, 0);
-      cancelButton.button.on('removed', () => cancelButton.button.removeAllListeners());
-      cancelButton.button.on('pointerdown', () => doneListener(true));
-    }
-
-    doSelectButtonContainer.x = Math.floor(
-      (this._playerHand?.x ?? 0) + (this._playerHand?.width ?? 0) * .5 - doSelectButtonContainer.width * .5
-    );
-
-    doSelectButtonContainer.y = Math.floor((this._playerHand?.y ?? 0) - doSelectButtonContainer.height - STANDARD_GAP);
-    this.addChild(doSelectButtonContainer);
-
-    const c = new Container({ label: 'cardCountContainer' });
-
-    if (arg.prompt.toLowerCase().includes('trash') || arg.prompt.toLowerCase().includes('discard')) {
-      let s: Sprite | undefined = undefined;
-      if (arg.prompt.toLowerCase().includes('trash')) {
-        s = Sprite.from(await Assets.load(`./assets/ui-icons/trash-card-count.png`));
-      }
-      else if (arg.prompt.toLowerCase().includes('discard')) {
-        s = Sprite.from(await Assets.load(`./assets/ui-icons/discard-card-count.png`));
-      }
-
-      if (s) {
-        s.x = 5;
-        s.y = 5;
-        c.addChild(s);
-
-        const g = new Graphics();
-        g.roundRect(0, 0, s.x + s.width + 5, s.y + s.height + 5, 5);
-        g.fill(this._theme.surfaces.countBadge);
-        c.addChildAt(g, 0);
-      }
-
-      const countText = new Text({
-        label: 'count',
-        text: isNumber(arg.count) ? count : 0,
-        style: {
-          fontSize: 26,
-          fill: this._theme.text.onOverlay
-        }
-      });
-      countText.x = Math.floor(c.width - countText.width * .5);
-      countText.y = -Math.floor(countText.height * .5);
-      c.addChild(countText);
-      c.scale = .6;
-      c.x = Math.floor(doSelectButtonContainer.x + doSelectButtonContainer.width - 5);
-      c.y = Math.floor(doSelectButtonContainer.y - c.height * .25);
-      this.addChild(c);
-    }
-
-    const cardsSelectedComplete = (cardIds: number[]) => {
-      const selectedCardIds = cardIds as CardId[];
-      const payload: CardId[] | PlayCardSelectionResult = supportsWaySelection
-        ? {
-          selectedCardIds,
-          selectedWayId:
-            selectedCardIds.length === 1 && selectedCardIds[0] === this._promptPlaySelectedCardId
-              ? this._promptPlaySelectedWayId
-              : null,
-        }
-        : selectedCardIds;
-      // reset selected card state
-      selectedCardStore.set([]);
-      c.removeFromParent();
-      doSelectButtonContainer?.removeChildren();
-      selectedCardsListenerCleanup();
-
-      // reset overrides so server can tell us now what cards are selectable
-      clientSelectableCardsOverrideStore.set(null);
-      this.resetPromptPlaySelectionState();
-      this._socketService.emit('userInputReceived', signalId, payload);
-    };
-
-    const doneListener = (cancelled?: boolean) => {
-      this._selecting = false;
-      promptInteractionLockStore.set(false);
-      cardsSelectedComplete(!!cancelled ? [] : selectedCardStore.get());
-    }
-
-    const updateCountText = (countText: Text, count: number) => {
-      countText.text = count;
-    }
-
-    const validateSelection = (selectedCards: readonly number[]) => {
-      if (arg.count === undefined) {
-        console.error('validate requires a count');
-        doneListener(true);
-        return;
-      }
-
-      if (validateCountSpec(arg.count, selectedCards?.length ?? 0)) {
-        if (!isUndefined(arg.validPrompt)) {
-          button.text(arg.validPrompt);
-        }
-        else {
-          button.text(arg.prompt);
-        }
-
-        if (doneSelectingBtn) {
-          const b = doneSelectingBtn.getChildByLabel('doneSelectingButton');
-          if (b) {
-            b.alpha = 1;
-          }
-          doneSelectingBtn.on('pointerdown', () => doneListener());
-        }
-
-        if (isNumber(arg.count) && !arg.optional) {
-          // Keep prompt play-selection open so the player can choose a Way after selecting a card.
-          if (!supportsWaySelection && arg.count === selectedCardStore.get().length) doneListener();
-        }
-        if (!isNumber(arg.count) && !arg.optional && arg.count?.kind === 'range') {
-          // Auto-complete when range is fixed to a single value.
-          if (
-            !supportsWaySelection &&
-            arg.count.min === arg.count.max &&
-            arg.count.max === selectedCardStore.get().length
-          ) {
-            doneListener();
-          }
-        }
-
-      }
-      else {
-        button.text(arg.prompt);
-        if (doneSelectingBtn) {
-          const b = doneSelectingBtn.getChildByLabel('doneSelectingButton');
-          if (b) {
-            b.alpha = .6;
-          }
-          doneSelectingBtn.off('pointerdown', () => doneListener());
-        }
-      }
-    };
-
-    // set the currently selectable cards
-    clientSelectableCardsOverrideStore.set(arg.selectableCardIds);
-    promptWaySelectableCardsOverrideStore.set(supportsWaySelection ? [...cardIds] : null);
 
     this._selecting = true;
-    // Hide turn action controls while card-selection prompt is active.
+    // Hide turn action controls while modal selection prompt is active.
     promptInteractionLockStore.set(true);
-    if (supportsWaySelection) {
-      // Way selections are only meaningful for single-card play prompts.
-      this._promptPlayWaySelectionResolver = (selectedCardId: CardId, selectedWayId: CardLikeId) => {
-        selectedCardStore.set([selectedCardId]);
-        this._promptPlaySelectedCardId = selectedCardId;
-        this._promptPlaySelectedWayId = selectedWayId;
-        doneListener();
+    selectedCardStore.set([]);
+    clientSelectableCardsOverrideStore.set(null);
+
+    try {
+      const modalArgs: UserPromptActionArgs = {
+        playerId: this._selfId,
+        prompt: arg.prompt,
+        content: {
+          type: 'select',
+          cardIds,
+          selectableCardIds: [...cardIds],
+          selectCount: arg.count ?? 1,
+          selectionIntent: arg.selectionIntent,
+        },
       };
+
+      if (arg.optional) {
+        modalArgs.actionButtons = [
+          { label: arg.cancelPrompt ?? 'Cancel', action: 0 },
+          { label: arg.validPrompt ?? arg.prompt ?? 'Confirm', action: 1 },
+        ];
+        modalArgs.validationAction = 1;
+      }
+
+      const modalResult = await this.openPromptUi(modalArgs);
+      const parsedSelection = this.parsePromptSelectionResult(modalResult);
+      const payload: CardId[] | PlayCardSelectionResult = supportsWaySelection
+        ? {
+          selectedCardIds: parsedSelection.selectedCardIds,
+          selectedWayId: parsedSelection.selectedWayId ?? null,
+        }
+        : parsedSelection.selectedCardIds;
+      this._socketService.emit('userInputReceived', signalId, payload);
+    } finally {
+      this._selecting = false;
+      promptInteractionLockStore.set(false);
+      selectedCardStore.set([]);
+      clientSelectableCardsOverrideStore.set(null);
+      this.resetPromptPlaySelectionState();
     }
-
-    // listen for cards being selected
-    const selectedCardsListenerCleanup = selectedCardStore.subscribe(cardIds => {
-      if (
-        !supportsWaySelection ||
-        cardIds.length !== 1 ||
-        cardIds[0] !== this._promptPlaySelectedCardId
-      ) {
-        this._promptPlaySelectedCardId = null;
-        this._promptPlaySelectedWayId = null;
-      }
-
-      const countText = this.getChildByLabel('cardCountContainer')?.getChildByLabel('count') as Text;
-
-      if (countText) {
-        if (resolvedCountSpec.kind === 'fixed') {
-          updateCountText(
-            countText,
-            Math.max(resolvedCountSpec.count - cardIds.length, 0),
-          );
-        }
-        else {
-          updateCountText(countText, cardIds.length);
-        }
-      }
-
-      validateSelection(cardIds);
-    });
-
-    validateSelection(selectedCardStore.get());
   }
 
   // Handles pile selection prompts by highlighting piles and capturing a selection.
@@ -1100,6 +815,8 @@ export class MatchScene extends Scene {
     }
 
     clientSelectablePilesOverrideStore.set(pileNames);
+    // Suppress any stale card/card-like selectable highlights while pile selection is active.
+    clientSelectableCardsOverrideStore.set([]);
     selectedPileStore.set([]);
     this._selectingPiles = true;
     // Hide turn action controls while pile-selection prompt is active.
@@ -1126,11 +843,43 @@ export class MatchScene extends Scene {
 
     doSelectButtonContainer.addChild(doneSelectingBtn);
 
+    if (isOptional) {
+      const cancelButton = createAppButton({
+        text: 'Cancel',
+        style: {
+          fill: this._theme.text.onOverlay,
+          fontSize: 36,
+        },
+      });
+      doSelectButtonContainer.addChildAt(cancelButton.button, 0);
+      cancelButton.button.on('removed', () => cancelButton.button.removeAllListeners());
+      cancelButton.button.on('pointerdown', () => doneListener(true));
+    }
+
     doSelectButtonContainer.x = Math.floor(
       (this._playerHand?.x ?? 0) + (this._playerHand?.width ?? 0) * .5 - doSelectButtonContainer.width * .5
     );
     doSelectButtonContainer.y = Math.floor((this._playerHand?.y ?? 0) - doSelectButtonContainer.height - STANDARD_GAP);
     this.addChild(doSelectButtonContainer);
+
+    const cleanupSelection = () => {
+      selectedPileStore.set([]);
+      clientSelectablePilesOverrideStore.set(null);
+      clientSelectableCardsOverrideStore.set(null);
+      this._selectingPiles = false;
+      promptInteractionLockStore.set(false);
+      doSelectButtonContainer.removeChildren();
+      doSelectButtonContainer.removeFromParent();
+    };
+
+    let selectedListenerCleanup: () => void = () => undefined;
+
+    const doneListener = (cancelled?: boolean) => {
+      const selectedPiles = cancelled ? [] : selectedPileStore.get();
+      selectedListenerCleanup();
+      cleanupSelection();
+      this._socketService.emit('userInputReceived', signalId, selectedPiles);
+    };
 
     const updateButtonState = (selected: readonly CardKey[]) => {
       const valid = validateCountSpec(selectCount, selected.length);
@@ -1148,25 +897,9 @@ export class MatchScene extends Scene {
       }
     };
 
-    const selectedListenerCleanup = selectedPileStore.subscribe(selected => {
+    selectedListenerCleanup = selectedPileStore.subscribe(selected => {
       updateButtonState(selected);
     });
-
-    const cleanupSelection = () => {
-      selectedListenerCleanup();
-      selectedPileStore.set([]);
-      clientSelectablePilesOverrideStore.set(null);
-      this._selectingPiles = false;
-      promptInteractionLockStore.set(false);
-      doSelectButtonContainer.removeChildren();
-      doSelectButtonContainer.removeFromParent();
-    };
-
-    const doneListener = (cancelled?: boolean) => {
-      const selectedPiles = cancelled ? [] : selectedPileStore.get();
-      cleanupSelection();
-      this._socketService.emit('userInputReceived', signalId, selectedPiles);
-    };
 
     doneSelectingBtn.on('pointerdown', () => doneListener());
 
