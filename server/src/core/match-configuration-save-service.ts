@@ -17,9 +17,7 @@ type PersistedMatchConfigurationSave = {
 export class MatchConfigurationSaveService {
   private static readonly FILE_EXTENSION = '.json';
 
-  constructor(
-    private readonly loggerService: LoggerService,
-  ) {}
+  constructor(private readonly loggerService: LoggerService) {}
 
   // Checks whether a user-provided save name is valid and available.
   public checkSaveName(name: string): MatchConfigurationSaveNameCheckResult {
@@ -120,8 +118,9 @@ export class MatchConfigurationSaveService {
   }
 
   // Loads one saved configuration by key.
-  public loadConfiguration(key: string): { ok: true; key: string; configuration: MatchConfiguration }
-    | { ok: false; key: string; message: string } {
+  public loadConfiguration(
+    key: string,
+  ): { ok: true; key: string; configuration: MatchConfiguration } | { ok: false; key: string; message: string } {
     const normalizedKey = this.normalizeSaveName(key);
     if (!normalizedKey) {
       return {
@@ -149,7 +148,9 @@ export class MatchConfigurationSaveService {
   }
 
   // Loads one saved configuration by key with metadata needed by debug CRUD endpoints.
-  public getSavedConfiguration(key: string):
+  public getSavedConfiguration(
+    key: string,
+  ):
     | { ok: true; entry: SavedMatchConfigurationEntry; configuration: MatchConfiguration }
     | { ok: false; key: string; message: string } {
     const normalizedKey = this.normalizeSaveName(key);
@@ -208,9 +209,12 @@ export class MatchConfigurationSaveService {
     }
 
     const trimmedRequestedName = requestedName?.trim() ?? '';
-    const resolvedName = trimmedRequestedName.length > 0
-      ? trimmedRequestedName
-      : (existingSave.name.trim().length > 0 ? existingSave.name : normalizedKey);
+    const resolvedName =
+      trimmedRequestedName.length > 0
+        ? trimmedRequestedName
+        : existingSave.name.trim().length > 0
+          ? existingSave.name
+          : normalizedKey;
 
     const payload: PersistedMatchConfigurationSave = {
       name: resolvedName,
@@ -239,9 +243,7 @@ export class MatchConfigurationSaveService {
   }
 
   // Deletes one saved configuration by key.
-  public deleteConfiguration(key: string):
-    | { ok: true; key: string }
-    | { ok: false; key: string; message: string } {
+  public deleteConfiguration(key: string): { ok: true; key: string } | { ok: false; key: string; message: string } {
     const normalizedKey = this.normalizeSaveName(key);
     if (!normalizedKey) {
       return {
@@ -279,9 +281,7 @@ export class MatchConfigurationSaveService {
   }
 
   // Deletes all saved configurations and returns the number of files removed.
-  public deleteAllConfigurations():
-    | { ok: true; removed: number }
-    | { ok: false; removed: number; message: string } {
+  public deleteAllConfigurations(): { ok: true; removed: number } | { ok: false; removed: number; message: string } {
     const saveDirectory = getSavedMatchConfigurationDirectory();
     let removedCount = 0;
     try {

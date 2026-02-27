@@ -6,30 +6,20 @@ export type ObeliskMetadata = {
   chosenPileKey?: CardKey;
 };
 
-export const configureObelisk = (
-  registrar: GameEventRegistrar,
-  config: ComputedMatchConfiguration,
-) => {
+export const configureObelisk = (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => {
   // Only register Obelisk handlers when the landmark is present.
-  const hasObelisk = (config.landmarks ?? []).some(
-    (landmark) => landmark.cardKey === 'obelisk',
-  );
+  const hasObelisk = (config.landmarks ?? []).some(landmark => landmark.cardKey === 'obelisk');
   if (!hasObelisk) return;
 
-  registrar('onGameStartSetup', async (args) => {
+  registrar('onGameStartSetup', async args => {
     // Locate the Obelisk landmark instance to store the chosen pile metadata.
-    const obeliskLandmark = args.match.landmarks.find(
-      (landmark) => landmark.cardKey === 'obelisk',
-    );
+    const obeliskLandmark = args.match.landmarks.find(landmark => landmark.cardKey === 'obelisk');
     if (!obeliskLandmark) {
       return;
     }
 
     // Build the list of Action supply piles using pile-level type data.
-    const supplyPiles = [
-      ...(config.basicSupply ?? []),
-      ...(config.kingdomSupply ?? []),
-    ];
+    const supplyPiles = [...(config.basicSupply ?? []), ...(config.kingdomSupply ?? [])];
     const actionPileKeys: CardKey[] = [];
 
     for (const supply of supplyPiles) {
@@ -50,9 +40,7 @@ export const configureObelisk = (
     metadata.chosenPileKey = chosenPileKey;
 
     // Resolve card keys for logging/debugging only.
-    const chosenPile = supplyPiles.find(
-      (supply) => supply.name === chosenPileKey,
-    );
-    const chosenCardKeys = chosenPile ? Array.from(new Set(chosenPile.cards.map((card) => card.cardKey))) : [];
+    const chosenPile = supplyPiles.find(supply => supply.name === chosenPileKey);
+    const chosenCardKeys = chosenPile ? Array.from(new Set(chosenPile.cards.map(card => card.cardKey))) : [];
   });
 };

@@ -2,7 +2,7 @@ import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 
 // Adds the Will-o'-Wisp non-supply pile when boons are in use.
 export const configureWillOWisp = (args: ExpansionConfiguratorContext) => {
-  if (args.config.nonSupply?.some((supply) => supply.name === 'will-o-wisp')) {
+  if (args.config.nonSupply?.some(supply => supply.name === 'will-o-wisp')) {
     args.loggerService.info('[nocturne configurator - will-o-wisp] pile already configured');
     return;
   }
@@ -11,9 +11,7 @@ export const configureWillOWisp = (args: ExpansionConfiguratorContext) => {
 
   args.config.nonSupply ??= [];
 
-  const baseCard = structuredClone(
-    args.expansionCatalog['nocturne']?.cardData.kingdomSupply['will-o-wisp'],
-  );
+  const baseCard = structuredClone(args.expansionCatalog['nocturne']?.cardData.kingdomSupply['will-o-wisp']);
 
   if (!baseCard) {
     args.loggerService.warn('[nocturne configurator - will-o-wisp] card data not found');

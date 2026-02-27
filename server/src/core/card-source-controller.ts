@@ -4,8 +4,7 @@ export class CardSourceController {
   private readonly _sourceMap: Map<string, CardId[]> = new Map();
   private readonly _tagMap: Map<string, CardLocation[]> = new Map();
 
-  constructor(private readonly match: Match) {
-  }
+  constructor(private readonly match: Match) {}
 
   registerZone(sourceKey: CardLocation, source: CardId[], index: number = NaN, tags: string[] = []) {
     const key = `${sourceKey}${isNaN(index) ? '' : ':' + index}`;
@@ -39,7 +38,7 @@ export class CardSourceController {
 
   findCardSource(cardId: CardId) {
     for (const [sourceKey, source] of this._sourceMap) {
-      const idx = source.findIndex((id) => id === cardId);
+      const idx = source.findIndex(id => id === cardId);
       if (idx !== -1) {
         const [key, playerIdToken] = sourceKey.split(':');
         const parsedPlayerId = playerIdToken === undefined ? undefined : Number(playerIdToken);

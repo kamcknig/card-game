@@ -5,17 +5,12 @@ import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { placeVictoryTokensPerPlayer } from './landmark-utils.ts';
 
-export const configureColonnade = (
-  registrar: GameEventRegistrar,
-  config: ComputedMatchConfiguration,
-) => {
+export const configureColonnade = (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => {
   // Only register Colonnade handlers when the landmark is present.
-  const hasColonnade = (config.landmarks ?? []).some(
-    (landmark) => landmark.cardKey === 'colonnade',
-  );
+  const hasColonnade = (config.landmarks ?? []).some(landmark => landmark.cardKey === 'colonnade');
   if (!hasColonnade) return;
 
-  registrar('onGameStartSetup', async (args) => {
+  registrar('onGameStartSetup', async args => {
     // Colonnade setup: put 6 VP tokens per player on the landmark using the shared helper.
     await placeVictoryTokensPerPlayer(args, {
       landmarkKey: 'colonnade',
@@ -36,22 +31,24 @@ export const configureColonnade = (
     if (!gainedCard.type.includes('ACTION')) return;
 
     // Check for a copy of the gained Action in the player's play area.
-    const copyInPlay = args.findCardService.findCards({ all: [
-      { location: 'playArea', playerId: eventArgs.playerId },
-      { cardKeys: gainedCard.cardKey },
-    ] }).length > 0;
+    const copyInPlay =
+      args.findCardService.findCards({
+        all: [{ location: 'playArea', playerId: eventArgs.playerId }, { cardKeys: gainedCard.cardKey }],
+      }).length > 0;
 
     if (!copyInPlay) {
       return;
     }
 
     const victoryTokenId = prosperityTokenIds.victory;
-    const tokensOnColonnade = Object.values(args.match.tokens ?? {}).filter(
-      (token) =>
-        token.tokenId === victoryTokenId &&
-        token.location.type === 'supplyPile' &&
-        token.location.cardKey === 'colonnade',
-    ).sort((a, b) => a.id.localeCompare(b.id));
+    const tokensOnColonnade = Object.values(args.match.tokens ?? {})
+      .filter(
+        token =>
+          token.tokenId === victoryTokenId &&
+          token.location.type === 'supplyPile' &&
+          token.location.cardKey === 'colonnade',
+      )
+      .sort((a, b) => a.id.localeCompare(b.id));
 
     if (!tokensOnColonnade.length) {
       return;

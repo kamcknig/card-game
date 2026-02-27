@@ -5,22 +5,14 @@ import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 
-export const configureDefiledShrine = (
-  registrar: GameEventRegistrar,
-  config: ComputedMatchConfiguration,
-) => {
+export const configureDefiledShrine = (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => {
   // Only register Defiled Shrine handlers when the landmark is present.
-  const hasDefiledShrine = (config.landmarks ?? []).some(
-    (landmark) => landmark.cardKey === 'defiled-shrine',
-  );
+  const hasDefiledShrine = (config.landmarks ?? []).some(landmark => landmark.cardKey === 'defiled-shrine');
   if (!hasDefiledShrine) return;
 
-  registrar('onGameStartSetup', async (args) => {
+  registrar('onGameStartSetup', async args => {
     // Defiled Shrine setup: put 2 VP tokens on each non-Gathering Action supply pile.
-    const supplyPiles = [
-      ...(config.basicSupply ?? []),
-      ...(config.kingdomSupply ?? []),
-    ];
+    const supplyPiles = [...(config.basicSupply ?? []), ...(config.kingdomSupply ?? [])];
     const eligiblePileKeys = new Set<CardKey>();
 
     for (const supply of supplyPiles) {
@@ -28,7 +20,7 @@ export const configureDefiledShrine = (
       if (!pileCards.length) continue;
 
       // Skip Gathering piles so Farmers' Market/Temple/Wild Hunt keep their own tokens.
-      const hasGathering = pileCards.some((card) => card.type.includes('GATHERING'));
+      const hasGathering = pileCards.some(card => card.type.includes('GATHERING'));
       if (hasGathering) {
         continue;
       }
@@ -59,12 +51,14 @@ export const configureDefiledShrine = (
     if (gainedCard.type.includes('ACTION')) {
       // Move 1 VP from the gained card's pile to Defiled Shrine.
       const pileKey = getCardPileKey(gainedCard);
-      const tokensOnPile = Object.values(args.match.tokens ?? {}).filter(
-        (token) =>
-          token.tokenId === victoryTokenId &&
-          token.location.type === 'supplyPile' &&
-          token.location.cardKey === pileKey,
-      ).sort((a, b) => a.id.localeCompare(b.id));
+      const tokensOnPile = Object.values(args.match.tokens ?? {})
+        .filter(
+          token =>
+            token.tokenId === victoryTokenId &&
+            token.location.type === 'supplyPile' &&
+            token.location.cardKey === pileKey,
+        )
+        .sort((a, b) => a.id.localeCompare(b.id));
 
       const tokenToMove = tokensOnPile[0];
       if (!tokenToMove) {
@@ -88,12 +82,14 @@ export const configureDefiledShrine = (
       return;
     }
 
-    const tokensOnShrine = Object.values(args.match.tokens ?? {}).filter(
-      (token) =>
-        token.tokenId === victoryTokenId &&
-        token.location.type === 'supplyPile' &&
-        token.location.cardKey === 'defiled-shrine',
-    ).sort((a, b) => a.id.localeCompare(b.id));
+    const tokensOnShrine = Object.values(args.match.tokens ?? {})
+      .filter(
+        token =>
+          token.tokenId === victoryTokenId &&
+          token.location.type === 'supplyPile' &&
+          token.location.cardKey === 'defiled-shrine',
+      )
+      .sort((a, b) => a.id.localeCompare(b.id));
 
     if (!tokensOnShrine.length) {
       return;

@@ -3,17 +3,12 @@ import { GameEventRegistrar } from '@server-types/index.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
 import { placeVictoryTokensPerPlayer } from './landmark-utils.ts';
 
-export const configureBaths = (
-  registrar: GameEventRegistrar,
-  config: ComputedMatchConfiguration,
-) => {
+export const configureBaths = (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => {
   // Only register Baths handlers when the landmark is present.
-  const hasBaths = (config.landmarks ?? []).some(
-    (landmark) => landmark.cardKey === 'baths',
-  );
+  const hasBaths = (config.landmarks ?? []).some(landmark => landmark.cardKey === 'baths');
   if (!hasBaths) return;
 
-  registrar('onGameStartSetup', async (args) => {
+  registrar('onGameStartSetup', async args => {
     // Baths setup: put 6 VP tokens per player on the landmark using the shared helper.
     await placeVictoryTokensPerPlayer(args, {
       landmarkKey: 'baths',
@@ -22,9 +17,7 @@ export const configureBaths = (
     });
 
     // Find the Baths landmark instance for reaction registration.
-    const bathsLandmark = args.match.landmarks.find(
-      (landmark) => landmark.cardKey === 'baths',
-    );
+    const bathsLandmark = args.match.landmarks.find(landmark => landmark.cardKey === 'baths');
     if (!bathsLandmark) {
       return;
     }
@@ -39,16 +32,15 @@ export const configureBaths = (
           once: false,
           compulsory: true,
           allowMultipleInstances: true,
-          condition: async (conditionArgs) => {
+          condition: async conditionArgs => {
             // Only check for the player whose turn just ended.
             if (conditionArgs.trigger.args.playerId !== player.id) return false;
 
             const currentTurnHistoryIndex = conditionArgs.match.stats.turns.length - 1;
             const turnStatsIndex = currentTurnHistoryIndex;
             const cardIdsGainedThisTurn = conditionArgs.match.stats.cardsGainedByTurn?.[turnStatsIndex] ?? [];
-            const selfGainedCardIds = cardIdsGainedThisTurn.filter((cardId) =>
-              conditionArgs.match.stats.cardsGained[cardId]?.playerId ===
-                player.id
+            const selfGainedCardIds = cardIdsGainedThisTurn.filter(
+              cardId => conditionArgs.match.stats.cardsGained[cardId]?.playerId === player.id,
             );
 
             if (selfGainedCardIds.length) {
@@ -57,16 +49,17 @@ export const configureBaths = (
 
             return true;
           },
-          triggeredEffectFn: async (triggeredArgs) => {
+          triggeredEffectFn: async triggeredArgs => {
             // Resolve the Victory token id for token filtering.
             const victoryTokenId = prosperityTokenIds.victory;
-            const tokensOnBaths = Object.values(
-              triggeredArgs.match.tokens ?? {},
-            ).filter((token) =>
-              token.tokenId === victoryTokenId &&
-              token.location.type === 'supplyPile' &&
-              token.location.cardKey === 'baths'
-            ).sort((a, b) => a.id.localeCompare(b.id));
+            const tokensOnBaths = Object.values(triggeredArgs.match.tokens ?? {})
+              .filter(
+                token =>
+                  token.tokenId === victoryTokenId &&
+                  token.location.type === 'supplyPile' &&
+                  token.location.cardKey === 'baths',
+              )
+              .sort((a, b) => a.id.localeCompare(b.id));
 
             if (!tokensOnBaths.length) {
               return;

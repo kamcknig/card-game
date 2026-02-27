@@ -19,9 +19,7 @@ export class TokenRegistryService {
     TokenCardPlayedHandler
   >;
 
-  constructor(
-    private readonly loggerService: LoggerService,
-  ) {}
+  constructor(private readonly loggerService: LoggerService) {}
 
   // Registers a token definition by token id.
   public registerTokenDefinition(definition: TokenDefinition): void {

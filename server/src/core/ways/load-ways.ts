@@ -19,10 +19,9 @@ export class WayLoaderService {
 
     try {
       // Load the way library JSON for the expansion when present.
-      const wayLibraryModule = await import(
-        `@expansions/${expansionName}/way-library-${expansionName}.json`,
-        { with: { type: 'json' } },
-      );
+      const wayLibraryModule = await import(`@expansions/${expansionName}/way-library-${expansionName}.json`, {
+        with: { type: 'json' },
+      });
       const ways = wayLibraryModule.default as Record<string, Partial<WayNoId>>;
 
       for (const cardKey of Object.keys(ways)) {
@@ -36,9 +35,7 @@ export class WayLoaderService {
       }
     } catch (error) {
       if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
-        this.loggerService.warn(
-          `[load-ways] failed to load expansion way library for expansion ${expansionName}`,
-        );
+        this.loggerService.warn(`[load-ways] failed to load expansion way library for expansion ${expansionName}`);
         this.loggerService.error(error);
       }
     }
@@ -50,15 +47,11 @@ export class WayLoaderService {
 
       for (const cardKey of Object.keys(ways)) {
         if (this.expansionEffectRegistryService.hasWayEffectFactory(cardKey as CardKey)) {
-          this.loggerService.warn(
-            `[load-ways] way key ${cardKey} already exists in way registry, overwriting`,
-          );
+          this.loggerService.warn(`[load-ways] way key ${cardKey} already exists in way registry, overwriting`);
         }
 
         if (ways[cardKey].registerEffects) {
-          this.loggerService.info(
-            `[load-ways] registering way effects for ${cardKey}`,
-          );
+          this.loggerService.info(`[load-ways] registering way effects for ${cardKey}`);
           this.expansionEffectRegistryService.registerWayEffectFactory(
             cardKey as CardKey,
             ways[cardKey].registerEffects,
@@ -67,9 +60,7 @@ export class WayLoaderService {
       }
     } catch (error) {
       if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
-        this.loggerService.warn(
-          `[load-ways] failed to load expansion way effects for expansion ${expansionName}`,
-        );
+        this.loggerService.warn(`[load-ways] failed to load expansion way effects for expansion ${expansionName}`);
         this.loggerService.error(error);
       }
     }

@@ -119,10 +119,11 @@ const settlersBustlingVillageOrder: CardKey[] = [
 ];
 
 const configurator: ExpansionConfiguratorFactory = () => {
-  return async (args) => {
+  return async args => {
     // Locate the Castles split pile in the kingdom supply, if present.
-    const castlesSupply = args.config.kingdomSupply
-      .find((supply) => supply.cards.some((card) => getCardPileKey(card) === 'castles'));
+    const castlesSupply = args.config.kingdomSupply.find(supply =>
+      supply.cards.some(card => getCardPileKey(card) === 'castles'),
+    );
 
     if (!castlesSupply) {
       args.loggerService.info(`[empires configurator] no castles pile in kingdom supply`);
@@ -130,33 +131,27 @@ const configurator: ExpansionConfiguratorFactory = () => {
       // Choose the canonical order based on player count.
       const playerCount = args.config.players.length;
       const desiredOrder = playerCount > 2 ? castleOrderThreePlus : castleOrderTwoPlayers;
-      const currentOrder = castlesSupply.cards.map((card) => card.cardKey);
+      const currentOrder = castlesSupply.cards.map(card => card.cardKey);
 
-      const orderMatches = currentOrder.length === desiredOrder.length &&
-        currentOrder.every((key, index) => key === desiredOrder[index]);
+      const orderMatches =
+        currentOrder.length === desiredOrder.length && currentOrder.every((key, index) => key === desiredOrder[index]);
 
       if (orderMatches) {
-        args.loggerService.info(
-          `[empires configurator] castles pile already configured for ${playerCount} players`,
-        );
+        args.loggerService.info(`[empires configurator] castles pile already configured for ${playerCount} players`);
       } else {
         // Replace the pile with the canonical ordering, cloning card templates for safety.
         const nextCastleCards = [];
         for (const cardKey of desiredOrder) {
           const cardTemplate = args.cardLibrary[cardKey];
           if (!cardTemplate) {
-            args.loggerService.warn(
-              `[empires configurator] missing card template for ${cardKey}`,
-            );
+            args.loggerService.warn(`[empires configurator] missing card template for ${cardKey}`);
             continue;
           }
           nextCastleCards.push(structuredClone(cardTemplate));
         }
         castlesSupply.cards = nextCastleCards;
 
-        args.loggerService.log(
-          `[empires configurator] configured castles pile for ${playerCount} players`,
-        );
+        args.loggerService.log(`[empires configurator] configured castles pile for ${playerCount} players`);
       }
     }
 
@@ -210,9 +205,7 @@ const configurePatricianEmporium = (args: ExpansionConfiguratorContext) => {
   });
 };
 
-const configureSettlersBustlingVillage = (
-  args: ExpansionConfiguratorContext,
-) => {
+const configureSettlersBustlingVillage = (args: ExpansionConfiguratorContext) => {
   // Locate the settlers/bustling-village split pile in the kingdom supply, if present.
   // Use the shared split pile configurator for canonical ordering.
   configureSplitPile(args, {
@@ -223,10 +216,10 @@ const configureSettlersBustlingVillage = (
 };
 
 // Register Empires landmark effects when included in the match configuration.
-export const registerGameEvents: (
-  registrar: GameEventRegistrar,
-  config: ComputedMatchConfiguration,
-) => void = (registrar, config) => {
+export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (
+  registrar,
+  config,
+) => {
   // Determine which Empires landmarks are in this match.
   configureAqueduct(registrar, config);
   configureArena(registrar, config);
@@ -242,15 +235,11 @@ export const registerGameEvents: (
   configureTomb(registrar, config);
 };
 
-export const registerScoringFunctions = (
-  registrar: PlayerScoreDecoratorRegistrar,
-) => {
+export const registerScoringFunctions = (registrar: PlayerScoreDecoratorRegistrar) => {
   // Register Empires landmark scoring adjustments (e.g., Bandit Fort).
   registrar((playerId, match, cardLibrary) => {
     // Only apply Bandit Fort penalties when the landmark is active.
-    const hasBanditFort = (match.landmarks ?? []).some(
-      (landmark) => landmark.cardKey === 'bandit-fort',
-    );
+    const hasBanditFort = (match.landmarks ?? []).some(landmark => landmark.cardKey === 'bandit-fort');
     if (!hasBanditFort) return;
 
     // Count Silver and Gold cards owned by the player.
@@ -275,9 +264,7 @@ export const registerScoringFunctions = (
   // Register Empires landmark scoring bonuses (e.g., Fountain).
   registrar((playerId, match, cardLibrary) => {
     // Only apply Fountain bonuses when the landmark is active.
-    const hasFountain = (match.landmarks ?? []).some(
-      (landmark) => landmark.cardKey === 'fountain',
-    );
+    const hasFountain = (match.landmarks ?? []).some(landmark => landmark.cardKey === 'fountain');
     if (!hasFountain) return;
 
     // Count Copper cards owned by the player for the Fountain threshold.
@@ -301,9 +288,7 @@ export const registerScoringFunctions = (
   // Register Empires landmark scoring bonuses (e.g., Keep).
   registrar((playerId, match, cardLibrary) => {
     // Only apply Keep bonuses when the landmark is active.
-    const hasKeep = (match.landmarks ?? []).some(
-      (landmark) => landmark.cardKey === 'keep',
-    );
+    const hasKeep = (match.landmarks ?? []).some(landmark => landmark.cardKey === 'keep');
     if (!hasKeep) return;
 
     // Collect every Treasure card key that exists in this match.
@@ -371,9 +356,7 @@ export const registerScoringFunctions = (
   // Register Empires landmark scoring bonuses (e.g., Museum).
   registrar((playerId, match, cardLibrary) => {
     // Only apply Museum bonuses when the landmark is active.
-    const hasMuseum = (match.landmarks ?? []).some(
-      (landmark) => landmark.cardKey === 'museum',
-    );
+    const hasMuseum = (match.landmarks ?? []).some(landmark => landmark.cardKey === 'museum');
     if (!hasMuseum) return;
 
     // Track unique card names owned by the player.
@@ -394,9 +377,7 @@ export const registerScoringFunctions = (
   // Register Empires landmark scoring bonuses (e.g., Orchard).
   registrar((playerId, match, cardLibrary) => {
     // Only apply Orchard bonuses when the landmark is active.
-    const hasOrchard = (match.landmarks ?? []).some(
-      (landmark) => landmark.cardKey === 'orchard',
-    );
+    const hasOrchard = (match.landmarks ?? []).some(landmark => landmark.cardKey === 'orchard');
     if (!hasOrchard) return;
 
     // Count Action cards by name for the player.
@@ -427,9 +408,7 @@ export const registerScoringFunctions = (
   // Register Empires landmark scoring bonuses (e.g., Palace).
   registrar((playerId, match, cardLibrary) => {
     // Only apply Palace bonuses when the landmark is active.
-    const hasPalace = (match.landmarks ?? []).some(
-      (landmark) => landmark.cardKey === 'palace',
-    );
+    const hasPalace = (match.landmarks ?? []).some(landmark => landmark.cardKey === 'palace');
     if (!hasPalace) return;
 
     // Count basic Treasures (Copper, Silver, Gold) owned by the player.
@@ -458,9 +437,7 @@ export const registerScoringFunctions = (
   // Register Empires landmark scoring bonuses (e.g., Tower).
   registrar((playerId, match, cardLibrary) => {
     // Only apply Tower bonuses when the landmark is active.
-    const hasTower = (match.landmarks ?? []).some(
-      (landmark) => landmark.cardKey === 'tower',
-    );
+    const hasTower = (match.landmarks ?? []).some(landmark => landmark.cardKey === 'tower');
     if (!hasTower) return;
 
     // Collect all supply pile keys in the match.
@@ -472,10 +449,7 @@ export const registerScoringFunctions = (
 
     // Count remaining cards in each supply pile based on current supply sources.
     const remainingCounts = new Map<CardKey, number>();
-    const supplyCardIds = [
-      ...(match.cardSources.basicSupply ?? []),
-      ...(match.cardSources.kingdomSupply ?? []),
-    ];
+    const supplyCardIds = [...(match.cardSources.basicSupply ?? []), ...(match.cardSources.kingdomSupply ?? [])];
     for (const cardId of supplyCardIds) {
       const supplyCard = cardLibrary.getCard(cardId);
       const pileKey = getCardPileKey(supplyCard);
@@ -519,9 +493,7 @@ export const registerScoringFunctions = (
   // Register Empires landmark scoring bonuses (e.g., Triumphal Arch).
   registrar((playerId, match, cardLibrary) => {
     // Only apply Triumphal Arch bonuses when the landmark is active.
-    const hasTriumphalArch = (match.landmarks ?? []).some(
-      (landmark) => landmark.cardKey === 'triumphal-arch',
-    );
+    const hasTriumphalArch = (match.landmarks ?? []).some(landmark => landmark.cardKey === 'triumphal-arch');
     if (!hasTriumphalArch) return;
 
     // Count Action cards by name for the player.
@@ -551,9 +523,7 @@ export const registerScoringFunctions = (
   // Register Empires landmark scoring penalties (e.g., Wall).
   registrar((playerId, match, cardLibrary) => {
     // Only apply Wall penalties when the landmark is active.
-    const hasWall = (match.landmarks ?? []).some(
-      (landmark) => landmark.cardKey === 'wall',
-    );
+    const hasWall = (match.landmarks ?? []).some(landmark => landmark.cardKey === 'wall');
     if (!hasWall) return;
 
     // Count all cards owned by the player (Wall cares about total deck size).
@@ -569,9 +539,7 @@ export const registerScoringFunctions = (
   // Register Empires landmark scoring penalties (e.g., Wolf Den).
   registrar((playerId, match, cardLibrary) => {
     // Only apply Wolf Den penalties when the landmark is active.
-    const hasWolfDen = (match.landmarks ?? []).some(
-      (landmark) => landmark.cardKey === 'wolf-den',
-    );
+    const hasWolfDen = (match.landmarks ?? []).some(landmark => landmark.cardKey === 'wolf-den');
     if (!hasWolfDen) return;
 
     // Count all cards owned by the player by name.
@@ -599,9 +567,7 @@ export const registerScoringFunctions = (
   // Register Empires landmark scoring bonuses (e.g., Obelisk).
   registrar((playerId, match, cardLibrary) => {
     // Only apply Obelisk bonuses when the landmark is active.
-    const obeliskLandmark = (match.landmarks ?? []).find(
-      (landmark) => landmark.cardKey === 'obelisk',
-    );
+    const obeliskLandmark = (match.landmarks ?? []).find(landmark => landmark.cardKey === 'obelisk');
     if (!obeliskLandmark) return;
 
     const metadata = obeliskLandmark.metadata as ObeliskMetadata;
@@ -611,20 +577,13 @@ export const registerScoringFunctions = (
     }
 
     // Resolve the chosen pile's card keys from the match configuration.
-    const supplyPiles = [
-      ...(match.config.basicSupply ?? []),
-      ...(match.config.kingdomSupply ?? []),
-    ];
-    const chosenPile = supplyPiles.find(
-      (supply) => supply.name === chosenPileKey,
-    );
+    const supplyPiles = [...(match.config.basicSupply ?? []), ...(match.config.kingdomSupply ?? [])];
+    const chosenPile = supplyPiles.find(supply => supply.name === chosenPileKey);
     if (!chosenPile) {
       return;
     }
 
-    const chosenKeySet = new Set<CardKey>(
-      chosenPile.cards.map((card) => card.cardKey),
-    );
+    const chosenKeySet = new Set<CardKey>(chosenPile.cards.map(card => card.cardKey));
     const playerCards = cardLibrary.getCardsByOwner(playerId);
     let qualifyingCards = 0;
     for (const card of playerCards) {

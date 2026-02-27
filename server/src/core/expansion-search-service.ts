@@ -53,15 +53,13 @@ export class ExpansionSearchService {
     const rawCardLibrary = this.expansionCatalogService.getRawCardLibrary();
     const expansionLibrary = this.expansionCatalogService.getExpansionLibrary();
     const cards = Object.values(rawCardLibrary);
-    const events = Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.events ?? {}));
-    const landmarks = Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.landmarks ?? {}));
-    const artifacts = Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.artifacts ?? {}));
-    const projects = Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.projects ?? {}));
-    const traits = Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.traits ?? {}));
-    const allies = Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.allies ?? {}));
-    const prophecies = Object.values(expansionLibrary).flatMap((expansion) =>
-      Object.values(expansion.prophecies ?? {})
-    );
+    const events = Object.values(expansionLibrary).flatMap(expansion => Object.values(expansion.events ?? {}));
+    const landmarks = Object.values(expansionLibrary).flatMap(expansion => Object.values(expansion.landmarks ?? {}));
+    const artifacts = Object.values(expansionLibrary).flatMap(expansion => Object.values(expansion.artifacts ?? {}));
+    const projects = Object.values(expansionLibrary).flatMap(expansion => Object.values(expansion.projects ?? {}));
+    const traits = Object.values(expansionLibrary).flatMap(expansion => Object.values(expansion.traits ?? {}));
+    const allies = Object.values(expansionLibrary).flatMap(expansion => Object.values(expansion.allies ?? {}));
+    const prophecies = Object.values(expansionLibrary).flatMap(expansion => Object.values(expansion.prophecies ?? {}));
     this._cardFuse = this.createFuse(cards);
     this._eventFuse = this.createFuse(events);
     this._landmarkFuse = this.createFuse(landmarks);
@@ -70,12 +68,12 @@ export class ExpansionSearchService {
     this._traitFuse = this.createFuse(traits);
     this._allyFuse = this.createFuse(allies);
     this._prophecyFuse = this.createFuse(prophecies);
-    const expansionWays = Object.values(expansionLibrary).flatMap((expansion) => Object.values(expansion.ways ?? {}));
+    const expansionWays = Object.values(expansionLibrary).flatMap(expansion => Object.values(expansion.ways ?? {}));
     // Fallback source: allow WAY-typed entries from raw card templates so search still works
     // while an expansion is transitioning to dedicated way-library files.
     const rawWayCards = Object.values(rawCardLibrary)
-      .filter((card) => (card.type ?? []).includes('WAY'))
-      .map((card) => card as unknown as WayNoId);
+      .filter(card => (card.type ?? []).includes('WAY'))
+      .map(card => card as unknown as WayNoId);
     const wayByKey = new Map<string, WayNoId>();
     for (const way of [...expansionWays, ...rawWayCards]) {
       wayByKey.set(way.cardKey, way);
@@ -83,7 +81,7 @@ export class ExpansionSearchService {
     const ways = [...wayByKey.values()];
     this._wayFuse = this.createFuse(ways);
     this._selectableCatalog = {
-      cards: this.sortByName(cards.filter((card) => this.isCardEligibleForKingdomSearch(card))),
+      cards: this.sortByName(cards.filter(card => this.isCardEligibleForKingdomSearch(card))),
       events: this.sortByName(events),
       landmarks: this.sortByName(landmarks),
       artifacts: this.sortByName(artifacts),
@@ -107,8 +105,8 @@ export class ExpansionSearchService {
     if (searchStr.trim().length < 1) {
       return this._selectableCatalog.cards;
     }
-    const cards = this._cardFuse?.search(searchStr).map((result) => result.item) ?? [];
-    return cards.filter((card) => this.isCardEligibleForKingdomSearch(card));
+    const cards = this._cardFuse?.search(searchStr).map(result => result.item) ?? [];
+    return cards.filter(card => this.isCardEligibleForKingdomSearch(card));
   }
 
   // Returns matching events for a search term.
@@ -116,7 +114,7 @@ export class ExpansionSearchService {
     if (searchStr.trim().length < 1) {
       return this._selectableCatalog.events;
     }
-    return this._eventFuse?.search(searchStr).map((result) => result.item) ?? [];
+    return this._eventFuse?.search(searchStr).map(result => result.item) ?? [];
   }
 
   // Returns matching landmarks for a search term.
@@ -124,7 +122,7 @@ export class ExpansionSearchService {
     if (searchStr.trim().length < 1) {
       return this._selectableCatalog.landmarks;
     }
-    return this._landmarkFuse?.search(searchStr).map((result) => result.item) ?? [];
+    return this._landmarkFuse?.search(searchStr).map(result => result.item) ?? [];
   }
 
   // Returns matching artifacts for a search term.
@@ -132,7 +130,7 @@ export class ExpansionSearchService {
     if (searchStr.trim().length < 1) {
       return this._selectableCatalog.artifacts;
     }
-    return this._artifactFuse?.search(searchStr).map((result) => result.item) ?? [];
+    return this._artifactFuse?.search(searchStr).map(result => result.item) ?? [];
   }
 
   // Returns matching projects for a search term.
@@ -140,7 +138,7 @@ export class ExpansionSearchService {
     if (searchStr.trim().length < 1) {
       return this._selectableCatalog.projects;
     }
-    return this._projectFuse?.search(searchStr).map((result) => result.item) ?? [];
+    return this._projectFuse?.search(searchStr).map(result => result.item) ?? [];
   }
 
   // Returns matching ways for a search term.
@@ -148,7 +146,7 @@ export class ExpansionSearchService {
     if (searchStr.trim().length < 1) {
       return this._selectableCatalog.ways;
     }
-    const ways = this._wayFuse?.search(searchStr).map((result) => result.item) ?? [];
+    const ways = this._wayFuse?.search(searchStr).map(result => result.item) ?? [];
     this.loggerService.debug(`[expansion search] ways search '${searchStr}' returned ${ways.length} way card(s)`);
     return ways;
   }
@@ -158,7 +156,7 @@ export class ExpansionSearchService {
     if (searchStr.trim().length < 1) {
       return this._selectableCatalog.traits;
     }
-    return this._traitFuse?.search(searchStr).map((result) => result.item) ?? [];
+    return this._traitFuse?.search(searchStr).map(result => result.item) ?? [];
   }
 
   // Returns matching ally for a search term.
@@ -166,7 +164,7 @@ export class ExpansionSearchService {
     if (searchStr.trim().length < 1) {
       return this._selectableCatalog.allies;
     }
-    return this._allyFuse?.search(searchStr).map((result) => result.item) ?? [];
+    return this._allyFuse?.search(searchStr).map(result => result.item) ?? [];
   }
 
   // Returns matching prophecies for a search term.
@@ -174,7 +172,7 @@ export class ExpansionSearchService {
     if (searchStr.trim().length < 1) {
       return this._selectableCatalog.prophecies;
     }
-    return this._prophecyFuse?.search(searchStr).map((result) => result.item) ?? [];
+    return this._prophecyFuse?.search(searchStr).map(result => result.item) ?? [];
   }
 
   // Returns a structured clone of the current searchable landscape catalog.

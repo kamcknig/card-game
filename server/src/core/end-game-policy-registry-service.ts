@@ -20,6 +20,6 @@ export class EndGamePolicyRegistryService {
         if (a.priority !== b.priority) return a.priority - b.priority;
         return a.order - b.order;
       })
-      .map((entry) => entry.fn);
+      .map(entry => entry.fn);
   }
 }

@@ -5,12 +5,12 @@ import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { ExpansionData } from '../expansion-library.ts';
 
 export const configureYoungWitch = (args: ExpansionConfiguratorContext) => {
-  const youngWitchPresent = args.config.kingdomSupply.some((supply) => supply.name === 'young-witch');
+  const youngWitchPresent = args.config.kingdomSupply.some(supply => supply.name === 'young-witch');
 
   // if no witch is present, or if the bane is already configured, no need to configure
   if (
     !youngWitchPresent ||
-    args.config.kingdomSupply.some((supply) => supply.cards.some((card) => card.tags?.includes('bane')))
+    args.config.kingdomSupply.some(supply => supply.cards.some(card => card.tags?.includes('bane')))
   ) {
     return;
   }
@@ -31,9 +31,9 @@ export const configureYoungWitch = (args: ExpansionConfiguratorContext) => {
   }, [] as ExpansionData[]);
 
   const existingPileKeys = Array.from(
-    new Set(args.config.kingdomSupply.flatMap((supply) => supply.cards.map((card) => getCardPileKey(card)))),
+    new Set(args.config.kingdomSupply.flatMap(supply => supply.cards.map(card => getCardPileKey(card)))),
   );
-  const bannedPileKeys = args.config.bannedKingdoms.map((card) => getCardPileKey(card));
+  const bannedPileKeys = args.config.bannedKingdoms.map(card => getCardPileKey(card));
   const availableGroups = getAvailableKingdomRandomizerGroups({
     expansions: selectedExpansions,
     excludedPileKeys: existingPileKeys,

@@ -40,10 +40,7 @@ export class LoggerBackendProvider {
   };
   private backend: LoggerBackend = this.defaultBackend;
 
-  constructor(
-    private readonly serverConfigService: ServerConfigService,
-  ) {
-  }
+  constructor(private readonly serverConfigService: ServerConfigService) {}
 
   // Returns the active backend, initializing it once when first requested.
   public getBackend(): LoggerBackend {
@@ -55,7 +52,7 @@ export class LoggerBackendProvider {
   public configureBackend(backend: Partial<LoggerBackend>): void {
     this.backend = {
       ...this.getBackend(),
-      ...backend ?? {},
+      ...(backend ?? {}),
     };
   }
 
@@ -80,22 +77,28 @@ export class LoggerBackendProvider {
     }
 
     // Always disable enhanced-deno-log file sink; we route files ourselves per game directory.
-    log.setConfig({
-      enabledLevels: [],
-    }, 'file');
+    log.setConfig(
+      {
+        enabledLevels: [],
+      },
+      'file',
+    );
 
     // Configure console level colors.
-    log.setConfig({
-      colors: {
-        log: 'white',
-        info: 'blue',
-        debug: 'cyan',
-        warn: 'yellow',
-        error: 'red',
-        func: '#f5f5f5',
-        timer: 'green',
+    log.setConfig(
+      {
+        colors: {
+          log: 'white',
+          info: 'blue',
+          debug: 'cyan',
+          warn: 'yellow',
+          error: 'red',
+          func: '#f5f5f5',
+          timer: 'green',
+        },
       },
-    }, 'console');
+      'console',
+    );
 
     log.init();
 
@@ -106,21 +109,13 @@ export class LoggerBackendProvider {
     this.backend = {
       log: (...args: unknown[]) => (enhancedBackend.log ?? console.log)(...args),
       info: (...args: unknown[]) =>
-        (enhancedBackend.info ?? console.info)(
-          ...this.withAnsiColor(args, 36, useAnsiMessageColors),
-        ),
+        (enhancedBackend.info ?? console.info)(...this.withAnsiColor(args, 36, useAnsiMessageColors)),
       debug: (...args: unknown[]) =>
-        (enhancedBackend.debug ?? console.debug)(
-          ...this.withAnsiColor(args, 90, useAnsiMessageColors),
-        ),
+        (enhancedBackend.debug ?? console.debug)(...this.withAnsiColor(args, 90, useAnsiMessageColors)),
       warn: (...args: unknown[]) =>
-        (enhancedBackend.warn ?? console.warn)(
-          ...this.withAnsiColor(args, 33, useAnsiMessageColors),
-        ),
+        (enhancedBackend.warn ?? console.warn)(...this.withAnsiColor(args, 33, useAnsiMessageColors)),
       error: (...args: unknown[]) =>
-        (enhancedBackend.error ?? console.error)(
-          ...this.withAnsiColor(args, 31, useAnsiMessageColors),
-        ),
+        (enhancedBackend.error ?? console.error)(...this.withAnsiColor(args, 31, useAnsiMessageColors)),
     };
   }
 
@@ -163,17 +158,20 @@ export class LoggerBackendProvider {
 
   // Creates one compact timestamped log line for file output.
   private formatFileLine(date: Date, level: LogLevel, args: unknown[]): string {
-    const timestamp = [
-      date.getFullYear(),
-      String(date.getMonth() + 1).padStart(2, '0'),
-      String(date.getDate()).padStart(2, '0'),
-    ].join('-') + ` ` + [
-      String(date.getHours()).padStart(2, '0'),
-      String(date.getMinutes()).padStart(2, '0'),
-      String(date.getSeconds()).padStart(2, '0'),
-    ].join(':') + `.` + String(date.getMilliseconds()).padStart(3, '0');
+    const timestamp =
+      [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join(
+        '-',
+      ) +
+      ` ` +
+      [
+        String(date.getHours()).padStart(2, '0'),
+        String(date.getMinutes()).padStart(2, '0'),
+        String(date.getSeconds()).padStart(2, '0'),
+      ].join(':') +
+      `.` +
+      String(date.getMilliseconds()).padStart(3, '0');
     const levelLabel = level.toUpperCase().padEnd(5, ' ');
-    const message = args.map((arg) => this.toLogString(arg)).join(' ');
+    const message = args.map(arg => this.toLogString(arg)).join(' ');
     return `[${timestamp}] [${levelLabel}] ${message}\n`;
   }
 
@@ -267,8 +265,7 @@ export class LoggerService {
   constructor(
     private readonly loggerBackendProvider: LoggerBackendProvider,
     private readonly loggerContext: LoggerContext,
-  ) {
-  }
+  ) {}
 
   public log(...args: unknown[]): void {
     this.emit('log', this.loggerContext, ...args);
@@ -334,9 +331,7 @@ export class LoggerService {
     if (!entries.length) {
       return '';
     }
-    const pairs = entries
-      .map(([key, value]) => `${key}=${String(value)}`)
-      .join(' ');
+    const pairs = entries.map(([key, value]) => `${key}=${String(value)}`).join(' ');
     return `[ctx ${pairs}]`;
   }
 

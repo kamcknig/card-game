@@ -17,15 +17,13 @@ export type CardPlayRule = (card: Card, context: PlayRuleContext & { match: Matc
 export class PlayRulesController {
   private readonly rules: CardPlayRule[] = [];
 
-  constructor(
-    private readonly match: Match,
-  ) {}
+  constructor(private readonly match: Match) {}
 
   public registerRule(rule: CardPlayRule): () => void {
     this.rules.push(rule);
 
     return () => {
-      const index = this.rules.findIndex((existingRule) => existingRule === rule);
+      const index = this.rules.findIndex(existingRule => existingRule === rule);
       if (index !== -1) {
         this.rules.splice(index, 1);
       }

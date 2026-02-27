@@ -1,14 +1,6 @@
 import { GameLifecycleCallbackContext } from '@server-types/index.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
-import {
-  Ally,
-  Card,
-  CardId,
-  CardKey,
-  ComputedMatchConfiguration,
-  Match,
-  PlayerId,
-} from 'shared/types/index.ts';
+import { Ally, Card, CardId, CardKey, ComputedMatchConfiguration, Match, PlayerId } from 'shared/types/index.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
@@ -22,16 +14,16 @@ import { alliesTokenIds } from './token-ids-allies.ts';
 type AlliesGameContext = Omit<GameLifecycleCallbackContext, 'cardId'>;
 
 // Ally implementations intentionally deferred until missing engine capabilities are modeled.
-export const skippedAllyImplementations: Array<{ cardKey: CardKey; reason: string }> = [
-];
+export const skippedAllyImplementations: Array<{ cardKey: CardKey; reason: string }> = [];
 
 // Returns current Favor count for one player.
 export const getPlayerFavorCount = (match: Match, playerId: PlayerId): number => {
   return Object.values(match.tokens ?? {})
-    .filter((token) =>
-      token.tokenId === alliesTokenIds.favor &&
-      token.location.type === 'player' &&
-      token.location.playerId === playerId
+    .filter(
+      token =>
+        token.tokenId === alliesTokenIds.favor &&
+        token.location.type === 'player' &&
+        token.location.playerId === playerId,
     )
     .reduce((total, token) => total + Math.max(1, token.counters ?? 1), 0);
 };
@@ -155,7 +147,7 @@ const getTrailingConsecutiveTurns = (match: Match, playerId: PlayerId): number =
 // Returns true if adding an Island Folk turn would create a 3rd turn in a row.
 const wouldCreateThirdTurnInRow = (match: Match, playerId: PlayerId): boolean => {
   const consecutiveTurns = getTrailingConsecutiveTurns(match, playerId);
-  const queuedSamePlayerTurns = (match.extraTurnQueue ?? []).filter((turn) => turn.playerId === playerId).length;
+  const queuedSamePlayerTurns = (match.extraTurnQueue ?? []).filter(turn => turn.playerId === playerId).length;
   return consecutiveTurns + queuedSamePlayerTurns >= 2;
 };
 
@@ -175,7 +167,7 @@ const getCoastalHavenSetAsideCards = (
     return [];
   }
 
-  return setAsideCards.filter((cardId) => {
+  return setAsideCards.filter(cardId => {
     const source = args.match.setAsideSourceById?.[cardId];
     return source?.sourceKind === 'ally' && source.sourceCardLikeId === allyId;
   });
@@ -192,7 +184,7 @@ const registerArchitectsGuild = (args: AlliesGameContext, ally: Ally): void => {
       once: false,
       compulsory: true,
       allowMultipleInstances: true,
-      condition: (conditionArgs) => {
+      condition: conditionArgs => {
         if (conditionArgs.trigger.args.playerId !== playerId) {
           return false;
         }
@@ -203,7 +195,7 @@ const registerArchitectsGuild = (args: AlliesGameContext, ally: Ally): void => {
 
         const gainedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
         const gainedCardCost = conditionArgs.cardPriceController.applyRules(gainedCard, { playerId }).cost;
-        const hasCheaperNonVictorySupply = getTopSupplyCards(conditionArgs).some((candidateCard) => {
+        const hasCheaperNonVictorySupply = getTopSupplyCards(conditionArgs).some(candidateCard => {
           if (candidateCard.type.includes('VICTORY')) {
             return false;
           }
@@ -213,11 +205,11 @@ const registerArchitectsGuild = (args: AlliesGameContext, ally: Ally): void => {
 
         return hasCheaperNonVictorySupply;
       },
-      triggeredEffectFn: async (triggeredArgs) => {
+      triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
         const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
         const gainedCardCost = triggeredArgs.cardPriceController.applyRules(gainedCard, { playerId }).cost;
-        const eligibleCards = getTopSupplyCards(triggeredArgs).filter((candidateCard) => {
+        const eligibleCards = getTopSupplyCards(triggeredArgs).filter(candidateCard => {
           if (candidateCard.type.includes('VICTORY')) {
             return false;
           }
@@ -233,7 +225,7 @@ const registerArchitectsGuild = (args: AlliesGameContext, ally: Ally): void => {
         const spend = await promptSpendFavor(triggeredArgs, {
           ally,
           playerId,
-          prompt: 'Spend 2 Favor to gain a cheaper non-Victory card (Architects\' Guild)?',
+          prompt: "Spend 2 Favor to gain a cheaper non-Victory card (Architects' Guild)?",
         });
         if (!spend) {
           return;
@@ -247,7 +239,7 @@ const registerArchitectsGuild = (args: AlliesGameContext, ally: Ally): void => {
         const selectedCardId = await triggeredArgs.actionService.run('selectSingleCard', {
           playerId,
           prompt: 'Gain a cheaper non-Victory card',
-          restrict: eligibleCards.map((card) => card.id),
+          restrict: eligibleCards.map(card => card.id),
           count: 1,
         });
         if (!selectedCardId) {
@@ -276,7 +268,7 @@ const registerBandOfNomads = (args: AlliesGameContext, ally: Ally): void => {
       once: false,
       compulsory: true,
       allowMultipleInstances: true,
-      condition: (conditionArgs) => {
+      condition: conditionArgs => {
         if (conditionArgs.trigger.args.playerId !== playerId) {
           return false;
         }
@@ -288,7 +280,7 @@ const registerBandOfNomads = (args: AlliesGameContext, ally: Ally): void => {
         const gainedCardCost = conditionArgs.cardPriceController.applyRules(gainedCard, { playerId }).cost;
         return compareCardCosts(gainedCardCost, { treasure: 3 }) >= 0;
       },
-      triggeredEffectFn: async (triggeredArgs) => {
+      triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
         const spend = await promptSpendFavor(triggeredArgs, {
           ally,
@@ -350,10 +342,12 @@ const registerCaveDwellers = (args: AlliesGameContext, ally: Ally): void => {
       once: false,
       compulsory: true,
       allowMultipleInstances: true,
-      condition: (conditionArgs) => {
-        return conditionArgs.trigger.args.playerId === playerId && getPlayerFavorCount(conditionArgs.match, playerId) > 0;
+      condition: conditionArgs => {
+        return (
+          conditionArgs.trigger.args.playerId === playerId && getPlayerFavorCount(conditionArgs.match, playerId) > 0
+        );
       },
-      triggeredEffectFn: async (triggeredArgs) => {
+      triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
         let hand = [...triggeredArgs.cardSourceController.getSource('playerHand', playerId)];
         while (getPlayerFavorCount(triggeredArgs.match, playerId) > 0 && hand.length > 0) {
@@ -374,7 +368,7 @@ const registerCaveDwellers = (args: AlliesGameContext, ally: Ally): void => {
           const discardedCardId = await triggeredArgs.actionService.run('selectSingleCard', {
             playerId,
             prompt: 'You may discard a card (Cave Dwellers)',
-            restrict: hand
+            restrict: hand,
           });
 
           if (discardedCardId) {
@@ -402,7 +396,7 @@ const registerCircleOfWitches = (args: AlliesGameContext, ally: Ally): void => {
       once: false,
       compulsory: true,
       allowMultipleInstances: true,
-      condition: (conditionArgs) => {
+      condition: conditionArgs => {
         if (conditionArgs.trigger.args.playerId !== playerId) {
           return false;
         }
@@ -414,7 +408,7 @@ const registerCircleOfWitches = (args: AlliesGameContext, ally: Ally): void => {
         const playedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
         return playedCard.type.includes('LIAISON');
       },
-      triggeredEffectFn: async (triggeredArgs) => {
+      triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
         const spend = await promptSpendFavor(triggeredArgs, {
           ally,
@@ -460,7 +454,7 @@ const registerCityState = (args: AlliesGameContext, ally: Ally): void => {
       once: false,
       compulsory: true,
       allowMultipleInstances: true,
-      condition: (conditionArgs) => {
+      condition: conditionArgs => {
         if (conditionArgs.trigger.args.playerId !== playerId) {
           return false;
         }
@@ -484,7 +478,7 @@ const registerCityState = (args: AlliesGameContext, ally: Ally): void => {
           conditionArgs.trigger.args.gainedLocation,
         );
       },
-      triggeredEffectFn: async (triggeredArgs) => {
+      triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
         const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
 
@@ -527,7 +521,7 @@ const registerCoastalHaven = (args: AlliesGameContext, ally: Ally): void => {
       once: false,
       compulsory: true,
       allowMultipleInstances: true,
-      condition: (conditionArgs) => {
+      condition: conditionArgs => {
         if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'cleanup') {
           return false;
         }
@@ -541,7 +535,7 @@ const registerCoastalHaven = (args: AlliesGameContext, ally: Ally): void => {
         const hand = conditionArgs.cardSourceController.getSource('playerHand', playerId);
         return hand.length > 0;
       },
-      triggeredEffectFn: async (triggeredArgs) => {
+      triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
         const hand = [...triggeredArgs.cardSourceController.getSource('playerHand', playerId)];
         const maxKeep = Math.min(hand.length, getPlayerFavorCount(triggeredArgs.match, playerId));
@@ -597,13 +591,13 @@ const registerCoastalHaven = (args: AlliesGameContext, ally: Ally): void => {
       compulsory: true,
       allowMultipleInstances: true,
       autoResolve: true,
-      condition: (conditionArgs) => {
+      condition: conditionArgs => {
         if (conditionArgs.trigger.args.playerId !== playerId) {
           return false;
         }
         return getCoastalHavenSetAsideCards(conditionArgs, playerId, ally.id).length > 0;
       },
-      triggeredEffectFn: async (triggeredArgs) => {
+      triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
         triggeredArgs.loggerService.debug(`[coastal-haven ally] returning set-aside cards for player ${playerId}`);
         const setAsideCards = getCoastalHavenSetAsideCards(triggeredArgs, playerId, ally.id);
@@ -636,7 +630,7 @@ const registerCraftersGuild = (args: AlliesGameContext, ally: Ally): void => {
       once: false,
       compulsory: true,
       allowMultipleInstances: true,
-      condition: (conditionArgs) => {
+      condition: conditionArgs => {
         if (conditionArgs.trigger.args.playerId !== playerId) {
           return false;
         }
@@ -644,16 +638,16 @@ const registerCraftersGuild = (args: AlliesGameContext, ally: Ally): void => {
           return false;
         }
 
-        const gainableCards = getTopSupplyCards(conditionArgs).filter((card) => {
+        const gainableCards = getTopSupplyCards(conditionArgs).filter(card => {
           const cost = conditionArgs.cardPriceController.applyRules(card, { playerId }).cost;
           return compareCardCosts(cost, { treasure: 4 }) <= 0;
         });
 
         return gainableCards.length > 0;
       },
-      triggeredEffectFn: async (triggeredArgs) => {
+      triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
-        const gainableCards = getTopSupplyCards(triggeredArgs).filter((card) => {
+        const gainableCards = getTopSupplyCards(triggeredArgs).filter(card => {
           const cost = triggeredArgs.cardPriceController.applyRules(card, { playerId }).cost;
           return compareCardCosts(cost, { treasure: 4 }) <= 0;
         });
@@ -665,7 +659,7 @@ const registerCraftersGuild = (args: AlliesGameContext, ally: Ally): void => {
         const spend = await promptSpendFavor(triggeredArgs, {
           ally,
           playerId,
-          prompt: 'Spend 2 Favor to gain a card costing up to $4 onto your deck (Crafters\' Guild)?',
+          prompt: "Spend 2 Favor to gain a card costing up to $4 onto your deck (Crafters' Guild)?",
         });
         if (!spend) {
           return;
@@ -679,7 +673,7 @@ const registerCraftersGuild = (args: AlliesGameContext, ally: Ally): void => {
         const selectedCardId = await triggeredArgs.actionService.run('selectSingleCard', {
           playerId,
           prompt: 'Gain a card costing up to $4 onto your deck',
-          restrict: gainableCards.map((card) => card.id),
+          restrict: gainableCards.map(card => card.id),
         });
         if (!selectedCardId) {
           triggeredArgs.loggerService.warn('[crafters-guild ally] no card selected after spending Favor');
@@ -709,10 +703,12 @@ const registerDesertGuides = (args: AlliesGameContext, ally: Ally): void => {
       once: false,
       compulsory: true,
       allowMultipleInstances: true,
-      condition: (conditionArgs) => {
-        return conditionArgs.trigger.args.playerId === playerId && getPlayerFavorCount(conditionArgs.match, playerId) > 0;
+      condition: conditionArgs => {
+        return (
+          conditionArgs.trigger.args.playerId === playerId && getPlayerFavorCount(conditionArgs.match, playerId) > 0
+        );
       },
-      triggeredEffectFn: async (triggeredArgs) => {
+      triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
         while (getPlayerFavorCount(triggeredArgs.match, playerId) > 0) {
           const spend = await promptSpendFavor(triggeredArgs, {
@@ -783,7 +779,7 @@ const registerFamilyOfInventors = (args: AlliesGameContext, ally: Ally): void =>
       once: false,
       compulsory: true,
       allowMultipleInstances: true,
-      condition: (conditionArgs) => {
+      condition: conditionArgs => {
         if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') {
           return false;
         }
@@ -798,7 +794,7 @@ const registerFamilyOfInventors = (args: AlliesGameContext, ally: Ally): void =>
 
         return getNonVictorySupplyPileKeys(conditionArgs.match).length > 0;
       },
-      triggeredEffectFn: async (triggeredArgs) => {
+      triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
         const availablePileKeys = getNonVictorySupplyPileKeys(triggeredArgs.match);
         if (!availablePileKeys.length) {
@@ -846,7 +842,9 @@ const registerFamilyOfInventors = (args: AlliesGameContext, ally: Ally): void =>
           location: { type: 'supplyPile', cardKey: selectedPileKey },
         });
 
-        triggeredArgs.loggerService.debug(`[family-of-inventors ally] spent 1 Favor to place token on ${selectedPileKey}`);
+        triggeredArgs.loggerService.debug(
+          `[family-of-inventors ally] spent 1 Favor to place token on ${selectedPileKey}`,
+        );
       },
     });
   }
@@ -863,7 +861,7 @@ const registerFellowshipOfScribes = (args: AlliesGameContext, ally: Ally): void 
       once: false,
       compulsory: true,
       allowMultipleInstances: true,
-      condition: (conditionArgs) => {
+      condition: conditionArgs => {
         if (conditionArgs.trigger.args.playerId !== playerId) {
           return false;
         }
@@ -880,7 +878,7 @@ const registerFellowshipOfScribes = (args: AlliesGameContext, ally: Ally): void 
 
         return getPlayerFavorCount(conditionArgs.match, playerId) > 0;
       },
-      triggeredEffectFn: async (triggeredArgs) => {
+      triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
         const spend = await promptSpendFavor(triggeredArgs, {
           ally,
@@ -918,7 +916,7 @@ const registerForestDwellers = (args: AlliesGameContext, ally: Ally): void => {
       once: false,
       compulsory: true,
       allowMultipleInstances: true,
-      condition: (conditionArgs) => {
+      condition: conditionArgs => {
         if (conditionArgs.trigger.args.playerId !== playerId) {
           return false;
         }
@@ -930,7 +928,7 @@ const registerForestDwellers = (args: AlliesGameContext, ally: Ally): void => {
         const discard = conditionArgs.cardSourceController.getSource('playerDiscard', playerId);
         return deck.length + discard.length > 0;
       },
-      triggeredEffectFn: async (triggeredArgs) => {
+      triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
         const spend = await promptSpendFavor(triggeredArgs, {
           ally,
@@ -976,7 +974,7 @@ const registerForestDwellers = (args: AlliesGameContext, ally: Ally): void => {
           });
         }
 
-        const cardsToRearrange = cardsToLookAt.filter((cardId) => !cardsToDiscard.includes(cardId));
+        const cardsToRearrange = cardsToLookAt.filter(cardId => !cardsToDiscard.includes(cardId));
         if (cardsToRearrange.length === 1) {
           await triggeredArgs.actionService.run('moveCard', {
             cardId: cardsToRearrange[0],
@@ -1020,8 +1018,8 @@ const registerGangOfPickpockets = (args: AlliesGameContext, ally: Ally): void =>
       once: false,
       compulsory: true,
       allowMultipleInstances: true,
-      condition: (conditionArgs) => conditionArgs.trigger.args.playerId === playerId,
-      triggeredEffectFn: async (triggeredArgs) => {
+      condition: conditionArgs => conditionArgs.trigger.args.playerId === playerId,
+      triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
         if (getPlayerFavorCount(triggeredArgs.match, playerId) > 0) {
           const spend = await promptSpendFavor(triggeredArgs, {
@@ -1066,7 +1064,7 @@ const registerIslandFolk = (args: AlliesGameContext, ally: Ally): void => {
       once: false,
       compulsory: true,
       allowMultipleInstances: true,
-      condition: (conditionArgs) => {
+      condition: conditionArgs => {
         if (conditionArgs.trigger.args.playerId !== playerId) {
           return false;
         }
@@ -1075,7 +1073,7 @@ const registerIslandFolk = (args: AlliesGameContext, ally: Ally): void => {
         }
         return !wouldCreateThirdTurnInRow(conditionArgs.match, playerId);
       },
-      triggeredEffectFn: async (triggeredArgs) => {
+      triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
         if (wouldCreateThirdTurnInRow(triggeredArgs.match, playerId)) {
           return;
@@ -1124,13 +1122,13 @@ const registerLeagueOfBankers = (args: AlliesGameContext, ally: Ally): void => {
       once: false,
       compulsory: true,
       allowMultipleInstances: true,
-      condition: (conditionArgs) => {
+      condition: conditionArgs => {
         if (getCurrentPlayer(conditionArgs.match).id !== playerId) {
           return false;
         }
         return getTurnPhase(conditionArgs.trigger.args.phaseIndex) === 'buy';
       },
-      triggeredEffectFn: async (triggeredArgs) => {
+      triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
         const bonusTreasure = Math.floor(getPlayerFavorCount(triggeredArgs.match, playerId) / 4);
         if (bonusTreasure < 1) {
@@ -1156,7 +1154,7 @@ const registerLeagueOfShopkeepers = (args: AlliesGameContext, ally: Ally): void 
       once: false,
       compulsory: true,
       allowMultipleInstances: true,
-      condition: (conditionArgs) => {
+      condition: conditionArgs => {
         if (conditionArgs.trigger.args.playerId !== playerId) {
           return false;
         }
@@ -1168,7 +1166,7 @@ const registerLeagueOfShopkeepers = (args: AlliesGameContext, ally: Ally): void 
 
         return getPlayerFavorCount(conditionArgs.match, playerId) >= 5;
       },
-      triggeredEffectFn: async (triggeredArgs) => {
+      triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
         const favorCount = getPlayerFavorCount(triggeredArgs.match, playerId);
         if (favorCount < 5) {
@@ -1202,7 +1200,7 @@ const registerMarketTowns = (args: AlliesGameContext, ally: Ally): void => {
       once: false,
       compulsory: true,
       allowMultipleInstances: true,
-      condition: (conditionArgs) => {
+      condition: conditionArgs => {
         if (getCurrentPlayer(conditionArgs.match).id !== playerId) {
           return false;
         }
@@ -1213,21 +1211,23 @@ const registerMarketTowns = (args: AlliesGameContext, ally: Ally): void => {
         const hand = conditionArgs.cardSourceController.getSource('playerHand', playerId);
         const deck = conditionArgs.cardSourceController.getSource('playerDeck', playerId);
         // Market Towns can be satisfied by normal Actions in hand or Shadow Actions in deck.
-        const hasPlayableAction = hand.some((cardId) => conditionArgs.cardLibrary.getCard(cardId).type.includes('ACTION')) ||
-          deck.some((cardId) => {
+        const hasPlayableAction =
+          hand.some(cardId => conditionArgs.cardLibrary.getCard(cardId).type.includes('ACTION')) ||
+          deck.some(cardId => {
             const deckCard = conditionArgs.cardLibrary.getCard(cardId);
             return deckCard.type.includes('ACTION') && deckCard.type.includes('SHADOW');
           });
         return hasPlayableAction && getPlayerFavorCount(conditionArgs.match, playerId) > 0;
       },
-      triggeredEffectFn: async (triggeredArgs) => {
+      triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
         while (getPlayerFavorCount(triggeredArgs.match, playerId) > 0) {
           const hand = triggeredArgs.cardSourceController.getSource('playerHand', playerId);
           const deck = triggeredArgs.cardSourceController.getSource('playerDeck', playerId);
           // Re-check each loop so mid-loop card movement can terminate the prompt sequence safely.
-          const hasPlayableAction = hand.some((cardId) => triggeredArgs.cardLibrary.getCard(cardId).type.includes('ACTION')) ||
-            deck.some((cardId) => {
+          const hasPlayableAction =
+            hand.some(cardId => triggeredArgs.cardLibrary.getCard(cardId).type.includes('ACTION')) ||
+            deck.some(cardId => {
               const deckCard = triggeredArgs.cardLibrary.getCard(cardId);
               return deckCard.type.includes('ACTION') && deckCard.type.includes('SHADOW');
             });
@@ -1257,10 +1257,7 @@ const registerMarketTowns = (args: AlliesGameContext, ally: Ally): void => {
             playerId,
             prompt: 'Play an Action card from your hand',
             restrict: {
-              all: [
-                { location: 'playerHand', playerId },
-                { cardType: ['ACTION'] },
-              ],
+              all: [{ location: 'playerHand', playerId }, { cardType: ['ACTION'] }],
             },
             selectionIntent: { kind: 'play-card', cardTypes: ['ACTION'] },
             count: 1,
@@ -1296,10 +1293,12 @@ const registerMountainFolk = (args: AlliesGameContext, ally: Ally): void => {
       once: false,
       compulsory: true,
       allowMultipleInstances: true,
-      condition: (conditionArgs) => {
-        return conditionArgs.trigger.args.playerId === playerId && getPlayerFavorCount(conditionArgs.match, playerId) >= 5;
+      condition: conditionArgs => {
+        return (
+          conditionArgs.trigger.args.playerId === playerId && getPlayerFavorCount(conditionArgs.match, playerId) >= 5
+        );
       },
-      triggeredEffectFn: async (triggeredArgs) => {
+      triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
         const spend = await promptSpendFavor(triggeredArgs, {
           ally,
@@ -1337,7 +1336,7 @@ const registerOrderOfAstrologers = (args: AlliesGameContext, ally: Ally): void =
       once: false,
       compulsory: true,
       allowMultipleInstances: true,
-      condition: (conditionArgs) => {
+      condition: conditionArgs => {
         if (conditionArgs.trigger.args.playerId !== playerId) {
           return false;
         }
@@ -1346,7 +1345,7 @@ const registerOrderOfAstrologers = (args: AlliesGameContext, ally: Ally): void =
         }
         return (conditionArgs.trigger.args.cardIds ?? []).length > 0;
       },
-      triggeredEffectFn: async (triggeredArgs) => {
+      triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
         const availableCards = [...(triggeredArgs.trigger.args.cardIds ?? [])];
         if (!availableCards.length) {
@@ -1424,7 +1423,7 @@ const registerOrderOfMasons = (args: AlliesGameContext, ally: Ally): void => {
       once: false,
       compulsory: true,
       allowMultipleInstances: true,
-      condition: (conditionArgs) => {
+      condition: conditionArgs => {
         if (conditionArgs.trigger.args.playerId !== playerId) {
           return false;
         }
@@ -1433,7 +1432,7 @@ const registerOrderOfMasons = (args: AlliesGameContext, ally: Ally): void => {
         }
         return (conditionArgs.trigger.args.cardIds ?? []).length > 0;
       },
-      triggeredEffectFn: async (triggeredArgs) => {
+      triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
         const availableCards = [...(triggeredArgs.trigger.args.cardIds ?? [])];
         if (!availableCards.length) {
@@ -1495,7 +1494,7 @@ const registerPeacefulCult = (args: AlliesGameContext, ally: Ally): void => {
       once: false,
       compulsory: true,
       allowMultipleInstances: true,
-      condition: (conditionArgs) => {
+      condition: conditionArgs => {
         if (getCurrentPlayer(conditionArgs.match).id !== playerId) {
           return false;
         }
@@ -1508,7 +1507,7 @@ const registerPeacefulCult = (args: AlliesGameContext, ally: Ally): void => {
 
         return conditionArgs.cardSourceController.getSource('playerHand', playerId).length > 0;
       },
-      triggeredEffectFn: async (triggeredArgs) => {
+      triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
         const hand = [...triggeredArgs.cardSourceController.getSource('playerHand', playerId)];
         const maxTrashCount = Math.min(hand.length, getPlayerFavorCount(triggeredArgs.match, playerId));
@@ -1563,7 +1562,7 @@ const registerTrappersLodge = (args: AlliesGameContext, ally: Ally): void => {
       once: false,
       compulsory: true,
       allowMultipleInstances: true,
-      condition: (conditionArgs) => {
+      condition: conditionArgs => {
         if (conditionArgs.trigger.args.playerId !== playerId) {
           return false;
         }
@@ -1577,14 +1576,14 @@ const registerTrappersLodge = (args: AlliesGameContext, ally: Ally): void => {
           conditionArgs.trigger.args.gainedLocation,
         );
       },
-      triggeredEffectFn: async (triggeredArgs) => {
+      triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
         const gainedCardId = triggeredArgs.trigger.args.cardId;
 
         const spend = await promptSpendFavor(triggeredArgs, {
           ally,
           playerId,
-          prompt: 'Spend 1 Favor to put the gained card onto your deck (Trappers\' Lodge)?',
+          prompt: "Spend 1 Favor to put the gained card onto your deck (Trappers' Lodge)?",
         });
         if (!spend) {
           return;
@@ -1622,7 +1621,7 @@ const registerWoodworkersGuild = (args: AlliesGameContext, ally: Ally): void => 
       once: false,
       compulsory: true,
       allowMultipleInstances: true,
-      condition: (conditionArgs) => {
+      condition: conditionArgs => {
         if (getCurrentPlayer(conditionArgs.match).id !== playerId) {
           return false;
         }
@@ -1634,12 +1633,13 @@ const registerWoodworkersGuild = (args: AlliesGameContext, ally: Ally): void => 
         }
 
         const hand = conditionArgs.cardSourceController.getSource('playerHand', playerId);
-        return hand.some((cardId) => conditionArgs.cardLibrary.getCard(cardId).type.includes('ACTION'));
+        return hand.some(cardId => conditionArgs.cardLibrary.getCard(cardId).type.includes('ACTION'));
       },
-      triggeredEffectFn: async (triggeredArgs) => {
+      triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.loggerService.debug(`[${ally.cardKey} ally] resolving trigger for player ${playerId}`);
-        const actionCardsInHand = [...triggeredArgs.cardSourceController.getSource('playerHand', playerId)]
-          .filter((cardId) => triggeredArgs.cardLibrary.getCard(cardId).type.includes('ACTION'));
+        const actionCardsInHand = [...triggeredArgs.cardSourceController.getSource('playerHand', playerId)].filter(
+          cardId => triggeredArgs.cardLibrary.getCard(cardId).type.includes('ACTION'),
+        );
         if (!actionCardsInHand.length) {
           return;
         }
@@ -1647,7 +1647,7 @@ const registerWoodworkersGuild = (args: AlliesGameContext, ally: Ally): void => 
         const spend = await promptSpendFavor(triggeredArgs, {
           ally,
           playerId,
-          prompt: 'Spend 1 Favor to trash an Action card from hand (Woodworkers\' Guild)?',
+          prompt: "Spend 1 Favor to trash an Action card from hand (Woodworkers' Guild)?",
         });
         if (!spend) {
           return;
@@ -1678,8 +1678,7 @@ const registerWoodworkersGuild = (args: AlliesGameContext, ally: Ally): void => 
           cardId: trashedActionId,
         });
 
-        const gainableActionCards = getTopSupplyCards(triggeredArgs)
-          .filter((card) => card.type.includes('ACTION'));
+        const gainableActionCards = getTopSupplyCards(triggeredArgs).filter(card => card.type.includes('ACTION'));
         if (!gainableActionCards.length) {
           return;
         }
@@ -1687,7 +1686,7 @@ const registerWoodworkersGuild = (args: AlliesGameContext, ally: Ally): void => 
         const selectedGainId = await triggeredArgs.actionService.run('selectSingleCard', {
           playerId,
           prompt: 'Gain an Action card',
-          restrict: gainableActionCards.map((card) => card.id),
+          restrict: gainableActionCards.map(card => card.id),
           count: 1,
         });
         if (!selectedGainId) {
@@ -1701,17 +1700,16 @@ const registerWoodworkersGuild = (args: AlliesGameContext, ally: Ally): void => 
           to: { location: 'playerDiscard' },
         });
 
-        triggeredArgs.loggerService.debug('[woodworkers-guild ally] spent 1 Favor to trash an Action and gain an Action');
+        triggeredArgs.loggerService.debug(
+          '[woodworkers-guild ally] spent 1 Favor to trash an Action and gain an Action',
+        );
       },
     });
   }
 };
 
 // Registers all ally effects for the active ally in the match.
-export const registerActiveAllyEffects = (
-  args: AlliesGameContext,
-  config: ComputedMatchConfiguration,
-): void => {
+export const registerActiveAllyEffects = (args: AlliesGameContext, config: ComputedMatchConfiguration): void => {
   const ally = args.match.allies?.[0];
   if (!ally) {
     args.loggerService.info('[allies effects] no active ally in match state; skipping ally effect registration');
@@ -1725,7 +1723,7 @@ export const registerActiveAllyEffects = (
     );
   }
 
-  const skipped = skippedAllyImplementations.find((entry) => entry.cardKey === ally.cardKey);
+  const skipped = skippedAllyImplementations.find(entry => entry.cardKey === ally.cardKey);
   if (skipped) {
     args.loggerService.warn(`[allies effects] skipping ${ally.cardKey}: ${skipped.reason}`);
     return;

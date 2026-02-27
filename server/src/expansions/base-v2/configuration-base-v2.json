@@ -1,6 +1,4 @@
 {
   "title": "Base",
-  "mutuallyExclusiveExpansions": [
-    "base-v1"
-  ]
+  "mutuallyExclusiveExpansions": ["base-v1"]
 }

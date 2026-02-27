@@ -36,8 +36,7 @@ export class GameMatchLifecycleCoordinatorService {
     private readonly disconnectedPlayerVoteService: DisconnectedPlayerVoteService,
     private readonly loggerService: LoggerService,
     private readonly serverConfigService: ServerConfigService,
-  ) {
-  }
+  ) {}
 
   // Loads persisted config, rebuilds search indexes, and creates the first match runtime.
   public initialize(state: GameRuntimeState, defaultMatchConfiguration: MatchConfiguration): void {
@@ -57,9 +56,7 @@ export class GameMatchLifecycleCoordinatorService {
     });
     state.matchScopeId = state.matchScope.matchScopeId;
     this.configStore.setMatchScopeId(state.matchScopeId);
-    this.loggerService.info(
-      `[game] created match scope ${state.matchScopeId} for game '${state.gameId}'`,
-    );
+    this.loggerService.info(`[game] created match scope ${state.matchScopeId} for game '${state.gameId}'`);
     state.matchController = state.matchScope.matchController;
     state.matchConfiguration = { ...structuredClone(defaultMatchConfiguration) };
 
@@ -75,7 +72,7 @@ export class GameMatchLifecycleCoordinatorService {
   // Applies expansion-loaded side effects to runtime availability and search indexes.
   public expansionLoaded(state: GameRuntimeState, expansion: ExpansionListElement): void {
     const alreadyAvailable = state.availableExpansion.some(
-      (availableExpansion) => availableExpansion.name === expansion.name,
+      availableExpansion => availableExpansion.name === expansion.name,
     );
     if (alreadyAvailable) {
       this.loggerService.debug(
@@ -102,10 +99,7 @@ export class GameMatchLifecycleCoordinatorService {
   }
 
   // Applies a partial match patch onto the live runtime match state.
-  public mergeMatchState(
-    state: GameRuntimeState,
-    partial: Partial<Match>,
-  ): { ok: boolean; errors?: string[] } {
+  public mergeMatchState(state: GameRuntimeState, partial: Partial<Match>): { ok: boolean; errors?: string[] } {
     if (!state.matchController) {
       return { ok: false, errors: ['match not initialized'] };
     }
@@ -123,7 +117,7 @@ export class GameMatchLifecycleCoordinatorService {
   public clearMatch(state: GameRuntimeState, defaultMatchConfiguration: MatchConfiguration): void {
     this.loggerService.log('[game] clearing match');
 
-    state.socketMap.forEach((socket) => {
+    state.socketMap.forEach(socket => {
       socket.offAnyIncoming();
       socket.leave(state.roomName);
     });

@@ -54,7 +54,7 @@ const registerBadOmens = (registerHexEffect: HexEffectRegistrar) => {
       }
 
       const discard = cardSourceController.getSource('playerDiscard', playerId);
-      const copperIds = discard.filter((cardId) => cardLibrary.getCard(cardId).cardKey === 'copper');
+      const copperIds = discard.filter(cardId => cardLibrary.getCard(cardId).cardKey === 'copper');
 
       if (copperIds.length < 1) {
         loggerService.debug('[bad-omens hex] no Copper cards available, revealing discard');
@@ -139,7 +139,7 @@ const registerFamine = (registerHexEffect: HexEffectRegistrar) => {
       });
     }
 
-    const actionIds = revealedIds.filter((cardId) => cardLibrary.getCard(cardId).type.includes('ACTION'));
+    const actionIds = revealedIds.filter(cardId => cardLibrary.getCard(cardId).type.includes('ACTION'));
     loggerService.debug(`[famine hex] discarding ${actionIds.length} Action card(s)`);
 
     for (const cardId of actionIds) {
@@ -163,7 +163,7 @@ const registerFear = (registerHexEffect: HexEffectRegistrar) => {
       return;
     }
 
-    const eligibleIds = hand.filter((cardId) => {
+    const eligibleIds = hand.filter(cardId => {
       const card = cardLibrary.getCard(cardId);
       return card.type.includes('ACTION') || card.type.includes('TREASURE');
     });
@@ -179,12 +179,12 @@ const registerFear = (registerHexEffect: HexEffectRegistrar) => {
       return;
     }
 
-    const selectedId = await actionService.run('selectSingleCard', {
+    const selectedId = (await actionService.run('selectSingleCard', {
       playerId,
       prompt: 'Discard an Action or Treasure',
       count: 1,
       restrict: eligibleIds,
-    }) as CardId | null;
+    })) as CardId | null;
     if (!selectedId) {
       loggerService.debug('[fear hex] no card selected to discard');
       return;
@@ -227,12 +227,12 @@ const registerHaunting = (registerHexEffect: HexEffectRegistrar) => {
         return;
       }
 
-      const selectedId = await actionService.run('selectSingleCard', {
+      const selectedId = (await actionService.run('selectSingleCard', {
         playerId,
         prompt: 'Put a card from your hand onto your deck',
         count: 1,
         restrict: hand,
-      }) as CardId | null;
+      })) as CardId | null;
       if (!selectedId) {
         loggerService.debug('[haunting hex] no card selected to topdeck');
         return;
@@ -252,18 +252,16 @@ const registerHaunting = (registerHexEffect: HexEffectRegistrar) => {
 const registerLocusts = (registerHexEffect: HexEffectRegistrar) => {
   registerHexEffect(
     'locusts',
-    async (
-      {
-        loggerService,
-        playerId,
-        cardSourceController,
-        cardLibrary,
-        cardPriceController,
-        findCardService,
-        actionService,
-        supplyGainService,
-      },
-    ) => {
+    async ({
+      loggerService,
+      playerId,
+      cardSourceController,
+      cardLibrary,
+      cardPriceController,
+      findCardService,
+      actionService,
+      supplyGainService,
+    }) => {
       let deck = cardSourceController.getSource('playerDeck', playerId);
       const discard = cardSourceController.getSource('playerDiscard', playerId);
 
@@ -304,27 +302,27 @@ const registerLocusts = (registerHexEffect: HexEffectRegistrar) => {
       }
 
       const trashedCost = cardPriceController.applyRules(trashedCard, { playerId }).cost;
-      const eligibleCards = findCardService.findCards({ all: [
-        { location: ['basicSupply', 'kingdomSupply'] },
-      ] }).filter((card) => {
-        if (!card.type.some((type) => trashedCard.type.includes(type))) {
-          return false;
-        }
-        const candidateCost = cardPriceController.applyRules(card, { playerId }).cost;
-        return compareCardCosts(candidateCost, trashedCost) === -1;
-      });
+      const eligibleCards = findCardService
+        .findCards({ all: [{ location: ['basicSupply', 'kingdomSupply'] }] })
+        .filter(card => {
+          if (!card.type.some(type => trashedCard.type.includes(type))) {
+            return false;
+          }
+          const candidateCost = cardPriceController.applyRules(card, { playerId }).cost;
+          return compareCardCosts(candidateCost, trashedCost) === -1;
+        });
 
       if (!eligibleCards.length) {
         loggerService.debug('[locusts hex] no eligible cards to gain');
         return;
       }
 
-      const selectedId = await actionService.run('selectSingleCard', {
+      const selectedId = (await actionService.run('selectSingleCard', {
         playerId,
         prompt: 'Gain a cheaper card sharing a type',
         count: 1,
-        restrict: eligibleCards.map((card) => card.id),
-      }) as CardId | null;
+        restrict: eligibleCards.map(card => card.id),
+      })) as CardId | null;
       if (!selectedId) {
         loggerService.debug('[locusts hex] no card selected to gain');
         return;
@@ -392,7 +390,7 @@ const registerPlague = (registerHexEffect: HexEffectRegistrar) => {
 
 // Registers Poverty hex effect logic.
 const registerPoverty = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('poverty', async (cardEffectArgs) => {
+  registerHexEffect('poverty', async cardEffectArgs => {
     // Discard down to 3 cards in hand.
     await discardDownTo(cardEffectArgs, {
       playerId: cardEffectArgs.playerId,
@@ -418,9 +416,8 @@ const registerWar = (registerHexEffect: HexEffectRegistrar) => {
         const topCardId = deck[deck.length - 1];
         const card = cardLibrary.getCard(topCardId);
         const cost = cardPriceController.applyRules(card, { playerId }).cost;
-        const matchesCost = (cost.treasure === 3 || cost.treasure === 4) &&
-          (cost.potion ?? 0) === 0 &&
-          (cost.debt ?? 0) === 0;
+        const matchesCost =
+          (cost.treasure === 3 || cost.treasure === 4) && (cost.potion ?? 0) === 0 && (cost.debt ?? 0) === 0;
 
         if (matchesCost) {
           loggerService.debug(`[war hex] trashing ${card}`);

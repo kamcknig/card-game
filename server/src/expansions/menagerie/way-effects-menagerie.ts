@@ -17,7 +17,7 @@ type WayOfTheMouseWayMetadata = {
 
 // Resolves the configured Way of the Mouse metadata from active match ways.
 const getWayOfTheMouseMetadata = (args: CardEffectFunctionContext) => {
-  const wayOfTheMouse = args.match.ways.find((way) => way.cardKey === 'way-of-the-mouse');
+  const wayOfTheMouse = args.match.ways.find(way => way.cardKey === 'way-of-the-mouse');
   if (!wayOfTheMouse) {
     return undefined;
   }
@@ -28,7 +28,7 @@ const getWayOfTheMouseMetadata = (args: CardEffectFunctionContext) => {
 const getCurrentPlayInstanceCount = (args: CardEffectFunctionContext): number => {
   const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: args.match }) ?? 0;
   const playedThisTurn = args.match.stats.playedCardsByTurn[turnHistoryIndex] ?? [];
-  return playedThisTurn.filter((playedCardId) => playedCardId === args.cardId).length;
+  return playedThisTurn.filter(playedCardId => playedCardId === args.cardId).length;
 };
 
 // Best-effort return helper used by Ways that return the played card to a pile.
@@ -70,10 +70,7 @@ const returnCardToPile = async (args: CardEffectFunctionContext, logTag: string)
 };
 
 // Returns the top card in supply for a pile key.
-const findTopSupplyCard = (
-  args: CardEffectFunctionContext,
-  pileKey: string,
-) => {
+const findTopSupplyCard = (args: CardEffectFunctionContext, pileKey: string) => {
   return args.findCardService.findTopSupplyCardForPileKey({
     pileKey,
     from: ['basicSupply', 'kingdomSupply'],
@@ -124,7 +121,7 @@ const registerWayOfTheChameleonDrawSwap = (args: CardEffectFunctionContext): voi
         trigger.args.count > 0 &&
         trigger.args.source === sourceCard.id &&
         match.stats.turns.length - 1 === turnHistoryIndex,
-      triggeredEffectFn: async (triggeredArgs) => {
+      triggeredEffectFn: async triggeredArgs => {
         const swappedCount = Math.max(0, triggeredArgs.trigger.args.count);
         if (swappedCount < 1) {
           loggerService.debug('[way-of-the-chameleon effect] draw swap skipped because draw count is 0');
@@ -133,48 +130,59 @@ const registerWayOfTheChameleonDrawSwap = (args: CardEffectFunctionContext): voi
 
         loggerService.info(`[way-of-the-chameleon effect] converting +${swappedCount} Cards into +$${swappedCount}`);
         triggeredArgs.trigger.args.count = 0;
-        await triggeredArgs.actionService.run('gainTreasure', {
-          count: swappedCount,
-        }, {
-          loggingContext: {
-            source: triggeredArgs.trigger.args.source,
+        await triggeredArgs.actionService.run(
+          'gainTreasure',
+          {
+            count: swappedCount,
           },
-        });
+          {
+            loggingContext: {
+              source: triggeredArgs.trigger.args.source,
+            },
+          },
+        );
       },
     },
     { idSuffix: `way-of-the-chameleon:draw:turn:${turnHistoryIndex}:play:${playInstance}` },
   );
 
   // Always remove the draw swap at end of turn so it cannot leak into future turns.
-  args.reactionManager.registerSystemTemplate(sourceCard, 'endTurn', {
-    playerId: args.playerId,
-    once: true,
-    allowMultipleInstances: true,
-    compulsory: true,
-    condition: ({ trigger, match }) =>
-      trigger.args.playerId === args.playerId &&
-      match.stats.turns.length - 1 === turnHistoryIndex,
-    triggeredEffectFn: async (triggeredArgs) => {
-      triggeredArgs.reactionManager.unregisterTrigger(drawSwapTriggerId);
-      loggerService.debug('[way-of-the-chameleon effect] removed draw swap trigger at end of turn');
+  args.reactionManager.registerSystemTemplate(
+    sourceCard,
+    'endTurn',
+    {
+      playerId: args.playerId,
+      once: true,
+      allowMultipleInstances: true,
+      compulsory: true,
+      condition: ({ trigger, match }) =>
+        trigger.args.playerId === args.playerId && match.stats.turns.length - 1 === turnHistoryIndex,
+      triggeredEffectFn: async triggeredArgs => {
+        triggeredArgs.reactionManager.unregisterTrigger(drawSwapTriggerId);
+        loggerService.debug('[way-of-the-chameleon effect] removed draw swap trigger at end of turn');
+      },
     },
-  }, {
-    idSuffix: `way-of-the-chameleon:cleanup:turn:${turnHistoryIndex}:play:${playInstance}`,
-  });
+    {
+      idSuffix: `way-of-the-chameleon:cleanup:turn:${turnHistoryIndex}:play:${playInstance}`,
+    },
+  );
 };
 
 const expansion: CardExpansionModule = {
   'way-of-the-butterfly': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
-      const shouldReturn = await cardEffectArgs.promptService.confirm({
-        playerId: cardEffectArgs.playerId,
-        prompt: 'Return this to its pile to gain a card costing exactly $1 more?',
-        actionButtons: [
-          { label: 'NO', action: 1 },
-          { label: 'YES', action: 2 },
-        ],
-      }, 2);
+      const shouldReturn = await cardEffectArgs.promptService.confirm(
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Return this to its pile to gain a card costing exactly $1 more?',
+          actionButtons: [
+            { label: 'NO', action: 1 },
+            { label: 'YES', action: 2 },
+          ],
+        },
+        2,
+      );
 
       if (!shouldReturn) {
         loggerService.debug('[way-of-the-butterfly effect] player declined to return card to pile');
@@ -201,10 +209,12 @@ const expansion: CardExpansionModule = {
       const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Gain a card costing exactly $1 more',
-        restrict: { all: [
-          { location: ['basicSupply', 'kingdomSupply'] },
-          { kind: 'exact', playerId: cardEffectArgs.playerId, amount: targetCost },
-        ] },
+        restrict: {
+          all: [
+            { location: ['basicSupply', 'kingdomSupply'] },
+            { kind: 'exact', playerId: cardEffectArgs.playerId, amount: targetCost },
+          ],
+        },
         count: 1,
         optional: true,
       });
@@ -223,7 +233,7 @@ const expansion: CardExpansionModule = {
     },
   },
   'way-of-the-chameleon': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       cardEffectArgs.loggerService.debug(
         '[way-of-the-chameleon effect] registering this-turn draw-to-treasure conversion trigger',
       );
@@ -233,7 +243,7 @@ const expansion: CardExpansionModule = {
     },
   },
   'way-of-the-camel': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       // Way of the Camel exiles a Gold from the Supply.
       const topGold = cardEffectArgs.findCardService.findTopSupplyCardForPileKey({
@@ -252,7 +262,7 @@ const expansion: CardExpansionModule = {
     },
   },
   'way-of-the-frog': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       // Way of the Frog gives +1 Action immediately.
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
@@ -274,11 +284,9 @@ const expansion: CardExpansionModule = {
             trigger.args.playerId === cardEffectArgs.playerId &&
             trigger.args.cardId === cardEffectArgs.cardId &&
             match.stats.turns.length - 1 === turnHistoryIndex &&
-            (
-              trigger.args.previousLocation.location === 'playArea' ||
-              trigger.args.previousLocation.location === 'activeDuration'
-            ),
-          triggeredEffectFn: async (triggeredArgs) => {
+            (trigger.args.previousLocation.location === 'playArea' ||
+              trigger.args.previousLocation.location === 'activeDuration'),
+          triggeredEffectFn: async triggeredArgs => {
             const discardPile = getPlayerSourceSafe(triggeredArgs, 'playerDiscard', cardEffectArgs.playerId);
             if (!discardPile.includes(cardEffectArgs.cardId)) {
               loggerService.debug('[way-of-the-frog effect] card is no longer in discard, skipping topdeck');
@@ -296,7 +304,7 @@ const expansion: CardExpansionModule = {
     },
   },
   'way-of-the-goat': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       const hand = getPlayerSourceSafe(cardEffectArgs, 'playerHand', cardEffectArgs.playerId);
       if (hand.length < 1) {
@@ -324,7 +332,7 @@ const expansion: CardExpansionModule = {
     },
   },
   'way-of-the-horse': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       // Way of the Horse gives +2 Cards and +1 Action.
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
@@ -337,7 +345,7 @@ const expansion: CardExpansionModule = {
     },
   },
   'way-of-the-mole': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       // Way of the Mole gives +1 Action first.
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
@@ -357,21 +365,21 @@ const expansion: CardExpansionModule = {
     },
   },
   'way-of-the-monkey': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       // Way of the Monkey gives +1 Buy and +$1.
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
       await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
     },
   },
   'way-of-the-mule': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       // Way of the Mule gives +1 Action and +$1.
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
       await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
     },
   },
   'way-of-the-mouse': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       const metadata = getWayOfTheMouseMetadata(cardEffectArgs);
       const runtimeSetAsidePileKey = metadata?.runtimeSetAsidePileKey;
@@ -382,7 +390,7 @@ const expansion: CardExpansionModule = {
 
       // Resolve the runtime set-aside card id from the shared set-aside area using the synthetic pile key.
       const setAsideCardIds = cardEffectArgs.cardSourceController.getSource('set-aside');
-      const setAsideCardId = setAsideCardIds.find((candidateId) => {
+      const setAsideCardId = setAsideCardIds.find(candidateId => {
         const candidate = cardEffectArgs.cardLibrary.getCard(candidateId);
         return candidate.kingdom === runtimeSetAsidePileKey;
       });
@@ -412,7 +420,7 @@ const expansion: CardExpansionModule = {
     },
   },
   'way-of-the-otter': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       // Way of the Otter gives +2 Cards.
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
@@ -421,7 +429,7 @@ const expansion: CardExpansionModule = {
     },
   },
   'way-of-the-owl': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       // Way of the Owl draws until the player has 6 cards in hand.
       while (getPlayerSourceSafe(cardEffectArgs, 'playerHand', cardEffectArgs.playerId).length < 6) {
         const drawnCard = await cardEffectArgs.actionService.run('drawCard', {
@@ -435,23 +443,25 @@ const expansion: CardExpansionModule = {
     },
   },
   'way-of-the-ox': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       // Way of the Ox gives +2 Actions.
       await cardEffectArgs.actionService.run('gainAction', { count: 2 });
     },
   },
   'way-of-the-pig': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       // Way of the Pig gives +1 Card and +1 Action.
       await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
     },
   },
   'way-of-the-rat': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       const hand = getPlayerSourceSafe(cardEffectArgs, 'playerHand', cardEffectArgs.playerId);
-      const handTreasureIds = hand.filter((cardId) => cardEffectArgs.cardLibrary.getCard(cardId).type.includes('TREASURE'));
+      const handTreasureIds = hand.filter(cardId =>
+        cardEffectArgs.cardLibrary.getCard(cardId).type.includes('TREASURE'),
+      );
       if (handTreasureIds.length < 1) {
         loggerService.debug('[way-of-the-rat effect] no Treasure in hand to discard');
         return;
@@ -491,7 +501,7 @@ const expansion: CardExpansionModule = {
     },
   },
   'way-of-the-seal': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       // Way of the Seal grants +$1 immediately.
       await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
@@ -499,8 +509,7 @@ const expansion: CardExpansionModule = {
       // Then it enables a rest-of-turn "topdeck gained card" choice.
       const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: cardEffectArgs.match }) ?? 0;
       const playInstance = getCurrentPlayInstanceCount(cardEffectArgs);
-      const gainTriggerId =
-        `way-of-the-seal:${cardEffectArgs.playerId}:turn:${turnHistoryIndex}:source:${cardEffectArgs.cardId}:play:${playInstance}`;
+      const gainTriggerId = `way-of-the-seal:${cardEffectArgs.playerId}:turn:${turnHistoryIndex}:source:${cardEffectArgs.cardId}:play:${playInstance}`;
 
       cardEffectArgs.reactionManager.registerReactionTemplate({
         id: gainTriggerId,
@@ -510,18 +519,18 @@ const expansion: CardExpansionModule = {
         allowMultipleInstances: false,
         compulsory: false,
         condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-        triggeredEffectFn: async (triggeredArgs) => {
+        triggeredEffectFn: async triggeredArgs => {
           const gainedCardId = triggeredArgs.trigger.args.cardId;
           const gainedCard = triggeredArgs.cardLibrary.getCard(gainedCardId);
 
-          const decision = await triggeredArgs.actionService.run('userPrompt', {
+          const decision = (await triggeredArgs.actionService.run('userPrompt', {
             playerId: cardEffectArgs.playerId,
             prompt: `Put ${gainedCard.cardName} onto your deck?`,
             actionButtons: [
               { label: 'NO', action: 1 },
               { label: 'YES', action: 2 },
             ],
-          }) as { action: number };
+          })) as { action: number };
 
           if (decision.action !== 2) {
             loggerService.debug('[way-of-the-seal effect] player declined to topdeck gained card');
@@ -529,11 +538,13 @@ const expansion: CardExpansionModule = {
           }
 
           // Stop-moving guard: only move the card if it has not moved since being gained.
-          if (!isCardStillAtGainedLocation(
-            triggeredArgs.cardSourceController,
-            gainedCardId,
-            triggeredArgs.trigger.args.gainedLocation,
-          )) {
+          if (
+            !isCardStillAtGainedLocation(
+              triggeredArgs.cardSourceController,
+              gainedCardId,
+              triggeredArgs.trigger.args.gainedLocation,
+            )
+          ) {
             loggerService.debug('[way-of-the-seal effect] gained card moved before topdeck choice resolved');
             return;
           }
@@ -547,57 +558,65 @@ const expansion: CardExpansionModule = {
       });
 
       const sourceCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      cardEffectArgs.reactionManager.registerSystemTemplate(sourceCard, 'endTurn', {
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        allowMultipleInstances: true,
-        compulsory: true,
-        condition: ({ trigger, match }) =>
-          trigger.args.playerId === cardEffectArgs.playerId &&
-          match.stats.turns.length - 1 === turnHistoryIndex,
-        triggeredEffectFn: async (triggeredArgs) => {
-          triggeredArgs.reactionManager.unregisterTrigger(gainTriggerId);
-          loggerService.debug('[way-of-the-seal effect] removed gain trigger at end of turn');
+      cardEffectArgs.reactionManager.registerSystemTemplate(
+        sourceCard,
+        'endTurn',
+        {
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          allowMultipleInstances: true,
+          compulsory: true,
+          condition: ({ trigger, match }) =>
+            trigger.args.playerId === cardEffectArgs.playerId && match.stats.turns.length - 1 === turnHistoryIndex,
+          triggeredEffectFn: async triggeredArgs => {
+            triggeredArgs.reactionManager.unregisterTrigger(gainTriggerId);
+            loggerService.debug('[way-of-the-seal effect] removed gain trigger at end of turn');
+          },
         },
-      }, {
-        idSuffix: `way-of-the-seal:${cardEffectArgs.cardId}:turn:${turnHistoryIndex}:play:${playInstance}`,
-      });
+        {
+          idSuffix: `way-of-the-seal:${cardEffectArgs.cardId}:turn:${turnHistoryIndex}:play:${playInstance}`,
+        },
+      );
     },
   },
   'way-of-the-sheep': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       // Way of the Sheep gives +$2.
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
     },
   },
   'way-of-the-squirrel': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: cardEffectArgs.match }) ?? 0;
       const playInstance = getCurrentPlayInstanceCount(cardEffectArgs);
       const sourceCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
       // Way of the Squirrel draws 2 cards at end of turn.
-      cardEffectArgs.reactionManager.registerSystemTemplate(sourceCard, 'endTurn', {
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        allowMultipleInstances: true,
-        compulsory: true,
-        condition: ({ trigger, match }) =>
-          trigger.args.playerId === cardEffectArgs.playerId &&
-          match.stats.turns.length - 1 === turnHistoryIndex,
-        triggeredEffectFn: async (triggeredArgs) => {
-          await triggeredArgs.actionService.run('drawCard', {
-            playerId: cardEffectArgs.playerId,
-            count: 2,
-          });
+      cardEffectArgs.reactionManager.registerSystemTemplate(
+        sourceCard,
+        'endTurn',
+        {
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          allowMultipleInstances: true,
+          compulsory: true,
+          condition: ({ trigger, match }) =>
+            trigger.args.playerId === cardEffectArgs.playerId && match.stats.turns.length - 1 === turnHistoryIndex,
+          triggeredEffectFn: async triggeredArgs => {
+            await triggeredArgs.actionService.run('drawCard', {
+              playerId: cardEffectArgs.playerId,
+              count: 2,
+            });
+          },
         },
-      }, {
-        idSuffix: `way-of-the-squirrel:${cardEffectArgs.cardId}:turn:${turnHistoryIndex}:play:${playInstance}`,
-      });
+        {
+          idSuffix: `way-of-the-squirrel:${cardEffectArgs.cardId}:turn:${turnHistoryIndex}:play:${playInstance}`,
+        },
+      );
     },
   },
   'way-of-the-turtle': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       const sourceCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       // Way of the Turtle sets the played card aside.
@@ -628,7 +647,7 @@ const expansion: CardExpansionModule = {
               cardEffectArgs.playerId,
             ).includes(cardEffectArgs.cardId);
           },
-          triggeredEffectFn: async (triggeredArgs) => {
+          triggeredEffectFn: async triggeredArgs => {
             loggerService.debug('[way-of-the-turtle effect] replaying set-aside card at start of turn');
             await triggeredArgs.actionService.run('playCard', {
               playerId: cardEffectArgs.playerId,
@@ -642,7 +661,7 @@ const expansion: CardExpansionModule = {
     },
   },
   'way-of-the-worm': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       // Way of the Worm exiles an Estate from the Supply.
       const topEstate = cardEffectArgs.findCardService.findTopSupplyCardForPileKey({

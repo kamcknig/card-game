@@ -98,7 +98,7 @@ const registerHorn = (registerArtifactEffect: ArtifactEffectRegistrar) => {
         once: false,
         allowMultipleInstances: true,
         compulsory: false,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (conditionArgs.trigger.args.playerId !== playerId) return false;
           const currentTurnHistoryIndex = conditionArgs.match.stats.turns.length - 1;
           if (lastUsedTurnHistoryIndex === currentTurnHistoryIndex) return false;
@@ -110,7 +110,7 @@ const registerHorn = (registerArtifactEffect: ArtifactEffectRegistrar) => {
           const ownedArtifacts = conditionArgs.match.artifacts?.byPlayer?.[playerId] ?? [];
           return ownedArtifacts.includes(cardId);
         },
-        triggeredEffectFn: async (triggeredArgs) => {
+        triggeredEffectFn: async triggeredArgs => {
           const discardedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
           loggerService.debug(`[horn artifact] top-decking ${discardedCard}`);
 
@@ -201,7 +201,7 @@ const registerTreasureChest = (registerArtifactEffect: ArtifactEffectRegistrar) 
         once: false,
         allowMultipleInstances: true,
         compulsory: true,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') {
             return false;
           }

@@ -5,12 +5,12 @@ import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { ExpansionData } from '../expansion-library.ts';
 
 export const configureFerryman = (args: ExpansionConfiguratorContext) => {
-  const ferrymanPresent = args.config.kingdomSupply.some((supply) => supply.name === 'ferryman');
+  const ferrymanPresent = args.config.kingdomSupply.some(supply => supply.name === 'ferryman');
 
   // If no Ferryman is present, or if the Ferryman pile is already configured, no setup is needed.
   if (
     !ferrymanPresent ||
-    args.config.kingdomSupply.some((supply) => supply.cards.some((card) => card.tags?.includes('ferryman')))
+    args.config.kingdomSupply.some(supply => supply.cards.some(card => card.tags?.includes('ferryman')))
   ) {
     return;
   }
@@ -31,15 +31,15 @@ export const configureFerryman = (args: ExpansionConfiguratorContext) => {
   }, [] as ExpansionData[]);
 
   const existingPileKeys = Array.from(
-    new Set(args.config.kingdomSupply.flatMap((supply) => supply.cards.map((card) => getCardPileKey(card)))),
+    new Set(args.config.kingdomSupply.flatMap(supply => supply.cards.map(card => getCardPileKey(card)))),
   );
-  const bannedPileKeys = args.config.bannedKingdoms.map((card) => getCardPileKey(card));
+  const bannedPileKeys = args.config.bannedKingdoms.map(card => getCardPileKey(card));
   const availableGroups = getAvailableKingdomRandomizerGroups({
     expansions: selectedExpansions,
     excludedPileKeys: existingPileKeys,
     bannedPileKeys,
     // Ferryman uses an extra kingdom card costing exactly 3 or 4.
-    cardFilter: (card) => card.cost.treasure === 3 || card.cost.treasure === 4,
+    cardFilter: card => card.cost.treasure === 3 || card.cost.treasure === 4,
   });
 
   if (!availableGroups.length) {

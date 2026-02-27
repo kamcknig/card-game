@@ -11,8 +11,7 @@ export class ServerShutdownHandlerService {
   constructor(
     private readonly lobbyDirectoryService: LobbyDirectoryService,
     private readonly loggerService: LoggerService,
-  ) {
-  }
+  ) {}
 
   // Registers SIGINT behavior to dispose runtime resources and stop serving.
   public registerShutdownHandler(shutdownController: AbortController): void {

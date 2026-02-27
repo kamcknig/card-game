@@ -5,10 +5,7 @@
       "cost": {
         "treasure": 3
       },
-      "type": [
-        "ACTION",
-        "AUGUR"
-      ]
+      "type": ["ACTION", "AUGUR"]
     },
     "cards": [
       {
@@ -16,10 +13,7 @@
         "cost": {
           "treasure": 3
         },
-        "type": [
-          "ACTION",
-          "AUGUR"
-        ],
+        "type": ["ACTION", "AUGUR"],
         "abilityText": "+1 Buy\nPut your deck into your discard pile. Look through it and you may play a Treasure from it.\nYou may rotate the Augurs."
       },
       {
@@ -27,10 +21,7 @@
         "cost": {
           "treasure": 4
         },
-        "type": [
-          "ACTION",
-          "AUGUR"
-        ],
+        "type": ["ACTION", "AUGUR"],
         "abilityText": "You may trash an Action or Victory card from your hand to gain a Gold.\nYou may trash this to gain an Augur."
       },
       {
@@ -38,11 +29,7 @@
         "cost": {
           "treasure": 5
         },
-        "type": [
-          "ACTION",
-          "ATTACK",
-          "AUGUR"
-        ],
+        "type": ["ACTION", "ATTACK", "AUGUR"],
         "targetScheme": "ALL_OTHER",
         "abilityText": "+1 Action\nName a card. Reveal the top card of your deck and put it into your hand. If it's the named card, each other player gains a Curse."
       },
@@ -51,10 +38,7 @@
         "cost": {
           "treasure": 6
         },
-        "type": [
-          "ACTION",
-          "AUGUR"
-        ],
+        "type": ["ACTION", "AUGUR"],
         "abilityText": "+4 Cards\n+1 Action\nPut a card from your hand on top of your deck, and another on the bottom."
       }
     ]
@@ -65,10 +49,7 @@
       "cost": {
         "treasure": 3
       },
-      "type": [
-        "ACTION",
-        "CLASH"
-      ]
+      "type": ["ACTION", "CLASH"]
     },
     "cards": [
       {
@@ -76,10 +57,7 @@
         "cost": {
           "treasure": 3
         },
-        "type": [
-          "ACTION",
-          "CLASH"
-        ],
+        "type": ["ACTION", "CLASH"],
         "abilityText": "+1 Card\n+1 Action\nYou may reveal an Attack card from your hand for +1 Card.\nYou may rotate any Supply pile."
       },
       {
@@ -87,11 +65,7 @@
         "cost": {
           "treasure": 4
         },
-        "type": [
-          "ACTION",
-          "ATTACK",
-          "CLASH"
-        ],
+        "type": ["ACTION", "ATTACK", "CLASH"],
         "targetScheme": "ALL_OTHER",
         "abilityText": "+$2\nEach other player with 5 or more cards in hand reveals all but one, and discards one of those you choose."
       },
@@ -100,12 +74,7 @@
         "cost": {
           "treasure": 5
         },
-        "type": [
-          "ACTION",
-          "DURATION",
-          "ATTACK",
-          "CLASH"
-        ],
+        "type": ["ACTION", "DURATION", "ATTACK", "CLASH"],
         "targetScheme": "ALL_OTHER",
         "abilityText": "+1 Action\nAt the start of your next turn, +2 Cards. Until then, other players can't play an Action from their hand that they have 2 or more copies of in play."
       },
@@ -114,10 +83,7 @@
         "cost": {
           "treasure": 6
         },
-        "type": [
-          "VICTORY",
-          "CLASH"
-        ],
+        "type": ["VICTORY", "CLASH"],
         "victoryPoints": 0,
         "abilityText": "Worth 1VP per differently named Victory card you have.\nWhen you gain this, gain a Gold per empty Supply pile."
       }
@@ -129,10 +95,7 @@
       "cost": {
         "treasure": 3
       },
-      "type": [
-        "ACTION",
-        "FORT"
-      ]
+      "type": ["ACTION", "FORT"]
     },
     "cards": [
       {
@@ -140,10 +103,7 @@
         "cost": {
           "treasure": 3
         },
-        "type": [
-          "ACTION",
-          "FORT"
-        ],
+        "type": ["ACTION", "FORT"],
         "abilityText": "+$2\nYou may rotate the Forts.\nWhen you discard this from play, you may put it onto your deck."
       },
       {
@@ -151,11 +111,7 @@
         "cost": {
           "treasure": 4
         },
-        "type": [
-          "ACTION",
-          "DURATION",
-          "FORT"
-        ],
+        "type": ["ACTION", "DURATION", "FORT"],
         "abilityText": "+$2\nThis turn, when you gain a card, add a token here. At the start of your next turn, remove them for +1 Card each."
       },
       {
@@ -163,10 +119,7 @@
         "cost": {
           "treasure": 5
         },
-        "type": [
-          "ACTION",
-          "FORT"
-        ],
+        "type": ["ACTION", "FORT"],
         "abilityText": "Gain a card costing up to $4. Choose one: Put it into your hand; or +1 Card and +1 Action."
       },
       {
@@ -174,12 +127,7 @@
         "cost": {
           "treasure": 6
         },
-        "type": [
-          "ACTION",
-          "DURATION",
-          "VICTORY",
-          "FORT"
-        ],
+        "type": ["ACTION", "DURATION", "VICTORY", "FORT"],
         "abilityText": "Choose one: +$3; or at the start of your next turn, +3 Cards.",
         "victoryPoints": 2
       }
@@ -191,10 +139,7 @@
       "cost": {
         "treasure": 2
       },
-      "type": [
-        "ACTION",
-        "TOWNSFOLK"
-      ]
+      "type": ["ACTION", "TOWNSFOLK"]
     },
     "cards": [
       {
@@ -202,10 +147,7 @@
         "cost": {
           "treasure": 2
         },
-        "type": [
-          "ACTION",
-          "TOWNSFOLK"
-        ],
+        "type": ["ACTION", "TOWNSFOLK"],
         "abilityText": "Choose one: +$2; or gain a Silver; or +1 Card and +1 Action.\nYou may rotate the Townsfolk."
       },
       {
@@ -213,10 +155,7 @@
         "cost": {
           "treasure": 3
         },
-        "type": [
-          "ACTION",
-          "TOWNSFOLK"
-        ],
+        "type": ["ACTION", "TOWNSFOLK"],
         "abilityText": "Choose one: Draw until you have 6 cards in hand; or +2 Cards; or +1 Card and +1 Action."
       },
       {
@@ -224,10 +163,7 @@
         "cost": {
           "treasure": 4
         },
-        "type": [
-          "ACTION",
-          "TOWNSFOLK"
-        ],
+        "type": ["ACTION", "TOWNSFOLK"],
         "abilityText": "+1 Action\nLook at the top 4 cards of your deck. Put one into your hand and discard the rest."
       },
       {
@@ -235,10 +171,7 @@
         "cost": {
           "treasure": 5
         },
-        "type": [
-          "ACTION",
-          "TOWNSFOLK"
-        ],
+        "type": ["ACTION", "TOWNSFOLK"],
         "abilityText": "+$2\nYou may play an Action card from your hand. When it gives you a choice of abilities (with \"choose\") this turn, you may choose an extra (different) option."
       }
     ]
@@ -249,10 +182,7 @@
       "cost": {
         "treasure": 3
       },
-      "type": [
-        "ACTION",
-        "WIZARD"
-      ]
+      "type": ["ACTION", "WIZARD"]
     },
     "cards": [
       {
@@ -260,11 +190,7 @@
         "cost": {
           "treasure": 3
         },
-        "type": [
-          "ACTION",
-          "WIZARD",
-          "LIAISON"
-        ],
+        "type": ["ACTION", "WIZARD", "LIAISON"],
         "abilityText": "+1 Action\nYou may rotate the Wizards.\nTrash a card from your hand. If it's a Treasure, +1 Favor and put this onto your deck."
       },
       {
@@ -272,11 +198,7 @@
         "cost": {
           "treasure": 4
         },
-        "type": [
-          "ACTION",
-          "DURATION",
-          "WIZARD"
-        ],
+        "type": ["ACTION", "DURATION", "WIZARD"],
         "abilityText": "Gain a card costing up to $4.\nAt the start of your next turn, put this into your hand."
       },
       {
@@ -284,11 +206,7 @@
         "cost": {
           "treasure": 5
         },
-        "type": [
-          "ACTION",
-          "ATTACK",
-          "WIZARD"
-        ],
+        "type": ["ACTION", "ATTACK", "WIZARD"],
         "targetScheme": "ALL_OTHER",
         "abilityText": "+1 Card\n+1 Action\nEach other player names a card, then reveals the top card of their deck. If wrong, they gain a Curse."
       },
@@ -297,10 +215,7 @@
         "cost": {
           "treasure": 6
         },
-        "type": [
-          "ACTION",
-          "WIZARD"
-        ],
+        "type": ["ACTION", "WIZARD"],
         "abilityText": "+6 Cards\n+2 Actions\nSkip a turn.\nWhen you trash this, discard it and gain a cheaper card from the trash."
       }
     ]
@@ -311,10 +226,7 @@
       "cost": {
         "treasure": 3
       },
-      "type": [
-        "ACTION",
-        "ODYSSEY"
-      ]
+      "type": ["ACTION", "ODYSSEY"]
     },
     "cards": [
       {
@@ -322,10 +234,7 @@
         "cost": {
           "treasure": 3
         },
-        "type": [
-          "ACTION",
-          "ODYSSEY"
-        ],
+        "type": ["ACTION", "ODYSSEY"],
         "abilityText": "+1 Card\n+1 Action\nDiscard a card. +1 Card.\nYou may rotate the Odysseys."
       },
       {
@@ -333,11 +242,7 @@
         "cost": {
           "treasure": 4
         },
-        "type": [
-          "ACTION",
-          "DURATION",
-          "ODYSSEY"
-        ],
+        "type": ["ACTION", "DURATION", "ODYSSEY"],
         "abilityText": "+1 Action\nTake an extra turn after this one (but not a 3rd turn in a row), during which you can only play 3 cards from your hand."
       },
       {
@@ -345,10 +250,7 @@
         "cost": {
           "treasure": 5
         },
-        "type": [
-          "TREASURE",
-          "ODYSSEY"
-        ],
+        "type": ["TREASURE", "ODYSSEY"],
         "abilityText": "Gain an Action card you don't have a copy of in play."
       },
       {
@@ -356,11 +258,7 @@
         "cost": {
           "treasure": 6
         },
-        "type": [
-          "ACTION",
-          "VICTORY",
-          "ODYSSEY"
-        ],
+        "type": ["ACTION", "VICTORY", "ODYSSEY"],
         "abilityText": "+2 Cards\n+1 Action\nGain an Estate.",
         "victoryPoints": 2
       }
@@ -370,125 +268,91 @@
     "cost": {
       "treasure": 2
     },
-    "type": [
-      "TREASURE",
-      "LIAISON"
-    ],
+    "type": ["TREASURE", "LIAISON"],
     "abilityText": "Choose two different options: +1 Buy; +$1; +1 Favor; this turn, when you gain a card, you may put it onto your deck."
   },
   "sycophant": {
     "cost": {
       "treasure": 2
     },
-    "type": [
-      "ACTION",
-      "LIAISON"
-    ],
+    "type": ["ACTION", "LIAISON"],
     "abilityText": "+1 Action\nDiscard 3 cards. If you discarded at least one, +$3.\nWhen you gain or trash this, +2 Favors."
   },
   "importer": {
     "cost": {
       "treasure": 3
     },
-    "type": [
-      "ACTION",
-      "DURATION",
-      "LIAISON"
-    ],
+    "type": ["ACTION", "DURATION", "LIAISON"],
     "abilityText": "At the start of your next turn, gain a card costing up to $5.\nSetup: Each player gets +4 Favors."
   },
   "merchant-camp": {
     "cost": {
       "treasure": 3
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+2 Actions\n+$1\nWhen you discard this from play, you may put it onto your deck."
   },
   "sentinel": {
     "cost": {
       "treasure": 3
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "Look at the top 5 cards of your deck. You may trash up to 2 of them. Put the rest back in any order."
   },
   "underling": {
     "cost": {
       "treasure": 3
     },
-    "type": [
-      "ACTION",
-      "LIAISON"
-    ],
+    "type": ["ACTION", "LIAISON"],
     "abilityText": "+1 Card\n+1 Action\n+1 Favor"
   },
   "broker": {
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION",
-      "LIAISON"
-    ],
+    "type": ["ACTION", "LIAISON"],
     "abilityText": "Trash a card from your hand and choose one: +1 Card per $1 it costs; or +1 Action per $1 it costs; or +$1 per $1 it costs; or +1 Favor per $1 it costs."
   },
   "carpenter": {
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "If no Supply piles are empty, +1 Action and gain a card costing up to $4.\nOtherwise, trash a card from your hand and gain a card costing up to $2 more than it."
   },
   "courier": {
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+$1\nDiscard the top card of your deck. Look through your discard pile; you may play an Action or Treasure from it."
   },
   "innkeeper": {
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+1 Action\nChoose one: +1 Card; or +3 Cards, then discard 3 cards; or +5 Cards, then discard 6 cards."
   },
   "royal-galley": {
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION",
-      "DURATION"
-    ],
+    "type": ["ACTION", "DURATION"],
     "abilityText": "+1 Card\nYou may play a non-Duration Action card from your hand.\nSet it aside; if you did, then at the start of your next turn, play it."
   },
   "town": {
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "Choose one: +1 Card and +2 Actions; or +1 Buy and +$2."
   },
   "barbarian": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION",
-      "ATTACK"
-    ],
+    "type": ["ACTION", "ATTACK"],
     "targetScheme": "ALL_OTHER",
     "abilityText": "+$2\nEach other player trashes the top card of their deck. If it costs $3 or more they gain a cheaper card sharing a type with it; otherwise they gain a Curse."
   },
@@ -496,60 +360,42 @@
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+1 Card\n+2 Actions\nYou may discard 2 cards for +$2.\nYou may pay $2 for +2 Cards."
   },
   "contract": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "TREASURE",
-      "DURATION",
-      "LIAISON"
-    ],
+    "type": ["TREASURE", "DURATION", "LIAISON"],
     "abilityText": "$2\n+1 Favor\nYou may set aside an Action from your hand to play it at the start of your next turn."
   },
   "emissary": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION",
-      "LIAISON"
-    ],
+    "type": ["ACTION", "LIAISON"],
     "abilityText": "+3 Cards\nIf this made you shuffle (at least one card), +1 Action and +2 Favors."
   },
   "galleria": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+$3\nThis turn, when you gain a card costing $3 or $4, +1 Buy."
   },
   "guildmaster": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION",
-      "LIAISON"
-    ],
+    "type": ["ACTION", "LIAISON"],
     "abilityText": "+$3\nThis turn, when you gain a card, +1 Favor."
   },
   "highwayman": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION",
-      "DURATION",
-      "ATTACK"
-    ],
+    "type": ["ACTION", "DURATION", "ATTACK"],
     "targetScheme": "ALL_OTHER",
     "abilityText": "At the start of your next turn, discard this from play and +3 Cards.\nUntil then, the first Treasure each other player plays each turn does nothing."
   },
@@ -557,28 +403,21 @@
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+1 Action\nReveal the top 3 cards of your deck. From those cards, put an Action, a Treasure, and a Victory card into your hand. Discard the rest."
   },
   "modify": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "Trash a card from your hand. Choose one: +1 Card and +1 Action; or gain a card costing up to $2 more than the trashed card."
   },
   "skirmisher": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION",
-      "ATTACK"
-    ],
+    "type": ["ACTION", "ATTACK"],
     "targetScheme": "ALL_OTHER",
     "abilityText": "+1 Card\n+1 Action\n+$1\nThis turn, when you gain an Attack card, each other player discards down to 3 cards in hand."
   },
@@ -586,27 +425,21 @@
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "You may play an Action or Treasure from your hand. Choose one: Play it again; or gain a copy of it."
   },
   "swap": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+1 Card\n+1 Action\nYou may return an Action from your hand to its pile, to gain to your hand a different Action costing up to $5."
   },
   "marquis": {
     "cost": {
       "treasure": 6
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+1 Buy\n+1 Card per card in your hand. Discard down to 10 cards in hand."
   }
 }

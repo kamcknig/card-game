@@ -164,8 +164,9 @@ export class ServerDebugRouteHandlerService {
           return new Response('match state merge disabled', { status: 403 });
         }
 
-        return req.json()
-          .then((body) => {
+        return req
+          .json()
+          .then(body => {
             // Require a JSON object as the partial match payload.
             if (!body || typeof body !== 'object' || Array.isArray(body)) {
               return new Response('invalid match payload', { status: 400 });
@@ -214,7 +215,16 @@ export class ServerDebugRouteHandlerService {
         | 'ways'
         | 'traits'
         | 'allies';
-      const allowedTypes = new Set(['cards', 'events', 'landmarks', 'artifacts', 'projects', 'ways', 'traits', 'allies']);
+      const allowedTypes = new Set([
+        'cards',
+        'events',
+        'landmarks',
+        'artifacts',
+        'projects',
+        'ways',
+        'traits',
+        'allies',
+      ]);
       if (!allowedTypes.has(type)) {
         return new Response('unsupported search type', { status: 400 });
       }
@@ -256,8 +266,9 @@ export class ServerDebugRouteHandlerService {
 
     // POST /debug/saved-match-configurations
     if (parts.length === 2 && req.method === 'POST') {
-      return req.json()
-        .then((body) => {
+      return req
+        .json()
+        .then(body => {
           if (!body || typeof body !== 'object' || Array.isArray(body)) {
             return new Response('invalid save payload', { status: 400 });
           }
@@ -304,8 +315,9 @@ export class ServerDebugRouteHandlerService {
 
     // PATCH /debug/saved-match-configurations/:key
     if (parts.length === 3 && req.method === 'PATCH') {
-      return req.json()
-        .then((body) => {
+      return req
+        .json()
+        .then(body => {
           if (!body || typeof body !== 'object' || Array.isArray(body)) {
             return new Response('invalid patch payload', { status: 400 });
           }
@@ -315,11 +327,13 @@ export class ServerDebugRouteHandlerService {
             return this.jsonResponse(existing, this.getSavedConfigurationErrorStatus(existing.message));
           }
 
-          const patchSource = (
-            'configuration' in body && body.configuration && typeof body.configuration === 'object' && !Array.isArray(body.configuration)
-          )
-            ? body.configuration
-            : body;
+          const patchSource =
+            'configuration' in body &&
+            body.configuration &&
+            typeof body.configuration === 'object' &&
+            !Array.isArray(body.configuration)
+              ? body.configuration
+              : body;
           const requestedName = typeof body.name === 'string' ? body.name : undefined;
           const { name: _ignoredName, ...configurationPatch } = patchSource as Record<string, unknown>;
           if (Object.keys(configurationPatch).length < 1 && !requestedName) {
@@ -419,7 +433,7 @@ export class ServerDebugRouteHandlerService {
   private getAllExpansionDebugResources(): ReturnType<ServerDebugRouteHandlerService['toExpansionDebugResource']>[] {
     const expansionLibrary = this.expansionCatalogService.getExpansionLibrary();
     const expansionNames = Object.keys(expansionLibrary).sort((a, b) => a.localeCompare(b));
-    return expansionNames.map((name) => this.toExpansionDebugResource(name));
+    return expansionNames.map(name => this.toExpansionDebugResource(name));
   }
 
   // Builds one expansion resource with supply cards and all supported landscape categories.

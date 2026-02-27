@@ -4,27 +4,21 @@
       "treasure": 0
     },
     "isBasic": true,
-    "type": [
-      "TREASURE"
-    ]
+    "type": ["TREASURE"]
   },
   "curse": {
     "cost": {
       "treasure": 0
     },
     "isBasic": true,
-    "type": [
-      "VICTORY"
-    ],
+    "type": ["VICTORY"],
     "victoryPoints": -1
   },
   "duchy": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "VICTORY"
-    ],
+    "type": ["VICTORY"],
     "isBasic": true,
     "victoryPoints": 3
   },
@@ -32,9 +26,7 @@
     "cost": {
       "treasure": 2
     },
-    "type": [
-      "VICTORY"
-    ],
+    "type": ["VICTORY"],
     "isBasic": true,
     "victoryPoints": 1
   },
@@ -42,18 +34,14 @@
     "cost": {
       "treasure": 6
     },
-    "type": [
-      "TREASURE"
-    ],
+    "type": ["TREASURE"],
     "isBasic": true
   },
   "province": {
     "cost": {
       "treasure": 8
     },
-    "type": [
-      "VICTORY"
-    ],
+    "type": ["VICTORY"],
     "isBasic": true,
     "victoryPoints": 6
   },
@@ -61,28 +49,21 @@
     "cost": {
       "treasure": 3
     },
-    "type": [
-      "TREASURE"
-    ],
+    "type": ["TREASURE"],
     "isBasic": true
   },
   "artisan": {
     "cost": {
       "treasure": 6
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "Gain a card to your hand costing up to 5 Treasure.\nPut a card from your hand onto your deck."
   },
   "bandit": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION",
-      "ATTACK"
-    ],
+    "type": ["ACTION", "ATTACK"],
     "targetScheme": "ALL_OTHER",
     "abilityText": "Gain a Gold. Each other player reveals the top 2 cards of their deck, trashes a revealed Treasure other than Copper, and discards the rest."
   },
@@ -90,10 +71,7 @@
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION",
-      "ATTACK"
-    ],
+    "type": ["ACTION", "ATTACK"],
     "targetScheme": "ALL_OTHER",
     "abilityText": "Gain a Silver onto your deck. Each other player reveals a Victory card from their hand and puts it onto their deck (or reveals a hand with no Victory cards)."
   },
@@ -101,36 +79,28 @@
     "cost": {
       "treasure": 2
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+1 Action\nDiscard any number of cards. +1 Card per card discarded."
   },
   "chapel": {
     "cost": {
       "treasure": 2
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "Trash up to 4 cards from your hand."
   },
   "council-room": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+4 Cards\n+1 Buy\nEach other player draws a card."
   },
   "festival": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+2 Actions\n+1 Buy\n+2 Treasure"
   },
   "gardens": {
@@ -138,15 +108,11 @@
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "VICTORY"
-    ],
+    "type": ["VICTORY"],
     "abilityText": "Worth 1 Victory for every 10 cards in your deck rounded down."
   },
   "harbinger": {
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "cost": {
       "treasure": 3
     },
@@ -156,46 +122,35 @@
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+2 Cards\n+1 Action"
   },
   "library": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "Draw until you have 7 cards in hand, skipping any Action cards you choose to; set those aside, discarding them afterward."
   },
   "market": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+1 Card\n+1 Action\n+1 Buy\n+1 Treasure"
   },
   "merchant": {
     "cost": {
       "treasure": 3
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+1 Card\n+1 Action\nThe first time you play a Silver this turn, +1 Treasure."
   },
   "militia": {
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION",
-      "ATTACK"
-    ],
+    "type": ["ACTION", "ATTACK"],
     "targetScheme": "ALL_OTHER",
     "abilityText": "+2 Treasure\nEach other player discards down to 3 cards in hand."
   },
@@ -203,101 +158,77 @@
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "You may trash a Treasure from your hand. Gain a Treasure to your hand costing up to 3 Treasure more than it."
   },
   "moat": {
     "cost": {
       "treasure": 2
     },
-    "type": [
-      "ACTION",
-      "REACTION"
-    ],
+    "type": ["ACTION", "REACTION"],
     "abilityText": "+2 Cards\n--------------\nWhen another player plays an Attack card, you may first reveal this from your hand, to be unaffected by it."
   },
   "moneylender": {
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "You may trash a Copper from your hand for +3 Treasure."
   },
   "poacher": {
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+1 Card\n+1 Action\n+1 Treasure\nDiscard a card per empty Supply pile."
   },
   "remodel": {
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "Trash a card from your hand. Gain a card costing up to 2 Treasure more than it."
   },
   "sentry": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+1 Card\n+1 Action\nLook at the top 2 cards of your deck. Trash and/or discard any number of them. Put the rest back on top in any order."
   },
   "smithy": {
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+3 Cards"
   },
   "throne-room": {
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "You may play an Action card from your hand twice."
   },
   "vassal": {
     "cost": {
       "treasure": 3
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+2 Treasure\nDiscard the top card of your deck. If it's an Action card, you may play it."
   },
   "village": {
     "cost": {
       "treasure": 3
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+1 Card\n+2 Actions"
   },
   "witch": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION",
-      "ATTACK"
-    ],
+    "type": ["ACTION", "ATTACK"],
     "targetScheme": "ALL_OTHER",
     "abilityText": "+2 Cards\nEach other player gains a Curse."
   },
@@ -305,9 +236,7 @@
     "cost": {
       "treasure": 3
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "Gain a card costing up to 4 Treasure."
   }
 }

@@ -27,7 +27,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
   // Track state effect registration to avoid duplicates across configurator iterations.
   let stateEffectsRegistered = false;
 
-  return async (args) => {
+  return async args => {
     if (!boonEffectsRegistered) {
       // Register all Nocturne boon effects once per match.
       registerNocturneBoonEffects(args.expansionRegistration.registerBoonEffect);
@@ -45,48 +45,48 @@ const configurator: ExpansionConfiguratorFactory = () => {
     }
 
     // Gather all selected kingdom cards for boons and heirloom-linked piles.
-    const kingdomCards = args.config.kingdomSupply.flatMap((supply) => supply.cards);
-    const hasCemetery = kingdomCards.some((card) => getCardPileKey(card) === 'cemetery');
-    const hasExorcist = kingdomCards.some((card) => getCardPileKey(card) === 'exorcist');
-    const hasFool = kingdomCards.some((card) => getCardPileKey(card) === 'fool');
-    const hasVampire = kingdomCards.some((card) => getCardPileKey(card) === 'vampire');
+    const kingdomCards = args.config.kingdomSupply.flatMap(supply => supply.cards);
+    const hasCemetery = kingdomCards.some(card => getCardPileKey(card) === 'cemetery');
+    const hasExorcist = kingdomCards.some(card => getCardPileKey(card) === 'exorcist');
+    const hasFool = kingdomCards.some(card => getCardPileKey(card) === 'fool');
+    const hasVampire = kingdomCards.some(card => getCardPileKey(card) === 'vampire');
     // Track which kingdom cards require the Imp pile.
     const impSources = new Set(['devils-workshop', 'tormentor', 'exorcist']);
-    const hasImpSource = kingdomCards.some((card) => impSources.has(getCardPileKey(card)));
+    const hasImpSource = kingdomCards.some(card => impSources.has(getCardPileKey(card)));
     const hasGhostSource = hasCemetery || hasExorcist;
     // Track which kingdom cards require the Wish pile.
     const wishSources = new Set(['leprechaun', 'secret-cave']);
-    const hasWishSource = kingdomCards.some((card) => wishSources.has(getCardPileKey(card)));
+    const hasWishSource = kingdomCards.some(card => wishSources.has(getCardPileKey(card)));
 
     if (hasGhostSource) {
       configureGhost(args);
-    } else if (args.config.nonSupply?.some((supply) => supply.name === 'ghost')) {
-      args.config.nonSupply = args.config.nonSupply.filter((supply) => supply.name !== 'ghost');
+    } else if (args.config.nonSupply?.some(supply => supply.name === 'ghost')) {
+      args.config.nonSupply = args.config.nonSupply.filter(supply => supply.name !== 'ghost');
     }
 
     // Ensure the Imp pile is present only when needed.
     if (hasImpSource) {
       configureImp(args);
-    } else if (args.config.nonSupply?.some((supply) => supply.name === 'imp')) {
-      args.config.nonSupply = args.config.nonSupply.filter((supply) => supply.name !== 'imp');
+    } else if (args.config.nonSupply?.some(supply => supply.name === 'imp')) {
+      args.config.nonSupply = args.config.nonSupply.filter(supply => supply.name !== 'imp');
     }
 
     // Ensure the Wish pile is present only when needed.
     if (hasWishSource) {
       configureWish(args);
-    } else if (args.config.nonSupply?.some((supply) => supply.name === 'wish')) {
-      args.config.nonSupply = args.config.nonSupply.filter((supply) => supply.name !== 'wish');
+    } else if (args.config.nonSupply?.some(supply => supply.name === 'wish')) {
+      args.config.nonSupply = args.config.nonSupply.filter(supply => supply.name !== 'wish');
     }
 
     // Ensure the Bat pile is present only when Vampire is in the kingdom.
     if (hasVampire) {
       configureBat(args);
-    } else if (args.config.nonSupply?.some((supply) => supply.name === 'bat')) {
-      args.config.nonSupply = args.config.nonSupply.filter((supply) => supply.name !== 'bat');
+    } else if (args.config.nonSupply?.some(supply => supply.name === 'bat')) {
+      args.config.nonSupply = args.config.nonSupply.filter(supply => supply.name !== 'bat');
     }
 
     // Fate cards determine whether boons are active for this match.
-    const fateCards = kingdomCards.filter((card) => card.type?.includes('FATE'));
+    const fateCards = kingdomCards.filter(card => card.type?.includes('FATE'));
 
     if (fateCards.length < 1) {
       // Clear out boons when the match does not contain any Fate cards.
@@ -96,11 +96,11 @@ const configurator: ExpansionConfiguratorFactory = () => {
       args.config.boons = [];
     } else {
       // Limit boon selection to expansions that actually contributed Fate cards.
-      const expansionsWithFate = Array.from(new Set(fateCards.map((card) => card.expansionName)));
+      const expansionsWithFate = Array.from(new Set(fateCards.map(card => card.expansionName)));
 
       // Pull boon definitions from the expansion library.
-      const boons = expansionsWithFate.flatMap((expansionName) =>
-        Object.values(args.expansionCatalog[expansionName]?.boons ?? {})
+      const boons = expansionsWithFate.flatMap(expansionName =>
+        Object.values(args.expansionCatalog[expansionName]?.boons ?? {}),
       );
       // De-duplicate boons across expansions by card key.
       const uniqueBoons = uniqueByProp(boons, 'cardKey');
@@ -108,9 +108,9 @@ const configurator: ExpansionConfiguratorFactory = () => {
       if (uniqueBoons.length < 1) {
         // Log missing boon definitions so configuration issues are visible.
         args.loggerService.warn(
-          `[nocturne configurator] Fate cards present but no boons found for expansions ${
-            expansionsWithFate.join(', ')
-          }`,
+          `[nocturne configurator] Fate cards present but no boons found for expansions ${expansionsWithFate.join(
+            ', ',
+          )}`,
         );
         args.config.boons = [];
       } else {
@@ -128,7 +128,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     }
 
     // Doom cards determine whether hexes are active for this match.
-    const doomCards = kingdomCards.filter((card) => card.type?.includes('DOOM'));
+    const doomCards = kingdomCards.filter(card => card.type?.includes('DOOM'));
 
     if (doomCards.length < 1) {
       // Clear out hexes when the match does not contain any Doom cards.
@@ -138,11 +138,11 @@ const configurator: ExpansionConfiguratorFactory = () => {
       args.config.hexes = [];
     } else {
       // Limit hex selection to expansions that actually contributed Doom cards.
-      const expansionsWithDoom = Array.from(new Set(doomCards.map((card) => card.expansionName)));
+      const expansionsWithDoom = Array.from(new Set(doomCards.map(card => card.expansionName)));
 
       // Pull hex definitions from the expansion library.
-      const hexes = expansionsWithDoom.flatMap((expansionName) =>
-        Object.values(args.expansionCatalog[expansionName]?.hexes ?? {})
+      const hexes = expansionsWithDoom.flatMap(expansionName =>
+        Object.values(args.expansionCatalog[expansionName]?.hexes ?? {}),
       );
       // De-duplicate hexes across expansions by card key.
       const uniqueHexes = uniqueByProp(hexes, 'cardKey');
@@ -150,9 +150,9 @@ const configurator: ExpansionConfiguratorFactory = () => {
       if (uniqueHexes.length < 1) {
         // Log missing hex definitions so configuration issues are visible.
         args.loggerService.warn(
-          `[nocturne configurator] Doom cards present but no hexes found for expansions ${
-            expansionsWithDoom.join(', ')
-          }`,
+          `[nocturne configurator] Doom cards present but no hexes found for expansions ${expansionsWithDoom.join(
+            ', ',
+          )}`,
         );
         args.config.hexes = [];
       } else {
@@ -164,8 +164,8 @@ const configurator: ExpansionConfiguratorFactory = () => {
     // Ensure Doom-linked states are present when hexes are active.
     const doomStateKeys = new Set(['deluded', 'envious', 'miserable', 'twice-miserable']);
     const existingStates = args.config.states ?? [];
-    const nonDoomStates = existingStates.filter((state) => !doomStateKeys.has(state.cardKey));
-    const doomStates = Array.from(doomStateKeys).flatMap((stateKey) => {
+    const nonDoomStates = existingStates.filter(state => !doomStateKeys.has(state.cardKey));
+    const doomStates = Array.from(doomStateKeys).flatMap(stateKey => {
       const state = args.expansionCatalog['nocturne']?.states?.[stateKey];
       if (!state) {
         args.loggerService.warn(`[nocturne configurator] missing doom state ${stateKey}`);
@@ -184,7 +184,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
     // Preserve any non-Nocturne states while toggling Lost in the Woods.
     const updatedStates = args.config.states ?? [];
-    const filteredStates = updatedStates.filter((state) => state.cardKey !== 'lost-in-the-woods');
+    const filteredStates = updatedStates.filter(state => state.cardKey !== 'lost-in-the-woods');
 
     if (!hasFool) {
       if (updatedStates.length !== filteredStates.length) {
@@ -200,10 +200,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
       return args.config;
     }
 
-    args.config.states = uniqueByProp(
-      [...filteredStates, structuredClone(lostInTheWoods)],
-      'cardKey',
-    );
+    args.config.states = uniqueByProp([...filteredStates, structuredClone(lostInTheWoods)], 'cardKey');
     return args.config;
   };
 };
@@ -219,10 +216,8 @@ export const registerScoringFunctions = (registrar: PlayerScoreDecoratorRegistra
     }
 
     const states = match.states?.cards ?? [];
-    const hasTwiceMiserable = states.some((state) =>
-      state.cardKey === 'twice-miserable' && stateIds.includes(state.id)
-    );
-    const hasMiserable = states.some((state) => state.cardKey === 'miserable' && stateIds.includes(state.id));
+    const hasTwiceMiserable = states.some(state => state.cardKey === 'twice-miserable' && stateIds.includes(state.id));
+    const hasMiserable = states.some(state => state.cardKey === 'miserable' && stateIds.includes(state.id));
 
     if (hasTwiceMiserable) {
       match.scores[playerId] = (match.scores[playerId] ?? 0) - 4;
@@ -240,35 +235,25 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   registrar,
   config,
 ) => {
-  const hasCemetery = config.kingdomSupply.some(
-    (supply) => supply.cards.some((card) => getCardPileKey(card) === 'cemetery'),
+  const hasCemetery = config.kingdomSupply.some(supply =>
+    supply.cards.some(card => getCardPileKey(card) === 'cemetery'),
   );
-  const hasFool = config.kingdomSupply.some(
-    (supply) => supply.cards.some((card) => getCardPileKey(card) === 'fool'),
+  const hasFool = config.kingdomSupply.some(supply => supply.cards.some(card => getCardPileKey(card) === 'fool'));
+  const hasDruid = config.kingdomSupply.some(supply => supply.cards.some(card => getCardPileKey(card) === 'druid'));
+  const hasPixie = config.kingdomSupply.some(supply => supply.cards.some(card => getCardPileKey(card) === 'pixie'));
+  const hasPooka = config.kingdomSupply.some(supply => supply.cards.some(card => getCardPileKey(card) === 'pooka'));
+  const hasSecretCave = config.kingdomSupply.some(supply =>
+    supply.cards.some(card => getCardPileKey(card) === 'secret-cave'),
   );
-  const hasDruid = config.kingdomSupply.some(
-    (supply) => supply.cards.some((card) => getCardPileKey(card) === 'druid'),
+  const hasShepherd = config.kingdomSupply.some(supply =>
+    supply.cards.some(card => getCardPileKey(card) === 'shepherd'),
   );
-  const hasPixie = config.kingdomSupply.some(
-    (supply) => supply.cards.some((card) => getCardPileKey(card) === 'pixie'),
-  );
-  const hasPooka = config.kingdomSupply.some(
-    (supply) => supply.cards.some((card) => getCardPileKey(card) === 'pooka'),
-  );
-  const hasSecretCave = config.kingdomSupply.some(
-    (supply) => supply.cards.some((card) => getCardPileKey(card) === 'secret-cave'),
-  );
-  const hasShepherd = config.kingdomSupply.some(
-    (supply) => supply.cards.some((card) => getCardPileKey(card) === 'shepherd'),
-  );
-  const hasTracker = config.kingdomSupply.some(
-    (supply) => supply.cards.some((card) => getCardPileKey(card) === 'tracker'),
-  );
-  const hasNecromancer = config.kingdomSupply.some(
-    (supply) => supply.cards.some((card) => getCardPileKey(card) === 'necromancer'),
+  const hasTracker = config.kingdomSupply.some(supply => supply.cards.some(card => getCardPileKey(card) === 'tracker'));
+  const hasNecromancer = config.kingdomSupply.some(supply =>
+    supply.cards.some(card => getCardPileKey(card) === 'necromancer'),
   );
   if (hasCemetery) {
-    registrar('onGameStartSetup', async (args) => {
+    registrar('onGameStartSetup', async args => {
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
         const deck = args.cardSourceController.getSource('playerDeck', player.id);
@@ -308,7 +293,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   if (hasFool) {
-    registrar('onGameStartSetup', async (args) => {
+    registrar('onGameStartSetup', async args => {
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
         const deck = args.cardSourceController.getSource('playerDeck', player.id);
@@ -350,7 +335,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   if (hasPixie) {
-    registrar('onGameStartSetup', async (args) => {
+    registrar('onGameStartSetup', async args => {
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
         const deck = args.cardSourceController.getSource('playerDeck', player.id);
@@ -387,7 +372,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   if (hasPooka) {
-    registrar('onGameStartSetup', async (args) => {
+    registrar('onGameStartSetup', async args => {
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
         const deck = args.cardSourceController.getSource('playerDeck', player.id);
@@ -429,7 +414,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   if (hasSecretCave) {
-    registrar('onGameStartSetup', async (args) => {
+    registrar('onGameStartSetup', async args => {
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
         const deck = args.cardSourceController.getSource('playerDeck', player.id);
@@ -471,7 +456,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   if (hasShepherd) {
-    registrar('onGameStartSetup', async (args) => {
+    registrar('onGameStartSetup', async args => {
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
         const deck = args.cardSourceController.getSource('playerDeck', player.id);
@@ -511,7 +496,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   if (hasTracker) {
-    registrar('onGameStartSetup', async (args) => {
+    registrar('onGameStartSetup', async args => {
       for (const player of args.match.players) {
         // Locate all Copper cards in the player deck.
         const deck = args.cardSourceController.getSource('playerDeck', player.id);
@@ -548,7 +533,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   if (hasDruid) {
-    registrar('onGameStartSetup', async (args) => {
+    registrar('onGameStartSetup', async args => {
       if (!args.match.boons) {
         args.loggerService.warn('[nocturne onGameStart] no boons configured for Druid');
         return;
@@ -579,7 +564,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   if (hasNecromancer) {
-    registrar('onGameStartSetup', async (args) => {
+    registrar('onGameStartSetup', async args => {
       // Create and place the three Zombies into the trash pile.
       const zombieKeys = ['zombie-apprentice', 'zombie-mason', 'zombie-spy'] as const;
       for (const zombieKey of zombieKeys) {
@@ -595,15 +580,15 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   // Register Changeling exchange rules when Changeling is in the kingdom supply.
-  const hasChangeling = config.kingdomSupply.some(
-    (supply) => supply.cards.some((card) => getCardPileKey(card) === 'changeling'),
+  const hasChangeling = config.kingdomSupply.some(supply =>
+    supply.cards.some(card => getCardPileKey(card) === 'changeling'),
   );
 
   if (!hasChangeling) {
     return;
   }
 
-  registrar('onGameStartSetup', async (args) => {
+  registrar('onGameStartSetup', async args => {
     for (const player of args.match.players) {
       // Listen for qualifying gains so the player can exchange for Changeling.
       args.reactionManager.registerReactionTemplate({
@@ -614,7 +599,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         compulsory: false,
         allowMultipleInstances: true,
         system: true,
-        condition: async (conditionArgs) => {
+        condition: async conditionArgs => {
           if (conditionArgs.trigger.args.playerId !== player.id) {
             return false;
           }
@@ -639,10 +624,9 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           }
 
           // Ensure there is at least one Changeling in the supply pile.
-          const changelingCards = conditionArgs.findCardService.findCards({ all: [
-            { location: 'kingdomSupply' },
-            { cardKeys: 'changeling' },
-          ] });
+          const changelingCards = conditionArgs.findCardService.findCards({
+            all: [{ location: 'kingdomSupply' }, { cardKeys: 'changeling' }],
+          });
 
           if (!changelingCards.length) {
             args.loggerService.debug('[changeling exchange condition] no changelings in supply');
@@ -654,18 +638,18 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           );
           return changelingCards.length > 0;
         },
-        triggeredEffectFn: async (triggeredArgs) => {
+        triggeredEffectFn: async triggeredArgs => {
           const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
 
           // Offer the exchange decision to the gaining player.
-          const decision = await triggeredArgs.actionService.run('userPrompt', {
+          const decision = (await triggeredArgs.actionService.run('userPrompt', {
             playerId: player.id,
             prompt: `Exchange ${gainedCard.cardName} for Changeling?`,
             actionButtons: [
               { label: 'CANCEL', action: 1 },
               { label: 'EXCHANGE', action: 2 },
             ],
-          }) as { action: number };
+          })) as { action: number };
 
           if (decision.action === 1) {
             args.loggerService.debug('[changeling exchange] player declined exchange');
@@ -689,15 +673,16 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
             logTag: 'changeling exchange',
           });
           if (!returnSucceeded) {
-            args.loggerService.warn('[changeling exchange] gained card has no configured pile in match, skipping exchange');
+            args.loggerService.warn(
+              '[changeling exchange] gained card has no configured pile in match, skipping exchange',
+            );
             return;
           }
 
           // Move the top Changeling to the player's discard (exchange is not a gain).
-          const changelingCards = triggeredArgs.findCardService.findCards({ all: [
-            { location: 'kingdomSupply' },
-            { cardKeys: 'changeling' },
-          ] });
+          const changelingCards = triggeredArgs.findCardService.findCards({
+            all: [{ location: 'kingdomSupply' }, { cardKeys: 'changeling' }],
+          });
 
           if (!changelingCards.length) {
             args.loggerService.warn('[changeling exchange] no changelings available to exchange');

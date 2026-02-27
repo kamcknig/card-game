@@ -9,7 +9,8 @@
   "nodeModulesDir": "manual",
   "tasks": {
     "dev:watch": "deno run --inspect --check --env-file --allow-sys --allow-read --allow-write --allow-net --allow-env --watch src/server.ts",
-    "dev:runbrowsers": "deno run scripts/run-browsers.js"
+    "dev:runbrowsers": "deno run scripts/run-browsers.js",
+    "fmt": "oxfmt --write src/"
   },
   "lint": {
     "include": ["src/"],
@@ -26,6 +27,9 @@
     "proseWrap": "always",
     "semiColons": true
   },
+  "lint-staged": {
+        "*": "oxfmt --no-error-on-unmatched-pattern"
+  },
   "imports": {
     "@shared/": "../shared/src/",
     "@server-types/": "./src/type-groups/",
@@ -35,6 +39,7 @@
     "@std/path": "jsr:@std/path@^1.0.8",
     "es-toolkit": "jsr:@es-toolkit/es-toolkit@^1.33.0",
     "fast-json-patch": "npm:fast-json-patch@3.1.1",
+    "lint-staged": "npm:lint-staged@^16.2.7",
     "lodash-es": "npm:lodash-es@4.17.21",
     "nanostores": "npm:nanostores@0.11.4",
     "shared/types/": "../shared/src/types/",

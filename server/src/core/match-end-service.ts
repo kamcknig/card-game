@@ -32,7 +32,7 @@ export class MatchEndService {
     interactivityController?.endGame();
 
     this.loggerService.debug(`[match] removing socket listeners for 'nextPhase'`);
-    this.socketMap.forEach((s) => s.off('nextPhase'));
+    this.socketMap.forEach(s => s.off('nextPhase'));
 
     // Restore all set-aside cards to owners' decks before final scoring/deck snapshot.
     for (const player of this.match.players) {
@@ -48,7 +48,7 @@ export class MatchEndService {
     }
 
     for (const event of registeredEvents) {
-      this.socketMap.forEach((s) => s.off(event));
+      this.socketMap.forEach(s => s.off(event));
     }
 
     const summary = this.buildMatchSummary();
@@ -56,50 +56,54 @@ export class MatchEndService {
     this.loggerService.info(`[match] match summary created`);
     this.loggerService.debug(summary);
 
-    this.socketMap.forEach((s) => s.emit('gameOver', summary));
+    this.socketMap.forEach(s => s.emit('gameOver', summary));
     return summary;
   }
 
   // Builds final player ordering using score, then turns, then original seat order.
   private buildMatchSummary(): MatchSummary {
     return {
-      playerSummary: this.match.players.reduce((prev, player) => {
-        const playerId = player.id;
-        // Tiebreaker turns are counted from recorded turn history.
-        // Seize the Day turns are excluded from this count per event FAQ.
-        const turnsTaken = this.match.stats.turns.filter((turnStats) => {
-          if (turnStats.playerId !== playerId) {
-            return false;
-          }
+      playerSummary: this.match.players
+        .reduce(
+          (prev, player) => {
+            const playerId = player.id;
+            // Tiebreaker turns are counted from recorded turn history.
+            // Seize the Day turns are excluded from this count per event FAQ.
+            const turnsTaken = this.match.stats.turns.filter(turnStats => {
+              if (turnStats.playerId !== playerId) {
+                return false;
+              }
 
-          const sourceId = turnStats.sourceId;
-          if (sourceId === undefined) {
-            return true;
-          }
+              const sourceId = turnStats.sourceId;
+              if (sourceId === undefined) {
+                return true;
+              }
 
-          const sourceEvent = this.match.events.find((event) => event.id === sourceId);
-          if (!sourceEvent) {
-            return true;
-          }
+              const sourceEvent = this.match.events.find(event => event.id === sourceId);
+              if (!sourceEvent) {
+                return true;
+              }
 
-          return sourceEvent.cardKey !== 'seize-the-day';
-        }).length;
+              return sourceEvent.cardKey !== 'seize-the-day';
+            }).length;
 
-        prev.push({
-          playerId,
-          turnsTaken,
-          score: this.match.scores[playerId],
-          deck: this.findCardService.findCards({ all: [{ owner: playerId }] }).map((card) => card.id),
-        });
-        return prev;
-      }, [] as MatchSummary['playerSummary'])
+            prev.push({
+              playerId,
+              turnsTaken,
+              score: this.match.scores[playerId],
+              deck: this.findCardService.findCards({ all: [{ owner: playerId }] }).map(card => card.id),
+            });
+            return prev;
+          },
+          [] as MatchSummary['playerSummary'],
+        )
         .sort((a, b) => {
           if (a.score < b.score) return 1;
           if (b.score < a.score) return -1;
           if (a.turnsTaken < b.turnsTaken) return -1;
           if (b.turnsTaken < a.turnsTaken) return 1;
-          const aIdx = this.match.players.findIndex((player) => player.id === a.playerId);
-          const bIdx = this.match.players.findIndex((player) => player.id === b.playerId);
+          const aIdx = this.match.players.findIndex(player => player.id === a.playerId);
+          const bIdx = this.match.players.findIndex(player => player.id === b.playerId);
           if (aIdx < bIdx) return -1;
           if (bIdx < aIdx) return 1;
           return 0;

@@ -35,7 +35,7 @@ export class LogManager {
     if (this._history.length > this._historyLimit) {
       this._history = this._history.slice(-this._historyLimit);
     }
-    this.socketMap.forEach((s) => s.emit('addLogEntry', entries));
+    this.socketMap.forEach(s => s.emit('addLogEntry', entries));
     this._queue = [];
   }
 

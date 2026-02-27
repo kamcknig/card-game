@@ -40,10 +40,7 @@ import { LoggerService } from './logger-service.ts';
  * @param   keep  'first' | 'last'  – keeps the first or last occurrence (default 'first')
  * @returns Deduplicated array
  */
-export function uniqueByProp<
-  T extends Record<string, any>,
-  K extends keyof T = keyof T,
->(
+export function uniqueByProp<T extends Record<string, any>, K extends keyof T = keyof T>(
   list: T[],
   prop: K,
   keep: 'first' | 'last' = 'first',
@@ -51,7 +48,7 @@ export function uniqueByProp<
   if (keep === 'first') {
     // Keep the first occurrence
     const seen = new Set<any>();
-    return list.filter((item) => {
+    return list.filter(item => {
       const key = item[prop];
       if (seen.has(key)) return false;
       seen.add(key);
@@ -121,35 +118,31 @@ export class MatchConfigurator {
   }
 
   public async createConfiguration() {
-    this._config.preselectedKingdoms = this._config.preselectedKingdoms.filter((card) => !!card);
+    this._config.preselectedKingdoms = this._config.preselectedKingdoms.filter(card => !!card);
 
     if (this._config.preselectedKingdoms?.length > 0) {
       this._loggerService.info(
         `[match configurator] requested kingdom cards ${this._config.preselectedKingdoms.length}`,
       );
-      this._loggerService.info(this._config.preselectedKingdoms?.map((card) => card.cardKey)?.join('\n'));
+      this._loggerService.info(this._config.preselectedKingdoms?.map(card => card.cardKey)?.join('\n'));
     } else {
       this._loggerService.info(`[match configurator] no cards requested in during match configuration`);
     }
 
-    this._loggerService.info(
-      `[match configurator] removing possible duplicates from requested kingdoms`,
-    );
+    this._loggerService.info(`[match configurator] removing possible duplicates from requested kingdoms`);
 
     this._requestedKingdoms = Array.from(
-      new Set([
-        ...(this._config.preselectedKingdoms?.map((card) => card.cardKey) ?? []),
-      ]),
+      new Set([...(this._config.preselectedKingdoms?.map(card => card.cardKey) ?? [])]),
     )
-      .map((key) => structuredClone(this._expansionCatalogService.getRawCard(key)))
-      .filter((card) => !!card);
+      .map(key => structuredClone(this._expansionCatalogService.getRawCard(key)))
+      .filter(card => !!card);
 
     if (this._requestedKingdoms.length > MatchBaseConfiguration.numberOfKingdomPiles) {
-      const requestedKingdomCardKeys = this._requestedKingdoms.map((card) => card.cardKey);
+      const requestedKingdomCardKeys = this._requestedKingdoms.map(card => card.cardKey);
       this._loggerService.info(
-        `[match configurator] requested kingdom cards exceeds 10, truncating to 10 ${
-          requestedKingdomCardKeys.join(', ')
-        }`,
+        `[match configurator] requested kingdom cards exceeds 10, truncating to 10 ${requestedKingdomCardKeys.join(
+          ', ',
+        )}`,
       );
       this._requestedKingdoms.length = MatchBaseConfiguration.numberOfKingdomPiles;
     }
@@ -175,7 +168,7 @@ export class MatchConfigurator {
     if (!supply.cards.length) {
       return false;
     }
-    return supply.cards.every((card) => {
+    return supply.cards.every(card => {
       const metadata = card.metadata as BaseCardMetadata | undefined;
       return metadata?.base?.isSetupProxyKingdomPile === true;
     });
@@ -184,9 +177,7 @@ export class MatchConfigurator {
   // Removes temporary setup proxy piles before finalizing config.
   private removeTemporarySetupProxyKingdomPiles(): void {
     const before = this._config.kingdomSupply.length;
-    this._config.kingdomSupply = this._config.kingdomSupply.filter((supply) =>
-      !this.isTemporarySetupProxySupply(supply)
-    );
+    this._config.kingdomSupply = this._config.kingdomSupply.filter(supply => !this.isTemporarySetupProxySupply(supply));
     const removed = before - this._config.kingdomSupply.length;
     if (removed > 0) {
       this._loggerService.info(`[match configurator] removed ${removed} temporary setup proxy kingdom pile(s)`);
@@ -254,8 +245,8 @@ export class MatchConfigurator {
       }, [] as ExpansionData[]);
 
       // list of pile keys that are banned or already pre-selected
-      const bannedKingdomRandomizers = this._bannedKingdoms.map((card) => getCardPileKey(card));
-      const alreadyIncludedKingdomRandomizers = selectedKingdoms.map((card) => getCardPileKey(card));
+      const bannedKingdomRandomizers = this._bannedKingdoms.map(card => getCardPileKey(card));
+      const alreadyIncludedKingdomRandomizers = selectedKingdoms.map(card => getCardPileKey(card));
 
       this._loggerService.info(
         `[match configurator] banned kingdoms ${bannedKingdomRandomizers.join(', ') ?? '- no banned kingdoms'}`,
@@ -278,58 +269,58 @@ export class MatchConfigurator {
         | { randomizer: string; type: 'trait'; cardLike: TraitNoId };
 
       const availableRandomizers: AvailableRandomizer[] = [
-        ...availableKingdomRandomizerGroups.map((group) => ({
+        ...availableKingdomRandomizerGroups.map(group => ({
           randomizer: group.pileKey,
           type: 'card' as const,
           cardsInRandomizer: group.cards,
         })),
-        ...selectedExpansions.flatMap((nextExpansion) => [
-        ...Object.values(nextExpansion.events)
-          .filter((event) => event.randomizer !== null)
-          .map((event) => ({
-            randomizer: event.randomizer!,
-            cardLike: event,
-            type: 'event' as const,
-          })),
-        // Landmarks participate in the shared "events and others" randomizer pool.
-        ...Object.values(nextExpansion.landmarks)
-          .filter((landmark) => landmark.randomizer !== null)
-          .map((landmark) => ({
-            randomizer: landmark.randomizer!,
-            cardLike: landmark,
-            type: 'landmark' as const,
-          })),
-        // Projects participate in the shared "events and others" randomizer pool.
-        ...Object.values(nextExpansion.projects ?? {})
-          .filter((project) => project.randomizer !== null)
-          .map((project) => ({
-            randomizer: project.randomizer!,
-            cardLike: project,
-            type: 'project' as const,
-          })),
-        // Ways participate in the shared "events and others" randomizer pool.
-        ...Object.values(nextExpansion.ways ?? {})
-          .filter((way) => way.randomizer !== null)
-          .map((way) => ({
-            randomizer: way.randomizer!,
-            cardLike: way,
-            type: 'way' as const,
-          })),
-        // Traits participate in the shared "events and others" randomizer pool.
-        ...Object.values(nextExpansion.traits ?? {})
-          .filter((trait) => trait.randomizer !== null)
-          .map((trait) => ({
-            randomizer: trait.randomizer!,
-            cardLike: trait,
-            type: 'trait' as const,
-          })),
+        ...selectedExpansions.flatMap(nextExpansion => [
+          ...Object.values(nextExpansion.events)
+            .filter(event => event.randomizer !== null)
+            .map(event => ({
+              randomizer: event.randomizer!,
+              cardLike: event,
+              type: 'event' as const,
+            })),
+          // Landmarks participate in the shared "events and others" randomizer pool.
+          ...Object.values(nextExpansion.landmarks)
+            .filter(landmark => landmark.randomizer !== null)
+            .map(landmark => ({
+              randomizer: landmark.randomizer!,
+              cardLike: landmark,
+              type: 'landmark' as const,
+            })),
+          // Projects participate in the shared "events and others" randomizer pool.
+          ...Object.values(nextExpansion.projects ?? {})
+            .filter(project => project.randomizer !== null)
+            .map(project => ({
+              randomizer: project.randomizer!,
+              cardLike: project,
+              type: 'project' as const,
+            })),
+          // Ways participate in the shared "events and others" randomizer pool.
+          ...Object.values(nextExpansion.ways ?? {})
+            .filter(way => way.randomizer !== null)
+            .map(way => ({
+              randomizer: way.randomizer!,
+              cardLike: way,
+              type: 'way' as const,
+            })),
+          // Traits participate in the shared "events and others" randomizer pool.
+          ...Object.values(nextExpansion.traits ?? {})
+            .filter(trait => trait.randomizer !== null)
+            .map(trait => ({
+              randomizer: trait.randomizer!,
+              cardLike: trait,
+              type: 'trait' as const,
+            })),
         ]),
       ];
 
       const uniqueRandomizers = uniqueByProp(availableRandomizers, 'randomizer');
 
       this._loggerService.info(`[match configurator] available kingdoms ${uniqueRandomizers.length}`);
-      this._loggerService.info(uniqueRandomizers.map((randomizer) => randomizer.randomizer).join('\n'));
+      this._loggerService.info(uniqueRandomizers.map(randomizer => randomizer.randomizer).join('\n'));
 
       const numKingdomsToSelect = MatchBaseConfiguration.numberOfKingdomPiles - this._requestedKingdoms.length;
 
@@ -337,7 +328,8 @@ export class MatchConfigurator {
 
       const allowedEventsAndOthers = MatchBaseConfiguration.numberOfEventsAndOthers;
       // Track the combined limit for events and other landscape types (landmarks included).
-      let selectedEventsAndOthers = this._config.events.length +
+      let selectedEventsAndOthers =
+        this._config.events.length +
         (this._config.landmarks?.length ?? 0) +
         (this._config.projects?.length ?? 0) +
         (this._config.ways?.length ?? 0) +
@@ -501,18 +493,20 @@ export class MatchConfigurator {
     }
 
     this._config.kingdomSupply = structuredClone(
-      selectedKingdoms.map((card) => {
-        return {
-          name: card.cardKey,
-          cards: new Array(getDefaultKingdomSupplySize(card, this._config)).fill(card),
-        };
-      }).concat(additionalKingdoms),
+      selectedKingdoms
+        .map(card => {
+          return {
+            name: card.cardKey,
+            cards: new Array(getDefaultKingdomSupplySize(card, this._config)).fill(card),
+          };
+        })
+        .concat(additionalKingdoms),
     );
 
     this._loggerService.info(
       `[match configurator] finalized selected kingdoms count ${this._config.kingdomSupply.length}`,
     );
-    this._loggerService.info(this._config.kingdomSupply.map((supply) => supply.name).join('\n'));
+    this._loggerService.info(this._config.kingdomSupply.map(supply => supply.name).join('\n'));
   }
 
   private selectBasicSupply() {
@@ -537,7 +531,7 @@ export class MatchConfigurator {
       return acc;
     }, [] as Supply[]);
 
-    const basicSupply = this._config.basicSupply.map((supply) => supply.name).join(', ');
+    const basicSupply = this._config.basicSupply.map(supply => supply.name).join(', ');
     this._loggerService.info(`[match configurator] setting default basic cards ${basicSupply}`);
   }
 
@@ -578,28 +572,27 @@ export class MatchConfigurator {
 
   // Resolves all expansion names relevant to this configuration, including selected expansion toggles.
   private getConfiguredExpansionNames(): string[] {
-    const configuredExpansionNames = this._config.expansions.map((expansion) => expansion.name);
-    const selectedKingdomExpansions = this._config.kingdomSupply
-      .flatMap((supply) => supply.cards.map((card) => card.expansionName));
+    const configuredExpansionNames = this._config.expansions.map(expansion => expansion.name);
+    const selectedKingdomExpansions = this._config.kingdomSupply.flatMap(supply =>
+      supply.cards.map(card => card.expansionName),
+    );
     // Card-likes can require expansion configurators even when no kingdom card from that expansion is selected.
     const selectedCardLikeKeys = [
-      ...(this._config.events ?? []).map((event) => event.cardKey),
-      ...(this._config.allies ?? []).map((ally) => ally.cardKey),
-      ...(this._config.prophecies ?? []).map((prophecy) => prophecy.cardKey),
-      ...(this._config.landmarks ?? []).map((landmark) => landmark.cardKey),
-      ...(this._config.projects ?? []).map((project) => project.cardKey),
-      ...(this._config.ways ?? []).map((way) => way.cardKey),
-      ...(this._config.traits ?? []).map((trait) => trait.cardKey),
+      ...(this._config.events ?? []).map(event => event.cardKey),
+      ...(this._config.allies ?? []).map(ally => ally.cardKey),
+      ...(this._config.prophecies ?? []).map(prophecy => prophecy.cardKey),
+      ...(this._config.landmarks ?? []).map(landmark => landmark.cardKey),
+      ...(this._config.projects ?? []).map(project => project.cardKey),
+      ...(this._config.ways ?? []).map(way => way.cardKey),
+      ...(this._config.traits ?? []).map(trait => trait.cardKey),
     ];
     const selectedCardLikeExpansions = selectedCardLikeKeys
-      .map((cardLikeKey) => this.resolveCardLikeExpansionName(cardLikeKey))
+      .map(cardLikeKey => this.resolveCardLikeExpansionName(cardLikeKey))
       .filter((expansionName): expansionName is string => !!expansionName);
 
-    return Array.from(new Set([
-      ...configuredExpansionNames,
-      ...selectedKingdomExpansions,
-      ...selectedCardLikeExpansions,
-    ]));
+    return Array.from(
+      new Set([...configuredExpansionNames, ...selectedKingdomExpansions, ...selectedCardLikeExpansions]),
+    );
   }
 
   private async runExpansionConfigurators() {

@@ -6,7 +6,7 @@ import { configureHermit } from './configure-hermit.ts';
 import { configureUrchin } from './configure-urchin.ts';
 import { configureShelters } from './configure-shelters.ts';
 
-const configurator: ExpansionConfiguratorFactory = () => async (args) => {
+const configurator: ExpansionConfiguratorFactory = () => async args => {
   await configureSpoils(args);
   await configureRuins(args);
   await configureKnights(args);

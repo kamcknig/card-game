@@ -35,14 +35,14 @@ const registerLostInTheWoods = (registerStateEffect: StateEffectRegistrar) => {
         once: false,
         allowMultipleInstances: true,
         compulsory: false,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (conditionArgs.trigger.args.playerId !== playerId) {
             return false;
           }
           const ownedStates = conditionArgs.match.states?.byPlayer?.[playerId] ?? [];
           return ownedStates.includes(state.id);
         },
-        triggeredEffectFn: async (triggeredArgs) => {
+        triggeredEffectFn: async triggeredArgs => {
           const hand = cardSourceController.getSource('playerHand', playerId);
           if (!hand.length) {
             loggerService.debug('[lost-in-the-woods state] no cards in hand to discard');
@@ -50,26 +50,26 @@ const registerLostInTheWoods = (registerStateEffect: StateEffectRegistrar) => {
           }
 
           // Ask whether the player wants to discard for a boon.
-          const decision = await actionService.run('userPrompt', {
+          const decision = (await actionService.run('userPrompt', {
             playerId,
             prompt: 'Discard a card to receive a Boon?',
             actionButtons: [
               { label: 'CANCEL', action: 1 },
               { label: 'DISCARD', action: 2 },
             ],
-          }) as { action: number };
+          })) as { action: number };
 
           if (decision.action !== 2) {
             loggerService.debug('[lost-in-the-woods state] player declined to discard');
             return;
           }
 
-          const selectedCardId = await actionService.run('selectSingleCard', {
+          const selectedCardId = (await actionService.run('selectSingleCard', {
             prompt: 'Discard a card',
             playerId,
             count: 1,
             restrict: hand,
-          }) as CardId | null;
+          })) as CardId | null;
           if (!selectedCardId) {
             loggerService.debug('[lost-in-the-woods state] no card selected to discard');
             return;
@@ -96,9 +96,16 @@ const registerLostInTheWoods = (registerStateEffect: StateEffectRegistrar) => {
 const registerDeluded = (registerStateEffect: StateEffectRegistrar) => {
   registerStateEffect(
     'deluded',
-    async (
-      { loggerService, playerId, match, reactionManager, actionService, cardId, cardLibrary, cardPriceController },
-    ) => {
+    async ({
+      loggerService,
+      playerId,
+      match,
+      reactionManager,
+      actionService,
+      cardId,
+      cardLibrary,
+      cardPriceController,
+    }) => {
       const state = findStateInMatch(match, cardId);
       if (!state) {
         loggerService.warn('[deluded state] state card not found');
@@ -113,7 +120,7 @@ const registerDeluded = (registerStateEffect: StateEffectRegistrar) => {
         once: true,
         allowMultipleInstances: true,
         compulsory: true,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') {
             return false;
           }
@@ -159,7 +166,7 @@ const registerDeluded = (registerStateEffect: StateEffectRegistrar) => {
             once: true,
             allowMultipleInstances: true,
             compulsory: true,
-            condition: (conditionArgs) => {
+            condition: conditionArgs => {
               if (conditionArgs.trigger.args.playerId !== playerId) {
                 return false;
               }
@@ -203,7 +210,7 @@ const registerEnvious = (registerStateEffect: StateEffectRegistrar) => {
         once: true,
         allowMultipleInstances: true,
         compulsory: true,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') {
             return false;
           }
@@ -234,7 +241,7 @@ const registerEnvious = (registerStateEffect: StateEffectRegistrar) => {
             once: false,
             allowMultipleInstances: true,
             compulsory: true,
-            condition: (conditionArgs) => {
+            condition: conditionArgs => {
               if (conditionArgs.trigger.args.playerId !== playerId) {
                 return false;
               }
@@ -248,7 +255,7 @@ const registerEnvious = (registerStateEffect: StateEffectRegistrar) => {
               const sourceCard = conditionArgs.cardLibrary.getCard(sourceId);
               return sourceCard.cardKey === 'silver' || sourceCard.cardKey === 'gold';
             },
-            triggeredEffectFn: async (triggeredArgs) => {
+            triggeredEffectFn: async triggeredArgs => {
               const sourceId = triggeredArgs.trigger.args.source;
               if (!sourceId) {
                 return;
@@ -264,7 +271,7 @@ const registerEnvious = (registerStateEffect: StateEffectRegistrar) => {
             once: true,
             allowMultipleInstances: true,
             compulsory: true,
-            condition: (conditionArgs) => conditionArgs.trigger.args.playerId === playerId,
+            condition: conditionArgs => conditionArgs.trigger.args.playerId === playerId,
             triggeredEffectFn: async () => {
               loggerService.debug('[envious state] clearing Envious triggers at end of turn');
               if (treasureGainTriggerId) {

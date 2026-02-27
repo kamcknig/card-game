@@ -50,10 +50,7 @@ export interface RegisterRootServicesArgs {
  * @param container Root Awilix container created in `server.ts`.
  * @param args Runtime host values that must be injected as constants.
  */
-export const registerRootServices = (
-  container: AwilixContainer,
-  args: RegisterRootServicesArgs,
-): void => {
+export const registerRootServices = (container: AwilixContainer, args: RegisterRootServicesArgs): void => {
   container.register({
     rootContainer: asValue(container),
     io: asValue(args.io),

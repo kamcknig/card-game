@@ -8,9 +8,7 @@ import {
 
 // Provides typed prompt helpers so effect code can avoid repetitive cast/parsing logic.
 export class PromptService implements PromptServiceContract {
-  constructor(
-    private readonly actionService: ActionService,
-  ) {}
+  constructor(private readonly actionService: ActionService) {}
 
   // Sends a prompt and returns the raw typed response payload, or null when the prompt cannot produce a result.
   public async request<TResult = unknown>(args: UserPromptActionArgs): Promise<TResult | null> {

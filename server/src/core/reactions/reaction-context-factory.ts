@@ -83,9 +83,7 @@ export class ReactionContextFactory {
   }
 
   // Creates context for card lifecycle callbacks.
-  public createCardLifecycleContext(args: {
-    reactionManager: ReactionManager;
-  }): CardLifecycleCallbackContext {
+  public createCardLifecycleContext(args: { reactionManager: ReactionManager }): CardLifecycleCallbackContext {
     return {
       cardSourceController: this.cardSourceController,
       actionService: this.actionService,

@@ -32,9 +32,7 @@ import { ExpansionCatalogService } from './expansion-catalog-service.ts';
 export class CardInstanceFactoryService {
   private _cardCount = 0;
 
-  constructor(
-    private readonly expansionCatalogService: ExpansionCatalogService,
-  ) {}
+  constructor(private readonly expansionCatalogService: ExpansionCatalogService) {}
 
   // Rehydrates a card instance while preserving its existing id.
   public rehydrateCard(card: Card): Card {
@@ -49,7 +47,7 @@ export class CardInstanceFactoryService {
       ...baseCardData,
       cardKey: cardKey,
       cardName: baseCardData.cardName ?? formatCardName(cardKey),
-      ...card ?? {},
+      ...(card ?? {}),
       id: ++this._cardCount,
     });
   }

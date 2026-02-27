@@ -7,32 +7,13 @@ import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { ExpansionData } from '../expansion-library.ts';
 
 // Menagerie cards that require the Horse non-supply pile to be configured.
-const horseSourcePiles = new Set([
-  'cavalry',
-  'groom',
-  'hostelry',
-  'livery',
-  'paddock',
-  'scrap',
-  'sleigh',
-  'supplies',
-]);
+const horseSourcePiles = new Set(['cavalry', 'groom', 'hostelry', 'livery', 'paddock', 'scrap', 'sleigh', 'supplies']);
 
 // Menagerie events that require the Horse non-supply pile.
-const horseSourceEvents = new Set([
-  'bargain',
-  'demand',
-  'ride',
-  'stampede',
-]);
+const horseSourceEvents = new Set(['bargain', 'demand', 'ride', 'stampede']);
 
 // Menagerie events that require the Exile mat.
-const exileMatEvents = new Set([
-  'banish',
-  'enclave',
-  'invest',
-  'transport',
-]);
+const exileMatEvents = new Set(['banish', 'enclave', 'invest', 'transport']);
 
 const WAY_OF_THE_MOUSE_CARD_KEY = 'way-of-the-mouse';
 const WAY_OF_THE_MOUSE_RUNTIME_SET_ASIDE_PREFIX = 'way-of-the-mouse-set-aside:';
@@ -77,11 +58,13 @@ const isWayOfTheMouseCandidate = (card: CardNoId): boolean => {
   const resolvedType = card.randomizerData?.type ?? card.type;
   const resolvedCost = card.randomizerData?.cost ?? card.cost;
   const treasureCost = resolvedCost.treasure ?? 0;
-  return resolvedType.includes('ACTION') &&
+  return (
+    resolvedType.includes('ACTION') &&
     !resolvedType.includes('DURATION') &&
     (resolvedCost.potion ?? 0) === 0 &&
     (resolvedCost.debt ?? 0) === 0 &&
-    (treasureCost === 2 || treasureCost === 3);
+    (treasureCost === 2 || treasureCost === 3)
+  );
 };
 
 // Returns true when a supply is a synthetic Way of the Mouse setup proxy.
@@ -89,7 +72,7 @@ const isWayOfTheMouseSetupProxySupply = (supply: Supply, expectedPileKey?: strin
   if (supply.cards.length < 1) {
     return false;
   }
-  return supply.cards.every((card) => {
+  return supply.cards.every(card => {
     const metadata = card.metadata as WayOfTheMouseCardMetadata | undefined;
     if (metadata?.base?.isSetupProxyKingdomPile !== true) {
       return false;
@@ -110,7 +93,7 @@ const isWayOfTheMouseRuntimeSetAsideSupply = (supply: Supply, expectedPileKey?: 
   if (supply.cards.length < 1) {
     return false;
   }
-  return supply.cards.every((card) => {
+  return supply.cards.every(card => {
     const metadata = card.metadata as WayOfTheMouseCardMetadata | undefined;
     const wayOfTheMouse = metadata?.menagerie?.wayOfTheMouse;
     if (!wayOfTheMouse || wayOfTheMouse.runtimeSetAsideCard !== true) {
@@ -129,9 +112,10 @@ const cleanupWayOfTheMouseSyntheticPiles = (
   keep?: { proxyPileKey?: string },
 ): void => {
   const config = args.config;
-  const nextKingdomSupply = config.kingdomSupply.filter((supply) =>
-    !isWayOfTheMouseSetupProxySupply(supply) ||
-    (keep?.proxyPileKey !== undefined && isWayOfTheMouseSetupProxySupply(supply, keep.proxyPileKey))
+  const nextKingdomSupply = config.kingdomSupply.filter(
+    supply =>
+      !isWayOfTheMouseSetupProxySupply(supply) ||
+      (keep?.proxyPileKey !== undefined && isWayOfTheMouseSetupProxySupply(supply, keep.proxyPileKey)),
   );
   const removedSetupProxyCount = config.kingdomSupply.length - nextKingdomSupply.length;
   if (removedSetupProxyCount > 0) {
@@ -146,7 +130,7 @@ const cleanupWayOfTheMouseSyntheticPiles = (
     return;
   }
   // Way of the Mouse runtime set-aside card should never exist as a non-supply pile.
-  const nextNonSupply = existingNonSupply.filter((supply) => !isWayOfTheMouseRuntimeSetAsideSupply(supply));
+  const nextNonSupply = existingNonSupply.filter(supply => !isWayOfTheMouseRuntimeSetAsideSupply(supply));
   const removedRuntimeSetAsideCount = existingNonSupply.length - nextNonSupply.length;
   if (removedRuntimeSetAsideCount > 0) {
     args.loggerService.info(
@@ -192,7 +176,7 @@ const resolveWayOfTheMouseSelectedCard = (args: ExpansionConfiguratorContext, wa
 // Adds or validates Way of the Mouse setup state: selected card, setup proxy pile, and runtime set-aside metadata.
 const configureWayOfTheMouse = (args: ExpansionConfiguratorContext): void => {
   const config = args.config;
-  const wayOfTheMouse = config.ways.find((way) => way.cardKey === WAY_OF_THE_MOUSE_CARD_KEY);
+  const wayOfTheMouse = config.ways.find(way => way.cardKey === WAY_OF_THE_MOUSE_CARD_KEY);
   if (!wayOfTheMouse) {
     cleanupWayOfTheMouseSyntheticPiles(args);
     return;
@@ -201,13 +185,14 @@ const configureWayOfTheMouse = (args: ExpansionConfiguratorContext): void => {
   const wayMetadata = getWayOfTheMouseMetadata(wayOfTheMouse);
   const usedPileKeys = new Set(
     config.kingdomSupply
-      .filter((supply) => !isWayOfTheMouseSetupProxySupply(supply))
-      .flatMap((supply) => supply.cards.map((card) => getCardPileKey(card))),
+      .filter(supply => !isWayOfTheMouseSetupProxySupply(supply))
+      .flatMap(supply => supply.cards.map(card => getCardPileKey(card))),
   );
-  const bannedPileKeys = config.bannedKingdoms.map((card) => getCardPileKey(card));
+  const bannedPileKeys = config.bannedKingdoms.map(card => getCardPileKey(card));
   let selectedCard = resolveWayOfTheMouseSelectedCard(args, wayOfTheMouse);
 
-  const currentSelectionValid = !!selectedCard &&
+  const currentSelectionValid =
+    !!selectedCard &&
     isWayOfTheMouseCandidate(selectedCard) &&
     !!wayMetadata.setAsidePileKey &&
     !usedPileKeys.has(wayMetadata.setAsidePileKey);
@@ -218,14 +203,14 @@ const configureWayOfTheMouse = (args: ExpansionConfiguratorContext): void => {
       expansions: selectedExpansions,
       excludedPileKeys: Array.from(usedPileKeys),
       bannedPileKeys,
-      cardFilter: (card) => isWayOfTheMouseCandidate(card),
+      cardFilter: card => isWayOfTheMouseCandidate(card),
     });
 
     if (availableGroups.length < 1) {
       args.loggerService.warn(
         '[menagerie configurator] no legal Way of the Mouse set-aside candidates; removing Way of the Mouse',
       );
-      config.ways = config.ways.filter((way) => way.cardKey !== WAY_OF_THE_MOUSE_CARD_KEY);
+      config.ways = config.ways.filter(way => way.cardKey !== WAY_OF_THE_MOUSE_CARD_KEY);
       cleanupWayOfTheMouseSyntheticPiles(args);
       return;
     }
@@ -234,7 +219,7 @@ const configureWayOfTheMouse = (args: ExpansionConfiguratorContext): void => {
     const chosenCard = structuredClone(chosenGroup.cards[0]);
     if (!chosenCard) {
       args.loggerService.warn('[menagerie configurator] selected Way of the Mouse candidate group has no cards');
-      config.ways = config.ways.filter((way) => way.cardKey !== WAY_OF_THE_MOUSE_CARD_KEY);
+      config.ways = config.ways.filter(way => way.cardKey !== WAY_OF_THE_MOUSE_CARD_KEY);
       cleanupWayOfTheMouseSyntheticPiles(args);
       return;
     }
@@ -252,7 +237,7 @@ const configureWayOfTheMouse = (args: ExpansionConfiguratorContext): void => {
 
   if (!selectedCard || !wayMetadata.proxyPileKey || !wayMetadata.runtimeSetAsidePileKey) {
     args.loggerService.warn('[menagerie configurator] Way of the Mouse metadata is incomplete after selection');
-    config.ways = config.ways.filter((way) => way.cardKey !== WAY_OF_THE_MOUSE_CARD_KEY);
+    config.ways = config.ways.filter(way => way.cardKey !== WAY_OF_THE_MOUSE_CARD_KEY);
     cleanupWayOfTheMouseSyntheticPiles(args);
     return;
   }
@@ -261,8 +246,8 @@ const configureWayOfTheMouse = (args: ExpansionConfiguratorContext): void => {
     proxyPileKey: wayMetadata.proxyPileKey,
   });
 
-  const hasSetupProxy = config.kingdomSupply.some((supply) =>
-    isWayOfTheMouseSetupProxySupply(supply, wayMetadata.proxyPileKey)
+  const hasSetupProxy = config.kingdomSupply.some(supply =>
+    isWayOfTheMouseSetupProxySupply(supply, wayMetadata.proxyPileKey),
   );
   if (!hasSetupProxy) {
     const proxyCard = structuredClone(selectedCard);
@@ -293,9 +278,10 @@ const configureWayOfTheMouse = (args: ExpansionConfiguratorContext): void => {
 // Ensures the Horse pile is present only when required by selected kingdom cards.
 const configureHorsePile = (configuratorArgs: ExpansionConfiguratorContext) => {
   const config = configuratorArgs.config;
-  const hasHorseSource = config.kingdomSupply.some((supply) => horseSourcePiles.has(supply.name)) ||
-    config.events.some((event) => horseSourceEvents.has(event.cardKey));
-  const hasHorsePile = config.nonSupply?.some((supply) => supply.name === 'horse') ?? false;
+  const hasHorseSource =
+    config.kingdomSupply.some(supply => horseSourcePiles.has(supply.name)) ||
+    config.events.some(event => horseSourceEvents.has(event.cardKey));
+  const hasHorsePile = config.nonSupply?.some(supply => supply.name === 'horse') ?? false;
 
   if (!hasHorseSource) {
     if (!hasHorsePile) {
@@ -304,7 +290,7 @@ const configureHorsePile = (configuratorArgs: ExpansionConfiguratorContext) => {
     configuratorArgs.loggerService.info(
       '[menagerie configurator] removing Horse pile because no Horse source cards are present',
     );
-    config.nonSupply = (config.nonSupply ?? []).filter((supply) => supply.name !== 'horse');
+    config.nonSupply = (config.nonSupply ?? []).filter(supply => supply.name !== 'horse');
     return;
   }
 
@@ -332,11 +318,11 @@ const configureHorsePile = (configuratorArgs: ExpansionConfiguratorContext) => {
 };
 
 const configurator: ExpansionConfiguratorFactory = () => {
-  return async (args) => {
+  return async args => {
     // Menagerie Exile mat is needed when selected Kingdom cards or Events use Exile.
     const requiresExileMat =
-      args.config.kingdomSupply.some((supply) => supply.cards.some((card) => card.mat === 'exile')) ||
-      args.config.events.some((event) => exileMatEvents.has(event.cardKey));
+      args.config.kingdomSupply.some(supply => supply.cards.some(card => card.mat === 'exile')) ||
+      args.config.events.some(event => exileMatEvents.has(event.cardKey));
 
     if (!requiresExileMat) {
       configureWayOfTheMouse(args);
@@ -345,7 +331,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     }
 
     // Avoid duplicate zone registration across configurator re-runs.
-    const exileZoneAlreadyRegisteredForAllPlayers = args.config.players.every((player) => {
+    const exileZoneAlreadyRegisteredForAllPlayers = args.config.players.every(player => {
       try {
         args.cardSourceController.getSource('exile', player.id);
         return true;
@@ -376,21 +362,20 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   registrar,
   config,
 ) => {
-  const hasFisherman = config.kingdomSupply.some((supply) => supply.name === 'fisherman');
-  const hasDestrier = config.kingdomSupply.some((supply) => supply.name === 'destrier');
-  const hasWayfarer = config.kingdomSupply.some((supply) => supply.name === 'wayfarer');
+  const hasFisherman = config.kingdomSupply.some(supply => supply.name === 'fisherman');
+  const hasDestrier = config.kingdomSupply.some(supply => supply.name === 'destrier');
+  const hasWayfarer = config.kingdomSupply.some(supply => supply.name === 'wayfarer');
 
   if (!hasFisherman && !hasDestrier && !hasWayfarer) {
     return;
   }
 
-  registrar('onGameStartSetup', async (args) => {
+  registrar('onGameStartSetup', async args => {
     if (hasFisherman) {
       args.loggerService.info('[menagerie configurator] registering Fisherman cost rules');
-      const fishermanCards = args.findCardService.findCards({ all: [
-        { location: 'kingdomSupply' },
-        { cardKeys: 'fisherman' },
-      ] });
+      const fishermanCards = args.findCardService.findCards({
+        all: [{ location: 'kingdomSupply' }, { cardKeys: 'fisherman' }],
+      });
 
       for (const fishermanCard of fishermanCards) {
         args.cardPriceController.registerRule(fishermanCard, (_card, context) => {
@@ -411,10 +396,9 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
     if (hasDestrier) {
       args.loggerService.info('[menagerie configurator] registering Destrier cost rules');
-      const destrierCards = args.findCardService.findCards({ all: [
-        { location: 'kingdomSupply' },
-        { cardKeys: 'destrier' },
-      ] });
+      const destrierCards = args.findCardService.findCards({
+        all: [{ location: 'kingdomSupply' }, { cardKeys: 'destrier' }],
+      });
 
       for (const destrierCard of destrierCards) {
         args.cardPriceController.registerRule(destrierCard, (_card, context) => {
@@ -429,10 +413,9 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           }
 
           const gainedCardIds = context.match.stats.cardsGainedByTurn[currentTurnHistoryIndex] ?? [];
-          const gainedCardCount = gainedCardIds.filter((gainedCardId) => {
+          const gainedCardCount = gainedCardIds.filter(gainedCardId => {
             const gainStats = context.match.stats.cardsGained[gainedCardId];
-            return gainStats?.turnHistoryIndex === currentTurnHistoryIndex &&
-              gainStats.playerId === context.playerId;
+            return gainStats?.turnHistoryIndex === currentTurnHistoryIndex && gainStats.playerId === context.playerId;
           }).length;
 
           if (gainedCardCount < 1) {
@@ -446,10 +429,9 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
     if (hasWayfarer) {
       args.loggerService.info('[menagerie configurator] registering Wayfarer cost rules');
-      const wayfarerCards = args.findCardService.findCards({ all: [
-        { location: 'kingdomSupply' },
-        { cardKeys: 'wayfarer' },
-      ] });
+      const wayfarerCards = args.findCardService.findCards({
+        all: [{ location: 'kingdomSupply' }, { cardKeys: 'wayfarer' }],
+      });
 
       for (const wayfarerCard of wayfarerCards) {
         args.cardPriceController.registerRule(wayfarerCard, (_card, context) => {

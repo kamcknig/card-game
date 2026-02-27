@@ -78,7 +78,8 @@ export class BuyOptionsResolver {
     // Respect card-level canBuy gates before considering any payment method.
     const canBuyCondition = this.expansionEffectRegistryService.getCardActionConditions(card.cardKey)?.canBuy;
     if (
-      canBuyCondition && !canBuyCondition({
+      canBuyCondition &&
+      !canBuyCondition({
         match: this.match,
         cardLibrary: this.cardLibrary,
         playerId: args.playerId,
@@ -121,7 +122,7 @@ export class BuyOptionsResolver {
       }
 
       // Skip duplicate option ids to keep prompt/result mapping deterministic.
-      if (options.some((existingOption) => existingOption.id === option.id)) {
+      if (options.some(existingOption => existingOption.id === option.id)) {
         this.loggerService.warn(
           `[buy options] duplicate buy option id '${option.id}' for ${card.cardKey}, skipping duplicate`,
         );

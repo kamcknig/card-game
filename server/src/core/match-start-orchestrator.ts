@@ -24,8 +24,7 @@ export class MatchStartOrchestrator {
     private readonly io: Server<ServerListenEvents, ServerEmitEvents>,
     private readonly lobbySocketBindings: LobbySocketBindings,
     private readonly rngService: RngService,
-  ) {
-  }
+  ) {}
 
   // Stable color assignment order used for active match players.
   private static readonly _MATCH_PLAYER_COLORS = ['#10FF19', '#3c69ff', '#FF0BF2', '#FFF114', '#FF1F11', '#FF9900'];
@@ -44,7 +43,7 @@ export class MatchStartOrchestrator {
     } = args;
 
     // Remove lobby-only handlers before gameplay starts.
-    socketMap.forEach((socket) => {
+    socketMap.forEach(socket => {
       this.lobbySocketBindings.unbindPlayerLobbyHandlers(socket);
       this.lobbySocketBindings.unbindOwnerLobbyHandlers(socket);
     });
@@ -52,7 +51,7 @@ export class MatchStartOrchestrator {
     // Set per-match player fields, then randomize turn order.
     const activePlayers = fisherYatesShuffle(
       players
-        .filter((player) => player.connected)
+        .filter(player => player.connected)
         .map((player, index) => {
           // Keep computer players ready so they do not block start.
           player.ready = player.isComputer;
@@ -68,13 +67,11 @@ export class MatchStartOrchestrator {
     matchController.on('gameOver', onGameOver);
 
     // Initialize the match with current lobby config overlayed on defaults.
-    void matchController.initialize(
-      {
-        ...structuredClone(defaultMatchConfiguration),
-        ...matchConfiguration,
-        players: activePlayers,
-      } as MatchConfiguration,
-    );
+    void matchController.initialize({
+      ...structuredClone(defaultMatchConfiguration),
+      ...matchConfiguration,
+      players: activePlayers,
+    } as MatchConfiguration);
 
     // Register runtime-only socket handlers after match activation.
     for (const [playerId, socket] of socketMap.entries()) {

@@ -1,10 +1,10 @@
 import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 
 export const configureSpoils = async (args: ExpansionConfiguratorContext) => {
-  const hasSpoilsSource = args.config.kingdomSupply.some((kingdom) =>
-    ['marauder', 'pillage', 'bandit-camp'].includes(kingdom.name)
+  const hasSpoilsSource = args.config.kingdomSupply.some(kingdom =>
+    ['marauder', 'pillage', 'bandit-camp'].includes(kingdom.name),
   );
-  const existingSpoilsPiles = (args.config.nonSupply ?? []).filter((supply) => supply.name === 'spoils');
+  const existingSpoilsPiles = (args.config.nonSupply ?? []).filter(supply => supply.name === 'spoils');
 
   // Remove stale Spoils piles when no source card is configured.
   if (!hasSpoilsSource) {
@@ -12,7 +12,7 @@ export const configureSpoils = async (args: ExpansionConfiguratorContext) => {
       args.loggerService.info(
         `[dark-ages configurator - configuring spoils] removing ${existingSpoilsPiles.length} stale spoils pile(s)`,
       );
-      args.config.nonSupply = (args.config.nonSupply ?? []).filter((supply) => supply.name !== 'spoils');
+      args.config.nonSupply = (args.config.nonSupply ?? []).filter(supply => supply.name !== 'spoils');
     }
     return;
   }
@@ -23,7 +23,7 @@ export const configureSpoils = async (args: ExpansionConfiguratorContext) => {
       `[dark-ages configurator - configuring spoils] found ${existingSpoilsPiles.length} spoils piles; trimming to one`,
     );
     let keptFirstSpoilsPile = false;
-    args.config.nonSupply = (args.config.nonSupply ?? []).filter((supply) => {
+    args.config.nonSupply = (args.config.nonSupply ?? []).filter(supply => {
       if (supply.name !== 'spoils') {
         return true;
       }

@@ -40,7 +40,7 @@ export const getAvailableKingdomRandomizerGroups = (
 
       const cardsInGroup = groups.get(pileKey) ?? [];
       // Keep each card key only once per group to avoid duplicate entries across sources.
-      if (cardsInGroup.some((existingCard) => existingCard.cardKey === card.cardKey)) {
+      if (cardsInGroup.some(existingCard => existingCard.cardKey === card.cardKey)) {
         continue;
       }
 

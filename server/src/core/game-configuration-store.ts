@@ -113,18 +113,18 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
       this.logLoadedList(
         'banned kingdom card(s)',
         bannedKingdoms.length,
-        bannedKingdoms.map((card) => card.cardKey),
+        bannedKingdoms.map(card => card.cardKey),
       );
     }
 
     // Restore preselected kingdoms when the file exists.
     const preselectedKingdoms = this.readJson<{ name: string; cards: CardNoId[] }[]>('preselected-kingdoms.json');
     if (preselectedKingdoms) {
-      defaultConfig.preselectedKingdoms = preselectedKingdoms.map((supply) => supply.cards[0]);
+      defaultConfig.preselectedKingdoms = preselectedKingdoms.map(supply => supply.cards[0]);
       this.logLoadedList(
         'preselected kingdom pile(s)',
         preselectedKingdoms.length,
-        preselectedKingdoms.map((supply) => supply.name),
+        preselectedKingdoms.map(supply => supply.name),
       );
     }
 
@@ -135,7 +135,7 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
       this.logLoadedList(
         'preselected event(s)',
         preselectedEvents.length,
-        preselectedEvents.map((event) => event.cardKey),
+        preselectedEvents.map(event => event.cardKey),
       );
     }
 
@@ -146,7 +146,7 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
       this.logLoadedList(
         'preselected landmark(s)',
         preselectedLandmarks.length,
-        preselectedLandmarks.map((landmark) => landmark.cardKey),
+        preselectedLandmarks.map(landmark => landmark.cardKey),
       );
     }
 
@@ -157,7 +157,7 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
       this.logLoadedList(
         'preselected artifact(s)',
         preselectedArtifacts.length,
-        preselectedArtifacts.map((artifact) => artifact.cardKey),
+        preselectedArtifacts.map(artifact => artifact.cardKey),
       );
     }
 
@@ -168,7 +168,7 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
       this.logLoadedList(
         'preselected project(s)',
         preselectedProjects.length,
-        preselectedProjects.map((project) => project.cardKey),
+        preselectedProjects.map(project => project.cardKey),
       );
     }
 
@@ -179,7 +179,7 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
       this.logLoadedList(
         'preselected way(s)',
         preselectedWays.length,
-        preselectedWays.map((way) => way.cardKey),
+        preselectedWays.map(way => way.cardKey),
       );
     }
 
@@ -190,7 +190,7 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
       this.logLoadedList(
         'preselected trait(s)',
         preselectedTraits.length,
-        preselectedTraits.map((trait) => trait.cardKey),
+        preselectedTraits.map(trait => trait.cardKey),
       );
     }
 
@@ -201,7 +201,7 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
       this.logLoadedList(
         'preselected ally(s)',
         preselectedAllies.length,
-        preselectedAllies.map((ally) => ally.cardKey),
+        preselectedAllies.map(ally => ally.cardKey),
       );
     }
 
@@ -212,7 +212,7 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
       this.logLoadedList(
         'preselected prophecy(s)',
         preselectedProphecies.length,
-        preselectedProphecies.map((prophecy) => prophecy.cardKey),
+        preselectedProphecies.map(prophecy => prophecy.cardKey),
       );
     }
   }

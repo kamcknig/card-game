@@ -9,11 +9,7 @@ import { uniqueByProp } from '../../core/match-configurator.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { configureSplitPile } from '../../utils/configure-split-pile.ts';
 import { registerAlliesTokenDefinitions } from './token-definitions-allies.ts';
-import {
-  getPlayerFavorCount,
-  registerActiveAllyEffects,
-  skippedAllyImplementations,
-} from './ally-effects-allies.ts';
+import { getPlayerFavorCount, registerActiveAllyEffects, skippedAllyImplementations } from './ally-effects-allies.ts';
 import { alliesTokenIds } from './token-ids-allies.ts';
 
 const IMPORTER_PILE_KEY = 'importer';
@@ -147,17 +143,17 @@ const WIZARDS_ORDER: CardKey[] = [
 
 // Returns true when at least one selected kingdom pile contains a Liaison card.
 const hasLiaisonInKingdom = (config: ComputedMatchConfiguration): boolean => {
-  return config.kingdomSupply.some((supply) => supply.cards.some((card) => card.type.includes('LIAISON')));
+  return config.kingdomSupply.some(supply => supply.cards.some(card => card.type.includes('LIAISON')));
 };
 
 // Ally effects with known missing engine support are excluded from setup selection.
-const skippedAllyKeys = new Set(skippedAllyImplementations.map((entry) => entry.cardKey));
+const skippedAllyKeys = new Set(skippedAllyImplementations.map(entry => entry.cardKey));
 
 const configurator: ExpansionConfiguratorFactory = () => {
   // Ensures Ally token definitions are only registered once per match scope.
   let tokenDefinitionsRegistered = false;
 
-  return async (args) => {
+  return async args => {
     if (!tokenDefinitionsRegistered) {
       registerAlliesTokenDefinitions(args.expansionRegistration.registerTokenDefinition);
       tokenDefinitionsRegistered = true;
@@ -210,11 +206,11 @@ const configurator: ExpansionConfiguratorFactory = () => {
     }
 
     const configuredAllies = uniqueByProp(args.config.allies ?? [], 'cardKey');
-    const supportedConfiguredAllies = configuredAllies.filter((ally) => !skippedAllyKeys.has(ally.cardKey));
+    const supportedConfiguredAllies = configuredAllies.filter(ally => !skippedAllyKeys.has(ally.cardKey));
     if (supportedConfiguredAllies.length !== configuredAllies.length) {
       const skippedConfigured = configuredAllies
-        .filter((ally) => skippedAllyKeys.has(ally.cardKey))
-        .map((ally) => ally.cardKey);
+        .filter(ally => skippedAllyKeys.has(ally.cardKey))
+        .map(ally => ally.cardKey);
       args.loggerService.warn(
         `[allies configurator] removing unsupported ally selection(s): ${skippedConfigured.join(', ')}`,
       );
@@ -228,17 +224,16 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
     if (supportedConfiguredAllies.length > 0) {
       args.config.allies = [supportedConfiguredAllies[0]];
-      args.loggerService.info(
-        `[allies configurator] using preselected ally ${supportedConfiguredAllies[0].cardKey}`,
-      );
+      args.loggerService.info(`[allies configurator] using preselected ally ${supportedConfiguredAllies[0].cardKey}`);
       return args.config;
     }
 
-    const candidateAllies = args.config.expansions.flatMap((expansion) =>
-      Object.values(args.expansionCatalog[expansion.name]?.allies ?? {})
+    const candidateAllies = args.config.expansions.flatMap(expansion =>
+      Object.values(args.expansionCatalog[expansion.name]?.allies ?? {}),
     );
-    const uniqueCandidates = uniqueByProp(candidateAllies, 'cardKey')
-      .filter((ally) => !skippedAllyKeys.has(ally.cardKey));
+    const uniqueCandidates = uniqueByProp(candidateAllies, 'cardKey').filter(
+      ally => !skippedAllyKeys.has(ally.cardKey),
+    );
     if (uniqueCandidates.length < 1) {
       args.loggerService.warn(
         '[ally configurator] Liaison present but no supported ally data available in loaded expansions',
@@ -266,12 +261,12 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     return;
   }
 
-  const hasImporter = config.kingdomSupply.some((supply) =>
-    supply.cards.some((card) => getCardPileKey(card) === IMPORTER_PILE_KEY)
+  const hasImporter = config.kingdomSupply.some(supply =>
+    supply.cards.some(card => getCardPileKey(card) === IMPORTER_PILE_KEY),
   );
   const startingFavors = hasImporter ? 5 : 1;
 
-  registrar('onGameStartSetup', async (args) => {
+  registrar('onGameStartSetup', async args => {
     args.loggerService.info(`[allies onGameStart] initializing Favor tokens to ${startingFavors}`);
     for (const player of args.match.players) {
       for (let index = 0; index < startingFavors; index += 1) {

@@ -14,9 +14,11 @@ export class ServerStartupService {
   // Loads expansion data/effects and notifies the lobby directory for game propagation.
   public async start(): Promise<void> {
     try {
-      const expansionList = (await import('@expansions/expansion-list.json', {
-        with: { type: 'json' },
-      })).default as ExpansionListElement[];
+      const expansionList = (
+        await import('@expansions/expansion-list.json', {
+          with: { type: 'json' },
+        })
+      ).default as ExpansionListElement[];
 
       for (const expansion of expansionList) {
         this.loggerService.info(`[SERVER] loading expansion card data for ${expansion.title}`);

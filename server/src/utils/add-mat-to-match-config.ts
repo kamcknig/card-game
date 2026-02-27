@@ -15,9 +15,7 @@ export const addMatToMatchConfig = (
       continue;
     }
 
-    initContext.loggerService.debug(
-      `[match configurator] registering mat zone '${mat}:${player.id}'`,
-    );
+    initContext.loggerService.debug(`[match configurator] registering mat zone '${mat}:${player.id}'`);
     initContext.cardSourceController.registerZone(mat, [], player.id, ['mat']);
   }
 };

@@ -39,10 +39,13 @@ export class GameLobbySessionCoordinatorService {
   // Shared lobby room name for returning resigned players to lobby updates.
   private static readonly LOBBY_ROOM_NAME = 'lobby';
   // Tracks per-socket runtime handlers so re-joins replace handlers instead of stacking duplicates.
-  private readonly runtimeSocketHandlersBySocketId = new Map<string, {
-    disconnect: (disconnectReason: unknown) => void;
-    resignMatch: () => void;
-  }>();
+  private readonly runtimeSocketHandlersBySocketId = new Map<
+    string,
+    {
+      disconnect: (disconnectReason: unknown) => void;
+      resignMatch: () => void;
+    }
+  >();
 
   constructor(
     private readonly io: Server<ServerListenEvents, ServerEmitEvents>,
@@ -55,8 +58,7 @@ export class GameLobbySessionCoordinatorService {
     private readonly playerFactoryService: PlayerFactoryService,
     private readonly loggerService: LoggerService,
     private readonly serverConfigService: ServerConfigService,
-  ) {
-  }
+  ) {}
 
   // Handles a player socket joining/rejoining the lobby or active match.
   public addPlayer(
@@ -129,7 +131,10 @@ export class GameLobbySessionCoordinatorService {
       }
     } else {
       this.loggerService.info('[game] not yet started, sending player to match configuration');
-      socket.emit('expansionList', state.availableExpansion.sort((a, b) => a.order - b.order));
+      socket.emit(
+        'expansionList',
+        state.availableExpansion.sort((a, b) => a.order - b.order),
+      );
       socket.emit('matchConfigurationUpdated', state.matchConfiguration!);
       this.lobbySocketBindings.bindPlayerLobbyHandlers(socket, {
         onUpdatePlayerName: (playerId, name) => this.onUpdatePlayerName(state, playerId, name),
@@ -208,7 +213,7 @@ export class GameLobbySessionCoordinatorService {
     const { playerId, socketId, reason, callbacks } = args;
     this.loggerService.info(`[game] ${playerId} disconnected - ${reason}`);
 
-    const activePlayer = state.players.find((candidate) => candidate.id === playerId);
+    const activePlayer = state.players.find(candidate => candidate.id === playerId);
     if (activePlayer && activePlayer.socketId !== socketId) {
       this.loggerService.debug(
         `[game] ignoring disconnect from stale socket ${socketId} for ${activePlayer}; active socket is ${activePlayer.socketId}`,
@@ -269,7 +274,7 @@ export class GameLobbySessionCoordinatorService {
       return;
     }
 
-    const activePlayer = state.players.find((candidate) => candidate.id === playerId);
+    const activePlayer = state.players.find(candidate => candidate.id === playerId);
     if (activePlayer && activePlayer.socketId !== socketId) {
       this.loggerService.debug(
         `[game] ignoring resign from stale socket ${socketId} for ${activePlayer}; active socket is ${activePlayer.socketId}`,
@@ -277,7 +282,7 @@ export class GameLobbySessionCoordinatorService {
       return;
     }
 
-    const player = state.players.find((candidate) => candidate.id === playerId);
+    const player = state.players.find(candidate => candidate.id === playerId);
     if (!player) {
       this.loggerService.warn(`[game] resign requested by unknown player ${playerId}`);
       return;
@@ -311,7 +316,7 @@ export class GameLobbySessionCoordinatorService {
     player.connected = false;
     player.ready = false;
 
-    state.players = state.players.filter((nextPlayer) => nextPlayer.id !== player.id);
+    state.players = state.players.filter(nextPlayer => nextPlayer.id !== player.id);
     state.matchController?.removePlayerFromMatch(player.id);
 
     this.io.in(state.roomName).emit('setPlayerList', state.players);
@@ -349,7 +354,7 @@ export class GameLobbySessionCoordinatorService {
     const voteResult = this.disconnectedPlayerVoteService.registerRemovalVote(state.players, voterId, targetPlayerId);
     if (!voteResult.accepted || !voteResult.allVoted) return;
 
-    state.players = state.players.filter((player) => player.id !== targetPlayerId);
+    state.players = state.players.filter(player => player.id !== targetPlayerId);
     state.socketMap.delete(targetPlayerId);
     state.matchController?.removePlayerFromMatch(targetPlayerId);
     this.io.in(state.roomName).emit('setPlayerList', state.players);
@@ -378,7 +383,7 @@ export class GameLobbySessionCoordinatorService {
       return { status: 'match_started' };
     }
 
-    const player = state.players.find((nextPlayer) => nextPlayer.id === playerId);
+    const player = state.players.find(nextPlayer => nextPlayer.id === playerId);
     if (!player) {
       this.loggerService.warn(`[game] cannot remove player ${playerId}; player not found`);
       return { status: 'not_found' };
@@ -393,7 +398,7 @@ export class GameLobbySessionCoordinatorService {
     }
 
     state.socketMap.delete(player.id);
-    state.players = state.players.filter((nextPlayer) => nextPlayer.id !== player.id);
+    state.players = state.players.filter(nextPlayer => nextPlayer.id !== player.id);
     player.connected = false;
     player.ready = false;
 
@@ -448,13 +453,11 @@ export class GameLobbySessionCoordinatorService {
   ): void {
     // Ignore late or duplicate ready events once match startup has begun.
     if (state.matchStarted) {
-      this.loggerService.debug(
-        `[game] ignoring ready event from ${playerId}; match has already started`,
-      );
+      this.loggerService.debug(`[game] ignoring ready event from ${playerId}; match has already started`);
       return;
     }
 
-    const player = state.players.find((nextPlayer) => nextPlayer.id === playerId);
+    const player = state.players.find(nextPlayer => nextPlayer.id === playerId);
     if (!player) {
       this.loggerService.warn(`[game] received player ready event from ${playerId} but could not find Player object`);
       return;
@@ -477,7 +480,7 @@ export class GameLobbySessionCoordinatorService {
     this.loggerService.info(`[game] marking ${player} as ${player.ready}`);
     this.io.in(state.roomName).except(player.socketId).emit('playerReady', playerId, player.ready);
 
-    if (state.players.some((nextPlayer) => !nextPlayer.ready && nextPlayer.connected)) {
+    if (state.players.some(nextPlayer => !nextPlayer.ready && nextPlayer.connected)) {
       this.loggerService.debug('[game] not all players ready yet');
       return;
     }
@@ -526,7 +529,8 @@ export class GameLobbySessionCoordinatorService {
   ): void {
     this.lobbySocketBindings.bindOwnerLobbyHandlers(socket, {
       onMatchConfigurationUpdated: callbacks.onMatchConfigurationUpdated,
-      onAddComputerPlayer: (count?: number) => this.onAddComputerPlayer(state, ownerId, count, callbacks.onGameStateChanged),
+      onAddComputerPlayer: (count?: number) =>
+        this.onAddComputerPlayer(state, ownerId, count, callbacks.onGameStateChanged),
       onCheckMatchConfigurationSaveName: (name: string) => callbacks.onCheckMatchConfigurationSaveName(ownerId, name),
       onSaveMatchConfiguration: (name: string) => callbacks.onSaveMatchConfiguration(ownerId, name),
       onRequestSavedMatchConfigurationList: () => callbacks.onRequestSavedMatchConfigurationList(ownerId),
@@ -534,28 +538,28 @@ export class GameLobbySessionCoordinatorService {
       onDeleteSavedMatchConfiguration: (key: string) => callbacks.onDeleteSavedMatchConfiguration(ownerId, key),
       onSearchCards: (playerId, searchTerm) => {
         const cards = this.expansionSearchService.searchKingdomCards(searchTerm);
-        this.loggerService.debug(
-          `[game] kingdom search '${searchTerm}' returned ${cards.length} eligible card(s)`,
-        );
+        this.loggerService.debug(`[game] kingdom search '${searchTerm}' returned ${cards.length} eligible card(s)`);
         state.socketMap.get(playerId)?.emit('searchCardResponse', cards);
       },
       onSearchEvents: (playerId, searchTerm) => {
-        state.socketMap.get(playerId)?.emit('searchEventResponse', this.expansionSearchService.searchEvents(searchTerm));
+        state.socketMap
+          .get(playerId)
+          ?.emit('searchEventResponse', this.expansionSearchService.searchEvents(searchTerm));
       },
       onSearchLandmarks: (playerId, searchTerm) => {
-        state.socketMap.get(playerId)?.emit(
-          'searchLandmarkResponse',
-          this.expansionSearchService.searchLandmarks(searchTerm),
-        );
+        state.socketMap
+          .get(playerId)
+          ?.emit('searchLandmarkResponse', this.expansionSearchService.searchLandmarks(searchTerm));
       },
       onSearchArtifacts: (playerId, searchTerm) => {
-        state.socketMap.get(playerId)?.emit(
-          'searchArtifactResponse',
-          this.expansionSearchService.searchArtifacts(searchTerm),
-        );
+        state.socketMap
+          .get(playerId)
+          ?.emit('searchArtifactResponse', this.expansionSearchService.searchArtifacts(searchTerm));
       },
       onSearchProjects: (playerId, searchTerm) => {
-        state.socketMap.get(playerId)?.emit('searchProjectResponse', this.expansionSearchService.searchProjects(searchTerm));
+        state.socketMap
+          .get(playerId)
+          ?.emit('searchProjectResponse', this.expansionSearchService.searchProjects(searchTerm));
       },
       onSearchWays: (playerId, searchTerm) => {
         const ways = this.expansionSearchService.searchWays(searchTerm);

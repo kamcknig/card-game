@@ -18,8 +18,7 @@ export class MatchConfiguratorFactory {
     private readonly expansionCatalogService: ExpansionCatalogService,
     private readonly rngService: RngService,
     private readonly loggerService: LoggerService,
-  ) {
-  }
+  ) {}
 
   /**
    * Creates a fresh configurator for a single match configuration pass.

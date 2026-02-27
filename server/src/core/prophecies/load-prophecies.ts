@@ -17,7 +17,7 @@ export class ProphecyLoaderService {
     try {
       const prophecyLibraryModule = await import(
         `@expansions/${expansionName}/prophecy-library-${expansionName}.json`,
-        { with: { type: 'json' } },
+        { with: { type: 'json' } }
       );
       const prophecies = prophecyLibraryModule.default as Record<string, Partial<ProphecyNoId>>;
 

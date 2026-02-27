@@ -3,7 +3,7 @@ import { ExpansionConfiguratorFactory } from '@server-types/index.ts';
 const configurator: ExpansionConfiguratorFactory = () => {
   let potionConfigured = false;
 
-  return async (args) => {
+  return async args => {
     args.loggerService.info(`configuring match for alchemy`);
 
     if (potionConfigured) {
@@ -17,8 +17,8 @@ const configurator: ExpansionConfiguratorFactory = () => {
       throw new Error(`potion card not found in card library`);
     }
 
-    const alchemySupplies = args.config.kingdomSupply.filter((supply) =>
-      supply.cards.some((card) => card.expansionName === 'alchemy')
+    const alchemySupplies = args.config.kingdomSupply.filter(supply =>
+      supply.cards.some(card => card.expansionName === 'alchemy'),
     );
 
     for (const supply of alchemySupplies) {

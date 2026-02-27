@@ -55,8 +55,7 @@ export class MatchScopeFactory {
     private readonly rootContainer: AwilixContainer,
     private readonly matchConfiguratorFactory: MatchConfiguratorFactory,
     private readonly expansionEffectRegistryService: ExpansionEffectRegistryService,
-  ) {
-  }
+  ) {}
 
   public create(args: { socketMap: Map<PlayerId, AppSocket>; gameId: string }): MatchScope {
     const scope = this.rootContainer.createScope();

@@ -6,9 +6,7 @@ import { LoggerService } from './logger-service.ts';
 export class PlayerFactoryService {
   private _playerId = 0;
 
-  constructor(
-    private readonly loggerService: LoggerService,
-  ) {}
+  constructor(private readonly loggerService: LoggerService) {}
 
   // Creates a human player bound to a live socket session.
   public createPlayer(sessionId: string, socket: AppSocket): Player {

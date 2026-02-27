@@ -56,26 +56,31 @@ const RIVERBOAT_RUNTIME_SET_ASIDE_PREFIX = 'riverboat-set-aside:';
 
 // Returns true when at least one selected kingdom pile contains an Omen card.
 const hasOmenInKingdom = (config: ComputedMatchConfiguration): boolean => {
-  return config.kingdomSupply.some((supply) => supply.cards.some((card) => {
-    const metadata = card.metadata as BaseCardMetadata | undefined;
-    if (metadata?.base?.isSetupProxyKingdomPile === true) {
-      return false;
-    }
-    return card.type.includes('OMEN');
-  }));
+  return config.kingdomSupply.some(supply =>
+    supply.cards.some(card => {
+      const metadata = card.metadata as BaseCardMetadata | undefined;
+      if (metadata?.base?.isSetupProxyKingdomPile === true) {
+        return false;
+      }
+      return card.type.includes('OMEN');
+    }),
+  );
 };
 
 // Resolves expansion data selected in the current match configuration.
-const getConfiguredExpansionData = (args: ExpansionConfiguratorContext): typeof args.expansionData[] => {
-  return args.config.expansions.reduce((expansions, configuredExpansion) => {
-    const expansionData = args.expansionCatalog[configuredExpansion.name];
-    if (!expansionData) {
-      args.loggerService.warn(`[rising-sun configurator] expansion ${configuredExpansion.name} not found`);
+const getConfiguredExpansionData = (args: ExpansionConfiguratorContext): (typeof args.expansionData)[] => {
+  return args.config.expansions.reduce(
+    (expansions, configuredExpansion) => {
+      const expansionData = args.expansionCatalog[configuredExpansion.name];
+      if (!expansionData) {
+        args.loggerService.warn(`[rising-sun configurator] expansion ${configuredExpansion.name} not found`);
+        return expansions;
+      }
+      expansions.push(expansionData);
       return expansions;
-    }
-    expansions.push(expansionData);
-    return expansions;
-  }, [] as typeof args.expansionData[]);
+    },
+    [] as (typeof args.expansionData)[],
+  );
 };
 
 // Returns true when the configured prophecy matches the provided key.
@@ -88,20 +93,20 @@ const isApproachingArmySyntheticPile = (supply: Supply): boolean => {
   if (supply.cards.length < 1) {
     return false;
   }
-  return supply.cards.every((card) => card.tags?.includes(APPROACHING_ARMY_SETUP_TAG));
+  return supply.cards.every(card => card.tags?.includes(APPROACHING_ARMY_SETUP_TAG));
 };
 
 // Adds/removes the extra Attack pile required by Approaching Army setup.
 const configureApproachingArmySetupPile = (args: ExpansionConfiguratorContext): void => {
   const shouldHaveExtraAttackPile = isConfiguredProphecyKey(args.config, APPROACHING_ARMY_PROPHECY_KEY);
-  const existingSyntheticPiles = args.config.kingdomSupply.filter((supply) => isApproachingArmySyntheticPile(supply));
+  const existingSyntheticPiles = args.config.kingdomSupply.filter(supply => isApproachingArmySyntheticPile(supply));
 
   if (!shouldHaveExtraAttackPile) {
     if (existingSyntheticPiles.length > 0) {
       args.loggerService.info(
         `[rising-sun configurator] removing ${existingSyntheticPiles.length} Approaching Army attack setup pile(s)`,
       );
-      args.config.kingdomSupply = args.config.kingdomSupply.filter((supply) => !isApproachingArmySyntheticPile(supply));
+      args.config.kingdomSupply = args.config.kingdomSupply.filter(supply => !isApproachingArmySyntheticPile(supply));
     }
     return;
   }
@@ -111,7 +116,7 @@ const configureApproachingArmySetupPile = (args: ExpansionConfiguratorContext): 
       `[rising-sun configurator] found ${existingSyntheticPiles.length} Approaching Army setup piles; trimming to one`,
     );
     let keptFirst = false;
-    args.config.kingdomSupply = args.config.kingdomSupply.filter((supply) => {
+    args.config.kingdomSupply = args.config.kingdomSupply.filter(supply => {
       if (!isApproachingArmySyntheticPile(supply)) {
         return true;
       }
@@ -134,18 +139,18 @@ const configureApproachingArmySetupPile = (args: ExpansionConfiguratorContext): 
   const existingPileKeys = Array.from(
     new Set(
       args.config.kingdomSupply
-        .filter((supply) => !isApproachingArmySyntheticPile(supply))
-        .flatMap((supply) => supply.cards.map((card) => getCardPileKey(card))),
+        .filter(supply => !isApproachingArmySyntheticPile(supply))
+        .flatMap(supply => supply.cards.map(card => getCardPileKey(card))),
     ),
   );
-  const bannedPileKeys = args.config.bannedKingdoms.map((card) => getCardPileKey(card));
+  const bannedPileKeys = args.config.bannedKingdoms.map(card => getCardPileKey(card));
 
   const availableAttackGroups = getAvailableKingdomRandomizerGroups({
     expansions: selectedExpansions,
     excludedPileKeys: existingPileKeys,
     bannedPileKeys,
     // Approaching Army requires the randomizer pile to be an Attack pile.
-    cardFilter: (card) => (card.randomizerData?.type ?? card.type).includes('ATTACK'),
+    cardFilter: card => (card.randomizerData?.type ?? card.type).includes('ATTACK'),
   });
 
   if (availableAttackGroups.length < 1) {
@@ -167,9 +172,7 @@ const configureApproachingArmySetupPile = (args: ExpansionConfiguratorContext): 
     cards: new Array(getDefaultKingdomSupplySize(selectedCard, args.config)).fill(selectedCard),
   });
 
-  args.loggerService.info(
-    `[rising-sun configurator] Approaching Army added Attack pile ${selectedGroup.pileKey}`,
-  );
+  args.loggerService.info(`[rising-sun configurator] Approaching Army added Attack pile ${selectedGroup.pileKey}`);
 };
 
 type RiverboatSelectionMetadata = {
@@ -240,11 +243,13 @@ const isRiverboatCandidate = (card: CardNoId): boolean => {
   const resolvedType = card.randomizerData?.type ?? card.type;
   const resolvedCost = card.randomizerData?.cost ?? card.cost;
   const treasureCost = resolvedCost.treasure ?? 0;
-  return resolvedType.includes('ACTION') &&
+  return (
+    resolvedType.includes('ACTION') &&
     !resolvedType.includes('DURATION') &&
     (resolvedCost.potion ?? 0) === 0 &&
     (resolvedCost.debt ?? 0) === 0 &&
-    treasureCost === 5;
+    treasureCost === 5
+  );
 };
 
 // Returns true when a supply pile is a synthetic Riverboat setup proxy.
@@ -252,7 +257,7 @@ const isRiverboatSetupProxySupply = (supply: Supply, expectedPileKey?: string): 
   if (supply.cards.length < 1) {
     return false;
   }
-  return supply.cards.every((card) => {
+  return supply.cards.every(card => {
     const metadata = card.metadata as RiverboatCardMetadata | undefined;
     if (metadata?.base?.isSetupProxyKingdomPile !== true) {
       return false;
@@ -273,7 +278,7 @@ const isRiverboatRuntimeSetAsideSupply = (supply: Supply, expectedPileKey?: stri
   if (supply.cards.length < 1) {
     return false;
   }
-  return supply.cards.every((card) => {
+  return supply.cards.every(card => {
     const metadata = card.metadata as RiverboatCardMetadata | undefined;
     const riverboat = metadata?.risingSun?.riverboat;
     if (!riverboat || riverboat.runtimeSetAsideCard !== true) {
@@ -292,9 +297,10 @@ const cleanupRiverboatSyntheticPiles = (
   keep?: { proxyPileKey?: string; runtimeSetAsidePileKey?: string },
 ): void => {
   const config = args.config;
-  const nextKingdomSupply = config.kingdomSupply.filter((supply) =>
-    !isRiverboatSetupProxySupply(supply) ||
-    (keep?.proxyPileKey !== undefined && isRiverboatSetupProxySupply(supply, keep.proxyPileKey))
+  const nextKingdomSupply = config.kingdomSupply.filter(
+    supply =>
+      !isRiverboatSetupProxySupply(supply) ||
+      (keep?.proxyPileKey !== undefined && isRiverboatSetupProxySupply(supply, keep.proxyPileKey)),
   );
   const removedSetupProxyCount = config.kingdomSupply.length - nextKingdomSupply.length;
   if (removedSetupProxyCount > 0) {
@@ -309,10 +315,11 @@ const cleanupRiverboatSyntheticPiles = (
     return;
   }
 
-  const nextNonSupply = existingNonSupply.filter((supply) =>
-    !isRiverboatRuntimeSetAsideSupply(supply) ||
-    (keep?.runtimeSetAsidePileKey !== undefined &&
-      isRiverboatRuntimeSetAsideSupply(supply, keep.runtimeSetAsidePileKey))
+  const nextNonSupply = existingNonSupply.filter(
+    supply =>
+      !isRiverboatRuntimeSetAsideSupply(supply) ||
+      (keep?.runtimeSetAsidePileKey !== undefined &&
+        isRiverboatRuntimeSetAsideSupply(supply, keep.runtimeSetAsidePileKey)),
   );
   const removedRuntimeSetAsideCount = existingNonSupply.length - nextNonSupply.length;
   if (removedRuntimeSetAsideCount > 0) {
@@ -347,8 +354,8 @@ const resolveRiverboatSelectedCard = (args: ExpansionConfiguratorContext, card: 
 const configureRiverboatSetAsideCard = (args: ExpansionConfiguratorContext): void => {
   const config = args.config;
   const riverboatCards = config.kingdomSupply
-    .flatMap((supply) => supply.cards)
-    .filter((card) => card.cardKey === RIVERBOAT_CARD_KEY);
+    .flatMap(supply => supply.cards)
+    .filter(card => card.cardKey === RIVERBOAT_CARD_KEY);
 
   if (riverboatCards.length < 1) {
     cleanupRiverboatSyntheticPiles(args);
@@ -364,13 +371,14 @@ const configureRiverboatSetAsideCard = (args: ExpansionConfiguratorContext): voi
   const riverboatMetadata = getRiverboatMetadata(riverboatCard);
   const usedPileKeys = new Set(
     config.kingdomSupply
-      .filter((supply) => !isRiverboatSetupProxySupply(supply))
-      .flatMap((supply) => supply.cards.map((card) => getCardPileKey(card))),
+      .filter(supply => !isRiverboatSetupProxySupply(supply))
+      .flatMap(supply => supply.cards.map(card => getCardPileKey(card))),
   );
-  const bannedPileKeys = config.bannedKingdoms.map((card) => getCardPileKey(card));
+  const bannedPileKeys = config.bannedKingdoms.map(card => getCardPileKey(card));
 
   let selectedCard = resolveRiverboatSelectedCard(args, riverboatCard);
-  const currentSelectionValid = !!selectedCard &&
+  const currentSelectionValid =
+    !!selectedCard &&
     isRiverboatCandidate(selectedCard) &&
     !!riverboatMetadata.setAsidePileKey &&
     !usedPileKeys.has(riverboatMetadata.setAsidePileKey);
@@ -381,7 +389,7 @@ const configureRiverboatSetAsideCard = (args: ExpansionConfiguratorContext): voi
       expansions: selectedExpansions,
       excludedPileKeys: Array.from(usedPileKeys),
       bannedPileKeys,
-      cardFilter: (candidateCard) => isRiverboatCandidate(candidateCard),
+      cardFilter: candidateCard => isRiverboatCandidate(candidateCard),
     });
 
     if (availableGroups.length < 1) {
@@ -392,7 +400,7 @@ const configureRiverboatSetAsideCard = (args: ExpansionConfiguratorContext): voi
     }
 
     const chosenGroup = availableGroups[args.rngService.nextIndex(availableGroups.length)];
-    const chosenCards = chosenGroup.cards.filter((candidateCard) => isRiverboatCandidate(candidateCard));
+    const chosenCards = chosenGroup.cards.filter(candidateCard => isRiverboatCandidate(candidateCard));
     const chosenCard = chosenCards[args.rngService.nextIndex(chosenCards.length)];
 
     if (!chosenCard) {
@@ -407,8 +415,7 @@ const configureRiverboatSetAsideCard = (args: ExpansionConfiguratorContext): voi
     riverboatMetadata.setAsideCardExpansion = selectedRiverboatCard.expansionName;
     riverboatMetadata.setAsidePileKey = chosenGroup.pileKey;
     riverboatMetadata.proxyPileKey = chosenGroup.pileKey;
-    riverboatMetadata.runtimeSetAsidePileKey =
-      `${RIVERBOAT_RUNTIME_SET_ASIDE_PREFIX}${chosenGroup.pileKey}:${selectedRiverboatCard.cardKey}`;
+    riverboatMetadata.runtimeSetAsidePileKey = `${RIVERBOAT_RUNTIME_SET_ASIDE_PREFIX}${chosenGroup.pileKey}:${selectedRiverboatCard.cardKey}`;
     args.loggerService.info(
       `[rising-sun configurator] Riverboat selected set-aside card ${selectedRiverboatCard.cardKey} (${chosenGroup.pileKey})`,
     );
@@ -435,8 +442,8 @@ const configureRiverboatSetAsideCard = (args: ExpansionConfiguratorContext): voi
     runtimeSetAsidePileKey: riverboatMetadata.runtimeSetAsidePileKey,
   });
 
-  const hasSetupProxy = config.kingdomSupply.some((supply) =>
-    isRiverboatSetupProxySupply(supply, riverboatMetadata.proxyPileKey)
+  const hasSetupProxy = config.kingdomSupply.some(supply =>
+    isRiverboatSetupProxySupply(supply, riverboatMetadata.proxyPileKey),
   );
   if (!hasSetupProxy) {
     const proxyCard = structuredClone(selectedCard);
@@ -459,13 +466,11 @@ const configureRiverboatSetAsideCard = (args: ExpansionConfiguratorContext): voi
       name: proxyCard.kingdom,
       cards: new Array(getDefaultKingdomSupplySize(proxyCard, config)).fill(proxyCard),
     });
-    args.loggerService.info(
-      `[rising-sun configurator] added Riverboat setup proxy pile for ${proxyCard.cardKey}`,
-    );
+    args.loggerService.info(`[rising-sun configurator] added Riverboat setup proxy pile for ${proxyCard.cardKey}`);
   }
 
-  const hasRuntimeSetAsidePile = (config.nonSupply ?? []).some((supply) =>
-    isRiverboatRuntimeSetAsideSupply(supply, riverboatMetadata.runtimeSetAsidePileKey)
+  const hasRuntimeSetAsidePile = (config.nonSupply ?? []).some(supply =>
+    isRiverboatRuntimeSetAsideSupply(supply, riverboatMetadata.runtimeSetAsidePileKey),
   );
   if (hasRuntimeSetAsidePile) {
     return;
@@ -508,17 +513,16 @@ const isProphecyActive = (match: Match, prophecyKey: CardKey): boolean => {
     return false;
   }
 
-  return !Object.values(match.tokens ?? {}).some((token) =>
-    token.tokenId === risingSunTokenIds.sun &&
-    token.location.type === 'cardLike' &&
-    token.location.cardLikeId === activeProphecy.id
+  return !Object.values(match.tokens ?? {}).some(
+    token =>
+      token.tokenId === risingSunTokenIds.sun &&
+      token.location.type === 'cardLike' &&
+      token.location.cardLikeId === activeProphecy.id,
   );
 };
 
 // Applies Enlightenment's global type mutation so Treasures are also Actions for all purposes.
-const applyEnlightenmentTreasureActionTypes = (
-  args: Pick<RisingSunGameEventContext, 'cardLibrary'>,
-): number => {
+const applyEnlightenmentTreasureActionTypes = (args: Pick<RisingSunGameEventContext, 'cardLibrary'>): number => {
   let addedCount = 0;
   // Iterate in id order to keep type mutation deterministic.
   const cards = args.cardLibrary.getAllCardsAsArray().sort((a, b) => a.id - b.id);
@@ -554,10 +558,7 @@ const registerFlourishingTradeCostReductionRules = (
 type RisingSunGameEventContext = Parameters<NonNullable<Parameters<GameEventRegistrar>[1]>>[0];
 
 // Registers Approaching Army: after you play an Attack, +$1.
-const registerApproachingArmyReactions = (
-  args: RisingSunGameEventContext,
-  prophecy: Prophecy,
-): void => {
+const registerApproachingArmyReactions = (args: RisingSunGameEventContext, prophecy: Prophecy): void => {
   for (const player of args.match.players) {
     args.reactionManager.registerReactionTemplate(prophecy, 'afterCardPlayed', {
       playerId: player.id,
@@ -580,10 +581,7 @@ const registerApproachingArmyReactions = (
 };
 
 // Registers Biding Time: at cleanup start set aside hand; at next turn start put those cards into hand.
-const registerBidingTimeReactions = (
-  args: RisingSunGameEventContext,
-  prophecy: Prophecy,
-): void => {
+const registerBidingTimeReactions = (args: RisingSunGameEventContext, prophecy: Prophecy): void => {
   for (const player of args.match.players) {
     const playerId = player.id;
 
@@ -639,11 +637,13 @@ const registerBidingTimeReactions = (
       },
       triggeredEffectFn: async ({ cardSourceController, actionService, loggerService, match }) => {
         const setAside = cardSourceController.getSource('set-aside', playerId);
-        const bidingTimeCards = setAside.filter((cardId) => {
+        const bidingTimeCards = setAside.filter(cardId => {
           const source = match.setAsideSourceById?.[cardId];
-          return source?.ownerPlayerId === playerId &&
+          return (
+            source?.ownerPlayerId === playerId &&
             source.sourceKind === 'prophecy' &&
-            source.sourceCardLikeId === prophecy.id;
+            source.sourceCardLikeId === prophecy.id
+          );
         });
 
         if (bidingTimeCards.length < 1) {
@@ -676,10 +676,7 @@ const registerBidingTimeReactions = (
 };
 
 // Registers Great Leader: after each Action you play, +1 Action.
-const registerGreatLeaderReactions = (
-  args: RisingSunGameEventContext,
-  prophecy: Prophecy,
-): void => {
+const registerGreatLeaderReactions = (args: RisingSunGameEventContext, prophecy: Prophecy): void => {
   for (const player of args.match.players) {
     args.reactionManager.registerReactionTemplate(prophecy, 'afterCardPlayed', {
       playerId: player.id,
@@ -702,16 +699,14 @@ const registerGreatLeaderReactions = (
 };
 
 // Resolves Kind Emperor's mandatory gain by choosing a top-of-supply Action and gaining it to hand.
-const resolveKindEmperorGainToHand = async (
-  args: {
-    playerId: PlayerId;
-    match: Match;
-    findCardService: RisingSunGameEventContext['findCardService'];
-    actionService: RisingSunGameEventContext['actionService'];
-    cardLibrary: RisingSunGameEventContext['cardLibrary'];
-    loggerService: RisingSunGameEventContext['loggerService'];
-  },
-): Promise<void> => {
+const resolveKindEmperorGainToHand = async (args: {
+  playerId: PlayerId;
+  match: Match;
+  findCardService: RisingSunGameEventContext['findCardService'];
+  actionService: RisingSunGameEventContext['actionService'];
+  cardLibrary: RisingSunGameEventContext['cardLibrary'];
+  loggerService: RisingSunGameEventContext['loggerService'];
+}): Promise<void> => {
   const gainableActionCards: Card[] = [];
   for (const pileKey of getConfiguredSupplyPileKeys(args.match)) {
     const topCard = args.findCardService.findTopSupplyCardForPileKey({ pileKey });
@@ -725,7 +720,9 @@ const resolveKindEmperorGainToHand = async (
   }
 
   if (gainableActionCards.length < 1) {
-    args.loggerService.debug(`[rising-sun prophecy:kind-emperor] no top-of-pile Action cards available for player ${args.playerId}`);
+    args.loggerService.debug(
+      `[rising-sun prophecy:kind-emperor] no top-of-pile Action cards available for player ${args.playerId}`,
+    );
     return;
   }
 
@@ -735,7 +732,7 @@ const resolveKindEmperorGainToHand = async (
   const selectedGainId = await args.actionService.run('selectSingleCard', {
     playerId: args.playerId,
     prompt: 'Gain an Action card',
-    restrict: gainableActionCards.map((card) => card.id),
+    restrict: gainableActionCards.map(card => card.id),
     count: 1,
   });
 
@@ -758,54 +755,56 @@ const resolveKindEmperorGainToHand = async (
 };
 
 // Registers Kind Emperor: at each start of turn, and on final Sun removal, gain an Action card to hand.
-const registerKindEmperorReactions = (
-  args: RisingSunGameEventContext,
-  prophecy: Prophecy,
-): void => {
-  args.reactionManager.registerGlobalSystemTemplate(prophecy, 'tokenChanged', {
-    compulsory: true,
-    autoResolve: true,
-    allowMultipleInstances: false,
-    condition: ({ trigger, match }) => {
-      if (trigger.args.tokenId !== risingSunTokenIds.sun) {
-        return false;
-      }
-      if (trigger.args.locationBefore.type !== 'cardLike') {
-        return false;
-      }
-      if (trigger.args.locationBefore.cardLikeId !== prophecy.id) {
-        return false;
-      }
-      if (prophecy.cardKey !== KIND_EMPEROR_PROPHECY_KEY) {
-        return false;
-      }
-      // Only trigger when this token change activated the prophecy.
-      return isProphecyActive(match, KIND_EMPEROR_PROPHECY_KEY);
-    },
-    triggeredEffectFn: async ({ trigger, match, findCardService, actionService, cardLibrary, loggerService }) => {
-      let beneficiaryPlayerId = getCurrentPlayer(match).id;
-      if (trigger.args.source !== undefined) {
-        const sourceCardInPlay = findCardService.getCardsInPlay().find((card) => card.id === trigger.args.source);
-        if (sourceCardInPlay?.owner !== undefined && sourceCardInPlay.owner !== null) {
-          beneficiaryPlayerId = sourceCardInPlay.owner;
+const registerKindEmperorReactions = (args: RisingSunGameEventContext, prophecy: Prophecy): void => {
+  args.reactionManager.registerGlobalSystemTemplate(
+    prophecy,
+    'tokenChanged',
+    {
+      compulsory: true,
+      autoResolve: true,
+      allowMultipleInstances: false,
+      condition: ({ trigger, match }) => {
+        if (trigger.args.tokenId !== risingSunTokenIds.sun) {
+          return false;
         }
-      }
+        if (trigger.args.locationBefore.type !== 'cardLike') {
+          return false;
+        }
+        if (trigger.args.locationBefore.cardLikeId !== prophecy.id) {
+          return false;
+        }
+        if (prophecy.cardKey !== KIND_EMPEROR_PROPHECY_KEY) {
+          return false;
+        }
+        // Only trigger when this token change activated the prophecy.
+        return isProphecyActive(match, KIND_EMPEROR_PROPHECY_KEY);
+      },
+      triggeredEffectFn: async ({ trigger, match, findCardService, actionService, cardLibrary, loggerService }) => {
+        let beneficiaryPlayerId = getCurrentPlayer(match).id;
+        if (trigger.args.source !== undefined) {
+          const sourceCardInPlay = findCardService.getCardsInPlay().find(card => card.id === trigger.args.source);
+          if (sourceCardInPlay?.owner !== undefined && sourceCardInPlay.owner !== null) {
+            beneficiaryPlayerId = sourceCardInPlay.owner;
+          }
+        }
 
-      loggerService.info(
-        `[rising-sun prophecy:kind-emperor] final Sun removed; resolving immediate gain for player ${beneficiaryPlayerId}`,
-      );
-      await resolveKindEmperorGainToHand({
-        playerId: beneficiaryPlayerId,
-        match,
-        findCardService,
-        actionService,
-        cardLibrary,
-        loggerService,
-      });
+        loggerService.info(
+          `[rising-sun prophecy:kind-emperor] final Sun removed; resolving immediate gain for player ${beneficiaryPlayerId}`,
+        );
+        await resolveKindEmperorGainToHand({
+          playerId: beneficiaryPlayerId,
+          match,
+          findCardService,
+          actionService,
+          cardLibrary,
+          loggerService,
+        });
+      },
     },
-  }, {
-    idSuffix: 'kind-emperor:token-activation',
-  });
+    {
+      idSuffix: 'kind-emperor:token-activation',
+    },
+  );
 
   for (const player of args.match.players) {
     const playerId = player.id;
@@ -833,39 +832,41 @@ const registerKindEmperorReactions = (
 };
 
 // Registers Enlightenment: Treasures are Actions, and in Action phase Treasure play becomes +1 Card and +1 Action.
-const registerEnlightenmentReactions = (
-  args: RisingSunGameEventContext,
-  prophecy: Prophecy,
-): void => {
-  args.reactionManager.registerGlobalSystemTemplate(prophecy, 'tokenChanged', {
-    compulsory: true,
-    autoResolve: true,
-    allowMultipleInstances: false,
-    condition: ({ trigger, match }) => {
-      if (trigger.args.tokenId !== risingSunTokenIds.sun) {
-        return false;
-      }
-      if (trigger.args.locationBefore.type !== 'cardLike') {
-        return false;
-      }
-      if (trigger.args.locationBefore.cardLikeId !== prophecy.id) {
-        return false;
-      }
-      if (prophecy.cardKey !== ENLIGHTENMENT_PROPHECY_KEY) {
-        return false;
-      }
-      // Only activate once the prophecy actually becomes active.
-      return isProphecyActive(match, ENLIGHTENMENT_PROPHECY_KEY);
+const registerEnlightenmentReactions = (args: RisingSunGameEventContext, prophecy: Prophecy): void => {
+  args.reactionManager.registerGlobalSystemTemplate(
+    prophecy,
+    'tokenChanged',
+    {
+      compulsory: true,
+      autoResolve: true,
+      allowMultipleInstances: false,
+      condition: ({ trigger, match }) => {
+        if (trigger.args.tokenId !== risingSunTokenIds.sun) {
+          return false;
+        }
+        if (trigger.args.locationBefore.type !== 'cardLike') {
+          return false;
+        }
+        if (trigger.args.locationBefore.cardLikeId !== prophecy.id) {
+          return false;
+        }
+        if (prophecy.cardKey !== ENLIGHTENMENT_PROPHECY_KEY) {
+          return false;
+        }
+        // Only activate once the prophecy actually becomes active.
+        return isProphecyActive(match, ENLIGHTENMENT_PROPHECY_KEY);
+      },
+      triggeredEffectFn: async ({ loggerService, cardLibrary }) => {
+        const addedCount = applyEnlightenmentTreasureActionTypes({ cardLibrary });
+        loggerService.info(
+          `[rising-sun prophecy:enlightenment] prophecy activated; added ACTION type to ${addedCount} Treasure card(s)`,
+        );
+      },
     },
-    triggeredEffectFn: async ({ loggerService, cardLibrary }) => {
-      const addedCount = applyEnlightenmentTreasureActionTypes({ cardLibrary });
-      loggerService.info(
-        `[rising-sun prophecy:enlightenment] prophecy activated; added ACTION type to ${addedCount} Treasure card(s)`,
-      );
+    {
+      idSuffix: 'enlightenment:token-activation',
     },
-  }, {
-    idSuffix: 'enlightenment:token-activation',
-  });
+  );
 
   if (isProphecyActive(args.match, ENLIGHTENMENT_PROPHECY_KEY)) {
     const addedCount = applyEnlightenmentTreasureActionTypes({ cardLibrary: args.cardLibrary });
@@ -940,10 +941,7 @@ const registerEnlightenmentReactions = (
 };
 
 // Registers Flourishing Trade: cards cost $1 less globally, and buy-phase entry converts remaining Actions into Buys.
-const registerFlourishingTradeReactions = (
-  args: RisingSunGameEventContext,
-  prophecy: Prophecy,
-): void => {
+const registerFlourishingTradeReactions = (args: RisingSunGameEventContext, prophecy: Prophecy): void => {
   // Prevent duplicate persistent registration when prophecy is already active and also later receives tokenChanged events.
   let costRulesRegistered = false;
 
@@ -969,43 +967,54 @@ const registerFlourishingTradeReactions = (
     );
   };
 
-  args.reactionManager.registerGlobalSystemTemplate(prophecy, 'tokenChanged', {
-    compulsory: true,
-    autoResolve: true,
-    allowMultipleInstances: false,
-    condition: ({ trigger, match }) => {
-      if (trigger.args.tokenId !== risingSunTokenIds.sun) {
-        return false;
-      }
-      if (trigger.args.locationBefore.type !== 'cardLike') {
-        return false;
-      }
-      if (trigger.args.locationBefore.cardLikeId !== prophecy.id) {
-        return false;
-      }
-      if (prophecy.cardKey !== FLOURISHING_TRADE_PROPHECY_KEY) {
-        return false;
-      }
-      // Only activate once the prophecy actually becomes active.
-      return isProphecyActive(match, FLOURISHING_TRADE_PROPHECY_KEY);
+  args.reactionManager.registerGlobalSystemTemplate(
+    prophecy,
+    'tokenChanged',
+    {
+      compulsory: true,
+      autoResolve: true,
+      allowMultipleInstances: false,
+      condition: ({ trigger, match }) => {
+        if (trigger.args.tokenId !== risingSunTokenIds.sun) {
+          return false;
+        }
+        if (trigger.args.locationBefore.type !== 'cardLike') {
+          return false;
+        }
+        if (trigger.args.locationBefore.cardLikeId !== prophecy.id) {
+          return false;
+        }
+        if (prophecy.cardKey !== FLOURISHING_TRADE_PROPHECY_KEY) {
+          return false;
+        }
+        // Only activate once the prophecy actually becomes active.
+        return isProphecyActive(match, FLOURISHING_TRADE_PROPHECY_KEY);
+      },
+      triggeredEffectFn: async ({ loggerService, cardLibrary, cardPriceController }) => {
+        applyCostReductionOnce(
+          {
+            loggerService,
+            cardLibrary,
+            cardPriceController,
+          },
+          'token-activation',
+        );
+      },
     },
-    triggeredEffectFn: async ({ loggerService, cardLibrary, cardPriceController }) => {
-      applyCostReductionOnce({
-        loggerService,
-        cardLibrary,
-        cardPriceController,
-      }, 'token-activation');
+    {
+      idSuffix: 'flourishing-trade:token-activation',
     },
-  }, {
-    idSuffix: 'flourishing-trade:token-activation',
-  });
+  );
 
   if (isProphecyActive(args.match, FLOURISHING_TRADE_PROPHECY_KEY)) {
-    applyCostReductionOnce({
-      loggerService: args.loggerService,
-      cardLibrary: args.cardLibrary,
-      cardPriceController: args.cardPriceController,
-    }, 'already-active');
+    applyCostReductionOnce(
+      {
+        loggerService: args.loggerService,
+        cardLibrary: args.cardLibrary,
+        cardPriceController: args.cardPriceController,
+      },
+      'already-active',
+    );
   }
 
   for (const player of args.match.players) {
@@ -1044,10 +1053,7 @@ const registerFlourishingTradeReactions = (
 };
 
 // Registers Harsh Winter: on your turn, gains either place 2 debt on gained-card pile or take all debt from that pile.
-const registerHarshWinterReactions = (
-  args: RisingSunGameEventContext,
-  prophecy: Prophecy,
-): void => {
+const registerHarshWinterReactions = (args: RisingSunGameEventContext, prophecy: Prophecy): void => {
   for (const player of args.match.players) {
     const playerId = player.id;
     args.reactionManager.registerReactionTemplate(prophecy, 'cardGained', {
@@ -1078,16 +1084,16 @@ const registerHarshWinterReactions = (
         }
 
         const pileDebtTokens = Object.values(match.tokens ?? {})
-          .filter((token) =>
-            token.tokenId === baseV2TokenIds.debt &&
-            token.location.type === 'supplyPile' &&
-            token.location.cardKey === pileLocation.pileName
+          .filter(
+            token =>
+              token.tokenId === baseV2TokenIds.debt &&
+              token.location.type === 'supplyPile' &&
+              token.location.cardKey === pileLocation.pileName,
           )
           .sort((left, right) => left.id.localeCompare(right.id));
 
         if (pileDebtTokens.length > 0) {
-          const debtToTake = pileDebtTokens
-            .reduce((sum, token) => sum + Math.max(1, token.counters ?? 1), 0);
+          const debtToTake = pileDebtTokens.reduce((sum, token) => sum + Math.max(1, token.counters ?? 1), 0);
           loggerService.info(
             `[rising-sun prophecy:harsh-winter] player ${trigger.args.playerId} gained from ${pileLocation.pileName}; taking ${debtToTake} debt from pile`,
           );
@@ -1119,10 +1125,7 @@ const registerHarshWinterReactions = (
 };
 
 // Registers Good Harvest: first time each differently named Treasure is played each turn, +1 Buy and +$1.
-const registerGoodHarvestReactions = (
-  args: RisingSunGameEventContext,
-  prophecy: Prophecy,
-): void => {
+const registerGoodHarvestReactions = (args: RisingSunGameEventContext, prophecy: Prophecy): void => {
   // Track already-triggered Treasure names per player-turn.
   const playedTreasureKeysByPlayer = new Map<PlayerId, Set<CardKey>>();
 
@@ -1171,10 +1174,7 @@ const registerGoodHarvestReactions = (
 };
 
 // Registers Bureaucracy: when you gain a card that doesn't cost $0, gain a Copper.
-const registerBureaucracyReactions = (
-  args: RisingSunGameEventContext,
-  prophecy: Prophecy,
-): void => {
+const registerBureaucracyReactions = (args: RisingSunGameEventContext, prophecy: Prophecy): void => {
   for (const player of args.match.players) {
     const playerId = player.id;
     args.reactionManager.registerReactionTemplate(prophecy, 'cardGained', {
@@ -1210,10 +1210,7 @@ const registerBureaucracyReactions = (
 };
 
 // Registers Growth: when you gain a Treasure, gain a cheaper card.
-const registerGrowthReactions = (
-  args: RisingSunGameEventContext,
-  prophecy: Prophecy,
-): void => {
+const registerGrowthReactions = (args: RisingSunGameEventContext, prophecy: Prophecy): void => {
   for (const player of args.match.players) {
     const playerId = player.id;
     args.reactionManager.registerReactionTemplate(prophecy, 'cardGained', {
@@ -1241,7 +1238,7 @@ const registerGrowthReactions = (
 
         // Build the current top card candidates for each configured Supply pile.
         const gainableCards = getConfiguredSupplyPileKeys(match)
-          .map((pileKey) => findCardService.findTopSupplyCardForPileKey({ pileKey }))
+          .map(pileKey => findCardService.findTopSupplyCardForPileKey({ pileKey }))
           .filter((candidate): candidate is Card => {
             if (!candidate) {
               return false;
@@ -1260,7 +1257,7 @@ const registerGrowthReactions = (
         const selectedGainId = await actionService.run('selectSingleCard', {
           playerId,
           prompt: 'Gain a cheaper card',
-          restrict: gainableCards.map((card) => card.id),
+          restrict: gainableCards.map(card => card.id),
           count: 1,
         });
 
@@ -1274,23 +1271,24 @@ const registerGrowthReactions = (
           `[rising-sun prophecy:growth] player ${playerId} gained ${selectedGainCard.cardKey} after gaining Treasure`,
         );
 
-        await actionService.run('gainCard', {
-          playerId,
-          cardId: selectedGainCard.id,
-          to: { location: 'playerDiscard' },
-        }, {
-          source: trigger.args.cardId,
-        });
+        await actionService.run(
+          'gainCard',
+          {
+            playerId,
+            cardId: selectedGainCard.id,
+            to: { location: 'playerDiscard' },
+          },
+          {
+            source: trigger.args.cardId,
+          },
+        );
       },
     });
   }
 };
 
 // Registers Panic: Treasures grant +2 Buys when played and return to their pile when discarded from play.
-const registerPanicReactions = (
-  args: RisingSunGameEventContext,
-  prophecy: Prophecy,
-): void => {
+const registerPanicReactions = (args: RisingSunGameEventContext, prophecy: Prophecy): void => {
   for (const player of args.match.players) {
     const playerId = player.id;
 
@@ -1346,10 +1344,7 @@ const registerPanicReactions = (
 };
 
 // Registers Progress: when you gain a card, put it onto your deck.
-const registerProgressReactions = (
-  args: RisingSunGameEventContext,
-  prophecy: Prophecy,
-): void => {
+const registerProgressReactions = (args: RisingSunGameEventContext, prophecy: Prophecy): void => {
   for (const player of args.match.players) {
     const playerId = player.id;
     args.reactionManager.registerReactionTemplate(prophecy, 'cardGained', {
@@ -1378,10 +1373,7 @@ const registerProgressReactions = (
 };
 
 // Registers Rapid Expansion: when you gain an Action or Treasure, set it aside and play it at the start of your next turn.
-const registerRapidExpansionReactions = (
-  args: RisingSunGameEventContext,
-  prophecy: Prophecy,
-): void => {
+const registerRapidExpansionReactions = (args: RisingSunGameEventContext, prophecy: Prophecy): void => {
   for (const player of args.match.players) {
     const playerId = player.id;
     args.reactionManager.registerReactionTemplate(prophecy, 'cardGained', {
@@ -1395,16 +1387,17 @@ const registerRapidExpansionReactions = (
         const gainedCard = cardLibrary.getCard(trigger.args.cardId);
         return gainedCard.type.includes('ACTION') || gainedCard.type.includes('TREASURE');
       },
-      triggeredEffectFn: async ({ trigger, actionService, loggerService, cardSourceController, cardLibrary, reactionManager }) => {
+      triggeredEffectFn: async ({
+        trigger,
+        actionService,
+        loggerService,
+        cardSourceController,
+        cardLibrary,
+        reactionManager,
+      }) => {
         const gainedCardId = trigger.args.cardId;
         const gainedCard = cardLibrary.getCard(gainedCardId);
-        if (
-          !isCardStillAtGainedLocation(
-            cardSourceController,
-            gainedCardId,
-            trigger.args.gainedLocation,
-          )
-        ) {
+        if (!isCardStillAtGainedLocation(cardSourceController, gainedCardId, trigger.args.gainedLocation)) {
           loggerService.debug(
             `[rising-sun prophecy:rapid-expansion] gained card ${gainedCardId} moved before set-aside redirect`,
           );
@@ -1428,62 +1421,80 @@ const registerRapidExpansionReactions = (
         });
 
         // Register one start-turn reaction per queued card so the player can order each play.
-        reactionManager.registerReactionTemplate(prophecy, 'startTurn', {
-          playerId,
-          once: true,
-          compulsory: true,
-          allowMultipleInstances: true,
-          sourceId: gainedCardId,
-          sourceKey: gainedCard.cardKey,
-          sourceName: gainedCard.cardName,
-          sourceType: 'card',
-          condition: async ({ trigger: startTurnTrigger, match, cardSourceController: startTurnCardSourceController }) => {
-            if (startTurnTrigger.args.playerId !== playerId || !isProphecyActive(match, RAPID_EXPANSION_PROPHECY_KEY)) {
-              return false;
-            }
+        reactionManager.registerReactionTemplate(
+          prophecy,
+          'startTurn',
+          {
+            playerId,
+            once: true,
+            compulsory: true,
+            allowMultipleInstances: true,
+            sourceId: gainedCardId,
+            sourceKey: gainedCard.cardKey,
+            sourceName: gainedCard.cardName,
+            sourceType: 'card',
+            condition: async ({
+              trigger: startTurnTrigger,
+              match,
+              cardSourceController: startTurnCardSourceController,
+            }) => {
+              if (
+                startTurnTrigger.args.playerId !== playerId ||
+                !isProphecyActive(match, RAPID_EXPANSION_PROPHECY_KEY)
+              ) {
+                return false;
+              }
 
-            // Prevent immediate replay during the same startTurn trigger chain if this card was just gained.
-            const currentTurnHistoryIndex = getCurrentTurnHistoryIndex({ match }, { fallbackToZero: false });
-            const gainTurnHistoryIndex = match.stats.cardsGained[gainedCardId]?.turnHistoryIndex;
-            if (
-              currentTurnHistoryIndex !== undefined &&
-              gainTurnHistoryIndex !== undefined &&
-              gainTurnHistoryIndex === currentTurnHistoryIndex
-            ) {
-              return false;
-            }
+              // Prevent immediate replay during the same startTurn trigger chain if this card was just gained.
+              const currentTurnHistoryIndex = getCurrentTurnHistoryIndex({ match }, { fallbackToZero: false });
+              const gainTurnHistoryIndex = match.stats.cardsGained[gainedCardId]?.turnHistoryIndex;
+              if (
+                currentTurnHistoryIndex !== undefined &&
+                gainTurnHistoryIndex !== undefined &&
+                gainTurnHistoryIndex === currentTurnHistoryIndex
+              ) {
+                return false;
+              }
 
-            const setAside = startTurnCardSourceController.getSource('set-aside', playerId);
-            if (!setAside.includes(gainedCardId)) {
-              return false;
-            }
+              const setAside = startTurnCardSourceController.getSource('set-aside', playerId);
+              if (!setAside.includes(gainedCardId)) {
+                return false;
+              }
 
-            const source = match.setAsideSourceById?.[gainedCardId];
-            return source?.ownerPlayerId === playerId &&
-              source.sourceKind === 'prophecy' &&
-              source.sourceCardLikeId === prophecy.id;
-          },
-          triggeredEffectFn: async ({ actionService, loggerService, cardSourceController: startTurnCardSourceController }) => {
-            const setAside = startTurnCardSourceController.getSource('set-aside', playerId);
-            if (!setAside.includes(gainedCardId)) {
-              loggerService.debug(
-                `[rising-sun prophecy:rapid-expansion] queued card ${gainedCardId} moved before start-turn play`,
+              const source = match.setAsideSourceById?.[gainedCardId];
+              return (
+                source?.ownerPlayerId === playerId &&
+                source.sourceKind === 'prophecy' &&
+                source.sourceCardLikeId === prophecy.id
               );
-              return;
-            }
+            },
+            triggeredEffectFn: async ({
+              actionService,
+              loggerService,
+              cardSourceController: startTurnCardSourceController,
+            }) => {
+              const setAside = startTurnCardSourceController.getSource('set-aside', playerId);
+              if (!setAside.includes(gainedCardId)) {
+                loggerService.debug(
+                  `[rising-sun prophecy:rapid-expansion] queued card ${gainedCardId} moved before start-turn play`,
+                );
+                return;
+              }
 
-            loggerService.info(
-              `[rising-sun prophecy:rapid-expansion] player ${playerId} playing set-aside ${gainedCard.cardKey} (${gainedCardId})`,
-            );
-            await actionService.run('playCard', {
-              playerId,
-              cardId: gainedCardId,
-              overrides: { actionCost: 0 },
-            });
+              loggerService.info(
+                `[rising-sun prophecy:rapid-expansion] player ${playerId} playing set-aside ${gainedCard.cardKey} (${gainedCardId})`,
+              );
+              await actionService.run('playCard', {
+                playerId,
+                cardId: gainedCardId,
+                overrides: { actionCost: 0 },
+              });
+            },
           },
-        }, {
-          idSuffix: `rapid-expansion:${playerId}:${gainedCardId}:startTurn`,
-        });
+          {
+            idSuffix: `rapid-expansion:${playerId}:${gainedCardId}:startTurn`,
+          },
+        );
 
         loggerService.debug(
           `[rising-sun prophecy:rapid-expansion] registered deferred start-turn play for card ${gainedCardId} and player ${playerId}`,
@@ -1494,10 +1505,7 @@ const registerRapidExpansionReactions = (
 };
 
 // Registers Sickness: at start of turn choose to gain Curse to deck or discard 3 cards.
-const registerSicknessReactions = (
-  args: RisingSunGameEventContext,
-  prophecy: Prophecy,
-): void => {
+const registerSicknessReactions = (args: RisingSunGameEventContext, prophecy: Prophecy): void => {
   for (const player of args.match.players) {
     const playerId = player.id;
     args.reactionManager.registerReactionTemplate(prophecy, 'startTurn', {
@@ -1571,9 +1579,7 @@ const registerSicknessReactions = (
 };
 
 // Registers runtime behavior for the selected prophecy at game start.
-const registerSelectedProphecyReactions = (
-  args: RisingSunGameEventContext,
-): void => {
+const registerSelectedProphecyReactions = (args: RisingSunGameEventContext): void => {
   const prophecy = getRuntimeProphecy(args.match);
   if (!prophecy) {
     args.loggerService.warn('[rising-sun onGameStart] no prophecy found while registering runtime reactions');
@@ -1637,7 +1643,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
   // Ensures Rising Sun token definitions are only registered once per match scope.
   let tokenDefinitionsRegistered = false;
 
-  return async (args) => {
+  return async args => {
     if (!tokenDefinitionsRegistered) {
       registerRisingSunTokenDefinitions(args.expansionRegistration.registerTokenDefinition);
       tokenDefinitionsRegistered = true;
@@ -1659,16 +1665,18 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
     const configuredProphecies = uniqueByProp(args.config.prophecies ?? [], 'cardKey');
     const candidateProphecies = uniqueByProp(
-      args.config.expansions.flatMap((expansion) => Object.values(args.expansionCatalog[expansion.name]?.prophecies ?? {})),
+      args.config.expansions.flatMap(expansion =>
+        Object.values(args.expansionCatalog[expansion.name]?.prophecies ?? {}),
+      ),
       'cardKey',
     );
-    const candidateByKey = new Set(candidateProphecies.map((prophecy) => prophecy.cardKey));
-    const supportedConfiguredProphecies = configuredProphecies.filter((prophecy) => candidateByKey.has(prophecy.cardKey));
+    const candidateByKey = new Set(candidateProphecies.map(prophecy => prophecy.cardKey));
+    const supportedConfiguredProphecies = configuredProphecies.filter(prophecy => candidateByKey.has(prophecy.cardKey));
 
     if (supportedConfiguredProphecies.length !== configuredProphecies.length) {
       const removed = configuredProphecies
-        .filter((prophecy) => !candidateByKey.has(prophecy.cardKey))
-        .map((prophecy) => prophecy.cardKey);
+        .filter(prophecy => !candidateByKey.has(prophecy.cardKey))
+        .map(prophecy => prophecy.cardKey);
       args.loggerService.warn(
         `[rising-sun configurator] removing unsupported prophecy selection(s): ${removed.join(', ')}`,
       );
@@ -1690,13 +1698,17 @@ const configurator: ExpansionConfiguratorFactory = () => {
     }
 
     if (candidateProphecies.length < 1) {
-      args.loggerService.warn('[rising-sun configurator] Omen present but no prophecy data available in loaded expansions');
+      args.loggerService.warn(
+        '[rising-sun configurator] Omen present but no prophecy data available in loaded expansions',
+      );
       args.config.prophecies = [];
       configureApproachingArmySetupPile(args);
       return args.config;
     }
 
-    const selectedProphecy = structuredClone(candidateProphecies[args.rngService.nextIndex(candidateProphecies.length)]);
+    const selectedProphecy = structuredClone(
+      candidateProphecies[args.rngService.nextIndex(candidateProphecies.length)],
+    );
     args.config.prophecies = [selectedProphecy];
     args.loggerService.info(`[rising-sun configurator] randomly selected prophecy ${selectedProphecy.cardKey}`);
     configureApproachingArmySetupPile(args);
@@ -1712,20 +1724,19 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   config,
 ) => {
   const hasOmen = hasOmenInKingdom(config);
-  const hasRiverboat = config.kingdomSupply.some((supply) =>
-    supply.cards.some((card) => card.cardKey === RIVERBOAT_CARD_KEY)
+  const hasRiverboat = config.kingdomSupply.some(supply =>
+    supply.cards.some(card => card.cardKey === RIVERBOAT_CARD_KEY),
   );
 
   if (!hasOmen && !hasRiverboat) {
     return;
   }
 
-  registrar('onGameStartSetup', async (args) => {
+  registrar('onGameStartSetup', async args => {
     if (hasRiverboat) {
-      const riverboatCard = args.findCardService.findCards({ all: [
-        { location: 'kingdomSupply' },
-        { cardKeys: RIVERBOAT_CARD_KEY },
-      ] })[0];
+      const riverboatCard = args.findCardService.findCards({
+        all: [{ location: 'kingdomSupply' }, { cardKeys: RIVERBOAT_CARD_KEY }],
+      })[0];
 
       if (!riverboatCard) {
         args.loggerService.warn('[rising-sun onGameStart] Riverboat configured but no runtime Riverboat card found');
@@ -1765,9 +1776,10 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
             movedMetadata.risingSun.riverboat.runtimeSetAsidePileKey = runtimeSetAsidePileKey;
             movedSetAsideCard.metadata = movedMetadata;
           } else {
-            const existingSetAsideCard = args.cardSourceController.getSource('set-aside')
-              .map((cardId) => args.cardLibrary.getCard(cardId))
-              .find((card) => card.kingdom === runtimeSetAsidePileKey);
+            const existingSetAsideCard = args.cardSourceController
+              .getSource('set-aside')
+              .map(cardId => args.cardLibrary.getCard(cardId))
+              .find(card => card.kingdom === runtimeSetAsidePileKey);
 
             if (!existingSetAsideCard) {
               args.loggerService.warn(
@@ -1820,7 +1832,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   // Register runtime trigger behavior once match setup has finished creating prophecy instances.
-  registrar('onGameStart', async (args) => {
+  registrar('onGameStart', async args => {
     registerSelectedProphecyReactions(args);
   });
 };

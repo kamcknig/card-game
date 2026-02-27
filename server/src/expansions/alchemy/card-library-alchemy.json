@@ -45,9 +45,7 @@
       "treasure": 4
     },
     "isBasic": true,
-    "type": [
-      "TREASURE"
-    ]
+    "type": ["TREASURE"]
   },
   "philosophers-stone": {
     "cardName": "Philosopher's Stone",

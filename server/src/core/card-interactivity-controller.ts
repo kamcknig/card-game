@@ -28,11 +28,11 @@ export class CardInteractivityController {
     private readonly promptService: PromptService,
     private readonly loggerService: LoggerService,
   ) {
-    this.socketMap.forEach((s) => {
+    this.socketMap.forEach(s => {
       s.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
       s.on('cardTappedAsWay', (pId, cId, wId) => this.onCardTappedAsWay(pId, cId, wId));
       s.on('cardLikeTapped', (pId, cId) => this.onCardLikeTapped(pId, cId));
-      s.on('playAllTreasure', async (pId) => await this.onPlayAllTreasure(pId));
+      s.on('playAllTreasure', async pId => await this.onPlayAllTreasure(pId));
     });
   }
 
@@ -40,7 +40,7 @@ export class CardInteractivityController {
     s?.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
     s?.on('cardTappedAsWay', (pId, cId, wId) => this.onCardTappedAsWay(pId, cId, wId));
     s?.on('cardLikeTapped', (pId, cId) => this.onCardLikeTapped(pId, cId));
-    s?.on('playAllTreasure', async (pId) => await this.onPlayAllTreasure(pId));
+    s?.on('playAllTreasure', async pId => await this.onPlayAllTreasure(pId));
   }
 
   public playerRemoved(socket: AppSocket | undefined) {
@@ -52,7 +52,7 @@ export class CardInteractivityController {
 
   public endGame() {
     this.loggerService.log(`[card interactivity] removing socket listeners and marking ended`);
-    this.socketMap.forEach((s) => {
+    this.socketMap.forEach(s => {
       s.off('cardTapped');
       s.off('cardTappedAsWay');
       s.off('cardLikeTapped');
@@ -91,8 +91,9 @@ export class CardInteractivityController {
 
     const selectableCards: number[] = [];
 
-    const hand = this.cardSourceController.getSource('playerHand', currentPlayer.id)
-      .map((id) => this.cardLibrary.getCard(id));
+    const hand = this.cardSourceController
+      .getSource('playerHand', currentPlayer.id)
+      .map(id => this.cardLibrary.getCard(id));
     // Turn history index uniquely identifies the active turn, even when turn numbers repeat.
     const currentTurnHistoryIndex = match.stats.turns.length - 1;
 
@@ -137,11 +138,9 @@ export class CardInteractivityController {
       // loop over the player's hand; in the buy phase, one can play treasure as long as you haven't already
       // bought a card
       if (
-        !Object.values<CardStats>(match.stats.cardsBought).concat(Object.values(match.stats.cardLikesBought))
-          .some((stats) =>
-            stats.playerId === currentPlayer.id &&
-            stats.turnHistoryIndex === currentTurnHistoryIndex
-          )
+        !Object.values<CardStats>(match.stats.cardsBought)
+          .concat(Object.values(match.stats.cardLikesBought))
+          .some(stats => stats.playerId === currentPlayer.id && stats.turnHistoryIndex === currentTurnHistoryIndex)
       ) {
         for (const card of hand) {
           if (card.type.includes('TREASURE')) {
@@ -166,21 +165,23 @@ export class CardInteractivityController {
         // Projects are purchased for their printed cost and require available cube tokens.
         const cubeTokenId = renaissanceTokenIds.cube;
         const tokens = Object.values(this.match.tokens ?? {});
-        const hasAvailableCube = tokens.some((token) =>
-          token.tokenId === cubeTokenId &&
-          token.ownerId === currentPlayer.id &&
-          token.location.type === 'playerAvailable' &&
-          token.location.playerId === currentPlayer.id
+        const hasAvailableCube = tokens.some(
+          token =>
+            token.tokenId === cubeTokenId &&
+            token.ownerId === currentPlayer.id &&
+            token.location.type === 'playerAvailable' &&
+            token.location.playerId === currentPlayer.id,
         );
 
         if (hasAvailableCube) {
           const projects = this.match.projects ?? [];
           for (const project of projects) {
-            const alreadyOwned = tokens.some((token) =>
-              token.tokenId === cubeTokenId &&
-              token.ownerId === currentPlayer.id &&
-              token.location.type === 'cardLike' &&
-              token.location.cardLikeId === project.id
+            const alreadyOwned = tokens.some(
+              token =>
+                token.tokenId === cubeTokenId &&
+                token.ownerId === currentPlayer.id &&
+                token.location.type === 'cardLike' &&
+                token.location.cardLikeId === project.id,
             );
             if (alreadyOwned) {
               continue;
@@ -219,9 +220,10 @@ export class CardInteractivityController {
       }
 
       // Shadow rule: while in Action phase, Action+Shadow cards in deck are playable "as if in hand".
-      const shadowActionCardsInDeck = this.cardSourceController.getSource('playerDeck', currentPlayer.id)
-        .map((id) => this.cardLibrary.getCard(id))
-        .filter((card) => card.type.includes('ACTION') && card.type.includes('SHADOW'));
+      const shadowActionCardsInDeck = this.cardSourceController
+        .getSource('playerDeck', currentPlayer.id)
+        .map(id => this.cardLibrary.getCard(id))
+        .filter(card => card.type.includes('ACTION') && card.type.includes('SHADOW'));
       this.loggerService.debug(
         `[card interactivity] ${currentPlayer} has ${shadowActionCardsInDeck.length} Shadow Action card(s) in deck`,
       );
@@ -263,10 +265,13 @@ export class CardInteractivityController {
       this.loggerService.debug(`[card interactivity] night phase selectable count ${selectableCards.length}`);
     }
 
-    match.selectableCards = match.players.reduce((prev, { id }) => {
-      prev[id] = id === currentPlayer.id ? selectableCards : [];
-      return prev;
-    }, {} as Record<PlayerId, CardId[]>);
+    match.selectableCards = match.players.reduce(
+      (prev, { id }) => {
+        prev[id] = id === currentPlayer.id ? selectableCards : [];
+        return prev;
+      },
+      {} as Record<PlayerId, CardId[]>,
+    );
 
     this.loggerService.debug(`[card interactivity] selectable cards`);
 
@@ -293,7 +298,7 @@ export class CardInteractivityController {
     }
 
     const hand = this.cardSourceController.getSource('playerHand', player.id);
-    const treasureCards = hand.filter((e) => this.cardLibrary.getCard(e).type.includes('TREASURE'));
+    const treasureCards = hand.filter(e => this.cardLibrary.getCard(e).type.includes('TREASURE'));
     this.loggerService.debug(`[card interactivity] ${player} has ${treasureCards.length} treasure cards in hand`);
     if (hand.length === 0 || treasureCards.length === 0) {
       return;

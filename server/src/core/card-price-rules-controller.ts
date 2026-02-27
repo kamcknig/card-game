@@ -19,7 +19,7 @@ export class CardPriceRulesController {
     this._rules[card.id].push(rule);
 
     return () => {
-      const idx = this._rules[card.id].findIndex((r) => r === rule);
+      const idx = this._rules[card.id].findIndex(r => r === rule);
       if (idx !== -1) {
         this._rules[card.id].splice(idx, 1);
       }
@@ -61,7 +61,8 @@ export class CardPriceRulesController {
       for (const card of cards) {
         const { cost, restricted } = this.applyRules(card, { playerId: player.id });
         const baseCost = card.cost;
-        const costChanged = cost.treasure !== baseCost.treasure ||
+        const costChanged =
+          cost.treasure !== baseCost.treasure ||
           (cost.potion ?? 0) !== (baseCost.potion ?? 0) ||
           (cost.debt ?? 0) !== (baseCost.debt ?? 0);
         if (costChanged || restricted) {

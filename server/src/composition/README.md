@@ -23,8 +23,8 @@ This folder is the composition root for server runtime wiring.
 
 - Register app-wide services in `register-root-services.ts`.
 - Register match-scoped services only in `MatchScopeFactory`.
-- Keep Awilix container usage constrained to lifecycle wiring code (`composition/*`,
-  `MatchScopeFactory`) and out of gameplay effect logic.
+- Keep Awilix container usage constrained to lifecycle wiring code (`composition/*`, `MatchScopeFactory`) and out of
+  gameplay effect logic.
 
 ## Resolution Boundaries
 
@@ -35,6 +35,6 @@ This folder is the composition root for server runtime wiring.
 ## Action Execution Path
 
 - Effects and reactions should execute game actions through injected `ActionService`.
-- `ScopedActionService` delegates to `MatchActionRunnerRef`, which is bound once to
-  `MatchController.runGameAction(...)` when a match scope is created.
+- `ScopedActionService` delegates to `MatchActionRunnerRef`, which is bound once to `MatchController.runGameAction(...)`
+  when a match scope is created.
 - This keeps action execution deterministic and removes per-call service-locator lookups.

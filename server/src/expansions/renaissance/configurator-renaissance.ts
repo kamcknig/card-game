@@ -11,8 +11,8 @@ import { renaissanceTokenIds } from './token-ids-renaissance.ts';
 const artifactSourceMap: Record<string, RenaissanceArtifactKey[]> = {
   'border-guard': [renaissanceArtifactKeys.horn, renaissanceArtifactKeys.lantern],
   'flag-bearer': [renaissanceArtifactKeys.flag],
-  'swashbuckler': [renaissanceArtifactKeys.treasureChest],
-  'treasurer': [renaissanceArtifactKeys.key],
+  swashbuckler: [renaissanceArtifactKeys.treasureChest],
+  treasurer: [renaissanceArtifactKeys.key],
 };
 
 // Tracks artifact keys managed by the Renaissance configurator.
@@ -22,14 +22,14 @@ const configurator: ExpansionConfiguratorFactory = () => {
   // Track artifact effect registration to avoid duplicates across configurator iterations.
   let artifactEffectsRegistered = false;
 
-  return async (args) => {
+  return async args => {
     registerRenaissanceTokenDefinitions(args.expansionRegistration.registerTokenDefinition);
     if (!artifactEffectsRegistered) {
       registerArtifactEffects(args.expansionRegistration.registerArtifactEffect);
       artifactEffectsRegistered = true;
     }
 
-    const kingdomCards = args.config.kingdomSupply.flatMap((supply) => supply.cards);
+    const kingdomCards = args.config.kingdomSupply.flatMap(supply => supply.cards);
     const requiredArtifactKeys = new Set<RenaissanceArtifactKey>();
 
     for (const card of kingdomCards) {
@@ -42,7 +42,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     }
 
     const existingArtifacts = args.config.artifacts ?? [];
-    const nonManagedArtifacts = existingArtifacts.filter((artifact) => !managedArtifactKeys.has(artifact.cardKey));
+    const nonManagedArtifacts = existingArtifacts.filter(artifact => !managedArtifactKeys.has(artifact.cardKey));
 
     if (requiredArtifactKeys.size < 1) {
       if (existingArtifacts.length !== nonManagedArtifacts.length) {
@@ -51,7 +51,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
       return args.config;
     }
 
-    const artifactDefinitions = Array.from(requiredArtifactKeys).flatMap((artifactKey) => {
+    const artifactDefinitions = Array.from(requiredArtifactKeys).flatMap(artifactKey => {
       const artifact = args.expansionCatalog['renaissance']?.artifacts?.[artifactKey];
       if (!artifact) {
         args.loggerService.warn(`[renaissance configurator] missing artifact ${artifactKey}`);
@@ -71,7 +71,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   registrar,
   config,
 ) => {
-  registrar('onGameStartSetup', async (args) => {
+  registrar('onGameStartSetup', async args => {
     const projectCount = config.projects?.length ?? 0;
     if (projectCount < 1) {
       args.loggerService.debug('[renaissance configurator] no projects configured, skipping cube placement');
@@ -79,8 +79,8 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     }
 
     for (const player of args.match.players) {
-      const existingCubes = Object.values(args.match.tokens ?? {}).filter((token) =>
-        token.tokenId === renaissanceTokenIds.cube && token.ownerId === player.id
+      const existingCubes = Object.values(args.match.tokens ?? {}).filter(
+        token => token.tokenId === renaissanceTokenIds.cube && token.ownerId === player.id,
       );
       const cubesToAdd = Math.max(0, projectCount - existingCubes.length);
 
@@ -119,17 +119,18 @@ export const registerEndGamePolicies = (registrar: EndGamePolicyRegistrar): void
         return { decision: 'continue' };
       }
 
-      const fleetProjectId = match.projects.find((project) => project.cardKey === 'fleet')?.id;
+      const fleetProjectId = match.projects.find(project => project.cardKey === 'fleet')?.id;
       if (fleetProjectId === undefined) {
         return { decision: 'end_now' };
       }
 
       const doesPlayerOwnFleet = (playerId: PlayerId): boolean => {
-        return Object.values(match.tokens ?? {}).some((token) =>
-          token.tokenId === renaissanceTokenIds.cube &&
-          token.ownerId === playerId &&
-          token.location.type === 'cardLike' &&
-          token.location.cardLikeId === fleetProjectId
+        return Object.values(match.tokens ?? {}).some(
+          token =>
+            token.tokenId === renaissanceTokenIds.cube &&
+            token.ownerId === playerId &&
+            token.location.type === 'cardLike' &&
+            token.location.cardLikeId === fleetProjectId,
         );
       };
 

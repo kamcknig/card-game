@@ -14,21 +14,19 @@ const configurator: ExpansionConfiguratorFactory = () => {
   let charlatanConfigured: boolean = false;
   let prosperityCheckConfigured: boolean = false;
 
-  return async (args) => {
+  return async args => {
     registerProsperityTokenDefinitions(args.expansionRegistration.registerTokenDefinition);
 
     const kingdomCards = args.config.kingdomSupply;
     // Standard Dominion rule: add Colony/Platinum when any Prosperity kingdom card is present.
-    const hasProsperityKingdom = kingdomCards.some((supply) =>
-      supply.cards.some((card) => card.expansionName === 'prosperity')
+    const hasProsperityKingdom = kingdomCards.some(supply =>
+      supply.cards.some(card => card.expansionName === 'prosperity'),
     );
 
     const basicCards = args.config.basicSupply;
 
     if (hasProsperityKingdom && !prosperityCheckConfigured) {
-      args.loggerService.log(
-        `[prosperity configurator] adding prosperity and colony to config`,
-      );
+      args.loggerService.log(`[prosperity configurator] adding prosperity and colony to config`);
 
       basicCards.push({
         name: 'colony',
@@ -39,32 +37,28 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
       basicCards.push({
         name: 'platinum',
-        cards: new Array(12).fill(
-          args.expansionData.cardData.basicSupply['platinum'],
-        ),
+        cards: new Array(12).fill(args.expansionData.cardData.basicSupply['platinum']),
       });
 
       prosperityCheckConfigured = true;
     }
 
-    const charlatanPresent = kingdomCards.find((supply) => supply.name === 'charlatan');
+    const charlatanPresent = kingdomCards.find(supply => supply.name === 'charlatan');
 
     if (charlatanPresent && !charlatanConfigured) {
       args.loggerService.log(
         `[prosperity configurator] charlatan is part of kingdom - curses gain the treasure type and +1 treasure effect`,
       );
 
-      const curseCard = basicCards.find((supply) => supply.name === 'curse');
+      const curseCard = basicCards.find(supply => supply.name === 'curse');
 
       if (!curseCard) {
-        args.loggerService.warn(
-          `[prosperity configurator] curse card not found in config`,
-        );
+        args.loggerService.warn(`[prosperity configurator] curse card not found in config`);
       }
 
-      curseCard?.cards?.forEach((card) => card.type.push('TREASURE'));
+      curseCard?.cards?.forEach(card => card.type.push('TREASURE'));
 
-      args.expansionRegistration.registerCardEffect('curse', 'prosperity', async (args) => {
+      args.expansionRegistration.registerCardEffect('curse', 'prosperity', async args => {
         args.loggerService.info(`[curse effect - prosperity] curse effect called`);
         await args.actionService.run('gainTreasure', { count: 1 });
       });
@@ -76,9 +70,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
   };
 };
 
-export const registerEndGamePolicies = (
-  registrar: EndGamePolicyRegistrar,
-) => {
+export const registerEndGamePolicies = (registrar: EndGamePolicyRegistrar) => {
   // Must run before Fleet policy so endTriggered is available to Fleet.
   registrar(
     ({ match, findCardService }) => ({
@@ -89,38 +81,29 @@ export const registerEndGamePolicies = (
   );
 };
 
-function isColonyPileEmpty(
-  match: Match,
-  findCardService: FindCardService,
-): boolean {
-  const colonyPresent = match.config.kingdomSupply.some((supply) => supply.name === 'colony');
+function isColonyPileEmpty(match: Match, findCardService: FindCardService): boolean {
+  const colonyPresent = match.config.kingdomSupply.some(supply => supply.name === 'colony');
   if (!colonyPresent) {
     return false;
   }
-  const colonyCards = findCardService.findCards({ all: [
-    { location: 'basicSupply' },
-    { cardKeys: 'colony' },
-  ] });
+  const colonyCards = findCardService.findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'colony' }] });
   return colonyCards.length === 0;
 }
 
 export const registerGameEvents: (
   registrar: GameEventRegistrar,
   config: ComputedMatchConfiguration,
-) => void = (registrar) => {
-  registrar('onGameStartSetup', async (args) => {
-    const peddlerCardIds = args.findCardService.findCards({ all: [
-      { location: 'kingdomSupply' },
-      { cardKeys: 'peddler' },
-    ] }).map((card) => card.id);
+) => void = registrar => {
+  registrar('onGameStartSetup', async args => {
+    const peddlerCardIds = args.findCardService
+      .findCards({ all: [{ location: 'kingdomSupply' }, { cardKeys: 'peddler' }] })
+      .map(card => card.id);
 
     if (peddlerCardIds.length === 0) {
       return;
     }
 
-    args.loggerService.info(
-      `[prosperity onGameStart event] registering peddler game events`,
-    );
+    args.loggerService.info(`[prosperity onGameStart event] registering peddler game events`);
 
     for (const cardId of peddlerCardIds) {
       for (const player of args.match.players) {
@@ -132,7 +115,7 @@ export const registerGameEvents: (
           once: false,
           compulsory: true,
           allowMultipleInstances: true,
-          condition: (conditionArgs) => {
+          condition: conditionArgs => {
             if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') {
               return false;
             }
@@ -151,22 +134,20 @@ export const registerGameEvents: (
           compulsory: true,
           once: false,
           allowMultipleInstances: true,
-          condition: (conditionArgs) => {
+          condition: conditionArgs => {
             if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') {
               return false;
             }
             return getCurrentPlayer(conditionArgs.match).id === player.id;
           },
-          triggeredEffectFn: async (triggerEffectArgs) => {
+          triggeredEffectFn: async triggerEffectArgs => {
             const peddlerCard = triggerEffectArgs.cardLibrary.getCard(cardId);
 
-            args.loggerService.info(
-              `[peddler triggered effect] adding pricing rule for ${peddlerCard}`,
-            );
+            args.loggerService.info(`[peddler triggered effect] adding pricing rule for ${peddlerCard}`);
 
             const rule: CardPriceRule = (ruleCard, ruleContext) => {
               const cardsInPlay = args.findCardService.getCardsInPlay();
-              const actionsInPlay = cardsInPlay.filter((card) => card.type.includes('ACTION'));
+              const actionsInPlay = cardsInPlay.filter(card => card.type.includes('ACTION'));
               if (actionsInPlay.length === 0) {
                 return { restricted: false, cost: { treasure: 0 } };
               }
@@ -177,10 +158,7 @@ export const registerGameEvents: (
               };
             };
 
-            ruleUnsub = args.cardPriceController.registerRule(
-              peddlerCard,
-              rule,
-            );
+            ruleUnsub = args.cardPriceController.registerRule(peddlerCard, rule);
           },
         });
       }

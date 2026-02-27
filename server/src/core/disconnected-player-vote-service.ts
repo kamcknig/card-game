@@ -34,19 +34,15 @@ export class DisconnectedPlayerVoteService {
 
   // Removes a disconnected player from pending queue and clears their votes.
   public removePendingRemovalPlayer(players: Player[], playerId: PlayerId) {
-    this._pendingRemovalQueue = this._pendingRemovalQueue.filter((id) => id !== playerId);
+    this._pendingRemovalQueue = this._pendingRemovalQueue.filter(id => id !== playerId);
     this._removalVotes.delete(playerId);
     this.sortPendingRemovalQueue(players);
   }
 
   // Records a removal vote and returns whether vote was accepted and complete.
-  public registerRemovalVote(
-    players: Player[],
-    voterId: PlayerId,
-    targetPlayerId: PlayerId,
-  ): RemovalVoteResult {
-    const target = players.find((player) => player.id === targetPlayerId);
-    const voter = players.find((player) => player.id === voterId);
+  public registerRemovalVote(players: Player[], voterId: PlayerId, targetPlayerId: PlayerId): RemovalVoteResult {
+    const target = players.find(player => player.id === targetPlayerId);
+    const voter = players.find(player => player.id === voterId);
 
     if (!target || !voter) {
       return { accepted: false, allVoted: false };
@@ -60,8 +56,8 @@ export class DisconnectedPlayerVoteService {
       return { accepted: false, allVoted: false };
     }
 
-    const connectedHumans = players.filter((player) =>
-      player.connected && !player.isComputer && player.id !== targetPlayerId
+    const connectedHumans = players.filter(
+      player => player.connected && !player.isComputer && player.id !== targetPlayerId,
     );
 
     if (!connectedHumans.length) {
@@ -72,19 +68,17 @@ export class DisconnectedPlayerVoteService {
     votes.add(voterId);
     this._removalVotes.set(targetPlayerId, votes);
 
-    const allVoted = connectedHumans.every((player) => votes.has(player.id));
+    const allVoted = connectedHumans.every(player => votes.has(player.id));
     return { accepted: true, allVoted };
   }
 
   // Keeps pending queue sorted by player order and removes invalid targets.
   private sortPendingRemovalQueue(players: Player[]) {
     const disconnectedHumans = new Set(
-      players
-        .filter((player) => !player.connected && !player.isComputer)
-        .map((player) => player.id),
+      players.filter(player => !player.connected && !player.isComputer).map(player => player.id),
     );
 
-    this._pendingRemovalQueue = this._pendingRemovalQueue.filter((id) => disconnectedHumans.has(id));
+    this._pendingRemovalQueue = this._pendingRemovalQueue.filter(id => disconnectedHumans.has(id));
 
     const orderById = new Map(players.map((player, index) => [player.id, index]));
     this._pendingRemovalQueue.sort((a, b) => (orderById.get(a) ?? 0) - (orderById.get(b) ?? 0));

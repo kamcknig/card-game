@@ -7,11 +7,12 @@ import { renaissanceTokenIds } from './token-ids-renaissance.ts';
 
 // Checks whether a player has a cube placed on the given project.
 function isProjectOwned(match: Match, playerId: PlayerId, project: Project) {
-  return Object.values(match.tokens ?? {}).some((token) =>
-    token.tokenId === renaissanceTokenIds.cube &&
-    token.ownerId === playerId &&
-    token.location.type === 'cardLike' &&
-    token.location.cardLikeId === project.id
+  return Object.values(match.tokens ?? {}).some(
+    token =>
+      token.tokenId === renaissanceTokenIds.cube &&
+      token.ownerId === playerId &&
+      token.location.type === 'cardLike' &&
+      token.location.cardLikeId === project.id,
   );
 }
 
@@ -70,8 +71,9 @@ const applyCapitalismTreasureTypes = (
 ) => {
   let addedCount = 0;
   // Iterate in id order to keep deterministic type mutation/log order.
-  const cards = cardLibrary.getAllCardsAsArray()
-    .map((card) => cardLibrary.getCard<CapitalismCardMetadata>(card.id))
+  const cards = cardLibrary
+    .getAllCardsAsArray()
+    .map(card => cardLibrary.getCard<CapitalismCardMetadata>(card.id))
     .sort((a, b) => a.id - b.id);
 
   for (const card of cards) {
@@ -98,14 +100,18 @@ const applyCapitalismTreasureTypes = (
 };
 
 // Removes only the Treasure types that were temporarily added by Capitalism for the specified player.
-function clearCapitalismTreasureTypes(cardLibrary: {
-  getAllCardsAsArray: () => Card[];
-  getCard: <M = unknown>(cardId: number) => Card<M>;
-}, playerId: PlayerId) {
+function clearCapitalismTreasureTypes(
+  cardLibrary: {
+    getAllCardsAsArray: () => Card[];
+    getCard: <M = unknown>(cardId: number) => Card<M>;
+  },
+  playerId: PlayerId,
+) {
   let removedCount = 0;
   // Iterate in id order to keep deterministic cleanup order.
-  const cards = cardLibrary.getAllCardsAsArray()
-    .map((card) => cardLibrary.getCard<CapitalismCardMetadata>(card.id))
+  const cards = cardLibrary
+    .getAllCardsAsArray()
+    .map(card => cardLibrary.getCard<CapitalismCardMetadata>(card.id))
     .sort((a, b) => a.id - b.id);
 
   for (const card of cards) {
@@ -128,8 +134,8 @@ function clearCapitalismTreasureTypes(cardLibrary: {
 }
 
 const effectMap: CardExpansionModule = {
-  'academy': {
-    registerEffects: () => async (cardEffectArgs) => {
+  academy: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
@@ -143,7 +149,7 @@ const effectMap: CardExpansionModule = {
         once: false,
         allowMultipleInstances: false,
         compulsory: true,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
@@ -163,7 +169,7 @@ const effectMap: CardExpansionModule = {
           loggerService.debug(`[academy project] evaluating gained card ${gainedCard}`);
           return gainedCard.type.includes('ACTION');
         },
-        triggeredEffectFn: async (triggeredArgs) => {
+        triggeredEffectFn: async triggeredArgs => {
           // Log the Villager grant before applying it.
           loggerService.debug(
             `[academy project] granting +1 Villager to player ${cardEffectArgs.playerId} on turn ${triggeredArgs.match.turnNumber}`,
@@ -183,8 +189,8 @@ const effectMap: CardExpansionModule = {
       });
     },
   },
-  'barracks': {
-    registerEffects: () => async (cardEffectArgs) => {
+  barracks: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
@@ -199,7 +205,7 @@ const effectMap: CardExpansionModule = {
         once: false,
         allowMultipleInstances: false,
         compulsory: true,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
@@ -213,7 +219,7 @@ const effectMap: CardExpansionModule = {
           }
           return owned;
         },
-        triggeredEffectFn: async (triggeredArgs) => {
+        triggeredEffectFn: async triggeredArgs => {
           // Log the timing for the Barracks bonus.
           loggerService.debug(
             `[barracks project] granting +1 Action to player ${cardEffectArgs.playerId} on turn ${triggeredArgs.match.turnNumber}`,
@@ -230,8 +236,8 @@ const effectMap: CardExpansionModule = {
       });
     },
   },
-  'canal': {
-    registerEffects: () => async (cardEffectArgs) => {
+  canal: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
@@ -246,7 +252,7 @@ const effectMap: CardExpansionModule = {
       // Apply the per-card cost rules for this player's turn.
       const registerRules = () => {
         if (ruleUnsubs.length > 0) {
-          ruleUnsubs.forEach((unsub) => unsub());
+          ruleUnsubs.forEach(unsub => unsub());
           ruleUnsubs = [];
         }
 
@@ -282,7 +288,7 @@ const effectMap: CardExpansionModule = {
       const clearRules = () => {
         if (!ruleUnsubs.length) return;
         loggerService.debug(`[canal project] clearing ${ruleUnsubs.length} cost rules`);
-        ruleUnsubs.forEach((unsub) => unsub());
+        ruleUnsubs.forEach(unsub => unsub());
         ruleUnsubs = [];
       };
 
@@ -291,7 +297,7 @@ const effectMap: CardExpansionModule = {
         once: false,
         allowMultipleInstances: true,
         compulsory: true,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
@@ -315,7 +321,7 @@ const effectMap: CardExpansionModule = {
         once: false,
         allowMultipleInstances: true,
         compulsory: true,
-        condition: (conditionArgs) => conditionArgs.trigger.args.playerId === cardEffectArgs.playerId,
+        condition: conditionArgs => conditionArgs.trigger.args.playerId === cardEffectArgs.playerId,
         triggeredEffectFn: async () => {
           loggerService.debug(`[canal project] removing cost reduction for player ${cardEffectArgs.playerId}`);
           clearRules();
@@ -323,8 +329,8 @@ const effectMap: CardExpansionModule = {
       });
     },
   },
-  'capitalism': {
-    registerEffects: () => async (cardEffectArgs) => {
+  capitalism: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
@@ -343,7 +349,7 @@ const effectMap: CardExpansionModule = {
         allowMultipleInstances: false,
         compulsory: true,
         autoResolve: true,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
@@ -356,7 +362,7 @@ const effectMap: CardExpansionModule = {
           }
           return owned;
         },
-        triggeredEffectFn: async (triggeredArgs) => {
+        triggeredEffectFn: async triggeredArgs => {
           const addedCount = applyCapitalismTreasureTypes(
             triggeredArgs.match,
             triggeredArgs.cardLibrary,
@@ -376,8 +382,8 @@ const effectMap: CardExpansionModule = {
         allowMultipleInstances: false,
         compulsory: true,
         autoResolve: true,
-        condition: (conditionArgs) => conditionArgs.trigger.args.playerId === cardEffectArgs.playerId,
-        triggeredEffectFn: async (triggeredArgs) => {
+        condition: conditionArgs => conditionArgs.trigger.args.playerId === cardEffectArgs.playerId,
+        triggeredEffectFn: async triggeredArgs => {
           const removedCount = clearCapitalismTreasureTypes(triggeredArgs.cardLibrary, cardEffectArgs.playerId);
           loggerService.debug(
             `[capitalism project] removed TREASURE type from ${removedCount} card(s) for player ${cardEffectArgs.playerId} on turn ${triggeredArgs.match.turnNumber}`,
@@ -408,8 +414,8 @@ const effectMap: CardExpansionModule = {
       );
     },
   },
-  'cathedral': {
-    registerEffects: () => async (cardEffectArgs) => {
+  cathedral: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
@@ -425,7 +431,7 @@ const effectMap: CardExpansionModule = {
         once: false,
         allowMultipleInstances: true,
         compulsory: true,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
@@ -439,7 +445,7 @@ const effectMap: CardExpansionModule = {
           }
           return owned;
         },
-        triggeredEffectFn: async (triggeredArgs) => {
+        triggeredEffectFn: async triggeredArgs => {
           const hand = triggeredArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
           if (!hand.length) {
             loggerService.debug('[cathedral project] no cards in hand to trash');
@@ -479,8 +485,8 @@ const effectMap: CardExpansionModule = {
       });
     },
   },
-  'citadel': {
-    registerEffects: () => async (cardEffectArgs) => {
+  citadel: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
@@ -496,7 +502,7 @@ const effectMap: CardExpansionModule = {
         once: false,
         allowMultipleInstances: true,
         compulsory: true,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
@@ -524,7 +530,7 @@ const effectMap: CardExpansionModule = {
           const turnHistoryIndex = conditionArgs.match.stats.turns.length - 1;
           const turnStatsIndex = turnHistoryIndex;
           const playedThisTurn = conditionArgs.match.stats.playedCardsByTurn[turnStatsIndex] ?? [];
-          const actionPlaysThisTurn = playedThisTurn.filter((cardId) => {
+          const actionPlaysThisTurn = playedThisTurn.filter(cardId => {
             const playStats = conditionArgs.match.stats.playedCards[cardId];
             if (playStats?.playerId !== cardEffectArgs.playerId) {
               return false;
@@ -540,7 +546,7 @@ const effectMap: CardExpansionModule = {
           }
           return isFirstAction;
         },
-        triggeredEffectFn: async (triggeredArgs) => {
+        triggeredEffectFn: async triggeredArgs => {
           const replayCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
           // Log the replay before executing it.
           loggerService.debug(`[citadel project] replaying ${replayCard}`);
@@ -564,7 +570,7 @@ const effectMap: CardExpansionModule = {
     },
   },
   'city-gate': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
@@ -579,7 +585,7 @@ const effectMap: CardExpansionModule = {
         once: false,
         allowMultipleInstances: true,
         compulsory: true,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
@@ -592,7 +598,7 @@ const effectMap: CardExpansionModule = {
           }
           return owned;
         },
-        triggeredEffectFn: async (triggeredArgs) => {
+        triggeredEffectFn: async triggeredArgs => {
           // Draw first, then topdeck a card from hand.
           triggeredArgs.logManager.addLogEntry({
             type: 'cardLikeEffect',
@@ -644,7 +650,7 @@ const effectMap: CardExpansionModule = {
     },
   },
   'crop-rotation': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
@@ -661,7 +667,7 @@ const effectMap: CardExpansionModule = {
         once: false,
         allowMultipleInstances: true,
         compulsory: true,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
@@ -674,11 +680,10 @@ const effectMap: CardExpansionModule = {
           }
           return owned;
         },
-        triggeredEffectFn: async (triggeredArgs) => {
-          const victoryCards = triggeredArgs.findCardService.findCards({ all: [
-            { location: 'playerHand', playerId: cardEffectArgs.playerId },
-            { cardType: ['VICTORY'] },
-          ] });
+        triggeredEffectFn: async triggeredArgs => {
+          const victoryCards = triggeredArgs.findCardService.findCards({
+            all: [{ location: 'playerHand', playerId: cardEffectArgs.playerId }, { cardType: ['VICTORY'] }],
+          });
 
           if (!victoryCards.length) {
             loggerService.debug('[crop-rotation project] no Victory cards in hand to discard');
@@ -689,7 +694,7 @@ const effectMap: CardExpansionModule = {
           const selectedCardId = await triggeredArgs.actionService.run('selectSingleCard', {
             playerId: cardEffectArgs.playerId,
             prompt: 'Discard a Victory card for +2 Cards?',
-            restrict: victoryCards.map((card) => card.id),
+            restrict: victoryCards.map(card => card.id),
             count: 1,
             optional: true,
           });
@@ -728,8 +733,8 @@ const effectMap: CardExpansionModule = {
       });
     },
   },
-  'exploration': {
-    registerEffects: () => async (cardEffectArgs) => {
+  exploration: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
@@ -746,7 +751,7 @@ const effectMap: CardExpansionModule = {
         once: false,
         allowMultipleInstances: true,
         compulsory: true,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') {
             return false;
           }
@@ -774,7 +779,7 @@ const effectMap: CardExpansionModule = {
         once: false,
         allowMultipleInstances: true,
         compulsory: true,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
@@ -789,7 +794,7 @@ const effectMap: CardExpansionModule = {
 
           return true;
         },
-        triggeredEffectFn: async (triggeredArgs) => {
+        triggeredEffectFn: async triggeredArgs => {
           if (gainedDuringBuyPhase) {
             loggerService.debug('[exploration project] already recorded a gain this buy phase');
             return;
@@ -805,7 +810,7 @@ const effectMap: CardExpansionModule = {
         once: false,
         allowMultipleInstances: true,
         compulsory: true,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
@@ -828,7 +833,7 @@ const effectMap: CardExpansionModule = {
           }
           return true;
         },
-        triggeredEffectFn: async (triggeredArgs) => {
+        triggeredEffectFn: async triggeredArgs => {
           triggeredArgs.logManager.addLogEntry({
             type: 'cardLikeEffect',
             playerId: cardEffectArgs.playerId,
@@ -851,8 +856,8 @@ const effectMap: CardExpansionModule = {
       });
     },
   },
-  'fair': {
-    registerEffects: () => async (cardEffectArgs) => {
+  fair: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
@@ -867,7 +872,7 @@ const effectMap: CardExpansionModule = {
         once: false,
         allowMultipleInstances: true,
         compulsory: true,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
@@ -880,7 +885,7 @@ const effectMap: CardExpansionModule = {
           }
           return owned;
         },
-        triggeredEffectFn: async (triggeredArgs) => {
+        triggeredEffectFn: async triggeredArgs => {
           triggeredArgs.logManager.addLogEntry({
             type: 'cardLikeEffect',
             playerId: cardEffectArgs.playerId,
@@ -894,8 +899,8 @@ const effectMap: CardExpansionModule = {
       });
     },
   },
-  'fleet': {
-    registerEffects: () => async (cardEffectArgs) => {
+  fleet: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       // Resolve Fleet so project purchases still register an effect entry for consistent diagnostics.
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
@@ -910,8 +915,8 @@ const effectMap: CardExpansionModule = {
       );
     },
   },
-  'guildhall': {
-    registerEffects: () => async (cardEffectArgs) => {
+  guildhall: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
@@ -926,7 +931,7 @@ const effectMap: CardExpansionModule = {
         once: false,
         allowMultipleInstances: false,
         compulsory: true,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
@@ -943,7 +948,7 @@ const effectMap: CardExpansionModule = {
           loggerService.debug(`[guildhall project] evaluating gained card ${gainedCard}`);
           return gainedCard.type.includes('TREASURE');
         },
-        triggeredEffectFn: async (triggeredArgs) => {
+        triggeredEffectFn: async triggeredArgs => {
           triggeredArgs.logManager.addLogEntry({
             type: 'cardLikeEffect',
             playerId: cardEffectArgs.playerId,
@@ -960,8 +965,8 @@ const effectMap: CardExpansionModule = {
       });
     },
   },
-  'innovation': {
-    registerEffects: () => async (cardEffectArgs) => {
+  innovation: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
@@ -978,7 +983,7 @@ const effectMap: CardExpansionModule = {
         once: false,
         allowMultipleInstances: true,
         compulsory: true,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
@@ -1001,7 +1006,7 @@ const effectMap: CardExpansionModule = {
         once: false,
         allowMultipleInstances: false,
         compulsory: false,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
@@ -1020,11 +1025,11 @@ const effectMap: CardExpansionModule = {
           loggerService.debug(`[innovation project] evaluating gained card ${gainedCard}`);
           return gainedCard.type.includes('ACTION');
         },
-        triggeredEffectFn: async (triggeredArgs) => {
+        triggeredEffectFn: async triggeredArgs => {
           const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
           loggerService.debug(`[innovation project] prompting to play gained card ${gainedCard}`);
 
-          const promptResult = await triggeredArgs.actionService.run('userPrompt', {
+          const promptResult = (await triggeredArgs.actionService.run('userPrompt', {
             playerId: cardEffectArgs.playerId,
             prompt: `Play ${gainedCard.cardName}?`,
             actionButtons: [
@@ -1035,7 +1040,7 @@ const effectMap: CardExpansionModule = {
               type: 'display-cards',
               cardIds: [gainedCard.id],
             },
-          }) as { action: number };
+          })) as { action: number };
 
           if (promptResult.action !== 2) {
             loggerService.debug('[innovation project] player declined to play gained card');
@@ -1063,8 +1068,8 @@ const effectMap: CardExpansionModule = {
       });
     },
   },
-  'pageant': {
-    registerEffects: () => async (cardEffectArgs) => {
+  pageant: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
@@ -1079,7 +1084,7 @@ const effectMap: CardExpansionModule = {
         once: false,
         allowMultipleInstances: true,
         compulsory: true,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
@@ -1095,20 +1100,20 @@ const effectMap: CardExpansionModule = {
           }
           return owned;
         },
-        triggeredEffectFn: async (triggeredArgs) => {
+        triggeredEffectFn: async triggeredArgs => {
           if (triggeredArgs.match.playerTreasure < 1) {
             loggerService.debug('[pageant project] no treasure available to pay $1');
             return;
           }
 
-          const result = await triggeredArgs.actionService.run('userPrompt', {
+          const result = (await triggeredArgs.actionService.run('userPrompt', {
             playerId: cardEffectArgs.playerId,
             prompt: 'Pay $1 for +1 Coffers? (Pageant)',
             actionButtons: [
               { label: 'NO', action: 1 },
               { label: 'YES', action: 2 },
             ],
-          }) as { action: number };
+          })) as { action: number };
 
           if (result.action !== 2) {
             loggerService.debug('[pageant project] player declined to pay $1');
@@ -1137,8 +1142,8 @@ const effectMap: CardExpansionModule = {
       });
     },
   },
-  'piazza': {
-    registerEffects: () => async (cardEffectArgs) => {
+  piazza: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
@@ -1153,7 +1158,7 @@ const effectMap: CardExpansionModule = {
         once: false,
         allowMultipleInstances: true,
         compulsory: true,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
@@ -1166,7 +1171,7 @@ const effectMap: CardExpansionModule = {
           }
           return owned;
         },
-        triggeredEffectFn: async (triggeredArgs) => {
+        triggeredEffectFn: async triggeredArgs => {
           let deck = triggeredArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
 
           if (!deck.length) {
@@ -1211,7 +1216,7 @@ const effectMap: CardExpansionModule = {
     },
   },
   'road-network': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
@@ -1228,7 +1233,7 @@ const effectMap: CardExpansionModule = {
         once: false,
         allowMultipleInstances: false,
         compulsory: true,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (conditionArgs.trigger.args.playerId === cardEffectArgs.playerId) {
             return false;
           }
@@ -1245,7 +1250,7 @@ const effectMap: CardExpansionModule = {
           loggerService.debug(`[road-network project] evaluating gained card ${gainedCard}`);
           return gainedCard.type.includes('VICTORY');
         },
-        triggeredEffectFn: async (triggeredArgs) => {
+        triggeredEffectFn: async triggeredArgs => {
           triggeredArgs.logManager.addLogEntry({
             type: 'cardLikeEffect',
             playerId: cardEffectArgs.playerId,
@@ -1262,8 +1267,8 @@ const effectMap: CardExpansionModule = {
       });
     },
   },
-  'sewers': {
-    registerEffects: () => async (cardEffectArgs) => {
+  sewers: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
@@ -1278,7 +1283,7 @@ const effectMap: CardExpansionModule = {
         once: false,
         allowMultipleInstances: true,
         compulsory: false,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
@@ -1305,7 +1310,7 @@ const effectMap: CardExpansionModule = {
 
           return true;
         },
-        triggeredEffectFn: async (triggeredArgs) => {
+        triggeredEffectFn: async triggeredArgs => {
           const hand = triggeredArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
           if (!hand.length) {
             loggerService.debug('[sewers project] no cards in hand to trash');
@@ -1334,19 +1339,23 @@ const effectMap: CardExpansionModule = {
           });
 
           loggerService.debug(`[sewers project] trashing ${selectedCardId}`);
-          await triggeredArgs.actionService.run('trashCard', {
-            playerId: cardEffectArgs.playerId,
-            cardId: selectedCardId,
-          }, {
-            // Mark the source so Sewers can ignore its own trash trigger.
-            loggingContext: { source: project.id },
-          });
+          await triggeredArgs.actionService.run(
+            'trashCard',
+            {
+              playerId: cardEffectArgs.playerId,
+              cardId: selectedCardId,
+            },
+            {
+              // Mark the source so Sewers can ignore its own trash trigger.
+              loggingContext: { source: project.id },
+            },
+          );
         },
       });
     },
   },
-  'silos': {
-    registerEffects: () => async (cardEffectArgs) => {
+  silos: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       // Resolve the Silos project to attach start-of-turn behavior.
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
@@ -1361,7 +1370,7 @@ const effectMap: CardExpansionModule = {
         once: false,
         allowMultipleInstances: false,
         compulsory: false,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
@@ -1375,8 +1384,8 @@ const effectMap: CardExpansionModule = {
           }
 
           const hand = conditionArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
-          const copperCount = hand.filter((cardId) =>
-            conditionArgs.cardLibrary.getCard(cardId).cardKey === 'copper'
+          const copperCount = hand.filter(
+            cardId => conditionArgs.cardLibrary.getCard(cardId).cardKey === 'copper',
           ).length;
           if (!copperCount) {
             loggerService.debug('[silos project] no Copper cards in hand to discard');
@@ -1385,9 +1394,9 @@ const effectMap: CardExpansionModule = {
 
           return true;
         },
-        triggeredEffectFn: async (triggeredArgs) => {
+        triggeredEffectFn: async triggeredArgs => {
           const hand = triggeredArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
-          const copperIds = hand.filter((cardId) => triggeredArgs.cardLibrary.getCard(cardId).cardKey === 'copper');
+          const copperIds = hand.filter(cardId => triggeredArgs.cardLibrary.getCard(cardId).cardKey === 'copper');
           if (!copperIds.length) {
             loggerService.debug('[silos project] no Copper cards in hand to discard');
             return;
@@ -1437,7 +1446,7 @@ const effectMap: CardExpansionModule = {
     },
   },
   'sinister-plot': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       // Resolve the Sinister Plot project to attach start-of-turn behavior.
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
@@ -1456,7 +1465,7 @@ const effectMap: CardExpansionModule = {
         allowMultipleInstances: false,
         compulsory: true,
         autoResolve: true,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
@@ -1469,19 +1478,20 @@ const effectMap: CardExpansionModule = {
           }
           return owned;
         },
-        triggeredEffectFn: async (triggeredArgs) => {
+        triggeredEffectFn: async triggeredArgs => {
           // Gather this player's Sinister Plot tokens at this project in deterministic order.
           const ownedTokenIds = Object.values(triggeredArgs.match.tokens ?? {})
-            .filter((token) =>
-              token.tokenId === renaissanceTokenIds.sinisterPlot &&
-              token.ownerId === cardEffectArgs.playerId &&
-              token.location.type === 'cardLike' &&
-              token.location.cardLikeId === project.id
+            .filter(
+              token =>
+                token.tokenId === renaissanceTokenIds.sinisterPlot &&
+                token.ownerId === cardEffectArgs.playerId &&
+                token.location.type === 'cardLike' &&
+                token.location.cardLikeId === project.id,
             )
-            .map((token) => token.id)
+            .map(token => token.id)
             .sort((a, b) => a.localeCompare(b));
 
-          const promptResult = await triggeredArgs.actionService.run('userPrompt', {
+          const promptResult = (await triggeredArgs.actionService.run('userPrompt', {
             playerId: cardEffectArgs.playerId,
             prompt: `Sinister Plot: Add a token, or remove ${ownedTokenIds.length} token(s) to draw that many cards?`,
             actionButtons: [
@@ -1492,7 +1502,7 @@ const effectMap: CardExpansionModule = {
               type: 'display-cards',
               cardLikeIds: [project.id],
             },
-          }) as { action?: number } | null;
+          })) as { action?: number } | null;
 
           const selectedAction = promptResult?.action === 2 ? 2 : 1;
 
@@ -1545,7 +1555,7 @@ const effectMap: CardExpansionModule = {
     },
   },
   'star-chart': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       const project = findProjectInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!project) {
@@ -1560,7 +1570,7 @@ const effectMap: CardExpansionModule = {
         once: false,
         allowMultipleInstances: false,
         compulsory: true,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
             return false;
           }
@@ -1581,7 +1591,7 @@ const effectMap: CardExpansionModule = {
 
           return true;
         },
-        triggeredEffectFn: async (triggeredArgs) => {
+        triggeredEffectFn: async triggeredArgs => {
           const shuffledCardIds = triggeredArgs.trigger.args.cardIds ?? [];
           if (shuffledCardIds.length < 2) {
             return;
@@ -1590,13 +1600,13 @@ const effectMap: CardExpansionModule = {
           loggerService.debug(
             `[star-chart project] prompting player ${cardEffectArgs.playerId} to choose top card from ${shuffledCardIds.length} shuffled card(s)`,
           );
-          const selectedCardId = await triggeredArgs.actionService.run('selectSingleCard', {
+          const selectedCardId = (await triggeredArgs.actionService.run('selectSingleCard', {
             playerId: cardEffectArgs.playerId,
             prompt: 'Choose a shuffled card to put on top (Star Chart)',
             restrict: shuffledCardIds,
             count: 1,
             optional: true,
-          }) as CardId | null;
+          })) as CardId | null;
           if (!selectedCardId) {
             loggerService.debug('[star-chart project] player declined to choose a top card');
             return;

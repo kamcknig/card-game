@@ -7,9 +7,7 @@ export class ExpansionCardMetadataRegistryService {
   private readonly _scoringFunctions: Partial<Record<CardKey, CardScoringFunction>> = {};
   private readonly _lifecycleMethods: Partial<Record<CardKey, CardLifecycleCallbackMap>> = {};
 
-  constructor(
-    private readonly loggerService: LoggerService,
-  ) {}
+  constructor(private readonly loggerService: LoggerService) {}
 
   // Registers a card scoring function by card key.
   public registerScoringFunction(cardKey: CardKey, scoringFunction: CardScoringFunction): void {

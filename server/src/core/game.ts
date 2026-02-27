@@ -34,19 +34,19 @@ import { MatchConfigurationSaveService } from './match-configuration-save-servic
 const createDefaultMatchConfiguration = (): MatchConfiguration => ({
   expansions: [
     {
-      'title': 'Base',
-      'name': 'base-v2',
-      'order': 1,
+      title: 'Base',
+      name: 'base-v2',
+      order: 1,
     },
     {
-      'title': 'Intrigue',
-      'name': 'intrigue',
-      'order': 2,
+      title: 'Intrigue',
+      name: 'intrigue',
+      order: 2,
     },
     {
-      'title': 'Seaside',
-      'name': 'seaside',
-      'order': 3,
+      title: 'Seaside',
+      name: 'seaside',
+      order: 3,
     },
   ],
   preselectedKingdoms: [],
@@ -187,27 +187,27 @@ export class Game {
 
   // Returns true when a player with the session already belongs to this game.
   public hasSession(sessionId: string): boolean {
-    return this.runtimeState.players.some((player) => player.sessionId === sessionId);
+    return this.runtimeState.players.some(player => player.sessionId === sessionId);
   }
 
   // Returns the count of currently connected players.
   public getConnectedPlayerCount(): number {
-    return this.runtimeState.players.filter((player) => player.connected).length;
+    return this.runtimeState.players.filter(player => player.connected).length;
   }
 
   // Returns the count of currently connected human players.
   public getConnectedHumanCount(): number {
-    return this.runtimeState.players.filter((player) => player.connected && !player.isComputer).length;
+    return this.runtimeState.players.filter(player => player.connected && !player.isComputer).length;
   }
 
   // Finds a player by session identifier in this game runtime.
   public getPlayerBySession(sessionId: string): Player | undefined {
-    return this.runtimeState.players.find((player) => player.sessionId === sessionId);
+    return this.runtimeState.players.find(player => player.sessionId === sessionId);
   }
 
   // Finds a player by player identifier in this game runtime.
   public getPlayerById(playerId: PlayerId): Player | undefined {
-    return this.runtimeState.players.find((player) => player.id === playerId);
+    return this.runtimeState.players.find(player => player.id === playerId);
   }
 
   // Handles expansion-loaded events from startup loaders.
@@ -358,8 +358,8 @@ export class Game {
     }
 
     jsonPatch.applyPatch(this.runtimeState.matchConfiguration, patch);
-    this.defaultMatchConfiguration.preselectedKingdoms = newConfig.kingdomSupply.map((supply) => supply.cards[0]);
-    this.runtimeState.matchConfiguration.preselectedKingdoms = newConfig.kingdomSupply.map((supply) => supply.cards[0]);
+    this.defaultMatchConfiguration.preselectedKingdoms = newConfig.kingdomSupply.map(supply => supply.cards[0]);
+    this.runtimeState.matchConfiguration.preselectedKingdoms = newConfig.kingdomSupply.map(supply => supply.cards[0]);
     // Lobby phase update for all clients.
     this.io.in(this.runtimeState.roomName).emit('matchConfigurationUpdated', this.runtimeState.matchConfiguration);
   };
@@ -373,7 +373,10 @@ export class Game {
   // Persists current lobby match configuration as a named save file.
   private onSaveMatchConfiguration = (playerId: PlayerId, name: string): void => {
     const configuration = this.runtimeState.matchConfiguration ?? structuredClone(this.defaultMatchConfiguration);
-    const result: MatchConfigurationSaveResult = this.matchConfigurationSaveService.saveConfiguration(name, configuration);
+    const result: MatchConfigurationSaveResult = this.matchConfigurationSaveService.saveConfiguration(
+      name,
+      configuration,
+    );
     this.runtimeState.socketMap.get(playerId)?.emit('matchConfigurationSaveCompleted', result);
     if (result.ok) {
       this.emitSavedConfigurationList(playerId);
@@ -455,11 +458,7 @@ export class Game {
 
   // Handles a connected human player's vote to remove a disconnected player.
   private onRemoveDisconnectedPlayerVote = (voterId: PlayerId, targetPlayerId: PlayerId): void => {
-    this.gameLobbySessionCoordinatorService.onRemoveDisconnectedPlayerVote(
-      this.runtimeState,
-      voterId,
-      targetPlayerId,
-    );
+    this.gameLobbySessionCoordinatorService.onRemoveDisconnectedPlayerVote(this.runtimeState, voterId, targetPlayerId);
     this.onGameStateChanged?.();
   };
 }

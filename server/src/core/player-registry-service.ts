@@ -13,8 +13,7 @@ export class PlayerRegistryService {
     private readonly playerFactoryService: PlayerFactoryService,
     // Keep player-cap policy configurable via DI while preserving the existing default.
     private readonly maxPlayers = 6,
-  ) {
-  }
+  ) {}
 
   // Registers a player join attempt, creating a new player or reconnecting an existing one.
   public registerPlayerJoin(args: {
@@ -25,7 +24,7 @@ export class PlayerRegistryService {
   }): RegisterPlayerJoinResult {
     const { players, sessionId, socket, matchStarted } = args;
 
-    const existingPlayer = players.find((player) => player.sessionId === sessionId);
+    const existingPlayer = players.find(player => player.sessionId === sessionId);
 
     // Existing players always keep their slot, even when the lobby is at max capacity.
     if (existingPlayer) {
@@ -52,7 +51,7 @@ export class PlayerRegistryService {
 
   // Marks a player disconnected and returns the player when found.
   public markPlayerDisconnected(players: Player[], playerId: PlayerId): Player | undefined {
-    const player = players.find((candidate) => candidate.id === playerId);
+    const player = players.find(candidate => candidate.id === playerId);
     if (!player) {
       return undefined;
     }
@@ -64,7 +63,7 @@ export class PlayerRegistryService {
 
   // Updates a player's display name when present.
   public setPlayerName(players: Player[], playerId: PlayerId, name: string): Player | undefined {
-    const player = players.find((candidate) => candidate.id === playerId);
+    const player = players.find(candidate => candidate.id === playerId);
     if (!player) {
       return undefined;
     }

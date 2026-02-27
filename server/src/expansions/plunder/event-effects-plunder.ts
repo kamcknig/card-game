@@ -14,13 +14,16 @@ type PlunderEventMetadata = {
   plunder?: {
     // Tracks one-time listener registration per player for persistent event state handlers.
     listenersByPlayerId?: Partial<
-      Record<PlayerId, {
-        avoid?: boolean;
-        deliver?: boolean;
-        mirror?: boolean;
-        rush?: boolean;
-        cleanup?: boolean;
-      }>
+      Record<
+        PlayerId,
+        {
+          avoid?: boolean;
+          deliver?: boolean;
+          mirror?: boolean;
+          rush?: boolean;
+          cleanup?: boolean;
+        }
+      >
     >;
     // Tracks pending Avoid card count to keep in discard on the next shuffle this turn.
     avoidPendingByPlayerId?: Partial<Record<PlayerId, number>>;
@@ -36,9 +39,7 @@ type PlunderEventMetadata = {
 };
 
 // Ensures Plunder event metadata containers exist and returns them.
-const getPlunderMetadata = (args: {
-  event: ReturnType<typeof findEventInMatch<PlunderEventMetadata>>;
-}) => {
+const getPlunderMetadata = (args: { event: ReturnType<typeof findEventInMatch<PlunderEventMetadata>> }) => {
   const event = args.event;
   if (!event) {
     return null;
@@ -73,28 +74,33 @@ const registerPlunderEndTurnCleanup = (
   }
 
   listeners[playerId]!.cleanup = true;
-  cardEffectArgs.reactionManager.registerSystemTemplate(event, 'endTurn', {
-    playerId,
-    once: false,
-    compulsory: true,
-    allowMultipleInstances: false,
-    condition: ({ trigger }) => trigger.args.playerId === playerId,
-    triggeredEffectFn: async (triggeredArgs) => {
-      const currentMetadata = getPlunderMetadata({ event });
-      if (!currentMetadata) {
-        return;
-      }
+  cardEffectArgs.reactionManager.registerSystemTemplate(
+    event,
+    'endTurn',
+    {
+      playerId,
+      once: false,
+      compulsory: true,
+      allowMultipleInstances: false,
+      condition: ({ trigger }) => trigger.args.playerId === playerId,
+      triggeredEffectFn: async triggeredArgs => {
+        const currentMetadata = getPlunderMetadata({ event });
+        if (!currentMetadata) {
+          return;
+        }
 
-      currentMetadata.avoidPendingByPlayerId![playerId] = 0;
-      currentMetadata.deliverActiveTurnIndexByPlayerId![playerId] = undefined;
-      currentMetadata.deliverSetAsideByPlayerId![playerId] = [];
-      currentMetadata.mirrorPendingByPlayerId![playerId] = 0;
-      currentMetadata.rushPendingByPlayerId![playerId] = false;
-      triggeredArgs.loggerService.debug(`[plunder event cleanup] cleared transient state for player ${playerId}`);
+        currentMetadata.avoidPendingByPlayerId![playerId] = 0;
+        currentMetadata.deliverActiveTurnIndexByPlayerId![playerId] = undefined;
+        currentMetadata.deliverSetAsideByPlayerId![playerId] = [];
+        currentMetadata.mirrorPendingByPlayerId![playerId] = 0;
+        currentMetadata.rushPendingByPlayerId![playerId] = false;
+        triggeredArgs.loggerService.debug(`[plunder event cleanup] cleared transient state for player ${playerId}`);
+      },
     },
-  }, {
-    idSuffix: `plunder-transient-cleanup:${playerId}`,
-  });
+    {
+      idSuffix: `plunder-transient-cleanup:${playerId}`,
+    },
+  );
 };
 
 // Registers the shared Avoid shuffle listener for one player.
@@ -114,78 +120,83 @@ const registerAvoidListener = (
   }
 
   metadata.listenersByPlayerId![playerId]!.avoid = true;
-  cardEffectArgs.reactionManager.registerSystemTemplate(event, 'shuffle', {
-    playerId,
-    once: false,
-    compulsory: false,
-    allowMultipleInstances: false,
-    condition: ({ trigger }) => {
-      if (trigger.args.playerId !== playerId) {
-        return false;
-      }
-      const pendingCount = getPlunderMetadata({ event })?.avoidPendingByPlayerId?.[playerId] ?? 0;
-      if (pendingCount < 1) {
-        return false;
-      }
-      return (trigger.args.cardIds ?? []).length > 0;
+  cardEffectArgs.reactionManager.registerSystemTemplate(
+    event,
+    'shuffle',
+    {
+      playerId,
+      once: false,
+      compulsory: false,
+      allowMultipleInstances: false,
+      condition: ({ trigger }) => {
+        if (trigger.args.playerId !== playerId) {
+          return false;
+        }
+        const pendingCount = getPlunderMetadata({ event })?.avoidPendingByPlayerId?.[playerId] ?? 0;
+        if (pendingCount < 1) {
+          return false;
+        }
+        return (trigger.args.cardIds ?? []).length > 0;
+      },
+      triggeredEffectFn: async triggeredArgs => {
+        const currentMetadata = getPlunderMetadata({ event });
+        if (!currentMetadata) {
+          return;
+        }
+
+        const pendingCount = currentMetadata.avoidPendingByPlayerId![playerId] ?? 0;
+        const shuffledCardIds = [...(triggeredArgs.trigger.args.cardIds ?? [])];
+        const selectableCount = Math.min(pendingCount, shuffledCardIds.length);
+
+        currentMetadata.avoidPendingByPlayerId![playerId] = 0;
+        if (selectableCount < 1) {
+          return;
+        }
+
+        const selectedCardIds = await triggeredArgs.actionService.run('selectCard', {
+          playerId,
+          prompt: `Choose up to ${selectableCount} shuffled card(s) to keep in discard (Avoid)`,
+          restrict: shuffledCardIds,
+          count: { kind: 'upTo', count: selectableCount },
+          optional: true,
+        });
+
+        if (!selectedCardIds.length) {
+          triggeredArgs.loggerService.debug('[avoid effect] player selected no cards to keep in discard');
+          return;
+        }
+
+        const filteredShuffledCardIds = [...shuffledCardIds];
+        for (const selectedCardId of selectedCardIds) {
+          const selectedCardIndex = filteredShuffledCardIds.indexOf(selectedCardId);
+          if (selectedCardIndex >= 0) {
+            filteredShuffledCardIds.splice(selectedCardIndex, 1);
+          }
+
+          let sourceInfo: { sourceKey: string; playerId?: PlayerId } | null = null;
+          try {
+            sourceInfo = triggeredArgs.cardSourceController.findCardSource(selectedCardId);
+          } catch {
+            sourceInfo = null;
+          }
+
+          const alreadyInPlayerDiscard = sourceInfo?.sourceKey === 'playerDiscard' && sourceInfo.playerId === playerId;
+          if (!alreadyInPlayerDiscard) {
+            await triggeredArgs.actionService.run('moveCard', {
+              cardId: selectedCardId,
+              toPlayerId: playerId,
+              to: { location: 'playerDiscard' },
+            });
+          }
+        }
+        triggeredArgs.trigger.args.cardIds = filteredShuffledCardIds;
+        triggeredArgs.loggerService.debug(`[avoid effect] removed ${selectedCardIds.length} card(s) from shuffled set`);
+      },
     },
-    triggeredEffectFn: async (triggeredArgs) => {
-      const currentMetadata = getPlunderMetadata({ event });
-      if (!currentMetadata) {
-        return;
-      }
-
-      const pendingCount = currentMetadata.avoidPendingByPlayerId![playerId] ?? 0;
-      const shuffledCardIds = [...(triggeredArgs.trigger.args.cardIds ?? [])];
-      const selectableCount = Math.min(pendingCount, shuffledCardIds.length);
-
-      currentMetadata.avoidPendingByPlayerId![playerId] = 0;
-      if (selectableCount < 1) {
-        return;
-      }
-
-      const selectedCardIds = await triggeredArgs.actionService.run('selectCard', {
-        playerId,
-        prompt: `Choose up to ${selectableCount} shuffled card(s) to keep in discard (Avoid)`,
-        restrict: shuffledCardIds,
-        count: { kind: 'upTo', count: selectableCount },
-        optional: true,
-      });
-
-      if (!selectedCardIds.length) {
-        triggeredArgs.loggerService.debug('[avoid effect] player selected no cards to keep in discard');
-        return;
-      }
-
-      const filteredShuffledCardIds = [...shuffledCardIds];
-      for (const selectedCardId of selectedCardIds) {
-        const selectedCardIndex = filteredShuffledCardIds.indexOf(selectedCardId);
-        if (selectedCardIndex >= 0) {
-          filteredShuffledCardIds.splice(selectedCardIndex, 1);
-        }
-
-        let sourceInfo: { sourceKey: string; playerId?: PlayerId } | null = null;
-        try {
-          sourceInfo = triggeredArgs.cardSourceController.findCardSource(selectedCardId);
-        } catch {
-          sourceInfo = null;
-        }
-
-        const alreadyInPlayerDiscard = sourceInfo?.sourceKey === 'playerDiscard' && sourceInfo.playerId === playerId;
-        if (!alreadyInPlayerDiscard) {
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: selectedCardId,
-            toPlayerId: playerId,
-            to: { location: 'playerDiscard' },
-          });
-        }
-      }
-      triggeredArgs.trigger.args.cardIds = filteredShuffledCardIds;
-      triggeredArgs.loggerService.debug(`[avoid effect] removed ${selectedCardIds.length} card(s) from shuffled set`);
+    {
+      idSuffix: `avoid:${playerId}:shuffle`,
     },
-  }, {
-    idSuffix: `avoid:${playerId}:shuffle`,
-  });
+  );
 };
 
 // Registers the shared Deliver gained-card redirect listener for one player.
@@ -205,95 +216,105 @@ const registerDeliverListener = (
   }
 
   metadata.listenersByPlayerId![playerId]!.deliver = true;
-  cardEffectArgs.reactionManager.registerSystemTemplate(event, 'cardGained', {
-    playerId,
-    once: false,
-    compulsory: true,
-    allowMultipleInstances: false,
-    condition: ({ trigger, match }) => {
-      if (trigger.args.playerId !== playerId) {
-        return false;
-      }
-      const activeTurnIndex = getPlunderMetadata({ event })?.deliverActiveTurnIndexByPlayerId?.[playerId];
-      if (activeTurnIndex === undefined) {
-        return false;
-      }
-      return getCurrentTurnHistoryIndex({ match }) === activeTurnIndex;
-    },
-    triggeredEffectFn: async (triggeredArgs) => {
-      const currentMetadata = getPlunderMetadata({ event });
-      if (!currentMetadata) {
-        return;
-      }
-
-      const gainedCardId = triggeredArgs.trigger.args.cardId;
-      if (
-        !isCardStillAtGainedLocation(
-          triggeredArgs.cardSourceController,
-          gainedCardId,
-          triggeredArgs.trigger.args.gainedLocation,
-        )
-      ) {
-        triggeredArgs.loggerService.debug('[deliver effect] gained card moved before set-aside redirect');
-        return;
-      }
-
-      await triggeredArgs.actionService.run('moveCard', {
-        cardId: gainedCardId,
-        toPlayerId: playerId,
-        to: { location: 'set-aside' },
-        setAsideSource: {
-          ownerPlayerId: playerId,
-          sourceCardLikeId: event.id,
-          sourceCardKey: event.cardKey,
-        },
-      });
-
-      currentMetadata.deliverSetAsideByPlayerId![playerId] ??= [];
-      currentMetadata.deliverSetAsideByPlayerId![playerId]!.push(gainedCardId);
-      triggeredArgs.loggerService.debug(`[deliver effect] set aside gained card ${gainedCardId}`);
-    },
-  }, {
-    idSuffix: `deliver:${playerId}:cardGained`,
-  });
-
-  cardEffectArgs.reactionManager.registerSystemTemplate(event, 'endTurn', {
-    playerId,
-    once: false,
-    compulsory: true,
-    allowMultipleInstances: false,
-    condition: ({ trigger }) => trigger.args.playerId === playerId,
-    triggeredEffectFn: async (triggeredArgs) => {
-      const currentMetadata = getPlunderMetadata({ event });
-      if (!currentMetadata) {
-        return;
-      }
-
-      const setAsideCardIds = [...(currentMetadata.deliverSetAsideByPlayerId![playerId] ?? [])];
-      if (!setAsideCardIds.length) {
-        return;
-      }
-
-      for (const setAsideCardId of setAsideCardIds) {
-        const setAsideSource = getPlayerSourceSafe(triggeredArgs, 'set-aside', playerId);
-        if (!setAsideSource.includes(setAsideCardId)) {
-          continue;
+  cardEffectArgs.reactionManager.registerSystemTemplate(
+    event,
+    'cardGained',
+    {
+      playerId,
+      once: false,
+      compulsory: true,
+      allowMultipleInstances: false,
+      condition: ({ trigger, match }) => {
+        if (trigger.args.playerId !== playerId) {
+          return false;
         }
-        await triggeredArgs.actionService.run('moveCard', {
-          cardId: setAsideCardId,
-          toPlayerId: playerId,
-          to: { location: 'playerHand' },
-        });
-      }
+        const activeTurnIndex = getPlunderMetadata({ event })?.deliverActiveTurnIndexByPlayerId?.[playerId];
+        if (activeTurnIndex === undefined) {
+          return false;
+        }
+        return getCurrentTurnHistoryIndex({ match }) === activeTurnIndex;
+      },
+      triggeredEffectFn: async triggeredArgs => {
+        const currentMetadata = getPlunderMetadata({ event });
+        if (!currentMetadata) {
+          return;
+        }
 
-      currentMetadata.deliverSetAsideByPlayerId![playerId] = [];
-      triggeredArgs.loggerService.debug(
-        `[deliver effect] returned ${setAsideCardIds.length} set-aside card(s) to hand`,
-      );
+        const gainedCardId = triggeredArgs.trigger.args.cardId;
+        if (
+          !isCardStillAtGainedLocation(
+            triggeredArgs.cardSourceController,
+            gainedCardId,
+            triggeredArgs.trigger.args.gainedLocation,
+          )
+        ) {
+          triggeredArgs.loggerService.debug('[deliver effect] gained card moved before set-aside redirect');
+          return;
+        }
+
+        await triggeredArgs.actionService.run('moveCard', {
+          cardId: gainedCardId,
+          toPlayerId: playerId,
+          to: { location: 'set-aside' },
+          setAsideSource: {
+            ownerPlayerId: playerId,
+            sourceCardLikeId: event.id,
+            sourceCardKey: event.cardKey,
+          },
+        });
+
+        currentMetadata.deliverSetAsideByPlayerId![playerId] ??= [];
+        currentMetadata.deliverSetAsideByPlayerId![playerId]!.push(gainedCardId);
+        triggeredArgs.loggerService.debug(`[deliver effect] set aside gained card ${gainedCardId}`);
+      },
     },
-  }, {
-    idSuffix: `deliver:${playerId}:endTurn`,
-  });
+    {
+      idSuffix: `deliver:${playerId}:cardGained`,
+    },
+  );
+
+  cardEffectArgs.reactionManager.registerSystemTemplate(
+    event,
+    'endTurn',
+    {
+      playerId,
+      once: false,
+      compulsory: true,
+      allowMultipleInstances: false,
+      condition: ({ trigger }) => trigger.args.playerId === playerId,
+      triggeredEffectFn: async triggeredArgs => {
+        const currentMetadata = getPlunderMetadata({ event });
+        if (!currentMetadata) {
+          return;
+        }
+
+        const setAsideCardIds = [...(currentMetadata.deliverSetAsideByPlayerId![playerId] ?? [])];
+        if (!setAsideCardIds.length) {
+          return;
+        }
+
+        for (const setAsideCardId of setAsideCardIds) {
+          const setAsideSource = getPlayerSourceSafe(triggeredArgs, 'set-aside', playerId);
+          if (!setAsideSource.includes(setAsideCardId)) {
+            continue;
+          }
+          await triggeredArgs.actionService.run('moveCard', {
+            cardId: setAsideCardId,
+            toPlayerId: playerId,
+            to: { location: 'playerHand' },
+          });
+        }
+
+        currentMetadata.deliverSetAsideByPlayerId![playerId] = [];
+        triggeredArgs.loggerService.debug(
+          `[deliver effect] returned ${setAsideCardIds.length} set-aside card(s) to hand`,
+        );
+      },
+    },
+    {
+      idSuffix: `deliver:${playerId}:endTurn`,
+    },
+  );
 };
 
 // Registers the shared Mirror listener that resolves the next gained Action this turn.
@@ -313,54 +334,59 @@ const registerMirrorListener = (
   }
 
   metadata.listenersByPlayerId![playerId]!.mirror = true;
-  cardEffectArgs.reactionManager.registerSystemTemplate(event, 'cardGained', {
-    playerId,
-    once: false,
-    compulsory: true,
-    allowMultipleInstances: false,
-    condition: ({ trigger }) => {
-      if (trigger.args.playerId !== playerId) {
-        return false;
-      }
-      const pendingCount = getPlunderMetadata({ event })?.mirrorPendingByPlayerId?.[playerId] ?? 0;
-      if (pendingCount < 1) {
-        return false;
-      }
-      const gainedCard = cardEffectArgs.cardLibrary.getCard(trigger.args.cardId);
-      return gainedCard.type.includes('ACTION');
-    },
-    triggeredEffectFn: async (triggeredArgs) => {
-      const currentMetadata = getPlunderMetadata({ event });
-      if (!currentMetadata) {
-        return;
-      }
-
-      const mirrorCount = currentMetadata.mirrorPendingByPlayerId![playerId] ?? 0;
-      currentMetadata.mirrorPendingByPlayerId![playerId] = 0;
-      if (mirrorCount < 1) {
-        return;
-      }
-
-      const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
-      const gainedPileKey = getCardPileKey(gainedCard) as CardKey;
-      for (let gainIndex = 0; gainIndex < mirrorCount; gainIndex += 1) {
-        const gainedCopyId = await triggeredArgs.supplyGainService.gainTopSupplyCardForPileKey({
-          playerId,
-          pileKey: gainedPileKey,
-          to: { location: 'playerDiscard' },
-          logTag: 'mirror effect',
-        });
-
-        if (gainedCopyId === undefined) {
-          break;
+  cardEffectArgs.reactionManager.registerSystemTemplate(
+    event,
+    'cardGained',
+    {
+      playerId,
+      once: false,
+      compulsory: true,
+      allowMultipleInstances: false,
+      condition: ({ trigger }) => {
+        if (trigger.args.playerId !== playerId) {
+          return false;
         }
-      }
+        const pendingCount = getPlunderMetadata({ event })?.mirrorPendingByPlayerId?.[playerId] ?? 0;
+        if (pendingCount < 1) {
+          return false;
+        }
+        const gainedCard = cardEffectArgs.cardLibrary.getCard(trigger.args.cardId);
+        return gainedCard.type.includes('ACTION');
+      },
+      triggeredEffectFn: async triggeredArgs => {
+        const currentMetadata = getPlunderMetadata({ event });
+        if (!currentMetadata) {
+          return;
+        }
 
-      triggeredArgs.loggerService.debug(`[mirror effect] resolved ${mirrorCount} pending copy gain(s)`);
+        const mirrorCount = currentMetadata.mirrorPendingByPlayerId![playerId] ?? 0;
+        currentMetadata.mirrorPendingByPlayerId![playerId] = 0;
+        if (mirrorCount < 1) {
+          return;
+        }
+
+        const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
+        const gainedPileKey = getCardPileKey(gainedCard) as CardKey;
+        for (let gainIndex = 0; gainIndex < mirrorCount; gainIndex += 1) {
+          const gainedCopyId = await triggeredArgs.supplyGainService.gainTopSupplyCardForPileKey({
+            playerId,
+            pileKey: gainedPileKey,
+            to: { location: 'playerDiscard' },
+            logTag: 'mirror effect',
+          });
+
+          if (gainedCopyId === undefined) {
+            break;
+          }
+        }
+
+        triggeredArgs.loggerService.debug(`[mirror effect] resolved ${mirrorCount} pending copy gain(s)`);
+      },
     },
-  }, {
-    idSuffix: `mirror:${playerId}:cardGained`,
-  });
+    {
+      idSuffix: `mirror:${playerId}:cardGained`,
+    },
+  );
 };
 
 // Registers the shared Rush listener that plays the next gained Action this turn.
@@ -380,56 +406,61 @@ const registerRushListener = (
   }
 
   metadata.listenersByPlayerId![playerId]!.rush = true;
-  cardEffectArgs.reactionManager.registerSystemTemplate(event, 'cardGained', {
-    playerId,
-    once: false,
-    compulsory: true,
-    allowMultipleInstances: false,
-    condition: ({ trigger }) => {
-      if (trigger.args.playerId !== playerId) {
-        return false;
-      }
-      const isArmed = getPlunderMetadata({ event })?.rushPendingByPlayerId?.[playerId] === true;
-      if (!isArmed) {
-        return false;
-      }
-      const gainedCard = cardEffectArgs.cardLibrary.getCard(trigger.args.cardId);
-      return gainedCard.type.includes('ACTION');
-    },
-    triggeredEffectFn: async (triggeredArgs) => {
-      const currentMetadata = getPlunderMetadata({ event });
-      if (!currentMetadata) {
-        return;
-      }
+  cardEffectArgs.reactionManager.registerSystemTemplate(
+    event,
+    'cardGained',
+    {
+      playerId,
+      once: false,
+      compulsory: true,
+      allowMultipleInstances: false,
+      condition: ({ trigger }) => {
+        if (trigger.args.playerId !== playerId) {
+          return false;
+        }
+        const isArmed = getPlunderMetadata({ event })?.rushPendingByPlayerId?.[playerId] === true;
+        if (!isArmed) {
+          return false;
+        }
+        const gainedCard = cardEffectArgs.cardLibrary.getCard(trigger.args.cardId);
+        return gainedCard.type.includes('ACTION');
+      },
+      triggeredEffectFn: async triggeredArgs => {
+        const currentMetadata = getPlunderMetadata({ event });
+        if (!currentMetadata) {
+          return;
+        }
 
-      currentMetadata.rushPendingByPlayerId![playerId] = false;
-      const gainedCardId = triggeredArgs.trigger.args.cardId;
-      if (
-        !isCardStillAtGainedLocation(
-          triggeredArgs.cardSourceController,
-          gainedCardId,
-          triggeredArgs.trigger.args.gainedLocation,
-        )
-      ) {
-        triggeredArgs.loggerService.debug('[rush effect] gained Action moved before play resolution');
-        return;
-      }
+        currentMetadata.rushPendingByPlayerId![playerId] = false;
+        const gainedCardId = triggeredArgs.trigger.args.cardId;
+        if (
+          !isCardStillAtGainedLocation(
+            triggeredArgs.cardSourceController,
+            gainedCardId,
+            triggeredArgs.trigger.args.gainedLocation,
+          )
+        ) {
+          triggeredArgs.loggerService.debug('[rush effect] gained Action moved before play resolution');
+          return;
+        }
 
-      await triggeredArgs.actionService.run('playCard', {
-        playerId,
-        cardId: gainedCardId,
-        overrides: { actionCost: 0 },
-      });
-      triggeredArgs.loggerService.debug(`[rush effect] played gained Action ${gainedCardId}`);
+        await triggeredArgs.actionService.run('playCard', {
+          playerId,
+          cardId: gainedCardId,
+          overrides: { actionCost: 0 },
+        });
+        triggeredArgs.loggerService.debug(`[rush effect] played gained Action ${gainedCardId}`);
+      },
     },
-  }, {
-    idSuffix: `rush:${playerId}:cardGained`,
-  });
+    {
+      idSuffix: `rush:${playerId}:cardGained`,
+    },
+  );
 };
 
 const effectMap: CardExpansionModule = {
-  'avoid': {
-    registerEffects: () => async (cardEffectArgs) => {
+  avoid: {
+    registerEffects: () => async cardEffectArgs => {
       const event = findEventInMatch<PlunderEventMetadata>(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
         cardEffectArgs.loggerService.warn('[avoid effect] event not found');
@@ -453,8 +484,8 @@ const effectMap: CardExpansionModule = {
       );
     },
   },
-  'bury': {
-    registerEffects: () => async (cardEffectArgs) => {
+  bury: {
+    registerEffects: () => async cardEffectArgs => {
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
 
       const discard = getPlayerSourceSafe(cardEffectArgs, 'playerDiscard', cardEffectArgs.playerId);
@@ -481,8 +512,8 @@ const effectMap: CardExpansionModule = {
       });
     },
   },
-  'deliver': {
-    registerEffects: () => async (cardEffectArgs) => {
+  deliver: {
+    registerEffects: () => async cardEffectArgs => {
       const event = findEventInMatch<PlunderEventMetadata>(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
         cardEffectArgs.loggerService.warn('[deliver effect] event not found');
@@ -507,8 +538,8 @@ const effectMap: CardExpansionModule = {
       );
     },
   },
-  'foray': {
-    registerEffects: () => async (cardEffectArgs) => {
+  foray: {
+    registerEffects: () => async cardEffectArgs => {
       const hand = getPlayerSourceSafe(cardEffectArgs, 'playerHand', cardEffectArgs.playerId);
       if (!hand.length) {
         cardEffectArgs.loggerService.debug('[foray effect] no cards in hand to discard');
@@ -546,8 +577,8 @@ const effectMap: CardExpansionModule = {
       }
     },
   },
-  'invasion': {
-    registerEffects: () => async (cardEffectArgs) => {
+  invasion: {
+    registerEffects: () => async cardEffectArgs => {
       const playerId = cardEffectArgs.playerId;
 
       // Invasion first optionally plays an Attack from hand.
@@ -556,10 +587,7 @@ const effectMap: CardExpansionModule = {
         prompt: 'You may play an Attack from your hand',
         // Canonical filter keeps play eligibility serializable for Shadow-aware selection handling.
         restrict: {
-          all: [
-            { location: 'playerHand', playerId },
-            { cardType: ['ATTACK'] },
-          ],
+          all: [{ location: 'playerHand', playerId }, { cardType: ['ATTACK'] }],
         },
         selectionIntent: { kind: 'play-card', cardTypes: ['ACTION', 'NIGHT', 'TREASURE'] },
         count: { kind: 'upTo', count: 1 },
@@ -584,15 +612,14 @@ const effectMap: CardExpansionModule = {
       });
 
       // Invasion then gains an Action card onto deck.
-      const actionCardsInSupply = cardEffectArgs.findCardService.findCards({ all: [
-        { location: ['basicSupply', 'kingdomSupply'] },
-        { cardType: ['ACTION'] },
-      ] });
+      const actionCardsInSupply = cardEffectArgs.findCardService.findCards({
+        all: [{ location: ['basicSupply', 'kingdomSupply'] }, { cardType: ['ACTION'] }],
+      });
       if (actionCardsInSupply.length) {
         const selectedActionCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
           playerId,
           prompt: 'Gain an Action onto your deck',
-          restrict: actionCardsInSupply.map((card) => card.id),
+          restrict: actionCardsInSupply.map(card => card.id),
           count: 1,
         });
 
@@ -633,8 +660,8 @@ const effectMap: CardExpansionModule = {
       });
     },
   },
-  'journey': {
-    registerEffects: () => async (cardEffectArgs) => {
+  journey: {
+    registerEffects: () => async cardEffectArgs => {
       const event = findEventInMatch<PlunderEventMetadata>(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
         cardEffectArgs.loggerService.warn('[journey effect] event not found');
@@ -651,44 +678,52 @@ const effectMap: CardExpansionModule = {
       });
 
       // Journey suppresses discard-from-play in the current cleanup for the current player's cards.
-      cardEffectArgs.reactionManager.registerSystemTemplate(event, 'startTurnPhase', {
-        playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        autoResolve: true,
-        condition: ({ trigger, match }) => {
-          if (getTurnPhase(trigger.args.phaseIndex) !== 'cleanup') {
-            return false;
-          }
+      cardEffectArgs.reactionManager.registerSystemTemplate(
+        event,
+        'startTurnPhase',
+        {
+          playerId,
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          autoResolve: true,
+          condition: ({ trigger, match }) => {
+            if (getTurnPhase(trigger.args.phaseIndex) !== 'cleanup') {
+              return false;
+            }
 
-          return getCurrentTurnHistoryIndex({ match }) === turnHistoryIndex;
+            return getCurrentTurnHistoryIndex({ match }) === turnHistoryIndex;
+          },
+          triggeredEffectFn: async triggeredArgs => {
+            const cardsInPlay = triggeredArgs.findCardService
+              .getCardsInPlay()
+              .filter(
+                card =>
+                  card.owner === playerId && triggeredArgs.cardSourceController.getSource('playArea').includes(card.id),
+              );
+
+            if (!cardsInPlay.length) {
+              return;
+            }
+
+            for (const cardInPlay of cardsInPlay) {
+              const journeyProtectedCard = triggeredArgs.cardLibrary.getCard<BaseCardMetadata>(cardInPlay.id);
+              journeyProtectedCard.metadata.base ??= {};
+              journeyProtectedCard.metadata.base.skipDiscardFromPlayAtCleanupTurnHistoryIndex = turnHistoryIndex;
+            }
+            triggeredArgs.loggerService.debug(
+              `[journey effect] marked ${cardsInPlay.length} card(s) to stay in play for this cleanup`,
+            );
+          },
         },
-        triggeredEffectFn: async (triggeredArgs) => {
-          const cardsInPlay = triggeredArgs.findCardService.getCardsInPlay().filter((card) =>
-            card.owner === playerId && triggeredArgs.cardSourceController.getSource('playArea').includes(card.id)
-          );
-
-          if (!cardsInPlay.length) {
-            return;
-          }
-
-          for (const cardInPlay of cardsInPlay) {
-            const journeyProtectedCard = triggeredArgs.cardLibrary.getCard<BaseCardMetadata>(cardInPlay.id);
-            journeyProtectedCard.metadata.base ??= {};
-            journeyProtectedCard.metadata.base.skipDiscardFromPlayAtCleanupTurnHistoryIndex = turnHistoryIndex;
-          }
-          triggeredArgs.loggerService.debug(
-            `[journey effect] marked ${cardsInPlay.length} card(s) to stay in play for this cleanup`,
-          );
+        {
+          idSuffix: `journey:${playerId}:turn:${turnHistoryIndex}`,
         },
-      }, {
-        idSuffix: `journey:${playerId}:turn:${turnHistoryIndex}`,
-      });
+      );
     },
   },
-  'launch': {
-    registerEffects: () => async (cardEffectArgs) => {
+  launch: {
+    registerEffects: () => async cardEffectArgs => {
       const event = findEventInMatch<PlunderEventMetadata>(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
         cardEffectArgs.loggerService.warn('[launch effect] event not found');
@@ -705,18 +740,23 @@ const effectMap: CardExpansionModule = {
       };
       const launchRestrictionUnsub = cardEffectArgs.cardPriceController.registerRule(event, launchRestrictionRule);
 
-      cardEffectArgs.reactionManager.registerSystemTemplate(event, 'endTurn', {
-        playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger }) => trigger.args.playerId === playerId,
-        triggeredEffectFn: async () => {
-          launchRestrictionUnsub();
+      cardEffectArgs.reactionManager.registerSystemTemplate(
+        event,
+        'endTurn',
+        {
+          playerId,
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          condition: ({ trigger }) => trigger.args.playerId === playerId,
+          triggeredEffectFn: async () => {
+            launchRestrictionUnsub();
+          },
         },
-      }, {
-        idSuffix: `launch:${playerId}:turn:${getCurrentTurnHistoryIndex({ match: cardEffectArgs.match }) ?? 0}`,
-      });
+        {
+          idSuffix: `launch:${playerId}:turn:${getCurrentTurnHistoryIndex({ match: cardEffectArgs.match }) ?? 0}`,
+        },
+      );
 
       await cardEffectArgs.actionService.run('setTurnPhase', {
         phase: 'action',
@@ -729,13 +769,13 @@ const effectMap: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
     },
   },
-  'looting': {
-    registerEffects: () => async (cardEffectArgs) => {
+  looting: {
+    registerEffects: () => async cardEffectArgs => {
       await cardEffectArgs.actionService.run('gainLoot', { playerId: cardEffectArgs.playerId });
     },
   },
-  'maelstrom': {
-    registerEffects: () => async (cardEffectArgs) => {
+  maelstrom: {
+    registerEffects: () => async cardEffectArgs => {
       const playerId = cardEffectArgs.playerId;
       const hand = getPlayerSourceSafe(cardEffectArgs, 'playerHand', playerId);
       if (!hand.length) {
@@ -788,8 +828,8 @@ const effectMap: CardExpansionModule = {
       }
     },
   },
-  'mirror': {
-    registerEffects: () => async (cardEffectArgs) => {
+  mirror: {
+    registerEffects: () => async cardEffectArgs => {
       const event = findEventInMatch<PlunderEventMetadata>(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
         cardEffectArgs.loggerService.warn('[mirror effect] event not found');
@@ -813,11 +853,11 @@ const effectMap: CardExpansionModule = {
       );
     },
   },
-  'peril': {
-    registerEffects: () => async (cardEffectArgs) => {
+  peril: {
+    registerEffects: () => async cardEffectArgs => {
       const playerId = cardEffectArgs.playerId;
       const hand = getPlayerSourceSafe(cardEffectArgs, 'playerHand', playerId);
-      const actionCardIdsInHand = hand.filter((cardId) => {
+      const actionCardIdsInHand = hand.filter(cardId => {
         const card = cardEffectArgs.cardLibrary.getCard(cardId);
         return card.type.includes('ACTION');
       });
@@ -846,8 +886,8 @@ const effectMap: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainLoot', { playerId });
     },
   },
-  'prepare': {
-    registerEffects: () => async (cardEffectArgs) => {
+  prepare: {
+    registerEffects: () => async cardEffectArgs => {
       const event = findEventInMatch<PlunderEventMetadata>(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
         cardEffectArgs.loggerService.warn('[prepare effect] event not found');
@@ -880,15 +920,15 @@ const effectMap: CardExpansionModule = {
         compulsory: true,
         allowMultipleInstances: true,
         condition: ({ trigger }) => trigger.args.playerId === playerId,
-        triggeredEffectFn: async (triggeredArgs) => {
-          const stillSetAsideCardIds = hand.filter((cardId) =>
-            getPlayerSourceSafe(triggeredArgs, 'set-aside', playerId).includes(cardId)
+        triggeredEffectFn: async triggeredArgs => {
+          const stillSetAsideCardIds = hand.filter(cardId =>
+            getPlayerSourceSafe(triggeredArgs, 'set-aside', playerId).includes(cardId),
           );
           if (!stillSetAsideCardIds.length) {
             return;
           }
 
-          const actionOrTreasureCardIds = stillSetAsideCardIds.filter((cardId) => {
+          const actionOrTreasureCardIds = stillSetAsideCardIds.filter(cardId => {
             const card = triggeredArgs.cardLibrary.getCard(cardId);
             return card.type.includes('ACTION') || card.type.includes('TREASURE');
           });
@@ -937,17 +977,20 @@ const effectMap: CardExpansionModule = {
       });
     },
   },
-  'prosper': {
-    registerEffects: () => async (cardEffectArgs) => {
+  prosper: {
+    registerEffects: () => async cardEffectArgs => {
       const playerId = cardEffectArgs.playerId;
       await cardEffectArgs.actionService.run('gainLoot', { playerId });
 
       const gainedTreasureCardKeys = new Set<CardKey>();
       while (true) {
         // Recompute from current top cards each loop so split-pile reveals are reflected.
-        const supplyDefinitions = [...cardEffectArgs.match.config.basicSupply, ...cardEffectArgs.match.config.kingdomSupply];
+        const supplyDefinitions = [
+          ...cardEffectArgs.match.config.basicSupply,
+          ...cardEffectArgs.match.config.kingdomSupply,
+        ];
         const gainableTreasureCards = supplyDefinitions
-          .map((supply) => {
+          .map(supply => {
             const pileDefinitionCard = getPileDefinitionCard(supply.cards, supply.name);
             if (!pileDefinitionCard) {
               return undefined;
@@ -956,10 +999,7 @@ const effectMap: CardExpansionModule = {
             return cardEffectArgs.findCardService.findTopSupplyCardForPileKey({ pileKey });
           })
           .filter((card): card is NonNullable<typeof card> => !!card)
-          .filter((card) =>
-            card.type.includes('TREASURE') &&
-            !gainedTreasureCardKeys.has(card.cardKey)
-          );
+          .filter(card => card.type.includes('TREASURE') && !gainedTreasureCardKeys.has(card.cardKey));
 
         if (!gainableTreasureCards.length) {
           break;
@@ -968,7 +1008,7 @@ const effectMap: CardExpansionModule = {
         const selectedTreasureCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
           playerId,
           prompt: 'You may gain a differently named Treasure (Prosper)',
-          restrict: gainableTreasureCards.map((card) => card.id),
+          restrict: gainableTreasureCards.map(card => card.id),
           count: { kind: 'upTo', count: 1 },
           optional: true,
         });
@@ -987,8 +1027,8 @@ const effectMap: CardExpansionModule = {
       }
     },
   },
-  'rush': {
-    registerEffects: () => async (cardEffectArgs) => {
+  rush: {
+    registerEffects: () => async cardEffectArgs => {
       const event = findEventInMatch<PlunderEventMetadata>(cardEffectArgs.match, cardEffectArgs.cardId);
       if (!event) {
         cardEffectArgs.loggerService.warn('[rush effect] event not found');
@@ -1008,17 +1048,17 @@ const effectMap: CardExpansionModule = {
       cardEffectArgs.loggerService.debug(`[rush effect] armed for player ${cardEffectArgs.playerId}`);
     },
   },
-  'scrounge': {
-    registerEffects: () => async (cardEffectArgs) => {
+  scrounge: {
+    registerEffects: () => async cardEffectArgs => {
       const playerId = cardEffectArgs.playerId;
-      const choice = await cardEffectArgs.actionService.run('userPrompt', {
+      const choice = (await cardEffectArgs.actionService.run('userPrompt', {
         playerId,
         prompt: 'Choose one',
         actionButtons: [
           { label: 'TRASH A CARD', action: 1 },
           { label: 'GAIN ESTATE FROM TRASH', action: 2 },
         ],
-      }) as { action: number };
+      })) as { action: number };
 
       if (choice.action === 1) {
         const hand = getPlayerSourceSafe(cardEffectArgs, 'playerHand', playerId);
@@ -1045,10 +1085,9 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      const estateCardsInTrash = cardEffectArgs.findCardService.findCards({ all: [
-        { location: 'trash' },
-        { cardKeys: 'estate' },
-      ] });
+      const estateCardsInTrash = cardEffectArgs.findCardService.findCards({
+        all: [{ location: 'trash' }, { cardKeys: 'estate' }],
+      });
 
       const estateCardFromTrash = estateCardsInTrash.slice(-1)[0];
       if (!estateCardFromTrash) {
@@ -1062,10 +1101,9 @@ const effectMap: CardExpansionModule = {
         to: { location: 'playerDiscard' },
       });
 
-      const gainableCards = cardEffectArgs.findCardService.findCards({ all: [
-        { location: ['basicSupply', 'kingdomSupply'] },
-        { kind: 'upTo', playerId, amount: { treasure: 5 } },
-      ] });
+      const gainableCards = cardEffectArgs.findCardService.findCards({
+        all: [{ location: ['basicSupply', 'kingdomSupply'] }, { kind: 'upTo', playerId, amount: { treasure: 5 } }],
+      });
 
       if (!gainableCards.length) {
         return;
@@ -1074,7 +1112,7 @@ const effectMap: CardExpansionModule = {
       const selectedGainCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId,
         prompt: 'Gain a card costing up to $5',
-        restrict: gainableCards.map((card) => card.id),
+        restrict: gainableCards.map(card => card.id),
         count: 1,
       });
 

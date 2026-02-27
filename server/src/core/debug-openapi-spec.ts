@@ -9,7 +9,8 @@ export const debugOpenApiSpec = {
   info: {
     title: 'Card Game Debug API',
     version: '1.0.0',
-    description: 'Debug endpoints for game/match inspection, state export/merge, expansion data, and saved configurations.',
+    description:
+      'Debug endpoints for game/match inspection, state export/merge, expansion data, and saved configurations.',
   },
   servers: [
     {
@@ -91,9 +92,7 @@ export const debugOpenApiSpec = {
         tags: ['debug-games'],
         operationId: 'getDebugGame',
         summary: 'Gets one debug game summary.',
-        parameters: [
-          { $ref: '#/components/parameters/GameId' },
-        ],
+        parameters: [{ $ref: '#/components/parameters/GameId' }],
         responses: {
           '200': {
             description: 'Debug game summary',
@@ -121,9 +120,7 @@ export const debugOpenApiSpec = {
         tags: ['debug-games'],
         operationId: 'listDebugMatchesForGame',
         summary: 'Lists match scopes for a game.',
-        parameters: [
-          { $ref: '#/components/parameters/GameId' },
-        ],
+        parameters: [{ $ref: '#/components/parameters/GameId' }],
         responses: {
           '200': {
             description: 'Debug match summaries',
@@ -155,10 +152,7 @@ export const debugOpenApiSpec = {
         tags: ['debug-games'],
         operationId: 'getDebugMatchForGame',
         summary: 'Gets one debug match summary.',
-        parameters: [
-          { $ref: '#/components/parameters/GameId' },
-          { $ref: '#/components/parameters/MatchScopeId' },
-        ],
+        parameters: [{ $ref: '#/components/parameters/GameId' }, { $ref: '#/components/parameters/MatchScopeId' }],
         responses: {
           '200': {
             description: 'Debug match summary',
@@ -187,10 +181,7 @@ export const debugOpenApiSpec = {
         tags: ['debug-state'],
         operationId: 'exportDebugMatchState',
         summary: 'Exports full match state for one match scope.',
-        parameters: [
-          { $ref: '#/components/parameters/GameId' },
-          { $ref: '#/components/parameters/MatchScopeId' },
-        ],
+        parameters: [{ $ref: '#/components/parameters/GameId' }, { $ref: '#/components/parameters/MatchScopeId' }],
         responses: {
           '200': {
             description: 'Exported match state payload',
@@ -209,10 +200,7 @@ export const debugOpenApiSpec = {
         tags: ['debug-state'],
         operationId: 'mergeDebugMatchState',
         summary: 'Applies a top-level partial merge into one match state.',
-        parameters: [
-          { $ref: '#/components/parameters/GameId' },
-          { $ref: '#/components/parameters/MatchScopeId' },
-        ],
+        parameters: [{ $ref: '#/components/parameters/GameId' }, { $ref: '#/components/parameters/MatchScopeId' }],
         requestBody: {
           required: true,
           content: {
@@ -267,10 +255,7 @@ export const debugOpenApiSpec = {
         tags: ['debug-games'],
         operationId: 'getDebugMatchCardLibrary',
         summary: 'Returns card library data for one initialized match scope.',
-        parameters: [
-          { $ref: '#/components/parameters/GameId' },
-          { $ref: '#/components/parameters/MatchScopeId' },
-        ],
+        parameters: [{ $ref: '#/components/parameters/GameId' }, { $ref: '#/components/parameters/MatchScopeId' }],
         responses: {
           '200': {
             description: 'Card library and metadata',
@@ -433,9 +418,7 @@ export const debugOpenApiSpec = {
         tags: ['debug-saved-configurations'],
         operationId: 'getSavedMatchConfiguration',
         summary: 'Gets one saved match configuration by key.',
-        parameters: [
-          { $ref: '#/components/parameters/SavedConfigurationKey' },
-        ],
+        parameters: [{ $ref: '#/components/parameters/SavedConfigurationKey' }],
         responses: {
           '200': {
             description: 'Saved configuration details',
@@ -476,9 +459,7 @@ export const debugOpenApiSpec = {
         tags: ['debug-saved-configurations'],
         operationId: 'deleteSavedMatchConfiguration',
         summary: 'Deletes one saved match configuration by key.',
-        parameters: [
-          { $ref: '#/components/parameters/SavedConfigurationKey' },
-        ],
+        parameters: [{ $ref: '#/components/parameters/SavedConfigurationKey' }],
         responses: {
           '200': {
             description: 'Delete result',
@@ -519,9 +500,7 @@ export const debugOpenApiSpec = {
         tags: ['debug-saved-configurations'],
         operationId: 'patchSavedMatchConfiguration',
         summary: 'Applies top-level patch updates to one saved match configuration.',
-        parameters: [
-          { $ref: '#/components/parameters/SavedConfigurationKey' },
-        ],
+        parameters: [{ $ref: '#/components/parameters/SavedConfigurationKey' }],
         requestBody: {
           required: true,
           content: {
@@ -657,9 +636,7 @@ export const debugOpenApiSpec = {
         tags: ['debug-expansions'],
         operationId: 'getExpansionDebugResource',
         summary: 'Gets one expansion debug resource.',
-        parameters: [
-          { $ref: '#/components/parameters/ExpansionName' },
-        ],
+        parameters: [{ $ref: '#/components/parameters/ExpansionName' }],
         responses: {
           '200': {
             description: 'Expansion debug resource',
@@ -679,9 +656,7 @@ export const debugOpenApiSpec = {
         tags: ['debug-expansions'],
         operationId: 'getExpansionCardData',
         summary: 'Gets one expansion card-data resource.',
-        parameters: [
-          { $ref: '#/components/parameters/ExpansionName' },
-        ],
+        parameters: [{ $ref: '#/components/parameters/ExpansionName' }],
         responses: {
           '200': {
             description: 'Expansion card-data resource',

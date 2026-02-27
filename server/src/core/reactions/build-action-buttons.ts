@@ -20,16 +20,12 @@ export function buildActionButtons(
         resolvedName = cardLibrary.getCard(parsedId).cardName;
       } catch (error) {
         // Fall back when the reaction source isn't a regular card (events/landmarks/tokens).
-        loggerService.debug(
-          `[buildActionButtons] unable to resolve card ${parsedId}, falling back to key`,
-        );
+        loggerService.debug(`[buildActionButtons] unable to resolve card ${parsedId}, falling back to key`);
       }
     }
     // Final fallback to a formatted key for non-card reactions.
     if (!resolvedName) {
-      loggerService.debug(
-        `[buildActionButtons] unable to resolve reaction name, using source key`,
-      );
+      loggerService.debug(`[buildActionButtons] unable to resolve reaction name, using source key`);
       resolvedName = formatCardName(reaction.getSourceKey());
     }
     buttons.push({ action: actionId++, label: `${resolvedName} (${count})` });

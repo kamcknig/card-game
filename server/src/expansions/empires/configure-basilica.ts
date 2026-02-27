@@ -5,17 +5,12 @@ import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { placeVictoryTokensPerPlayer } from './landmark-utils.ts';
 
-export const configureBasilica = (
-  registrar: GameEventRegistrar,
-  config: ComputedMatchConfiguration,
-) => {
+export const configureBasilica = (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => {
   // Only register Basilica handlers when the landmark is present.
-  const hasBasilica = (config.landmarks ?? []).some(
-    (landmark) => landmark.cardKey === 'basilica',
-  );
+  const hasBasilica = (config.landmarks ?? []).some(landmark => landmark.cardKey === 'basilica');
   if (!hasBasilica) return;
 
-  registrar('onGameStartSetup', async (args) => {
+  registrar('onGameStartSetup', async args => {
     // Basilica setup: put 6 VP tokens per player on the landmark using the shared helper.
     await placeVictoryTokensPerPlayer(args, {
       landmarkKey: 'basilica',
@@ -38,12 +33,14 @@ export const configureBasilica = (
     }
 
     const victoryTokenId = prosperityTokenIds.victory;
-    const tokensOnBasilica = Object.values(args.match.tokens ?? {}).filter(
-      (token) =>
-        token.tokenId === victoryTokenId &&
-        token.location.type === 'supplyPile' &&
-        token.location.cardKey === 'basilica',
-    ).sort((a, b) => a.id.localeCompare(b.id));
+    const tokensOnBasilica = Object.values(args.match.tokens ?? {})
+      .filter(
+        token =>
+          token.tokenId === victoryTokenId &&
+          token.location.type === 'supplyPile' &&
+          token.location.cardKey === 'basilica',
+      )
+      .sort((a, b) => a.id.localeCompare(b.id));
 
     if (!tokensOnBasilica.length) {
       return;

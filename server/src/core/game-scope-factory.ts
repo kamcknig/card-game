@@ -20,10 +20,7 @@ export interface GameScopeHandle {
 
 // Builds a child Awilix scope per lobby game to isolate game-level stateful services.
 export class GameScopeFactory {
-  constructor(
-    private readonly rootContainer: AwilixContainer,
-  ) {
-  }
+  constructor(private readonly rootContainer: AwilixContainer) {}
 
   // Creates and initializes one scoped Game instance with isolated room identity.
   public create(args: GameScopeFactoryArgs): GameScopeHandle {

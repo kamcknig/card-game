@@ -3,17 +3,12 @@ import { CardKey, ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { GameEventRegistrar } from '@server-types/index.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 
-export const configureAqueduct = (
-  registrar: GameEventRegistrar,
-  config: ComputedMatchConfiguration,
-) => {
-  const hasAqueduct = (config.landmarks ?? []).some(
-    (landmark) => landmark.cardKey === 'aqueduct',
-  );
+export const configureAqueduct = (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => {
+  const hasAqueduct = (config.landmarks ?? []).some(landmark => landmark.cardKey === 'aqueduct');
 
   if (!hasAqueduct) return;
 
-  registrar('onGameStartSetup', async (args) => {
+  registrar('onGameStartSetup', async args => {
     // Aqueduct setup: put 8 VP tokens on Silver and Gold piles.
     const victoryTokenId = prosperityTokenIds.victory;
     const targetPiles: CardKey[] = ['silver', 'gold'];
@@ -41,10 +36,11 @@ export const configureAqueduct = (
 
     // Finds victory tokens on a supply pile keyed by cardKey.
     const getTokensOnPile = (cardKey: CardKey) =>
-      Object.values(args.match.tokens).filter((token) =>
-        token.tokenId === victoryTokenId &&
-        token.location.type === 'supplyPile' &&
-        token.location.cardKey === cardKey
+      Object.values(args.match.tokens).filter(
+        token =>
+          token.tokenId === victoryTokenId &&
+          token.location.type === 'supplyPile' &&
+          token.location.cardKey === cardKey,
       );
 
     // Moves one victory token from the gained card's pile to Aqueduct.

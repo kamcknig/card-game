@@ -200,8 +200,7 @@ export class LobbyDirectoryService {
     private readonly gameScopeFactory: GameScopeFactory,
     private readonly expansionSearchService: ExpansionSearchService,
     private readonly loggerService: LoggerService,
-  ) {
-  }
+  ) {}
 
   // Registers a new client session in the lobby directory and wires lobby-level handlers.
   public registerConnection(sessionId: string, socket: AppSocket): void {
@@ -222,9 +221,7 @@ export class LobbyDirectoryService {
 
   // Applies expansion-load events to existing games and future game templates.
   public expansionLoaded(expansion: ExpansionListElement): void {
-    const alreadyTracked = this.loadedExpansions.some(
-      (loadedExpansion) => loadedExpansion.name === expansion.name,
-    );
+    const alreadyTracked = this.loadedExpansions.some(loadedExpansion => loadedExpansion.name === expansion.name);
     if (alreadyTracked) {
       this.loggerService.debug(
         `[lobby directory] expansion '${expansion.name}' already tracked globally, skipping duplicate load`,
@@ -240,16 +237,13 @@ export class LobbyDirectoryService {
     }
 
     // Push refreshed searchable catalog to all connected clients, including those inside game rooms.
-    this.io.emit(
-      'setSelectableSearchCatalog',
-      this.expansionSearchService.getSelectableSearchCatalog(),
-    );
+    this.io.emit('setSelectableSearchCatalog', this.expansionSearchService.getSelectableSearchCatalog());
   }
 
   // Returns debug summaries for all currently running games.
   public getDebugGames(): DebugGameSummary[] {
     const summaries = [...this.games.values()]
-      .map((record) => this.toDebugGameSummary(record))
+      .map(record => this.toDebugGameSummary(record))
       .sort((a, b) => a.gameName.localeCompare(b.gameName));
     this.loggerService.debug(`[lobby directory] debug games requested; returning ${summaries.length} game(s)`);
     return summaries;
@@ -289,8 +283,7 @@ export class LobbyDirectoryService {
       );
       return undefined;
     }
-    const summary = this.toDebugMatchSummaries(record)
-      .find((summary) => summary.matchScopeId === matchScopeId);
+    const summary = this.toDebugMatchSummaries(record).find(summary => summary.matchScopeId === matchScopeId);
     if (!summary) {
       this.loggerService.warn(
         `[lobby directory] debug match request not found for game '${gameId}' matchScopeId=${matchScopeId}`,
@@ -346,7 +339,15 @@ export class LobbyDirectoryService {
     matchScopeId: number,
     type: DebugSearchType,
     searchStr: string,
-  ): { ok: true; results: DebugSearchResult; gameId: string; matchScopeId: number; type: DebugSearchType; query: string }
+  ):
+    | {
+        ok: true;
+        results: DebugSearchResult;
+        gameId: string;
+        matchScopeId: number;
+        type: DebugSearchType;
+        query: string;
+      }
     | { ok: false; error: string } {
     const resolved = this.resolveDebugGameAndMatch(gameId, matchScopeId);
     if (!resolved.ok) {
@@ -359,9 +360,7 @@ export class LobbyDirectoryService {
     );
 
     const results = this.performDebugSearch(type, query);
-    this.loggerService.debug(
-      `[lobby directory] debug search returned ${results.length} result(s) for type=${type}`,
-    );
+    this.loggerService.debug(`[lobby directory] debug search returned ${results.length} result(s) for type=${type}`);
 
     return {
       ok: true,
@@ -611,7 +610,9 @@ export class LobbyDirectoryService {
       return;
     }
 
-    this.loggerService.info(`[lobby directory] owner session ${sessionId} kicking player ${targetPlayerId} from ${gameId}`);
+    this.loggerService.info(
+      `[lobby directory] owner session ${sessionId} kicking player ${targetPlayerId} from ${gameId}`,
+    );
     const removal = record.game.removePlayerFromLobby(targetPlayerId);
     if (removal.status === 'match_started') {
       this.emitJoinRejected(socket, {
@@ -671,7 +672,9 @@ export class LobbyDirectoryService {
       return;
     }
 
-    this.loggerService.info(`[lobby directory] owner session ${sessionId} banning player ${targetPlayerId} from ${gameId}`);
+    this.loggerService.info(
+      `[lobby directory] owner session ${sessionId} banning player ${targetPlayerId} from ${gameId}`,
+    );
     const targetPlayer = record.game.getPlayerById(targetPlayerId);
     if (!targetPlayer) {
       this.emitJoinRejected(socket, {
@@ -789,8 +792,8 @@ export class LobbyDirectoryService {
   // Builds the visible lobby list (configuring games only).
   private buildLobbySnapshot(): LobbyGameSummary[] {
     return [...this.games.values()]
-      .filter((record) => record.listedInLobby && !record.game.matchStarted)
-      .map((record) => this.toLobbySummary(record))
+      .filter(record => record.listedInLobby && !record.game.matchStarted)
+      .map(record => this.toLobbySummary(record))
       .sort((a, b) => a.gameName.localeCompare(b.gameName));
   }
 
@@ -833,14 +836,16 @@ export class LobbyDirectoryService {
       return [];
     }
 
-    return [{
-      gameId: record.game.id,
-      gameName: record.game.name,
-      matchScopeId: record.game.matchScopeId,
-      status: record.game.matchStarted ? 'active' : 'prepared',
-      matchStarted: record.game.matchStarted,
-      controllerInitialized: record.game.isMatchControllerInitialized(),
-    }];
+    return [
+      {
+        gameId: record.game.id,
+        gameName: record.game.name,
+        matchScopeId: record.game.matchScopeId,
+        status: record.game.matchStarted ? 'active' : 'prepared',
+        matchStarted: record.game.matchStarted,
+        controllerInitialized: record.game.isMatchControllerInitialized(),
+      },
+    ];
   }
 
   // Emits a structured join rejection payload and keeps socket in lobby context.
@@ -939,11 +944,12 @@ export class LobbyDirectoryService {
 
   // Generates a unique random adjective-animal game name.
   private generateUniqueGameName(): string {
-    const existingNames = new Set([...this.games.values()].map((record) => record.gameName));
+    const existingNames = new Set([...this.games.values()].map(record => record.gameName));
     let attempt = 0;
 
     while (true) {
-      const adjective = LobbyDirectoryService.ADJECTIVES[Math.floor(Math.random() * LobbyDirectoryService.ADJECTIVES.length)];
+      const adjective =
+        LobbyDirectoryService.ADJECTIVES[Math.floor(Math.random() * LobbyDirectoryService.ADJECTIVES.length)];
       const animal = LobbyDirectoryService.ANIMALS[Math.floor(Math.random() * LobbyDirectoryService.ANIMALS.length)];
       const baseName = `${adjective} ${animal}`;
       const candidate = attempt < 1 ? baseName : `${baseName} ${attempt + 1}`;

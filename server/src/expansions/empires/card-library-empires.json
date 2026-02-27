@@ -3,19 +3,14 @@
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION",
-      "DURATION"
-    ],
+    "type": ["ACTION", "DURATION"],
     "abilityText": "+1 Action\nSet aside the top 3 cards of your deck face down (you may look at them). Now and at the start of your next two turns, put one into your hand."
   },
   "capital": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "TREASURE"
-    ],
+    "type": ["TREASURE"],
     "abilityText": "+1 Buy\n+6 Treasure\nWhen you discard this from play, +6 Debt"
   },
   "castles": {
@@ -24,10 +19,7 @@
       "cost": {
         "treasure": 3
       },
-      "type": [
-        "VICTORY",
-        "CASTLE"
-      ]
+      "type": ["VICTORY", "CASTLE"]
     },
     "cards": [
       {
@@ -36,10 +28,7 @@
         "cost": {
           "treasure": 10
         },
-        "type": [
-          "VICTORY",
-          "CASTLE"
-        ],
+        "type": ["VICTORY", "CASTLE"],
         "abilityText": "Worth 2VP per Castle you have.",
         "victoryPoints": 0
       },
@@ -48,10 +37,7 @@
         "cost": {
           "treasure": 9
         },
-        "type": [
-          "VICTORY",
-          "CASTLE"
-        ],
+        "type": ["VICTORY", "CASTLE"],
         "victoryPoints": 5,
         "abilityText": "5VP\nWhen you gain this, reveal your hand. +1VP per Victory card in your hand and/or in play."
       },
@@ -60,10 +46,7 @@
         "cost": {
           "treasure": 8
         },
-        "type": [
-          "VICTORY",
-          "CASTLE"
-        ],
+        "type": ["VICTORY", "CASTLE"],
         "victoryPoints": 4,
         "abilityText": "4VP\nWhen you gain this, gain a Duchy or 3 Estates."
       },
@@ -72,11 +55,7 @@
         "cost": {
           "treasure": 7
         },
-        "type": [
-          "ACTION",
-          "VICTORY",
-          "CASTLE"
-        ],
+        "type": ["ACTION", "VICTORY", "CASTLE"],
         "victoryPoints": 3,
         "abilityText": "Discard any number of Victory cards, revealed. +$2 per card discarded.\n3VP"
       },
@@ -85,10 +64,7 @@
         "cost": {
           "treasure": 6
         },
-        "type": [
-          "VICTORY",
-          "CASTLE"
-        ],
+        "type": ["VICTORY", "CASTLE"],
         "victoryPoints": 2,
         "abilityText": "2VP\nWhen you gain this during your turn, gain a Gold, and each other player with 5 or more cards in hand puts 2 of them onto their deck."
       },
@@ -97,11 +73,7 @@
         "cost": {
           "treasure": 5
         },
-        "type": [
-          "ACTION",
-          "VICTORY",
-          "CASTLE"
-        ],
+        "type": ["ACTION", "VICTORY", "CASTLE"],
         "victoryPoints": 2,
         "abilityText": "Trash this or a Castle from your hand. If you do, gain a Castle.\n2VP"
       },
@@ -110,10 +82,7 @@
         "cost": {
           "treasure": 4
         },
-        "type": [
-          "VICTORY",
-          "CASTLE"
-        ],
+        "type": ["VICTORY", "CASTLE"],
         "victoryPoints": 1,
         "abilityText": "1VP\nWhen you gain or trash this, +1VP and gain a Silver."
       },
@@ -122,11 +91,7 @@
         "cost": {
           "treasure": 3
         },
-        "type": [
-          "TREASURE",
-          "VICTORY",
-          "CASTLE"
-        ],
+        "type": ["TREASURE", "VICTORY", "CASTLE"],
         "abilityText": "$1\nWorth 1VP per Castle you have",
         "victoryPoints": 0
       }
@@ -138,10 +103,7 @@
       "cost": {
         "treasure": 3
       },
-      "type": [
-        "ACTION",
-        "ATTACK"
-      ]
+      "type": ["ACTION", "ATTACK"]
     },
     "cards": [
       {
@@ -149,10 +111,7 @@
         "cost": {
           "treasure": 3
         },
-        "type": [
-          "ACTION",
-          "ATTACK"
-        ],
+        "type": ["ACTION", "ATTACK"],
         "abilityText": "+1 Treasure\nTrash a card from your hand. If it costs $3 or more, each other player gains a Curse. If it's a Treasure, each other player discards down to 3 cards in hand.",
         "targetScheme": "ALL_OTHER"
       },
@@ -161,9 +120,7 @@
         "cost": {
           "treasure": 4
         },
-        "type": [
-          "TREASURE"
-        ],
+        "type": ["TREASURE"],
         "abilityText": "+1 Treasure\nWhen you gain or trash this: If it's your Buy phase, gain a Silver onto your deck, otherwise gain a Silver to your hand."
       }
     ]
@@ -172,18 +129,14 @@
     "cost": {
       "treasure": 3
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+1 Action\n+1 Card, revealing it. The player to your left reveals the top card of their deck. If your card costs more, +$1 and +1VP."
   },
   "charm": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "TREASURE"
-    ],
+    "type": ["TREASURE"],
     "abilityText": "Choose one: +1 Buy and +2 Treasure; or the next time you gain a card this turn, you may also gain a differently named card with the same cost."
   },
   "city-quarter": {
@@ -196,10 +149,7 @@
     "type": ["ACTION"]
   },
   "crown": {
-    "type": [
-      "ACTION",
-      "TREASURE"
-    ],
+    "type": ["ACTION", "TREASURE"],
     "abilityText": "If it's your Action phase, you may play an Action from your hand twice.\nIf it's your Buy phase, you may play a Treasure from your hand twice.",
     "cost": {
       "treasure": 5
@@ -211,9 +161,7 @@
       "cost": {
         "treasure": 2
       },
-      "type": [
-        "ACTION"
-      ]
+      "type": ["ACTION"]
     },
     "cards": [
       {
@@ -222,9 +170,7 @@
           "treasure": 2
         },
         "abilityText": "+2 Cards\n+2 Actions\nYou may reveal a Gold or Plunder from your hand. If you do not, set this aside, and return it to its pile at the start of Clean-up.",
-        "type": [
-          "ACTION"
-        ]
+        "type": ["ACTION"]
       },
       {
         "cardKey": "plunder",
@@ -232,9 +178,7 @@
           "treasure": 5
         },
         "abilityText": "$2\n+1VP",
-        "type": [
-          "TREASURE"
-        ]
+        "type": ["TREASURE"]
       }
     ]
   },
@@ -243,11 +187,7 @@
       "treasure": 3
     },
     "abilityText": "Until your next turn, the first time each other player plays an Action card on their turn, they get +1 Card and +1 Action instead of following its instructions.\nAt the start of your next turn, +2 Cards",
-    "type": [
-      "ATTACK",
-      "ACTION",
-      "DURATION"
-    ],
+    "type": ["ATTACK", "ACTION", "DURATION"],
     "targetScheme": "ALL_OTHER"
   },
   "engineer": {
@@ -255,36 +195,27 @@
       "debt": 4,
       "treasure": 0
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "Gain a card costing up to $4. You may trash this. If you do, gain a card costing up to $4."
   },
   "farmers-market": {
     "cost": {
       "treasure": 3
     },
-    "type": [
-      "ACTION",
-      "GATHERING"
-    ],
+    "type": ["ACTION", "GATHERING"],
     "abilityText": "+1 Buy\nIf there are 4VP or more on the Farmers' Market pile, take them and trash this. Otherwise, add 1VP to the pile and then +$1 per 1VP on the pile."
   },
   "forum": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+3 Cards\n+1 Action\nDiscard 2 cards.\nWhen you gain this, +1 Buy."
   },
   "gladiator/fortune": {
     "pile": {
       "randomizer": "gladiator/fortune",
-      "type": [
-        "ACTION"
-      ],
+      "type": ["ACTION"],
       "cost": {
         "treasure": 3
       }
@@ -292,9 +223,7 @@
     "cards": [
       {
         "cardKey": "gladiator",
-        "type": [
-          "ACTION"
-        ],
+        "type": ["ACTION"],
         "cost": {
           "treasure": 3
         },
@@ -302,9 +231,7 @@
       },
       {
         "cardKey": "fortune",
-        "type": [
-          "TREASURE"
-        ],
+        "type": ["TREASURE"],
         "cost": {
           "treasure": 8,
           "debt": 8
@@ -319,9 +246,7 @@
       "cost": {
         "treasure": 2
       },
-      "type": [
-        "ACTION"
-      ]
+      "type": ["ACTION"]
     },
     "cards": [
       {
@@ -329,9 +254,7 @@
         "cost": {
           "treasure": 2
         },
-        "type": [
-          "ACTION"
-        ],
+        "type": ["ACTION"],
         "abilityText": "+1 Card\n+1 Action\nReveal the top card of your deck. If it costs $5 or more, put it into your hand."
       },
       {
@@ -339,9 +262,7 @@
         "cost": {
           "treasure": 5
         },
-        "type": [
-          "ACTION"
-        ],
+        "type": ["ACTION"],
         "abilityText": "+1 Card\n+1 Action\n+$1\nWhen you gain this, if you have at least 5 Action cards in play, +2VP."
       }
     ]
@@ -352,9 +273,7 @@
       "cost": {
         "treasure": 2
       },
-      "type": [
-        "ACTION"
-      ]
+      "type": ["ACTION"]
     },
     "cards": [
       {
@@ -362,9 +281,7 @@
         "cost": {
           "treasure": 2
         },
-        "type": [
-          "ACTION"
-        ],
+        "type": ["ACTION"],
         "abilityText": "+1 Card\n+1 Action\nYou may reveal a Copper from your discard pile and put it into your hand."
       },
       {
@@ -372,9 +289,7 @@
         "cost": {
           "treasure": 5
         },
-        "type": [
-          "ACTION"
-        ],
+        "type": ["ACTION"],
         "abilityText": "+1 Card\n+3 Actions\nYou may reveal a Settlers from your discard pile and put it into your hand."
       }
     ]
@@ -383,38 +298,28 @@
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION",
-      "GATHERING"
-    ],
+    "type": ["ACTION", "GATHERING"],
     "abilityText": "+1VP\nTrash from 1 to 3 differently named cards from your hand. Add 1VP to the Temple pile.\nWhen you gain this, take the VP from the Temple pile."
   },
   "wild-hunt": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION",
-      "GATHERING"
-    ],
+    "type": ["ACTION", "GATHERING"],
     "abilityText": "Choose one: +3 Cards and add 1VP to the Wild Hunt pile; or gain an Estate, and if you do, take the VP from the pile."
   },
   "villa": {
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+2 Actions\n+1 Buy\n+$1\nWhen you gain this, put it into your hand, +1 Action, and if it's your Buy phase return to your Action phase."
   },
   "sacrifice": {
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "Trash a card from your hand. If it's an...\nAction card, +2 Cards and +2 Actions\nTreasure card, +$2\nVictory card, +2VP"
   },
   "royal-blacksmith": {
@@ -422,28 +327,21 @@
       "treasure": 0,
       "debt": 8
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+5 Cards\nReveal your hand. Discard all Coppers from it."
   },
   "groundskeeper": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+1 Card\n+1 Action\nThis turn, when you gain a Victory card, +1VP."
   },
   "legionary": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION",
-      "ATTACK"
-    ],
+    "type": ["ACTION", "ATTACK"],
     "targetScheme": "ALL_OTHER",
     "abilityText": "+$3\nYou may reveal a Gold from your hand. If you do, each other player discards down to 2 cards in hand, then draws a card."
   },
@@ -452,10 +350,7 @@
       "treasure": 0,
       "debt": 8
     },
-    "type": [
-      "ACTION",
-      "COMMAND"
-    ],
+    "type": ["ACTION", "COMMAND"],
     "abilityText": "Play a non-Command non-Duration Action card from the Supply costing up to $5, leaving it there."
   }
 }

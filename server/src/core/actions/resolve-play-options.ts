@@ -41,7 +41,8 @@ export class PlayOptionsResolver {
 
     // Shadow Action cards can be played from deck whenever an Action can be played.
     const playableFromHand = sourceLocation === 'playerHand' && sourcePlayerId === args.playerId;
-    const playableShadowFromDeck = phase === 'action' &&
+    const playableShadowFromDeck =
+      phase === 'action' &&
       sourceLocation === 'playerDeck' &&
       sourcePlayerId === args.playerId &&
       card.type.includes('ACTION') &&

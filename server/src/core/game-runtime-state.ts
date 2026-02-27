@@ -1,10 +1,5 @@
 import type { AppSocket } from '@server-types/index.ts';
-import type {
-  ExpansionListElement,
-  MatchConfiguration,
-  Player,
-  PlayerId,
-} from 'shared/types/index.ts';
+import type { ExpansionListElement, MatchConfiguration, Player, PlayerId } from 'shared/types/index.ts';
 import type { MatchController } from './match-controller.ts';
 import type { MatchScope } from './match-scope-factory.ts';
 

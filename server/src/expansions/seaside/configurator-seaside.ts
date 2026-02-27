@@ -2,7 +2,7 @@ import { ExpansionConfiguratorFactory } from '@server-types/index.ts';
 import { addMatToMatchConfig } from '../../utils/add-mat-to-match-config.ts';
 
 const configurator: ExpansionConfiguratorFactory = () => {
-  return async (args) => {
+  return async args => {
     for (const supply of args.config.kingdomSupply) {
       const matsAdded: string[] = [];
       for (const card of supply.cards) {

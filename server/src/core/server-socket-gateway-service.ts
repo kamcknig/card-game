@@ -17,8 +17,7 @@ export class ServerSocketGatewayService {
     private readonly io: Server<ServerListenEvents, ServerEmitEvents>,
     private readonly lobbyDirectoryService: LobbyDirectoryService,
     private readonly loggerService: LoggerService,
-  ) {
-  }
+  ) {}
 
   // Registers the socket connection handler exactly once.
   public registerConnectionHandler(): void {
@@ -28,13 +27,11 @@ export class ServerSocketGatewayService {
     }
 
     this.registered = true;
-    this.io.on('connection', (socket) => {
+    this.io.on('connection', socket => {
       this.loggerService.log('[SERVER] new client connected');
 
       const sessionId = socket.handshake.query.get('sessionId');
-      this.loggerService.info(
-        `[SERVER] connection from ${socket.handshake.address} - session ID ${sessionId}`,
-      );
+      this.loggerService.info(`[SERVER] connection from ${socket.handshake.address} - session ID ${sessionId}`);
 
       if (!sessionId) {
         this.loggerService.error('[SERVER] no session ID, rejecting');

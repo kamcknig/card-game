@@ -22,13 +22,15 @@ export class DefaultSupplyGainService implements SupplyGainService {
   }): Promise<CardId | undefined> {
     const tag = args.logTag ?? 'gainTopSupplyCardForPileKey';
     const fromLocations = args.from
-      ? (Array.isArray(args.from) ? args.from : [args.from])
+      ? Array.isArray(args.from)
+        ? args.from
+        : [args.from]
       : ['basicSupply', 'kingdomSupply'];
 
     this.loggerService.debug(
-      `[${tag}] attempting top-supply gain for player ${args.playerId}: pileKey=${args.pileKey}, from=${
-        fromLocations.join(',')
-      }, to=${args.to.location}`,
+      `[${tag}] attempting top-supply gain for player ${args.playerId}: pileKey=${args.pileKey}, from=${fromLocations.join(
+        ',',
+      )}, to=${args.to.location}`,
     );
 
     const topSupplyCard = this.findCardService.findTopSupplyCardForPileKey({

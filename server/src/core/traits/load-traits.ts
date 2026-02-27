@@ -15,10 +15,9 @@ export class TraitLoaderService {
     const expansionTraits = (this.expansionCatalogService.getRequiredExpansion(expansionName).traits ??= {});
 
     try {
-      const traitLibraryModule = await import(
-        `@expansions/${expansionName}/trait-library-${expansionName}.json`,
-        { with: { type: 'json' } },
-      );
+      const traitLibraryModule = await import(`@expansions/${expansionName}/trait-library-${expansionName}.json`, {
+        with: { type: 'json' },
+      });
       const traits = traitLibraryModule.default as Record<string, Partial<TraitNoId>>;
 
       for (const cardKey of Object.keys(traits)) {

@@ -7,4 +7,4 @@ export const renaissanceArtifactKeys = {
   treasureChest: 'treasure-chest',
 } as const;
 
-export type RenaissanceArtifactKey = typeof renaissanceArtifactKeys[keyof typeof renaissanceArtifactKeys];
+export type RenaissanceArtifactKey = (typeof renaissanceArtifactKeys)[keyof typeof renaissanceArtifactKeys];

@@ -31,9 +31,8 @@ const hasRegisteredDurationTriggers = (
   reactionManager: CardEffectFunctionContext['reactionManager'],
   cardId: CardId,
 ): boolean => {
-  const durationMap = (
-    reactionManager as unknown as { _durationTriggerIdsByCardId?: Map<CardId, Set<string>> }
-  )._durationTriggerIdsByCardId;
+  const durationMap = (reactionManager as unknown as { _durationTriggerIdsByCardId?: Map<CardId, Set<string>> })
+    ._durationTriggerIdsByCardId;
   if (!durationMap) {
     return false;
   }
@@ -55,9 +54,7 @@ const getEffectiveCostForPlayer = (
 
 // Returns true when a card has only treasure cost and that cost is at most the requested amount.
 const isTreasureOnlyCostAtMost = (cost: CardCost, maxTreasure: number): boolean => {
-  return cost.treasure <= maxTreasure &&
-    (cost.potion ?? 0) === 0 &&
-    (cost.debt ?? 0) === 0;
+  return cost.treasure <= maxTreasure && (cost.potion ?? 0) === 0 && (cost.debt ?? 0) === 0;
 };
 
 // Returns how many times a specific card id has been played this turn.
@@ -67,7 +64,7 @@ const getCurrentPlayInstanceForCardIdThisTurn = (
 ): number => {
   const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: cardEffectArgs.match }) ?? 0;
   const playedCardIdsThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[turnHistoryIndex] ?? [];
-  return playedCardIdsThisTurn.filter((playedCardId) => playedCardId === cardId).length;
+  return playedCardIdsThisTurn.filter(playedCardId => playedCardId === cardId).length;
 };
 
 // Returns true when the player gained any card during Buy phase in the specified turn-history index.
@@ -102,7 +99,7 @@ const getOrderedOtherAttackTargets = (
     startingPlayerId: currentTurnPlayerId,
     appliesTo: 'ALL',
     match: cardEffectArgs.match,
-  }).filter((targetPlayerId) => {
+  }).filter(targetPlayerId => {
     if (targetPlayerId === cardEffectArgs.playerId) {
       return false;
     }
@@ -111,10 +108,7 @@ const getOrderedOtherAttackTargets = (
 };
 
 // Applies a standard "each other player gains a Curse" attack.
-const gainCurseForOtherPlayers = async (
-  cardEffectArgs: CardEffectFunctionContext,
-  logTag: string,
-): Promise<void> => {
+const gainCurseForOtherPlayers = async (cardEffectArgs: CardEffectFunctionContext, logTag: string): Promise<void> => {
   const targetPlayerIds = getOrderedOtherAttackTargets(cardEffectArgs);
   cardEffectArgs.loggerService.debug(`[${logTag}] curse targets ${targetPlayerIds.join(', ')}`);
 
@@ -152,7 +146,7 @@ const getRiverboatSetAsideCardId = (
   }
 
   const sharedSetAside = cardEffectArgs.cardSourceController.getSource('set-aside');
-  const setAsideCardId = sharedSetAside.find((candidateId) => {
+  const setAsideCardId = sharedSetAside.find(candidateId => {
     const candidateCard = cardEffectArgs.cardLibrary.getCard(candidateId);
     return candidateCard.kingdom === runtimeSetAsidePileKey;
   });
@@ -175,8 +169,8 @@ const getRiverboatSetAsideCardId = (
 };
 
 const cards: CardExpansionModule = {
-  'alley': {
-    registerEffects: () => async (cardEffectArgs) => {
+  alley: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.log('[alley effect] resolving card');
 
@@ -194,12 +188,13 @@ const cards: CardExpansionModule = {
         return;
       }
 
-      const selectedDiscardCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
-        playerId: cardEffectArgs.playerId,
-        prompt: 'Discard a card',
-        restrict: hand,
-        count: 1,
-      }) ?? hand[0];
+      const selectedDiscardCardId =
+        (await cardEffectArgs.actionService.run('selectSingleCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Discard a card',
+          restrict: hand,
+          count: 1,
+        })) ?? hand[0];
 
       if (!selectedDiscardCardId) {
         loggerService.warn('[alley effect] no card selected to discard');
@@ -212,15 +207,15 @@ const cards: CardExpansionModule = {
       });
     },
   },
-  'aristocrat': {
-    registerEffects: () => async (cardEffectArgs) => {
+  aristocrat: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.log('[aristocrat effect] resolving card');
 
-      const aristocratsInPlayCount = cardEffectArgs.findCardService.getCardsInPlay()
-        .filter((card) => card.owner === cardEffectArgs.playerId)
-        .filter((card) => card.cardKey === 'aristocrat')
-        .length;
+      const aristocratsInPlayCount = cardEffectArgs.findCardService
+        .getCardsInPlay()
+        .filter(card => card.owner === cardEffectArgs.playerId)
+        .filter(card => card.cardKey === 'aristocrat').length;
 
       loggerService.debug(`[aristocrat effect] player has ${aristocratsInPlayCount} Aristocrat card(s) in play`);
 
@@ -250,24 +245,23 @@ const cards: CardExpansionModule = {
       loggerService.debug('[aristocrat effect] no matching Aristocrat count bonus to resolve');
     },
   },
-  'artist': {
-    registerEffects: () => async (cardEffectArgs) => {
+  artist: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.log('[artist effect] resolving card');
 
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
-      const cardsInPlayForPlayer = cardEffectArgs.findCardService.getCardsInPlay()
-        .filter((card) => card.owner === cardEffectArgs.playerId);
+      const cardsInPlayForPlayer = cardEffectArgs.findCardService
+        .getCardsInPlay()
+        .filter(card => card.owner === cardEffectArgs.playerId);
 
       const copyCountByCardKey: Record<string, number> = {};
       for (const card of cardsInPlayForPlayer) {
         copyCountByCardKey[card.cardKey] = (copyCountByCardKey[card.cardKey] ?? 0) + 1;
       }
 
-      const uniqueInPlayCount = Object.values(copyCountByCardKey)
-        .filter((copyCount) => copyCount === 1)
-        .length;
+      const uniqueInPlayCount = Object.values(copyCountByCardKey).filter(copyCount => copyCount === 1).length;
 
       loggerService.debug(`[artist effect] unique in-play card count ${uniqueInPlayCount}`);
       if (uniqueInPlayCount < 1) {
@@ -280,8 +274,8 @@ const cards: CardExpansionModule = {
       });
     },
   },
-  'change': {
-    registerEffects: () => async (cardEffectArgs) => {
+  change: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.log('[change effect] resolving card');
 
@@ -298,12 +292,12 @@ const cards: CardExpansionModule = {
         return;
       }
 
-      const selectedTrashCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
+      const selectedTrashCardId = (await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Trash a card from your hand',
         restrict: hand,
         count: 1,
-      }) as CardId | null;
+      })) as CardId | null;
 
       if (!selectedTrashCardId) {
         loggerService.warn('[change effect] no card selected to trash');
@@ -321,27 +315,26 @@ const cards: CardExpansionModule = {
         cardEffectArgs.playerId,
         trashedCard,
       );
-      const gainableCards = getTopSupplyCards(cardEffectArgs)
-        .filter((candidateCard) => {
-          const candidateCost = getEffectiveCostForPlayer(
-            cardEffectArgs.cardPriceController,
-            cardEffectArgs.playerId,
-            candidateCard,
-          );
-          return candidateCost.treasure > trashedCardCostForGainSelection.treasure;
-        });
+      const gainableCards = getTopSupplyCards(cardEffectArgs).filter(candidateCard => {
+        const candidateCost = getEffectiveCostForPlayer(
+          cardEffectArgs.cardPriceController,
+          cardEffectArgs.playerId,
+          candidateCard,
+        );
+        return candidateCost.treasure > trashedCardCostForGainSelection.treasure;
+      });
 
       if (gainableCards.length < 1) {
         loggerService.debug('[change effect] no top-of-pile card costs more $ than trashed card');
         return;
       }
 
-      const selectedGainCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
+      const selectedGainCardId = (await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Gain a card costing more $ than the trashed card',
-        restrict: gainableCards.map((card) => card.id),
+        restrict: gainableCards.map(card => card.id),
         count: 1,
-      }) as CardId | null;
+      })) as CardId | null;
 
       if (!selectedGainCardId) {
         loggerService.warn('[change effect] no card selected to gain');
@@ -387,8 +380,8 @@ const cards: CardExpansionModule = {
       });
     },
   },
-  'craftsman': {
-    registerEffects: () => async (cardEffectArgs) => {
+  craftsman: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.log('[craftsman effect] resolving card');
 
@@ -397,25 +390,24 @@ const cards: CardExpansionModule = {
         count: 2,
       });
 
-      const gainableCards = getTopSupplyCards(cardEffectArgs)
-        .filter((candidateCard) =>
-          isTreasureOnlyCostAtMost(
-            getEffectiveCostForPlayer(cardEffectArgs.cardPriceController, cardEffectArgs.playerId, candidateCard),
-            5,
-          )
-        );
+      const gainableCards = getTopSupplyCards(cardEffectArgs).filter(candidateCard =>
+        isTreasureOnlyCostAtMost(
+          getEffectiveCostForPlayer(cardEffectArgs.cardPriceController, cardEffectArgs.playerId, candidateCard),
+          5,
+        ),
+      );
 
       if (gainableCards.length < 1) {
         loggerService.debug('[craftsman effect] no top-of-pile card costing up to $5 available');
         return;
       }
 
-      const selectedGainCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
+      const selectedGainCardId = (await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Gain a card costing up to $5',
-        restrict: gainableCards.map((card) => card.id),
+        restrict: gainableCards.map(card => card.id),
         count: 1,
-      }) as CardId | null;
+      })) as CardId | null;
 
       if (!selectedGainCardId) {
         loggerService.warn('[craftsman effect] no card selected to gain');
@@ -429,8 +421,8 @@ const cards: CardExpansionModule = {
       });
     },
   },
-  'daimyo': {
-    registerEffects: () => async (cardEffectArgs) => {
+  daimyo: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.log('[daimyo effect] resolving card');
 
@@ -459,10 +451,7 @@ const cards: CardExpansionModule = {
               return false;
             }
 
-            const currentTurnHistoryIndex = getCurrentTurnHistoryIndex(
-              { match },
-              { fallbackToZero: false },
-            );
+            const currentTurnHistoryIndex = getCurrentTurnHistoryIndex({ match }, { fallbackToZero: false });
             if (currentTurnHistoryIndex !== turnHistoryIndex) {
               return false;
             }
@@ -474,7 +463,7 @@ const cards: CardExpansionModule = {
 
             return !playedCard.type.includes('COMMAND');
           },
-          triggeredEffectFn: async (triggeredArgs) => {
+          triggeredEffectFn: async triggeredArgs => {
             const replayedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
             loggerService.info(`[daimyo effect] replaying ${replayedCard}`);
             await triggeredArgs.actionService.run('playCard', {
@@ -504,13 +493,10 @@ const cards: CardExpansionModule = {
             if (trigger.args.playerId !== playedOnTurnPlayerId) {
               return false;
             }
-            const currentTurnHistoryIndex = getCurrentTurnHistoryIndex(
-              { match },
-              { fallbackToZero: false },
-            );
+            const currentTurnHistoryIndex = getCurrentTurnHistoryIndex({ match }, { fallbackToZero: false });
             return currentTurnHistoryIndex === turnHistoryIndex;
           },
-          triggeredEffectFn: async (triggeredArgs) => {
+          triggeredEffectFn: async triggeredArgs => {
             loggerService.debug('[daimyo endTurn effect] cleaning up unused replay trigger');
             triggeredArgs.reactionManager.unregisterTrigger(replayTriggerId);
           },
@@ -519,8 +505,8 @@ const cards: CardExpansionModule = {
       );
     },
   },
-  'fishmonger': {
-    registerEffects: () => async (cardEffectArgs) => {
+  fishmonger: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.log('[fishmonger effect] resolving card');
 
@@ -531,7 +517,7 @@ const cards: CardExpansionModule = {
     },
   },
   'gold-mine': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.log('[gold-mine effect] resolving card');
 
@@ -591,7 +577,7 @@ const cards: CardExpansionModule = {
     },
   },
   'imperial-envoy': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 5,
@@ -603,8 +589,8 @@ const cards: CardExpansionModule = {
       });
     },
   },
-  'kitsune': {
-    registerEffects: () => async (cardEffectArgs) => {
+  kitsune: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.log('[kitsune effect] resolving card');
 
@@ -657,8 +643,8 @@ const cards: CardExpansionModule = {
       });
     },
   },
-  'ninja': {
-    registerEffects: () => async (cardEffectArgs) => {
+  ninja: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.log('[ninja effect] resolving card');
 
@@ -685,8 +671,8 @@ const cards: CardExpansionModule = {
       }
     },
   },
-  'litter': {
-    registerEffects: () => async (cardEffectArgs) => {
+  litter: {
+    registerEffects: () => async cardEffectArgs => {
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 2,
@@ -699,7 +685,7 @@ const cards: CardExpansionModule = {
     },
   },
   'mountain-shrine': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.log('[mountain-shrine effect] resolving card');
 
@@ -708,13 +694,13 @@ const cards: CardExpansionModule = {
 
       const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
       if (hand.length > 0) {
-        const selectedTrashCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
+        const selectedTrashCardId = (await cardEffectArgs.actionService.run('selectSingleCard', {
           playerId: cardEffectArgs.playerId,
           prompt: 'You may trash a card from your hand',
           restrict: hand,
           count: 1,
           optional: true,
-        }) as CardId | null;
+        })) as CardId | null;
 
         if (selectedTrashCardId) {
           await cardEffectArgs.actionService.run('trashCard', {
@@ -724,8 +710,9 @@ const cards: CardExpansionModule = {
         }
       }
 
-      const hasActionCardInTrash = cardEffectArgs.cardSourceController.getSource('trash')
-        .some((cardId) => cardEffectArgs.cardLibrary.getCard(cardId).type.includes('ACTION'));
+      const hasActionCardInTrash = cardEffectArgs.cardSourceController
+        .getSource('trash')
+        .some(cardId => cardEffectArgs.cardLibrary.getCard(cardId).type.includes('ACTION'));
 
       if (!hasActionCardInTrash) {
         loggerService.debug('[mountain-shrine effect] no Action card in trash, skipping +2 Cards');
@@ -738,8 +725,8 @@ const cards: CardExpansionModule = {
       });
     },
   },
-  'poet': {
-    registerEffects: () => async (cardEffectArgs) => {
+  poet: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.log('[poet effect] resolving card');
 
@@ -750,10 +737,10 @@ const cards: CardExpansionModule = {
       });
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
-      const revealedCardId = await cardEffectArgs.actionService.run('revealCard', {
+      const revealedCardId = (await cardEffectArgs.actionService.run('revealCard', {
         playerId: cardEffectArgs.playerId,
         source: 'playerDeck',
-      }) as CardId | undefined;
+      })) as CardId | undefined;
       if (revealedCardId === undefined) {
         loggerService.debug('[poet effect] no card to reveal');
         return;
@@ -779,7 +766,7 @@ const cards: CardExpansionModule = {
     },
   },
   'rice-broker': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.log('[rice-broker effect] resolving card');
 
@@ -791,12 +778,12 @@ const cards: CardExpansionModule = {
         return;
       }
 
-      const selectedTrashCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
+      const selectedTrashCardId = (await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Trash a card from your hand',
         restrict: hand,
         count: 1,
-      }) as CardId | null;
+      })) as CardId | null;
 
       if (!selectedTrashCardId) {
         loggerService.warn('[rice-broker effect] no card selected to trash');
@@ -824,15 +811,16 @@ const cards: CardExpansionModule = {
       }
     },
   },
-  'rice': {
-    registerEffects: () => async (cardEffectArgs) => {
+  rice: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.log('[rice effect] resolving card');
 
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
 
-      const inPlayCardsForPlayer = cardEffectArgs.findCardService.getCardsInPlay()
-        .filter((card) => card.owner === cardEffectArgs.playerId);
+      const inPlayCardsForPlayer = cardEffectArgs.findCardService
+        .getCardsInPlay()
+        .filter(card => card.owner === cardEffectArgs.playerId);
 
       const uniqueTypes = new Set<string>();
       for (const inPlayCard of inPlayCardsForPlayer) {
@@ -852,7 +840,7 @@ const cards: CardExpansionModule = {
     },
   },
   'river-shrine': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.log('[river-shrine effect] resolving card');
 
@@ -898,7 +886,7 @@ const cards: CardExpansionModule = {
             }
             return getTurnPhase(trigger.args.phaseIndex) === 'cleanup';
           },
-          triggeredEffectFn: async (triggeredArgs) => {
+          triggeredEffectFn: async triggeredArgs => {
             const didGainInBuyPhase = hasPlayerGainedCardInBuyPhaseThisTurn(
               triggeredArgs,
               cardEffectArgs.playerId,
@@ -909,29 +897,24 @@ const cards: CardExpansionModule = {
               return;
             }
 
-            const gainableCards = getTopSupplyCards(triggeredArgs)
-              .filter((candidateCard) =>
-                isTreasureOnlyCostAtMost(
-                  getEffectiveCostForPlayer(
-                    triggeredArgs.cardPriceController,
-                    cardEffectArgs.playerId,
-                    candidateCard,
-                  ),
-                  4,
-                )
-              );
+            const gainableCards = getTopSupplyCards(triggeredArgs).filter(candidateCard =>
+              isTreasureOnlyCostAtMost(
+                getEffectiveCostForPlayer(triggeredArgs.cardPriceController, cardEffectArgs.playerId, candidateCard),
+                4,
+              ),
+            );
 
             if (gainableCards.length < 1) {
               loggerService.debug('[river-shrine cleanup effect] no top-of-pile card costing up to $4 available');
               return;
             }
 
-            const selectedGainCardId = await triggeredArgs.actionService.run('selectSingleCard', {
+            const selectedGainCardId = (await triggeredArgs.actionService.run('selectSingleCard', {
               playerId: cardEffectArgs.playerId,
               prompt: 'Gain a card costing up to $4',
-              restrict: gainableCards.map((card) => card.id),
+              restrict: gainableCards.map(card => card.id),
               count: 1,
-            }) as CardId | null;
+            })) as CardId | null;
 
             if (!selectedGainCardId) {
               loggerService.warn('[river-shrine cleanup effect] no card selected to gain');
@@ -961,13 +944,10 @@ const cards: CardExpansionModule = {
             if (trigger.args.playerId !== playedOnTurnPlayerId) {
               return false;
             }
-            const currentTurnHistoryIndex = getCurrentTurnHistoryIndex(
-              { match },
-              { fallbackToZero: false },
-            );
+            const currentTurnHistoryIndex = getCurrentTurnHistoryIndex({ match }, { fallbackToZero: false });
             return currentTurnHistoryIndex === playedOnTurnHistoryIndex;
           },
-          triggeredEffectFn: async (triggeredArgs) => {
+          triggeredEffectFn: async triggeredArgs => {
             loggerService.debug('[river-shrine endTurn effect] cleaning up deferred cleanup trigger');
             triggeredArgs.reactionManager.unregisterTrigger(cleanupTriggerId);
           },
@@ -976,34 +956,37 @@ const cards: CardExpansionModule = {
       );
     },
   },
-  'ronin': {
-    registerEffects: () => async (cardEffectArgs) => {
+  ronin: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.log('[ronin effect] resolving card');
 
       const targetHandSize = 7;
-      const startingHandSize = cardEffectArgs.cardSourceController
-        .getSource('playerHand', cardEffectArgs.playerId)
-        .length;
+      const startingHandSize = cardEffectArgs.cardSourceController.getSource(
+        'playerHand',
+        cardEffectArgs.playerId,
+      ).length;
       if (startingHandSize >= targetHandSize) {
         loggerService.debug('[ronin effect] hand is already 7 or more cards; no draw needed');
         return;
       }
 
       let drawCount = 0;
-      while (cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId).length < targetHandSize) {
+      while (
+        cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId).length < targetHandSize
+      ) {
         // Stop early when there are no cards left to draw from deck or discard.
         const playerDeck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
         const playerDiscard = cardEffectArgs.cardSourceController.getSource('playerDiscard', cardEffectArgs.playerId);
-        if ((playerDeck.length + playerDiscard.length) < 1) {
+        if (playerDeck.length + playerDiscard.length < 1) {
           loggerService.debug(`[ronin effect] no cards left to draw after ${drawCount} draw(s)`);
           return;
         }
 
-        const drawnCardId = await cardEffectArgs.actionService.run('drawCard', {
+        const drawnCardId = (await cardEffectArgs.actionService.run('drawCard', {
           playerId: cardEffectArgs.playerId,
           count: 1,
-        }) as CardId | null;
+        })) as CardId | null;
         if (!drawnCardId) {
           loggerService.debug(`[ronin effect] draw action returned no card after ${drawCount} draw(s)`);
           return;
@@ -1012,14 +995,15 @@ const cards: CardExpansionModule = {
         drawCount++;
       }
 
-      const endingHandSize = cardEffectArgs.cardSourceController
-        .getSource('playerHand', cardEffectArgs.playerId)
-        .length;
+      const endingHandSize = cardEffectArgs.cardSourceController.getSource(
+        'playerHand',
+        cardEffectArgs.playerId,
+      ).length;
       loggerService.debug(`[ronin effect] reached hand size ${endingHandSize} after ${drawCount} draw(s)`);
     },
   },
-  'riverboat': {
-    registerEffects: () => async (cardEffectArgs) => {
+  riverboat: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       const riverboatCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: cardEffectArgs.match }) ?? 0;
@@ -1039,7 +1023,7 @@ const cards: CardExpansionModule = {
           compulsory: true,
           allowMultipleInstances: true,
           condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-          triggeredEffectFn: async (triggeredArgs) => {
+          triggeredEffectFn: async triggeredArgs => {
             pendingStartTurnReplay = false;
 
             const setAsideCardId = getRiverboatSetAsideCardId(triggeredArgs, riverboatCard);
@@ -1088,7 +1072,7 @@ const cards: CardExpansionModule = {
           },
         },
         {
-          hasActiveEffects: async (durationContext) => {
+          hasActiveEffects: async durationContext => {
             if (pendingStartTurnReplay) {
               return true;
             }
@@ -1106,7 +1090,7 @@ const cards: CardExpansionModule = {
     },
   },
   'root-cellar': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 3,
@@ -1119,7 +1103,7 @@ const cards: CardExpansionModule = {
     },
   },
   'rustic-village': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.log('[rustic-village effect] resolving card');
 
@@ -1168,8 +1152,8 @@ const cards: CardExpansionModule = {
       });
     },
   },
-  'samurai': {
-    registerEffects: () => async (cardEffectArgs) => {
+  samurai: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.log('[samurai effect] resolving card');
 
@@ -1196,7 +1180,7 @@ const cards: CardExpansionModule = {
           compulsory: true,
           allowMultipleInstances: true,
           condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-          triggeredEffectFn: async (triggeredArgs) => {
+          triggeredEffectFn: async triggeredArgs => {
             loggerService.debug('[samurai duration effect] gaining +$1 at start of turn');
             await triggeredArgs.actionService.run('gainTreasure', { count: 1 });
           },
@@ -1210,7 +1194,7 @@ const cards: CardExpansionModule = {
     },
   },
   'snake-witch': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.log('[snake-witch effect] resolving card');
 
@@ -1277,8 +1261,8 @@ const cards: CardExpansionModule = {
       await gainCurseForOtherPlayers(cardEffectArgs, 'snake-witch effect');
     },
   },
-  'tanuki': {
-    registerEffects: () => async (cardEffectArgs) => {
+  tanuki: {
+    registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.log('[tanuki effect] resolving card');
 
@@ -1288,12 +1272,12 @@ const cards: CardExpansionModule = {
         return;
       }
 
-      const selectedTrashCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
+      const selectedTrashCardId = (await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Trash a card from your hand',
         restrict: hand,
         count: 1,
-      }) as CardId | null;
+      })) as CardId | null;
       if (!selectedTrashCardId) {
         loggerService.warn('[tanuki effect] no card selected to trash');
         return;
@@ -1317,24 +1301,24 @@ const cards: CardExpansionModule = {
       });
 
       // "Up to $2 more" preserves potion/debt ceilings and increases coin by two.
-      const gainableCards = getTopSupplyCards(cardEffectArgs)
-        .filter((candidateCard) =>
+      const gainableCards = getTopSupplyCards(cardEffectArgs).filter(
+        candidateCard =>
           compareCardCosts(
             getEffectiveCostForPlayer(cardEffectArgs.cardPriceController, cardEffectArgs.playerId, candidateCard),
             maxGainCost,
-          ) <= 0
-        );
+          ) <= 0,
+      );
       if (gainableCards.length < 1) {
         loggerService.debug('[tanuki effect] no top-of-pile card available within +$2 cost limit');
         return;
       }
 
-      const selectedGainCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
+      const selectedGainCardId = (await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Gain a card costing up to $2 more than the trashed card',
-        restrict: gainableCards.map((card) => card.id),
+        restrict: gainableCards.map(card => card.id),
         count: 1,
-      }) as CardId | null;
+      })) as CardId | null;
       if (!selectedGainCardId) {
         loggerService.warn('[tanuki effect] no card selected to gain');
         return;
@@ -1350,7 +1334,7 @@ const cards: CardExpansionModule = {
     },
   },
   'tea-house': {
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
       await cardEffectArgs.actionService.run('removeSunToken');
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,

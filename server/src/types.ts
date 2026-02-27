@@ -65,63 +65,63 @@ export const MatchBaseConfiguration = {
   numberOfKingdomPiles: 10,
   basicSupplyByPlayerCount: [
     {
-      'province': 8,
-      'duchy': 8,
-      'estate': 8,
-      'curse': 10,
-      'gold': 30,
-      'silver': 40,
-      'copper': 60,
+      province: 8,
+      duchy: 8,
+      estate: 8,
+      curse: 10,
+      gold: 30,
+      silver: 40,
+      copper: 60,
     },
     {
-      'province': 12,
-      'duchy': 12,
-      'estate': 12,
-      'curse': 20,
-      'gold': 30,
-      'silver': 40,
-      'copper': 60,
+      province: 12,
+      duchy: 12,
+      estate: 12,
+      curse: 20,
+      gold: 30,
+      silver: 40,
+      copper: 60,
     },
     {
-      'province': 12,
-      'duchy': 12,
-      'estate': 12,
-      'curse': 30,
-      'gold': 30,
-      'silver': 40,
-      'copper': 60,
+      province: 12,
+      duchy: 12,
+      estate: 12,
+      curse: 30,
+      gold: 30,
+      silver: 40,
+      copper: 60,
     },
     {
-      'province': 15,
-      'duchy': 12,
-      'estate': 12,
-      'curse': 40,
-      'gold': 60,
-      'silver': 80,
-      'copper': 120,
+      province: 15,
+      duchy: 12,
+      estate: 12,
+      curse: 40,
+      gold: 60,
+      silver: 80,
+      copper: 120,
     },
     {
-      'province': 18,
-      'duchy': 12,
-      'estate': 12,
-      'curse': 50,
-      'gold': 60,
-      'silver': 80,
-      'copper': 120,
+      province: 18,
+      duchy: 12,
+      estate: 12,
+      curse: 50,
+      gold: 60,
+      silver: 80,
+      copper: 120,
     },
     {
-      'province': 18,
-      'duchy': 12,
-      'estate': 12,
-      'curse': 50,
-      'gold': 60,
-      'silver': 80,
-      'copper': 120,
+      province: 18,
+      duchy: 12,
+      estate: 12,
+      curse: 50,
+      gold: 60,
+      silver: 80,
+      copper: 120,
     },
   ],
   playerStartingHand: {
-    'copper': 7,
-    'estate': 3,
+    copper: 7,
+    estate: 3,
   },
   numberOfEventsAndOthers: 2,
 } as const;
@@ -167,14 +167,8 @@ export interface GameActionDefinitionMap {
     buyOptionId?: string;
     overpay?: { inTreasure: number; inCoffer: number };
   }) => Promise<void>;
-  buyEvent: (args: {
-    cardLikeId: CardLikeId;
-    playerId: PlayerId;
-  }) => Promise<void>;
-  buyProject: (args: {
-    cardLikeId: CardLikeId;
-    playerId: PlayerId;
-  }) => Promise<void>;
+  buyEvent: (args: { cardLikeId: CardLikeId; playerId: PlayerId }) => Promise<void>;
+  buyProject: (args: { cardLikeId: CardLikeId; playerId: PlayerId }) => Promise<void>;
   checkForRemainingPlayerActions: () => Promise<void>;
   exchangeCoffer: (args: { playerId: PlayerId; count: number }) => Promise<void>;
   discardCard: (
@@ -203,11 +197,14 @@ export interface GameActionDefinitionMap {
   gainDebt: (args: { playerId: PlayerId; count: number }, context?: GameActionContext) => Promise<void>;
   // Spends Villagers tokens to gain actions.
   spendVillager: (args: { playerId: PlayerId; count: number }, context?: GameActionContext) => Promise<void>;
-  gainCard: (args: {
-    playerId: PlayerId;
-    cardId: CardId | Card;
-    to: CardLocationSpec;
-  }, context?: GameActionContext & { bought?: boolean; overpay?: number }) => Promise<void>;
+  gainCard: (
+    args: {
+      playerId: PlayerId;
+      cardId: CardId | Card;
+      to: CardLocationSpec;
+    },
+    context?: GameActionContext & { bought?: boolean; overpay?: number },
+  ) => Promise<void>;
   // Gains the top card from the Loot non-supply pile, then reveals it.
   gainLoot: (
     args: { playerId: PlayerId; to?: CardLocationSpec },
@@ -255,34 +252,46 @@ export interface GameActionDefinitionMap {
   // Pays down debt tokens using the current player's treasure pool.
   payDebt: (args: { playerId: PlayerId; count: number }, context?: GameActionContext) => Promise<void>;
   // Expansions use token actions to place and manage token instances.
-  placeToken: (args: {
-    tokenId: TokenId;
-    location: TokenLocation;
-    ownerId?: PlayerId;
-    counters?: number;
-    facing?: TokenFacing;
-    sourceCardId?: CardId;
-  }, context?: GameActionContext) => Promise<TokenInstance>;
+  placeToken: (
+    args: {
+      tokenId: TokenId;
+      location: TokenLocation;
+      ownerId?: PlayerId;
+      counters?: number;
+      facing?: TokenFacing;
+      sourceCardId?: CardId;
+    },
+    context?: GameActionContext,
+  ) => Promise<TokenInstance>;
   // Expansions use token actions to place and manage token instances.
-  moveToken: (args: {
-    tokenInstanceId: TokenInstanceId;
-    location: TokenLocation;
-    ownerId?: PlayerId;
-  }, context?: GameActionContext) => Promise<void>;
+  moveToken: (
+    args: {
+      tokenInstanceId: TokenInstanceId;
+      location: TokenLocation;
+      ownerId?: PlayerId;
+    },
+    context?: GameActionContext,
+  ) => Promise<void>;
   // Expansions use token actions to place and manage token instances.
   removeToken: (args: { tokenInstanceId: TokenInstanceId }, context?: GameActionContext) => Promise<void>;
   // Removes one Sun token from the active prophecy, if present.
   removeSunToken: (args?: {}, context?: GameActionContext) => Promise<void>;
   // Expansions use token actions to place and manage token instances.
-  consumeToken: (args: {
-    tokenInstanceId: TokenInstanceId;
-    amount?: number;
-  }, context?: GameActionContext) => Promise<void>;
+  consumeToken: (
+    args: {
+      tokenInstanceId: TokenInstanceId;
+      amount?: number;
+    },
+    context?: GameActionContext,
+  ) => Promise<void>;
   // Expansions use token actions to place and manage token instances.
-  flipToken: (args: {
-    tokenInstanceId: TokenInstanceId;
-    facing: TokenFacing;
-  }, context?: GameActionContext) => Promise<void>;
+  flipToken: (
+    args: {
+      tokenInstanceId: TokenInstanceId;
+      facing: TokenFacing;
+    },
+    context?: GameActionContext,
+  ) => Promise<void>;
   moveCard: (args: {
     toPlayerId?: PlayerId;
     cardId: CardId | Card;
@@ -293,9 +302,7 @@ export interface GameActionDefinitionMap {
     setAsideSource?: SetAsideSourceInput;
   }) => Promise<{ location: CardLocation; playerId?: PlayerId; emptiedSupplyPileKey?: CardKey } | undefined>;
   // Removes a card from the active match (used for "remove from game" / "to the box" effects).
-  removeCardFromGame: (args: {
-    cardId: CardId | Card;
-  }) => Promise<void>;
+  removeCardFromGame: (args: { cardId: CardId | Card }) => Promise<void>;
   // Moves a landscape-like entry (boon/event/landmark) to a supported location.
   moveCardLike: (args: {
     toPlayerId?: PlayerId;
@@ -305,9 +312,7 @@ export interface GameActionDefinitionMap {
     setAsideSource?: SetAsideSourceInput;
   }) => Promise<{ location: CardLocation; playerId?: PlayerId } | undefined>;
   // Rotates a split pile by moving all copies of the current top card to the bottom.
-  rotateSplitPile: (args: {
-    pileKey: CardKey;
-  }) => Promise<void>;
+  rotateSplitPile: (args: { pileKey: CardKey }) => Promise<void>;
   // Sets the current turn phase without advancing the turn counter.
   setTurnPhase: (args: {
     phase: TurnPhase;
@@ -316,14 +321,17 @@ export interface GameActionDefinitionMap {
     startNewPhase?: boolean;
   }) => Promise<void>;
   nextPhase: () => Promise<void>;
-  playCard: (args: {
-    playerId: PlayerId;
-    cardId: CardId | Card;
-    // Optional way id to resolve alternate Action play behavior.
-    // undefined => resolve via prompt, null => explicit normal play.
-    wayId?: CardLikeId | null;
-    overrides?: GameActionOverrides;
-  }, context?: GameActionContext) => Promise<void>;
+  playCard: (
+    args: {
+      playerId: PlayerId;
+      cardId: CardId | Card;
+      // Optional way id to resolve alternate Action play behavior.
+      // undefined => resolve via prompt, null => explicit normal play.
+      wayId?: CardLikeId | null;
+      overrides?: GameActionOverrides;
+    },
+    context?: GameActionContext,
+  ) => Promise<void>;
   // Activates a card's instruction pipeline without counting as a new play.
   activateCardEffects: (args: {
     playerId: PlayerId;
@@ -333,13 +341,16 @@ export interface GameActionDefinitionMap {
     // Optional reaction context to preserve current trigger-scope state.
     reactionContext?: ReactionContext;
   }) => Promise<void>;
-  revealCard: (args: {
-    cardId?: CardId | Card;
-    playerId: PlayerId;
-    // Optional source to reveal from when cardId is not provided.
-    source?: 'playerDeck' | 'playerDiscard';
-    moveToSetAside?: boolean;
-  }, context?: GameActionContext) => Promise<CardId | undefined>;
+  revealCard: (
+    args: {
+      cardId?: CardId | Card;
+      playerId: PlayerId;
+      // Optional source to reveal from when cardId is not provided.
+      source?: 'playerDeck' | 'playerDiscard';
+      moveToSetAside?: boolean;
+    },
+    context?: GameActionContext,
+  ) => Promise<CardId | undefined>;
   selectCard: (args: SelectActionCardArgs) => Promise<CardId[]>;
   selectSingleCard: (args: SelectSingleActionCardArgs) => Promise<CardId | null>;
   // Generic shuffle action for cards and landscapes; does not add UI log entries.
@@ -383,18 +394,9 @@ export type GameActionRunner = GameActionRunnerBase & {
     args: { playerId: PlayerId; count: number; suppressReactions?: boolean },
     context?: GameActionContext,
   ): Promise<CardId[] | null>;
-  (
-    action: 'selectCard',
-    args: SelectActionCardArgs,
-  ): Promise<CardId[]>;
-  (
-    action: 'selectSingleCard',
-    args: Omit<SelectSingleActionCardArgs, 'count'>,
-  ): Promise<CardId | null>;
-  (
-    action: 'selectSingleCard',
-    args: Omit<SelectSingleActionCardArgs, 'count'> & { count: 1 },
-  ): Promise<CardId | null>;
+  (action: 'selectCard', args: SelectActionCardArgs): Promise<CardId[]>;
+  (action: 'selectSingleCard', args: Omit<SelectSingleActionCardArgs, 'count'>): Promise<CardId | null>;
+  (action: 'selectSingleCard', args: Omit<SelectSingleActionCardArgs, 'count'> & { count: 1 }): Promise<CardId | null>;
   (
     action: 'selectSingleCard',
     args: Omit<SelectSingleActionCardArgs, 'count'> & { count: { kind: 'exact'; count: 1 } },
@@ -403,10 +405,7 @@ export type GameActionRunner = GameActionRunnerBase & {
     action: 'selectSingleCard',
     args: Omit<SelectSingleActionCardArgs, 'count'> & { count: { kind: 'upTo'; count: 1 } },
   ): Promise<CardId | null>;
-  <TUserPromptResult = unknown>(
-    action: 'userPrompt',
-    args: UserPromptActionArgs,
-  ): Promise<TUserPromptResult | null>;
+  <TUserPromptResult = unknown>(action: 'userPrompt', args: UserPromptActionArgs): Promise<TUserPromptResult | null>;
 };
 
 export type ActionService = {
@@ -477,9 +476,7 @@ export type FindCardService = {
     from?: ('basicSupply' | 'kingdomSupply') | ('basicSupply' | 'kingdomSupply')[];
   }) => Card | undefined;
   // Finds the current top card in a named non-supply pile (by pile/kingdom name).
-  findTopNonSupplyCardForPileName: (args: {
-    pileName: string;
-  }) => Card | undefined;
+  findTopNonSupplyCardForPileName: (args: { pileName: string }) => Card | undefined;
 };
 
 export type SupplyGainService = {
@@ -517,9 +514,7 @@ export interface CardEffectFunctionContext extends AppContext {
 }
 
 // Duration registration template where id is optional and can be auto-generated.
-export type DurationReactionTemplate<T extends TriggerEventType> =
-  & Omit<ReactionTemplate<T>, 'id'>
-  & { id?: string };
+export type DurationReactionTemplate<T extends TriggerEventType> = Omit<ReactionTemplate<T>, 'id'> & { id?: string };
 
 // Options for duration cards that persist across multiple cleanup phases.
 export type DurationEffectOptions = {
@@ -893,10 +888,7 @@ export type GameLifecycleCallback = (
   ...rest: any[]
 ) => Promise<CardLifecycleCallbackResult | void>;
 
-export type GameLifecycleEvent =
-  | 'onGameStartSetup'
-  | 'onGameStart'
-  | 'onCardGained';
+export type GameLifecycleEvent = 'onGameStartSetup' | 'onGameStart' | 'onCardGained';
 
 export type GameLifeCycleEventArgsMap = {
   onGameStartSetup: { match: Match };

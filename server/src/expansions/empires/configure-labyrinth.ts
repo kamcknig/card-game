@@ -4,17 +4,12 @@ import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
 import { placeVictoryTokensPerPlayer } from './landmark-utils.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 
-export const configureLabyrinth = (
-  registrar: GameEventRegistrar,
-  config: ComputedMatchConfiguration,
-) => {
+export const configureLabyrinth = (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => {
   // Only register Labyrinth handlers when the landmark is present.
-  const hasLabyrinth = (config.landmarks ?? []).some(
-    (landmark) => landmark.cardKey === 'labyrinth',
-  );
+  const hasLabyrinth = (config.landmarks ?? []).some(landmark => landmark.cardKey === 'labyrinth');
   if (!hasLabyrinth) return;
 
-  registrar('onGameStartSetup', async (args) => {
+  registrar('onGameStartSetup', async args => {
     // Labyrinth setup: put 6 VP tokens per player on the landmark using the shared helper.
     await placeVictoryTokensPerPlayer(args, {
       landmarkKey: 'labyrinth',
@@ -49,12 +44,14 @@ export const configureLabyrinth = (
     }
 
     const victoryTokenId = prosperityTokenIds.victory;
-    const tokensOnLabyrinth = Object.values(args.match.tokens ?? {}).filter(
-      (token) =>
-        token.tokenId === victoryTokenId &&
-        token.location.type === 'supplyPile' &&
-        token.location.cardKey === 'labyrinth',
-    ).sort((a, b) => a.id.localeCompare(b.id));
+    const tokensOnLabyrinth = Object.values(args.match.tokens ?? {})
+      .filter(
+        token =>
+          token.tokenId === victoryTokenId &&
+          token.location.type === 'supplyPile' &&
+          token.location.cardKey === 'labyrinth',
+      )
+      .sort((a, b) => a.id.localeCompare(b.id));
 
     if (!tokensOnLabyrinth.length) {
       return;

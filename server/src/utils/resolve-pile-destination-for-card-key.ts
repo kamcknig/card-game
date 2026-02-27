@@ -8,10 +8,7 @@ export const resolvePileDestinationForCardKey = (args: {
 }): CardLocation | null => {
   const pileLocations: CardLocation[] = ['kingdomSupply', 'basicSupply', 'nonSupplyCards'];
   for (const location of pileLocations) {
-    const matches = args.findCardService.findCards({ all: [
-      { location },
-      { cardKeys: args.cardKey },
-    ] });
+    const matches = args.findCardService.findCards({ all: [{ location }, { cardKeys: args.cardKey }] });
     if (matches.length > 0) {
       return location;
     }

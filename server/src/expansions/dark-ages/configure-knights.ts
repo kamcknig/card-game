@@ -7,11 +7,11 @@ export const configureKnights = async (args: ExpansionConfiguratorContext) => {
   const logPrefix = '[dark-ages configurator - configuring knights]';
 
   // Resolve the Knights supply pile by name, with a pile-key fallback for safety.
-  const knightsSupply = args.config.kingdomSupply.find((supply) => {
+  const knightsSupply = args.config.kingdomSupply.find(supply => {
     if (supply.name === 'knights') {
       return true;
     }
-    return supply.cards.some((card) => getCardPileKey(card) === 'knights');
+    return supply.cards.some(card => getCardPileKey(card) === 'knights');
   });
 
   if (!knightsSupply) {

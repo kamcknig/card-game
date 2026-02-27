@@ -114,7 +114,7 @@ export class MatchSetupService {
 
   // Creates the Way of the Mouse runtime set-aside card directly into shared set-aside.
   private createWayOfTheMouseSetAsideCard(config: ComputedMatchConfiguration): void {
-    const wayOfTheMouse = config.ways.find((way) => way.cardKey === 'way-of-the-mouse');
+    const wayOfTheMouse = config.ways.find(way => way.cardKey === 'way-of-the-mouse');
     if (!wayOfTheMouse) {
       return;
     }
@@ -162,9 +162,8 @@ export class MatchSetupService {
     for (const [idx, player] of Object.values(config.players).entries()) {
       this.loggerService.debug('initializing player', player.id, 'cards...');
 
-      let playerStartHand = playerHands.length > 0
-        ? playerHands[idx]
-        : config.playerStartingHand as Record<string, number>;
+      let playerStartHand =
+        playerHands.length > 0 ? playerHands[idx] : (config.playerStartingHand as Record<string, number>);
 
       playerStartHand ??= MatchBaseConfiguration.playerStartingHand;
 
@@ -246,7 +245,7 @@ export class MatchSetupService {
 
   // Returns true when a kingdom pile can receive a Trait (Action/Treasure piles only).
   private isTraitEligiblePile(cards: ReadonlyArray<{ type: string[]; kingdom: CardKey }>): boolean {
-    return cards.some((card) => card.type.includes('ACTION') || card.type.includes('TREASURE'));
+    return cards.some(card => card.type.includes('ACTION') || card.type.includes('TREASURE'));
   }
 
   // Assigns each configured trait to a unique eligible kingdom pile.
@@ -255,12 +254,12 @@ export class MatchSetupService {
     kingdomPileCards: ReadonlyArray<ReadonlyArray<{ type: string[]; kingdom: CardKey }>>,
   ): Array<CardKey | null> {
     const eligiblePileKeys = kingdomPileCards
-      .filter((pileCards) => pileCards.length > 0 && this.isTraitEligiblePile(pileCards))
-      .map((pileCards) => pileCards[0].kingdom);
+      .filter(pileCards => pileCards.length > 0 && this.isTraitEligiblePile(pileCards))
+      .map(pileCards => pileCards[0].kingdom);
     const availablePileKeys = [...eligiblePileKeys];
     const usedPileKeys = new Set<CardKey>();
 
-    return traits.map((trait) => {
+    return traits.map(trait => {
       const requestedPileKey = trait.pileKey ?? null;
       if (requestedPileKey && eligiblePileKeys.includes(requestedPileKey) && !usedPileKeys.has(requestedPileKey)) {
         usedPileKeys.add(requestedPileKey);
@@ -289,7 +288,7 @@ export class MatchSetupService {
       return;
     }
 
-    const kingdomPiles = (config.kingdomSupply ?? []).map((supply) => supply.cards);
+    const kingdomPiles = (config.kingdomSupply ?? []).map(supply => supply.cards);
     const assignedPileKeys = this.assignTraitPileKeys(traits, kingdomPiles);
 
     this.loggerService.info('[match] creating traits');

@@ -12,16 +12,16 @@ export class PlayerSessionService {
 
   // Returns true when there is at least one connected human player.
   public hasConnectedHumanPlayers(players: Player[]): boolean {
-    return players.some((player) => player.connected && !player.isComputer);
+    return players.some(player => player.connected && !player.isComputer);
   }
 
   // Returns true when there is at least one disconnected human player.
   public hasDisconnectedHumanPlayers(players: Player[]): boolean {
-    return players.some((player) => !player.connected && !player.isComputer);
+    return players.some(player => !player.connected && !player.isComputer);
   }
 
   // Finds a connected human replacement owner.
   public findReplacementOwner(players: Player[], excludedPlayerId?: PlayerId): Player | undefined {
-    return players.find((player) => player.connected && !player.isComputer && player.id !== excludedPlayerId);
+    return players.find(player => player.connected && !player.isComputer && player.id !== excludedPlayerId);
   }
 }

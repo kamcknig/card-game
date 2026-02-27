@@ -45,9 +45,7 @@ export class LandmarkLoaderService {
 
     try {
       // Register landmark effects if the expansion provides them.
-      const landmarkModule = await import(
-        `@expansions/${expansionName}/landmark-effects-${expansionName}.ts`
-      );
+      const landmarkModule = await import(`@expansions/${expansionName}/landmark-effects-${expansionName}.ts`);
       const landmarks = landmarkModule.default as CardExpansionModule;
 
       for (const cardKey of Object.keys(landmarks)) {
@@ -59,9 +57,7 @@ export class LandmarkLoaderService {
 
         if (landmarks[cardKey].registerEffects) {
           // Landmarks currently reuse card effect factories for future expansion support.
-          this.loggerService.info(
-            `[load-landmarks] registering landmark effects for ${cardKey}`,
-          );
+          this.loggerService.info(`[load-landmarks] registering landmark effects for ${cardKey}`);
           this.expansionEffectRegistryService.registerLandmarkEffectFactory(
             cardKey as CardKey,
             landmarks[cardKey].registerEffects,

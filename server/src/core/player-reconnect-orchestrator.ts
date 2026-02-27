@@ -87,16 +87,13 @@ export class PlayerReconnectOrchestrator {
 
   private async onNextPhase() {
     await this.actionService.run('nextPhase');
-    this.socketMap.forEach((socket) => socket.emit('nextPhaseComplete'));
+    this.socketMap.forEach(socket => socket.emit('nextPhaseComplete'));
   }
 
   private onSearchCards(playerId: PlayerId, searchStr: string) {
     this.loggerService.debug(
       `[match] ${getPlayerById(this.match, playerId)} searching for cards using term '${searchStr}'`,
     );
-    this.socketMap.get(playerId)?.emit(
-      'searchCardResponse',
-      this.expansionSearchService.searchKingdomCards(searchStr),
-    );
+    this.socketMap.get(playerId)?.emit('searchCardResponse', this.expansionSearchService.searchKingdomCards(searchStr));
   }
 }

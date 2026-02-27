@@ -20,8 +20,7 @@ export class ServerBootstrapService {
     private readonly serverSocketGatewayService: ServerSocketGatewayService,
     private readonly serverDebugRouteHandlerService: ServerDebugRouteHandlerService,
     private readonly serverShutdownHandlerService: ServerShutdownHandlerService,
-  ) {
-  }
+  ) {}
 
   // Starts socket handling, shutdown wiring, HTTP serving, and expansion startup loading.
   public start(): void {
@@ -49,7 +48,7 @@ export class ServerBootstrapService {
       handler: (req, info) => this.serverDebugRouteHandlerService.handleRequest(req, info),
     });
 
-    void this.serverStartupService.start().catch((error) => {
+    void this.serverStartupService.start().catch(error => {
       // Surface startup failures and stop the process so the host can restart.
       this.loggerService.error('[SERVER] startup failed');
       this.loggerService.error(error);

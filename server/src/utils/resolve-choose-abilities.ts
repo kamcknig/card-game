@@ -8,7 +8,10 @@ export type ChooseAbilityOption = {
 };
 
 type ResolveChooseAbilitiesArgs = {
-  context: Pick<CardEffectFunctionContext, 'cardId' | 'playerId' | 'promptService' | 'loggerService' | 'reactionContext'>;
+  context: Pick<
+    CardEffectFunctionContext,
+    'cardId' | 'playerId' | 'promptService' | 'loggerService' | 'reactionContext'
+  >;
   logTag: string;
   prompt?: string;
   options: ChooseAbilityOption[];
@@ -44,16 +47,16 @@ export const resolveChooseAbilities = async (args: ResolveChooseAbilitiesArgs): 
     const selectedAction = await args.context.promptService.requestAction({
       playerId: args.context.playerId,
       prompt,
-      actionButtons: remainingOptions.map((option) => ({ label: option.label, action: option.action })),
+      actionButtons: remainingOptions.map(option => ({ label: option.label, action: option.action })),
     });
 
-    const selectedOption = remainingOptions.find((option) => option.action === selectedAction) ?? remainingOptions[0];
+    const selectedOption = remainingOptions.find(option => option.action === selectedAction) ?? remainingOptions[0];
     if (!selectedOption) {
       break;
     }
 
     selectedActions.push(selectedOption.action);
-    const selectedOptionIndex = remainingOptions.findIndex((option) => option.action === selectedOption.action);
+    const selectedOptionIndex = remainingOptions.findIndex(option => option.action === selectedOption.action);
     if (selectedOptionIndex >= 0) {
       remainingOptions.splice(selectedOptionIndex, 1);
     }
@@ -67,7 +70,7 @@ export const resolveChooseAbilities = async (args: ResolveChooseAbilitiesArgs): 
         prompt: 'You may choose an extra option',
         actionButtons: [
           { label: 'NO EXTRA OPTION', action: 0 },
-          ...remainingOptions.map((option) => ({ label: option.label, action: option.action })),
+          ...remainingOptions.map(option => ({ label: option.label, action: option.action })),
         ],
       });
 
@@ -76,14 +79,14 @@ export const resolveChooseAbilities = async (args: ResolveChooseAbilitiesArgs): 
         break;
       }
 
-      const selectedOption = remainingOptions.find((option) => option.action === selectedAction);
+      const selectedOption = remainingOptions.find(option => option.action === selectedAction);
       if (!selectedOption) {
         args.context.loggerService.warn(`[${args.logTag}] selected extra option is invalid, skipping`);
         continue;
       }
 
       selectedActions.push(selectedOption.action);
-      const selectedOptionIndex = remainingOptions.findIndex((option) => option.action === selectedOption.action);
+      const selectedOptionIndex = remainingOptions.findIndex(option => option.action === selectedOption.action);
       remainingOptions.splice(selectedOptionIndex, 1);
       args.context.loggerService.debug(`[${args.logTag}] selected extra option '${selectedOption.label}'`);
     }
@@ -91,11 +94,11 @@ export const resolveChooseAbilities = async (args: ResolveChooseAbilitiesArgs): 
 
   // Resolve selected effects in printed option order, not pick order.
   const selectedSet = new Set(selectedActions);
-  const selectedOptionsInTextOrder = args.options.filter((option) => selectedSet.has(option.action));
+  const selectedOptionsInTextOrder = args.options.filter(option => selectedSet.has(option.action));
   for (const selectedOption of selectedOptionsInTextOrder) {
     args.context.loggerService.debug(`[${args.logTag}] resolving option '${selectedOption.label}'`);
     await selectedOption.resolve();
   }
 
-  return selectedOptionsInTextOrder.map((option) => option.action);
+  return selectedOptionsInTextOrder.map(option => option.action);
 };

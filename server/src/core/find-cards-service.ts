@@ -22,9 +22,14 @@ type SourceSnapshot = {
   playerId?: PlayerId;
 };
 
-type CardFilterLeaf = Exclude<CardFilterExpr, { all: CardFilterExpr[] } | { any: CardFilterExpr[] } | {
-  not: CardFilterExpr;
-}>;
+type CardFilterLeaf = Exclude<
+  CardFilterExpr,
+  | { all: CardFilterExpr[] }
+  | { any: CardFilterExpr[] }
+  | {
+      not: CardFilterExpr;
+    }
+>;
 
 export class FindCardsService implements FindCardService {
   constructor(
@@ -85,11 +90,11 @@ export class FindCardsService implements FindCardService {
    *   ],
    * });
    */
-  public readonly findCards: FindCardsFn = (filter) => {
+  public readonly findCards: FindCardsFn = filter => {
     const seedCardIds = this.resolveSeedCardIds(filter);
-    const sourceCardIds = seedCardIds ?? this.cardLibrary.getAllCardsAsArray().map((card) => card.id);
-    const sourceCards = sourceCardIds.map((cardId) => this.cardLibrary.getCard(cardId));
-    return sourceCards.filter((card) => this.matchesFilterExpression(card, filter));
+    const sourceCardIds = seedCardIds ?? this.cardLibrary.getAllCardsAsArray().map(card => card.id);
+    const sourceCards = sourceCardIds.map(cardId => this.cardLibrary.getCard(cardId));
+    return sourceCards.filter(card => this.matchesFilterExpression(card, filter));
   };
 
   // Evaluates whether a card matches the supplied filter expression.
@@ -110,7 +115,7 @@ export class FindCardsService implements FindCardService {
   // Returns count of non-empty basic/kingdom supply piles.
   public getRemainingSupplyCount(): number {
     const remainingSupplyPileKeys = this.findCards({ location: ['kingdomSupply', 'basicSupply'] })
-      .map((card) => getCardPileKey(card))
+      .map(card => getCardPileKey(card))
       .reduce((prev, pileKey) => {
         if (prev.includes(pileKey)) {
           return prev;
@@ -127,20 +132,20 @@ export class FindCardsService implements FindCardService {
     from?: ('basicSupply' | 'kingdomSupply') | ('basicSupply' | 'kingdomSupply')[];
   }): Card | undefined {
     const supplyLocations = args.from
-      ? (Array.isArray(args.from) ? args.from : [args.from])
+      ? Array.isArray(args.from)
+        ? args.from
+        : [args.from]
       : ['basicSupply', 'kingdomSupply'];
 
     return this.findCards({ location: supplyLocations })
-      .filter((card) => getCardPileKey(card) === args.pileKey)
+      .filter(card => getCardPileKey(card) === args.pileKey)
       .slice(-1)[0];
   }
 
   // Finds the current top card in a named non-supply pile (using kingdom as pile name).
-  public findTopNonSupplyCardForPileName(args: {
-    pileName: string;
-  }): Card | undefined {
+  public findTopNonSupplyCardForPileName(args: { pileName: string }): Card | undefined {
     return this.findCards({ location: 'nonSupplyCards' })
-      .filter((card) => card.kingdom === args.pileName)
+      .filter(card => card.kingdom === args.pileName)
       .slice(-1)[0];
   }
 
@@ -192,11 +197,11 @@ export class FindCardsService implements FindCardService {
     sourceOverride?: { location?: CardLocation; playerId?: PlayerId },
   ): boolean {
     if (this.isAllFilter(filter)) {
-      return filter.all.every((child) => this.matchesFilterExpression(card, child, sourceOverride));
+      return filter.all.every(child => this.matchesFilterExpression(card, child, sourceOverride));
     }
 
     if (this.isAnyFilter(filter)) {
-      return filter.any.some((child) => this.matchesFilterExpression(card, child, sourceOverride));
+      return filter.any.some(child => this.matchesFilterExpression(card, child, sourceOverride));
     }
 
     if (this.isNotFilter(filter)) {
@@ -233,7 +238,7 @@ export class FindCardsService implements FindCardService {
       }
 
       const tags = filter.tags ? castArray(filter.tags) : undefined;
-      if (tags && !card.tags?.some((tag) => tags.includes(tag))) {
+      if (tags && !card.tags?.some(tag => tags.includes(tag))) {
         return false;
       }
 
@@ -252,12 +257,12 @@ export class FindCardsService implements FindCardService {
       }
 
       const cardTypes = filter.cardType ? castArray(filter.cardType) : undefined;
-      if (cardTypes && !card.type.some((cardType) => cardTypes.includes(cardType))) {
+      if (cardTypes && !card.type.some(cardType => cardTypes.includes(cardType))) {
         return false;
       }
 
       const excludedCardTypes = filter.excludedCardType ? castArray(filter.excludedCardType) : undefined;
-      if (excludedCardTypes && card.type.some((cardType) => excludedCardTypes.includes(cardType))) {
+      if (excludedCardTypes && card.type.some(cardType => excludedCardTypes.includes(cardType))) {
         return false;
       }
     }
@@ -314,7 +319,9 @@ export class FindCardsService implements FindCardService {
 
   // Narrows leaf expressions that constrain by effective card cost.
   private isCostFilter(filter: CardFilterLeaf): filter is CostFindCardsFilter {
-    return typeof filter === 'object' && filter !== null && 'kind' in filter && 'amount' in filter && 'playerId' in filter;
+    return (
+      typeof filter === 'object' && filter !== null && 'kind' in filter && 'amount' in filter && 'playerId' in filter
+    );
   }
 
   // Narrows leaf expressions that constrain by card metadata (type, key, tags, etc.).

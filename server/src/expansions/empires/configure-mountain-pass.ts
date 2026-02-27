@@ -2,14 +2,9 @@ import { ComputedMatchConfiguration, PlayerId } from 'shared/types/index.ts';
 import { GameEventRegistrar } from '@server-types/index.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 
-export const configureMountainPass = (
-  registrar: GameEventRegistrar,
-  config: ComputedMatchConfiguration,
-) => {
+export const configureMountainPass = (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => {
   // Only register Mountain Pass handlers when the landmark is present.
-  const hasMountainPass = (config.landmarks ?? []).some(
-    (landmark) => landmark.cardKey === 'mountain-pass',
-  );
+  const hasMountainPass = (config.landmarks ?? []).some(landmark => landmark.cardKey === 'mountain-pass');
   if (!hasMountainPass) return;
 
   registrar('onCardGained', async (args, eventArgs) => {

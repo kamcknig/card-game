@@ -4,9 +4,7 @@
     "cost": {
       "treasure": 2
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+1 Action\nReveal the top 2 cards of your deck. Put one into your hand and discard the other. If both were Actions, take the Lantern or Horn."
   },
   "acting-troupe": {
@@ -14,9 +12,7 @@
     "cost": {
       "treasure": 3
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+4 Villagers\nTrash this."
   },
   "cargo-ship": {
@@ -24,10 +20,7 @@
     "cost": {
       "treasure": 3
     },
-    "type": [
-      "ACTION",
-      "DURATION"
-    ],
+    "type": ["ACTION", "DURATION"],
     "abilityText": "+$2\nOnce this turn, when you gain a card, you may set it aside face up (on this). At the start of your next turn, put it into your hand."
   },
   "ducat": {
@@ -35,9 +28,7 @@
     "cost": {
       "treasure": 2
     },
-    "type": [
-      "TREASURE"
-    ],
+    "type": ["TREASURE"],
     "abilityText": "+1 Coffers\n+1 Buy\nWhen you gain this, you may trash a Copper from your hand."
   },
   "experiment": {
@@ -45,9 +36,7 @@
     "cost": {
       "treasure": 3
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+2 Cards\n+1 Action\nReturn this to its pile.\nWhen you gain this, gain another Experiment (that doesn't come with another)."
   },
   "flag-bearer": {
@@ -55,9 +44,7 @@
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+$2\nWhen you gain or trash this, take the Flag."
   },
   "hideout": {
@@ -65,9 +52,7 @@
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+1 Card\n+2 Actions\nTrash a card from your hand. If it's a Victory card, gain a Curse."
   },
   "inventor": {
@@ -75,9 +60,7 @@
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "Gain a card costing up to $4, then cards cost $1 less this turn."
   },
   "improve": {
@@ -85,9 +68,7 @@
     "cost": {
       "treasure": 3
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+$2\nAt the start of Clean-up, you may trash an Action card you would discard from play this turn, to gain a card costing exactly $1 more than it."
   },
   "lackeys": {
@@ -95,9 +76,7 @@
     "cost": {
       "treasure": 2
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+2 Cards\nWhen you gain this, +2 Villagers."
   },
   "mountain-village": {
@@ -105,9 +84,7 @@
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+2 Actions\nLook through your discard pile and put a card from it into your hand; if you can't, +1 Card."
   },
   "old-witch": {
@@ -115,10 +92,7 @@
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION",
-      "ATTACK"
-    ],
+    "type": ["ACTION", "ATTACK"],
     "targetScheme": "ALL_OTHER",
     "abilityText": "+3 Cards\nEach other player gains a Curse and may trash a Curse from their hand."
   },
@@ -127,10 +101,7 @@
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION",
-      "REACTION"
-    ],
+    "type": ["ACTION", "REACTION"],
     "abilityText": "+1 Villager\n+$2\nWhen something causes you to reveal this (using the word \"reveal\") in an Action phase, +1 Coffers."
   },
   "priest": {
@@ -138,9 +109,7 @@
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+$2\nTrash a card from your hand. For the rest of this turn, when you trash a card, +$2."
   },
   "recruiter": {
@@ -148,9 +117,7 @@
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+2 Cards\nTrash a card from your hand. +1 Villager per $1 it costs."
   },
   "research": {
@@ -158,10 +125,7 @@
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION",
-      "DURATION"
-    ],
+    "type": ["ACTION", "DURATION"],
     "abilityText": "+1 Action\nTrash a card from your hand. Per $1 it costs, set aside a card from your deck face down (on this). At the start of your next turn, put those cards into your hand."
   },
   "scholar": {
@@ -169,9 +133,7 @@
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "Discard your hand.\n+7 Cards."
   },
   "sculptor": {
@@ -179,9 +141,7 @@
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "Gain a card to your hand costing up to $4.\nIf it's a Treasure, +1 Villager."
   },
   "seer": {
@@ -189,9 +149,7 @@
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+1 Card\n+1 Action\nReveal the top 3 cards of your deck. Put the ones costing from $2 to $4 into your hand. Put the rest back in any order."
   },
   "silk-merchant": {
@@ -199,9 +157,7 @@
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+2 Cards\n+1 Buy\nWhen you gain or trash this, +1 Coffers and +1 Villager."
   },
   "spices": {
@@ -209,9 +165,7 @@
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "TREASURE"
-    ],
+    "type": ["TREASURE"],
     "abilityText": "+$2\n+1 Buy\nWhen you gain this, +2 Coffers."
   },
   "swashbuckler": {
@@ -219,9 +173,7 @@
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+3 Cards\nIf your discard pile has any cards in it: +1 Coffers, then if you have at least 4 Coffers tokens, take the Treasure Chest."
   },
   "treasurer": {
@@ -229,9 +181,7 @@
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ],
+    "type": ["ACTION"],
     "abilityText": "+$3\nChoose one: Trash a Treasure from your hand; or gain a Treasure from the trash to your hand; or take the Key."
   },
   "villain": {
@@ -239,10 +189,7 @@
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION",
-      "ATTACK"
-    ],
+    "type": ["ACTION", "ATTACK"],
     "targetScheme": "ALL_OTHER",
     "abilityText": "+2 Coffers\nEach other player with 5 or more cards in hand discards one costing $2 or more (or reveals they can't)."
   },
@@ -251,10 +198,7 @@
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "TREASURE",
-      "COMMAND"
-    ],
+    "type": ["TREASURE", "COMMAND"],
     "abilityText": "Choose one: +$2; or replay a non-Command Action card you played this turn that's still in play."
   },
   "flag": {
@@ -262,9 +206,7 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": [
-      "ARTIFACT"
-    ],
+    "type": ["ARTIFACT"],
     "abilityText": "When drawing your hand, +1 Card."
   },
   "horn": {
@@ -272,9 +214,7 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": [
-      "ARTIFACT"
-    ],
+    "type": ["ARTIFACT"],
     "abilityText": "Once per turn, when you discard a Border Guard from play, you may put it onto your deck."
   },
   "key": {
@@ -282,9 +222,7 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": [
-      "ARTIFACT"
-    ],
+    "type": ["ARTIFACT"],
     "abilityText": "At the start of your turn, +$1."
   },
   "lantern": {
@@ -292,9 +230,7 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": [
-      "ARTIFACT"
-    ],
+    "type": ["ARTIFACT"],
     "abilityText": "Border Guards you play reveal 3 cards and discard 2. (It takes all 3 being Actions to take the Horn.)"
   },
   "treasure-chest": {
@@ -302,9 +238,7 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": [
-      "ARTIFACT"
-    ],
+    "type": ["ARTIFACT"],
     "abilityText": "At the start of your Buy phase, gain a Gold."
   }
 }

@@ -206,7 +206,7 @@ export class ExpansionLoaderService {
       const cardEffectsModule = await import(`${expansionPath}/card-effects-${expansionName}.ts`);
       const cardEffects = cardEffectsModule.default as CardExpansionModule;
 
-      Object.keys(cardEffects).forEach((key) => {
+      Object.keys(cardEffects).forEach(key => {
         if (cardEffects[key].registerScoringFunction) {
           this.loggerService.debug(`[expansion loader] registering scoring function for ${key}`);
           this.expansionCardMetadataRegistryService.registerScoringFunction(

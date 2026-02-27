@@ -57,8 +57,7 @@ export class ReactionManager {
     private readonly loggerService: LoggerService,
   ) {}
 
-  public endGame() {
-  }
+  public endGame() {}
 
   registerGameEvent(event: GameLifecycleEvent, handler: GameLifecycleCallback) {
     this._expansionGameEventHandlers[event] ??= [];
@@ -96,11 +95,13 @@ export class ReactionManager {
       let include = true;
 
       if (reaction.condition !== undefined) {
-        const result = await reaction.condition(this.reactionContextFactory.createConditionContext({
-          reactionManager: this,
-          trigger,
-          reaction,
-        }));
+        const result = await reaction.condition(
+          this.reactionContextFactory.createConditionContext({
+            reactionManager: this,
+            trigger,
+            reaction,
+          }),
+        );
 
         include = result;
       }
@@ -114,7 +115,7 @@ export class ReactionManager {
   }
 
   async getReactionsForPlayer(trigger: ReactionTrigger, playerId: number) {
-    const playerReactions = this._reactions.filter((reaction) => reaction.playerId === playerId);
+    const playerReactions = this._reactions.filter(reaction => reaction.playerId === playerId);
     return await this.getReactions(trigger, playerReactions);
   }
 
@@ -124,9 +125,9 @@ export class ReactionManager {
       if (trigger.id === triggerId) {
         this._reactions.splice(i, 1);
         this.loggerService.info(
-          `[REACTION MANAGER] removing trigger reaction ${triggerId} for player ${
-            this.match.players?.find((player) => player.id === trigger.playerId)
-          }`,
+          `[REACTION MANAGER] removing trigger reaction ${triggerId} for player ${this.match.players?.find(
+            player => player.id === trigger.playerId,
+          )}`,
         );
       }
     }
@@ -142,8 +143,7 @@ export class ReactionManager {
     const idSuffix = templateOptions?.idSuffix;
     const systemTemplate = {
       ...reactionTemplate,
-      id: `${cardLike.cardKey}:${cardLike.id}:${event}:system` +
-        (idSuffix ? `:${idSuffix}` : ''),
+      id: `${cardLike.cardKey}:${cardLike.id}:${event}:system` + (idSuffix ? `:${idSuffix}` : ''),
       system: true,
     };
 
@@ -160,8 +160,7 @@ export class ReactionManager {
     const idSuffix = templateOptions?.idSuffix;
     const globalSystemTemplate = {
       ...reactionTemplate,
-      id: `${cardLike.cardKey}:${cardLike.id}:${event}:system` +
-        (idSuffix ? `:${idSuffix}` : ''),
+      id: `${cardLike.cardKey}:${cardLike.id}:${event}:system` + (idSuffix ? `:${idSuffix}` : ''),
       system: true,
       playerId: undefined,
     };
@@ -188,19 +187,20 @@ export class ReactionManager {
       template = cardLikeOrTemplate;
     } else {
       // Resolve a stable source type for landscape reactions.
-      const sourceType: ReactionSourceType = cardLikeOrTemplate instanceof Event
-        ? 'event'
-        : cardLikeOrTemplate instanceof Landmark
-        ? 'landmark'
-        : cardLikeOrTemplate instanceof Project
-        ? 'project'
-        : cardLikeOrTemplate instanceof Card
-        ? 'card'
-        : 'other';
+      const sourceType: ReactionSourceType =
+        cardLikeOrTemplate instanceof Event
+          ? 'event'
+          : cardLikeOrTemplate instanceof Landmark
+            ? 'landmark'
+            : cardLikeOrTemplate instanceof Project
+              ? 'project'
+              : cardLikeOrTemplate instanceof Card
+                ? 'card'
+                : 'other';
       // Allow optional ID suffixes for default reaction IDs.
       const idSuffix = templateOptions?.idSuffix;
-      const defaultId = `${cardLikeOrTemplate.cardName}:${cardLikeOrTemplate.id}:${event}` +
-        (idSuffix ? `:${idSuffix}` : '');
+      const defaultId =
+        `${cardLikeOrTemplate.cardName}:${cardLikeOrTemplate.id}:${event}` + (idSuffix ? `:${idSuffix}` : '');
       template = {
         ...reactionTemplate,
         listeningFor: event,
@@ -259,10 +259,12 @@ export class ReactionManager {
     // Track immunity scope to ensure context is not reused across triggers.
     initImmunityScope(reactionContext, trigger, this.loggerService);
 
-    const globalSystemReactions = (await this.getReactions(
-      trigger,
-      this._reactions.filter((reaction) => reaction.system && reaction.playerId === undefined),
-    )).sort((left, right) => left.id.localeCompare(right.id));
+    const globalSystemReactions = (
+      await this.getReactions(
+        trigger,
+        this._reactions.filter(reaction => reaction.system && reaction.playerId === undefined),
+      )
+    ).sort((left, right) => left.id.localeCompare(right.id));
 
     const usedGlobalSystemReactionIds = new Set<string>();
     const blockedGlobalSystemSourceKeys = new Set<string>();
@@ -290,10 +292,7 @@ export class ReactionManager {
 
     // now we get the order of players that could be affected by the play (including the current player),
     // then get reactions for them and run them
-    const targetOrder = getOrderStartingFrom(
-      this.match.players,
-      this.match.currentPlayerTurnIndex,
-    );
+    const targetOrder = getOrderStartingFrom(this.match.players, this.match.currentPlayerTurnIndex);
 
     for (const targetPlayer of targetOrder) {
       this.loggerService.info(`[REACTION MANAGER] checking '${trigger.eventType}' reactions for ${targetPlayer}`);
@@ -304,10 +303,7 @@ export class ReactionManager {
       const queuedAutoIds = new Set<string>();
 
       while (true) {
-        const reactions = (await this.getReactionsForPlayer(
-          trigger,
-          targetPlayer.id,
-        )).filter((r) => {
+        const reactions = (await this.getReactionsForPlayer(trigger, targetPlayer.id)).filter(r => {
           const key = r.getSourceKey();
           return !usedReactionIds.has(r.id) && !blockedCardKeys.has(key);
         });
@@ -320,15 +316,15 @@ export class ReactionManager {
           }
         }
 
-        const promptReactions = reactions.filter((reaction) => !reaction.autoResolve);
+        const promptReactions = reactions.filter(reaction => !reaction.autoResolve);
 
         this.loggerService.info(`[REACTION MANAGER] ${targetPlayer} has ${promptReactions.length} remaining reactions`);
 
         if (!promptReactions.length) break;
 
-        const compulsoryReactions = promptReactions.filter((r) => r.compulsory && !r.system);
+        const compulsoryReactions = promptReactions.filter(r => r.compulsory && !r.system);
 
-        const systemReactions = promptReactions.filter((r) => r.system);
+        const systemReactions = promptReactions.filter(r => r.system);
 
         if (systemReactions.length) {
           for (const systemReaction of systemReactions) {
@@ -352,12 +348,11 @@ export class ReactionManager {
 
         let selectedReaction: Reaction | undefined = undefined;
 
-        const shouldPrompt = promptReactions.length > 1 &&
-          (
-            compulsoryReactions.length !== promptReactions.length || // mix of compulsory + optional
-            !compulsoryReactions.every((r) => r.getSourceKey() === compulsoryReactions[0].getSourceKey()) // different
-            // cards
-          );
+        const shouldPrompt =
+          promptReactions.length > 1 &&
+          (compulsoryReactions.length !== promptReactions.length || // mix of compulsory + optional
+            !compulsoryReactions.every(r => r.getSourceKey() === compulsoryReactions[0].getSourceKey())); // different
+          // cards
 
         // when multiple reactions can occur, the user chooses unless they are all compulsory
         // and the same card
@@ -391,15 +386,8 @@ export class ReactionManager {
           continue;
         }
 
-        const reactionContextObject = this.buildTriggeredEffectContext(
-          trigger,
-          selectedReaction,
-        );
-        await this.runReaction(
-          selectedReaction,
-          reactionContextObject,
-          reactionContext,
-        );
+        const reactionContextObject = this.buildTriggeredEffectContext(trigger, selectedReaction);
+        await this.runReaction(selectedReaction, reactionContextObject, reactionContext);
 
         usedReactionIds.add(selectedReaction.id);
 
@@ -415,15 +403,8 @@ export class ReactionManager {
         if (!stillValid) continue;
 
         this.loggerService.info(`[REACTION MANAGER] auto-resolving reaction ${autoReaction.id} for ${targetPlayer}`);
-        const autoReactionContext = this.buildTriggeredEffectContext(
-          trigger,
-          autoReaction,
-        );
-        await this.runReaction(
-          autoReaction,
-          autoReactionContext,
-          reactionContext,
-        );
+        const autoReactionContext = this.buildTriggeredEffectContext(trigger, autoReaction);
+        await this.runReaction(autoReaction, autoReactionContext, reactionContext);
       }
     }
   }

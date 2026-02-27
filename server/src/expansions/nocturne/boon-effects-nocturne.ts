@@ -36,10 +36,9 @@ const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
     'the-earths-gift',
     async ({ loggerService, playerId, actionService, cardLibrary, findCardService }) => {
       // Determine if the player has any Treasures to discard.
-      const treasuresInHand = findCardService.findCards({ all: [
-        { location: 'playerHand', playerId },
-        { cardType: ['TREASURE'] },
-      ] });
+      const treasuresInHand = findCardService.findCards({
+        all: [{ location: 'playerHand', playerId }, { cardType: ['TREASURE'] }],
+      });
 
       if (treasuresInHand.length < 1) {
         loggerService.info('[the-earths-gift boon] no Treasures in hand, skipping discard');
@@ -47,16 +46,13 @@ const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       }
 
       // Prompt the player to optionally discard a Treasure.
-      const discardedTreasureId = await actionService.run('selectSingleCard', {
+      const discardedTreasureId = (await actionService.run('selectSingleCard', {
         prompt: 'Discard a Treasure to gain a card costing up to $4',
         playerId: playerId,
         count: 1,
         optional: true,
-        restrict: { all: [
-          { location: 'playerHand', playerId },
-          { cardType: ['TREASURE'] },
-        ] },
-      }) as CardId | null;
+        restrict: { all: [{ location: 'playerHand', playerId }, { cardType: ['TREASURE'] }] },
+      })) as CardId | null;
       if (!discardedTreasureId) {
         loggerService.debug('[the-earths-gift boon] player declined to discard a Treasure');
         return;
@@ -70,15 +66,14 @@ const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       });
 
       loggerService.debug('[the-earths-gift boon] selecting card to gain costing up to $4');
-      const gainCardId = await actionService.run('selectSingleCard', {
+      const gainCardId = (await actionService.run('selectSingleCard', {
         prompt: 'Gain a card costing up to $4',
         playerId: playerId,
         count: 1,
-        restrict: { all: [
-          { location: ['basicSupply', 'kingdomSupply'] },
-          { playerId, kind: 'upTo', amount: { treasure: 4 } },
-        ] },
-      }) as CardId | null;
+        restrict: {
+          all: [{ location: ['basicSupply', 'kingdomSupply'] }, { playerId, kind: 'upTo', amount: { treasure: 4 } }],
+        },
+      })) as CardId | null;
       if (!gainCardId) {
         loggerService.info('[the-earths-gift boon] no eligible cards to gain');
         return;
@@ -148,15 +143,13 @@ const registerFlamesGift = (registerBoonEffect: BoonEffectRegistrar) => {
         return;
       }
 
-      const selectedCardId = await actionService.run('selectSingleCard', {
+      const selectedCardId = (await actionService.run('selectSingleCard', {
         prompt: 'You may trash a card from your hand',
         playerId: playerId,
         count: 1,
         optional: true,
-        restrict: { all: [
-          { location: 'playerHand', playerId },
-        ] },
-      }) as CardId | null;
+        restrict: { all: [{ location: 'playerHand', playerId }] },
+      })) as CardId | null;
       if (!selectedCardId) {
         loggerService.debug('[the-flames-gift boon] player declined to trash a card');
         return;
@@ -225,7 +218,7 @@ const registerMoonsGift = (registerBoonEffect: BoonEffectRegistrar) => {
         return;
       }
 
-      const discardIds = discardCards.map((card) => card.id);
+      const discardIds = discardCards.map(card => card.id);
       const selectionResult = await promptService.requestActionResult<CardId[]>({
         prompt: 'You may put a card from your discard onto your deck',
         playerId: playerId,
@@ -323,9 +316,15 @@ const registerSeasGift = (registerBoonEffect: BoonEffectRegistrar) => {
 const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect(
     'the-skys-gift',
-    async (
-      { loggerService, playerId, actionService, promptService, cardLibrary, supplyGainService, cardSourceController },
-    ) => {
+    async ({
+      loggerService,
+      playerId,
+      actionService,
+      promptService,
+      cardLibrary,
+      supplyGainService,
+      cardSourceController,
+    }) => {
       const confirmAction = await promptService.requestAction({
         playerId,
         prompt: 'Discard 3 cards to gain a Gold?',
@@ -421,7 +420,7 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
         }
       }
 
-      const cardsToRearrange = cardsToLookAt.filter((id) => !cardsToDiscard.includes(id));
+      const cardsToRearrange = cardsToLookAt.filter(id => !cardsToDiscard.includes(id));
       if (cardsToRearrange.length < 2) {
         if (cardsToRearrange.length === 1) {
           await actionService.run('moveCard', {
@@ -458,10 +457,9 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 // Registers The Swamp's Gift boon effect logic.
 const registerSwampsGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect('the-swamps-gift', async ({ loggerService, playerId, actionService, findCardService }) => {
-    const willOWispCards = findCardService.findCards({ all: [
-      { location: 'nonSupplyCards' },
-      { cardKeys: 'will-o-wisp' },
-    ] });
+    const willOWispCards = findCardService.findCards({
+      all: [{ location: 'nonSupplyCards' }, { cardKeys: 'will-o-wisp' }],
+    });
 
     if (willOWispCards.length < 1) {
       loggerService.info("[the-swamps-gift boon] no Will-o'-Wisps available to gain");
@@ -492,12 +490,15 @@ const registerWindsGift = (registerBoonEffect: BoonEffectRegistrar) => {
         return;
       }
 
-      const cardIds = hand.length < 2 ? hand : await actionService.run('selectCard', {
-        prompt: 'Discard 2 cards',
-        playerId: playerId,
-        restrict: hand,
-        count: 2,
-      });
+      const cardIds =
+        hand.length < 2
+          ? hand
+          : await actionService.run('selectCard', {
+              prompt: 'Discard 2 cards',
+              playerId: playerId,
+              restrict: hand,
+              count: 2,
+            });
 
       for (const cardId of cardIds) {
         loggerService.debug(`[the-winds-gift boon] discarding ${cardLibrary.getCard(cardId)}`);

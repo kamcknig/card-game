@@ -210,7 +210,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       gameEventRegistrar: (event: GameLifecycleEvent, handler: GameLifecycleCallback) =>
         this.reactionManager.registerGameEvent(event, handler),
       clientEventRegistrar: (event, handler) => this.clientEventRegistrar(event, handler),
-      endGamePolicyRegistrar: (val) => this.endGamePolicyRegistryService.register(val),
+      endGamePolicyRegistrar: val => this.endGamePolicyRegistryService.register(val),
       expansionRegistration: {
         registerCardEffect: (...args) => this.gameActionsController.registerCardEffect(...args),
         registerBoonEffect: (cardKey, effectFn) => this.gameActionsController.registerBoonEffect(cardKey, effectFn),
@@ -220,7 +220,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
           this.gameActionsController.registerArtifactEffect(cardKey, effectFn),
         registerProjectEffect: (cardKey, effectFn) =>
           this.gameActionsController.registerProjectEffect(cardKey, effectFn),
-        registerTokenDefinition: (definition) => this.tokenRegistryService.registerTokenDefinition(definition),
+        registerTokenDefinition: definition => this.tokenRegistryService.registerTokenDefinition(definition),
         registerTokenCardPlayedHandler: (tokenId, handler) =>
           this.tokenRegistryService.registerTokenCardPlayedHandler(tokenId, handler),
       },
@@ -274,7 +274,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
     this.broadcastPatch(snapshot);
 
-    this.socketMap.forEach((s) => {
+    this.socketMap.forEach(s => {
       // Register readiness listener before notifying client that match data is ready.
       s.on('clientReady', this.onClientReady);
       s.emit('setCardLibrary', this.cardLibrary.getAllCards());
@@ -365,7 +365,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
   private clientEventRegistrar<T extends keyof ServerListenEvents>(event: T, handler: ServerListenEvents[T]) {
     this._registeredEvents.push(event);
-    this.socketMap.forEach((s) => {
+    this.socketMap.forEach(s => {
       s.on(event, handler as any);
     });
   }
@@ -379,7 +379,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     const roster = this.match.players?.length ? this.match.players : this.match.config.players;
 
     // There should always be at least one entry after a single disconnect
-    const leaving = roster.find((p) => p.id === playerId);
+    const leaving = roster.find(p => p.id === playerId);
     this.loggerService.info(`[match] ${leaving ?? `{id:${playerId}}`} has disconnected`);
 
     this.socketMap.get(playerId)?.offAnyIncoming();
@@ -487,12 +487,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   // Removes a player from the live match state and updates turn ordering.
   public removePlayerFromMatch(playerId: PlayerId): void {
     const prev = structuredClone(this.match);
-    const playerIdx = this.match.players.findIndex((player) => player.id === playerId);
+    const playerIdx = this.match.players.findIndex(player => player.id === playerId);
     if (playerIdx === -1) return;
 
     this.match.players.splice(playerIdx, 1);
     if (this.match.config?.players) {
-      const configIdx = this.match.config.players.findIndex((player) => player.id === playerId);
+      const configIdx = this.match.config.players.findIndex(player => player.id === playerId);
       if (configIdx !== -1) {
         this.match.config.players.splice(configIdx, 1);
       }
@@ -586,13 +586,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       if (playerId) {
         this.socketMap.get(playerId)?.emit('patchUpdate', patch, cardLibraryPatch);
       } else {
-        this.socketMap.forEach((s) => s.emit('patchUpdate', patch, cardLibraryPatch));
+        this.socketMap.forEach(s => s.emit('patchUpdate', patch, cardLibraryPatch));
       }
     }
   }
 
   private onClientReady = (playerId: number) => {
-    const player = this.match.config?.players.find((player) => player.id === playerId);
+    const player = this.match.config?.players.find(player => player.id === playerId);
 
     this.loggerService.info(`[match] received clientReady event from ${player}`);
 
@@ -608,7 +608,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
     player.ready = true;
 
-    if (this.match.config.players.some((p) => !p.ready)) {
+    if (this.match.config.players.some(p => !p.ready)) {
       this.loggerService.debug(`[match] not all players marked ready, waiting for everyone`);
       return;
     }
@@ -639,7 +639,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this.match.playerBuys = 1;
     this.match.playerActions = 1;
 
-    this.socketMap.forEach((s) => s.emit('matchStarted'));
+    this.socketMap.forEach(s => s.emit('matchStarted'));
 
     for (const player of this.match.players!) {
       await this.runGameAction('drawHand', { playerId: player.id });
@@ -659,11 +659,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     });
 
     // Seed turn history with the initial started turn.
-    this.match.stats.turns = [{
-      turnNumber: this.match.turnNumber,
-      controllerId: getCurrentPlayer(this.match).id,
-      playerId: getCurrentPlayer(this.match).id,
-    }];
+    this.match.stats.turns = [
+      {
+        turnNumber: this.match.turnNumber,
+        controllerId: getCurrentPlayer(this.match).id,
+        playerId: getCurrentPlayer(this.match).id,
+      },
+    ];
 
     // Kick off the first turn, including any computer player automation.
     await this.runGameAction('checkForRemainingPlayerActions');

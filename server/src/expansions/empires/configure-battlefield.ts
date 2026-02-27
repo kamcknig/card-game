@@ -3,17 +3,12 @@ import { GameEventRegistrar } from '@server-types/index.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
 import { placeVictoryTokensPerPlayer } from './landmark-utils.ts';
 
-export const configureBattlefield = (
-  registrar: GameEventRegistrar,
-  config: ComputedMatchConfiguration,
-) => {
+export const configureBattlefield = (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => {
   // Only register Battlefield handlers when the landmark is present.
-  const hasBattlefield = (config.landmarks ?? []).some(
-    (landmark) => landmark.cardKey === 'battlefield',
-  );
+  const hasBattlefield = (config.landmarks ?? []).some(landmark => landmark.cardKey === 'battlefield');
   if (!hasBattlefield) return;
 
-  registrar('onGameStartSetup', async (args) => {
+  registrar('onGameStartSetup', async args => {
     // Battlefield setup: put 6 VP tokens per player on the landmark using the shared helper.
     await placeVictoryTokensPerPlayer(args, {
       landmarkKey: 'battlefield',
@@ -28,12 +23,14 @@ export const configureBattlefield = (
     if (!gainedCard.type.includes('VICTORY')) return;
 
     const victoryTokenId = prosperityTokenIds.victory;
-    const tokensOnBattlefield = Object.values(args.match.tokens ?? {}).filter(
-      (token) =>
-        token.tokenId === victoryTokenId &&
-        token.location.type === 'supplyPile' &&
-        token.location.cardKey === 'battlefield',
-    ).sort((a, b) => a.id.localeCompare(b.id));
+    const tokensOnBattlefield = Object.values(args.match.tokens ?? {})
+      .filter(
+        token =>
+          token.tokenId === victoryTokenId &&
+          token.location.type === 'supplyPile' &&
+          token.location.cardKey === 'battlefield',
+      )
+      .sort((a, b) => a.id.localeCompare(b.id));
 
     if (!tokensOnBattlefield.length) {
       return;

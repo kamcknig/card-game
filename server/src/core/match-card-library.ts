@@ -10,9 +10,7 @@ import { LoggerService } from './logger-service.ts';
 export class MatchCardLibrary {
   private readonly _library: Map<CardId, Card> = new Map();
 
-  constructor(
-    private readonly loggerService: LoggerService,
-  ) {}
+  constructor(private readonly loggerService: LoggerService) {}
 
   public addCard = (card: Card) => {
     this.loggerService.debug(`[CARD LIBRARY] adding ${card} to library`);
@@ -41,7 +39,7 @@ export class MatchCardLibrary {
 
   getCardsByOwner(id: PlayerId) {
     const allCards = this.getAllCardsAsArray();
-    const playerCards = allCards.filter((c) => {
+    const playerCards = allCards.filter(c => {
       return c.owner === id;
     });
     return playerCards;

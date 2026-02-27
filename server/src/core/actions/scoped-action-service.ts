@@ -57,10 +57,7 @@ export class MatchActionRunnerRef {
  * This preserves a single action execution path and consistent trigger/lifecycle behavior.
  */
 export class ScopedActionService implements ActionService {
-  constructor(
-    private readonly matchActionRunnerRef: MatchActionRunnerRef,
-  ) {
-  }
+  constructor(private readonly matchActionRunnerRef: MatchActionRunnerRef) {}
 
   public async run<K extends GameActions>(
     action: K,

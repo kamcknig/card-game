@@ -15,10 +15,9 @@ export class AllyLoaderService {
     const expansionAllies = (this.expansionCatalogService.getRequiredExpansion(expansionName).allies ??= {});
 
     try {
-      const allyLibraryModule = await import(
-        `@expansions/${expansionName}/ally-library-${expansionName}.json`,
-        { with: { type: 'json' } },
-      );
+      const allyLibraryModule = await import(`@expansions/${expansionName}/ally-library-${expansionName}.json`, {
+        with: { type: 'json' },
+      });
       const allies = allyLibraryModule.default as Record<string, Partial<AllyNoId>>;
 
       for (const cardKey of Object.keys(allies)) {
