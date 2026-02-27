@@ -35,6 +35,12 @@ app-match-supply-overlay {
   z-index: 2;
 }
 
+app-match-landscapes-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
 app-match-configuration {
   height: 100%;
   max-height: 100%;

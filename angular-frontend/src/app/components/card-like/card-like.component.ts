@@ -26,6 +26,7 @@ export class CardLikeComponent {
 
   cardLikeId = input.required<CardLikeId>();
   size = input<CardSize>('half');
+  displayWidthPx = input<number>(CARD_WIDTH);
 
   private readonly _cards = toSignal(this._nanoStores.useStore(cardStore), { initialValue: cardStore.get() });
   private readonly _match = toSignal(this._nanoStores.useStore(matchStore), { initialValue: matchStore.get() });
@@ -63,6 +64,9 @@ export class CardLikeComponent {
     return this._sanitizer.bypassSecurityTrustUrl(imagePath);
   });
 
+  // Width used by image-based layouts (way-picker, landscape overlay).
+  readonly imageWidth = computed(() => this.displayWidthPx());
+
   // Reset fallback override whenever source card-like or desired size changes.
   private readonly _resetFallbackOverrideEffect = effect(() => {
     this.cardLikeId();
@@ -91,6 +95,4 @@ export class CardLikeComponent {
     if (size === 'detail') return cardLike.detailImagePath;
     return cardLike.fullImagePath;
   }
-
-  protected readonly CARD_WIDTH = CARD_WIDTH;
 }

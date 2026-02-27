@@ -29,6 +29,7 @@ import { PromptDialogCoordinatorService } from './core/prompt-dialog/prompt-dial
 import { WayPickerOverlayComponent } from './components/way-picker-overlay/way-picker-overlay.component';
 import { WayPickerOverlayService } from './core/way-picker/way-picker-overlay.service';
 import { MatchSupplyOverlayComponent } from './components/match/supply/match-supply-overlay.component';
+import { MatchLandscapesOverlayComponent } from './components/match/landscapes/match-landscapes-overlay.component';
 
 @Component({
   selector: 'app-root',
@@ -44,6 +45,7 @@ import { MatchSupplyOverlayComponent } from './components/match/supply/match-sup
     PromptDialogHostComponent,
     WayPickerOverlayComponent,
     MatchSupplyOverlayComponent,
+    MatchLandscapesOverlayComponent,
     NgClass,
   ],
   templateUrl: './app.component.html',

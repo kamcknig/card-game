@@ -146,12 +146,23 @@
   right: 4px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   pointer-events: none;
+  overflow: visible;
+}
+
+.pile-token-badge-stack {
+  position: relative;
+  width: 31px;
+  height: 31px;
+  overflow: visible;
 }
 
 .pile-token-badge {
-  min-width: 25px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 25px;
   height: 25px;
   border-radius: 999px;
   border: 2px solid #000000;
@@ -160,8 +171,27 @@
   font-weight: 700;
   line-height: 21px;
   text-align: center;
-  padding: 0 5px;
   box-sizing: border-box;
+  z-index: 1;
+}
+
+.pile-token-badge-count {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  min-width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 1px solid #000000;
+  background: #ffffff;
+  color: #000000;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 12px;
+  text-align: center;
+  padding: 0 2px;
+  box-sizing: border-box;
+  z-index: 2;
 }
 
 .pile-token-chips {

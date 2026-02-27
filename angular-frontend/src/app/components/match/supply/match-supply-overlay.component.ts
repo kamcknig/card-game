@@ -36,6 +36,13 @@ type SupplyTokenBadgeViewModel = {
   color: string;
 };
 
+type SupplyTokenBadgeStackViewModel = {
+  id: string;
+  label: string;
+  color: string;
+  count: number;
+};
+
 type SupplyTokenChipViewModel = {
   id: string;
   imagePath: string;
@@ -50,7 +57,7 @@ type SupplyPileViewModel = {
   cardId: CardId | null;
   count: number;
   trait: Trait | null;
-  tokenBadges: SupplyTokenBadgeViewModel[];
+  tokenBadgeStacks: SupplyTokenBadgeStackViewModel[];
   tokenChips: SupplyTokenChipViewModel[];
   selectableCard: boolean;
   selectedCard: boolean;
@@ -374,11 +381,11 @@ export class MatchSupplyOverlayComponent {
       cardId,
       count: sortedPileCards.length,
       trait,
-      tokenBadges: tokenVisual.tokenBadges.map((badge) => ({
+      tokenBadgeStacks: this.buildTokenBadgeStacks(tokenVisual.tokenBadges.map((badge) => ({
         id: badge.id,
         label: badge.label,
         color: this.toColorHex(badge.color),
-      })),
+      }))),
       tokenChips: tokenVisual.tokenChips.map((chip) => ({
         id: chip.id,
         imagePath: this.resolveTokenChipImagePath(chip.assetKey),
@@ -444,5 +451,33 @@ export class MatchSupplyOverlayComponent {
   private toColorHex(color: number): string {
     const normalized = Number.isFinite(color) ? Math.max(0, Math.min(0xffffff, Math.floor(color))) : 0xffffff;
     return `#${normalized.toString(16).padStart(6, '0')}`;
+  }
+
+  // Groups identical pile token badges and renders them as one stack with a count.
+  private buildTokenBadgeStacks(badges: SupplyTokenBadgeViewModel[]): SupplyTokenBadgeStackViewModel[] {
+    const grouped = new Map<string, { firstId: string; label: string; color: string; count: number }>();
+    for (const badge of badges) {
+      const key = `${badge.label}:${badge.color}`;
+      const existing = grouped.get(key);
+      if (existing) {
+        existing.count += 1;
+        continue;
+      }
+      grouped.set(key, {
+        firstId: badge.id,
+        label: badge.label,
+        color: badge.color,
+        count: 1,
+      });
+    }
+
+    return [...grouped.values()].map((group) => {
+      return {
+        id: `stack:${group.firstId}`,
+        label: group.label,
+        color: group.color,
+        count: group.count,
+      };
+    });
   }
 }

@@ -4,7 +4,7 @@
     class="card-image"
     [ngSrc]="path() ?? ''"
     (error)="onImageError()"
-    width="{{CARD_WIDTH}}"
+    [width]="imageWidth()"
     height="20"
   />
 </div>

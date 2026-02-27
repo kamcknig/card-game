@@ -29,12 +29,10 @@ import {selectablePileStore} from '../../../../state/interactive-pile-logic';
 import {SelectCardArgs} from '../../../../../types';
 import {NonSupplyKingdomView} from '../non-supply-kingdom-view';
 import {getCardSourceStore} from '../../../../state/card-source-store';
-import {OtherCardLikeView} from '../other-card-like-view';
 import {CardLikeView} from '../card-like-view';
 import {PileView} from '../pile';
 import {tokenDefinitionStore} from '../../../../state/token-definition-state';
 import {getPixiSceneTheme} from '../../../../theme/pixi-theme';
-import { cardStore } from '../../../../state/card-state';
 import { PromptDialogCoordinatorService } from '../../../../core/prompt-dialog/prompt-dialog-coordinator.service';
 import { WayPickerOverlayService } from '../../../../core/way-picker/way-picker-overlay.service';
 import {
@@ -42,6 +40,7 @@ import {
   SUPPLY_KINGDOM_PANEL_HEIGHT_PX,
   SUPPLY_KINGDOM_PANEL_WIDTH_PX
 } from '../../supply/supply-layout.constants';
+import { getLandscapePanelHeightPx } from '../../landscapes/landscape-layout.constants';
 
 export class MatchScene extends Scene {
   private static readonly WAY_PICKER_PANEL_WIDTH_PX = 220;
@@ -58,7 +57,6 @@ export class MatchScene extends Scene {
   private _scoreViewBottom: number = 0;
   private _nonSupplyView: NonSupplyKingdomView | undefined;
   private _selfId: PlayerId = selfPlayerIdStore.get()!;
-  private _otherCardLikes: OtherCardLikeView | undefined;
   // Semantic Pixi color roles resolved from app-level CSS theme tokens.
   private readonly _theme = getPixiSceneTheme();
 
@@ -208,10 +206,6 @@ export class MatchScene extends Scene {
 
     this._nonSupplyView = this.addChild(new NonSupplyKingdomView());
     this._nonSupplyView.scale = .9;
-
-    this._otherCardLikes = new OtherCardLikeView({label: 'otherCardLikes'});
-    this.addChild(this._otherCardLikes);
-    this._otherCardLikes.scale = .9;
 
     this._playArea = this.addChild(new PlayAreaView());
 
@@ -806,24 +800,21 @@ export class MatchScene extends Scene {
     const numLandmarks = matchStore.get()?.landmarks.length ?? 0;
     const numProjects = matchStore.get()?.projects.length ?? 0;
     const numWays = matchStore.get()?.ways.length ?? 0;
-    const numOtherCardLikes = numEvents + numLandmarks + numProjects + numWays;
-
-    if (this._otherCardLikes) {
-      this._otherCardLikes.x = kingdomLeft;
-      this._otherCardLikes.y = kingdomTop + SUPPLY_KINGDOM_PANEL_HEIGHT_PX + STANDARD_GAP;
-      this._otherCardLikes.visible = numOtherCardLikes > 0;
-    }
+    const numProphecies = matchStore.get()?.prophecies.length ?? 0;
+    const numOtherCardLikes = numEvents + numLandmarks + numProjects + numWays + numProphecies;
 
     if (this._nonSupplyView) {
       this._nonSupplyView.x = kingdomLeft + SUPPLY_KINGDOM_PANEL_WIDTH_PX + STANDARD_GAP;
       this._nonSupplyView.y = STANDARD_GAP;
     }
 
-    if (this._playArea && this._nonSupplyView && this._playerHand && this._otherCardLikes) {
+    if (this._playArea && this._nonSupplyView && this._playerHand) {
       this._playArea.x = kingdomLeft;
 
+      const landscapePanelTop = kingdomTop + SUPPLY_KINGDOM_PANEL_HEIGHT_PX + STANDARD_GAP;
+      const landscapePanelHeight = getLandscapePanelHeightPx(numOtherCardLikes);
       const otherCardLikesBottom = numOtherCardLikes > 0
-        ? this._otherCardLikes.y + this._otherCardLikes.height
+        ? landscapePanelTop + landscapePanelHeight
         : kingdomTop + SUPPLY_KINGDOM_PANEL_HEIGHT_PX;
       const top = Math.max(
         kingdomTop + SUPPLY_KINGDOM_PANEL_HEIGHT_PX,

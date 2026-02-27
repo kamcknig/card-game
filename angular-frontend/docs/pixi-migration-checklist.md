@@ -27,7 +27,7 @@ templates/CSS.
 - [x] Chunk 3: turn action controls moved to Angular
 - [x] Chunk 4: Way picker moved to Angular
 - [x] Chunk 5: supply area family converted (`basic-supply`, `kingdom-supply`)
-- [ ] Chunk 6: non-supply landscapes converted
+- [x] Chunk 6: non-supply landscapes converted
 - [ ] Chunk 7: hand/play/deck/discard area converted
 - [ ] Chunk 8: shared primitives converted (card/pile/token/badges/buttons)
 - [ ] Chunk 9: remove Pixi bootstrap (`PIXI_APP`, factory, canvas mount)
@@ -130,3 +130,34 @@ templates/CSS.
   - `angular-frontend/src/app/app.component.html`
   - `angular-frontend/src/app/app.component.scss`
   - `angular-frontend/src/app/components/match/views/scenes/match-scene.ts`
+
+### Chunk 6 notes
+
+- Goal: move non-supply landscape rendering from Pixi views to Angular overlay UI.
+- Scope:
+  - add Angular landscape overlay component for events, landmarks, projects, ways, and prophecies
+  - preserve landscape tap behavior (`cardLikeTapped`) with server-lock release flow
+  - preserve right-click landscape detail behavior
+  - preserve landscape overlays:
+    - event/project cost badges
+    - project cube + Sinister Plot token indicators
+    - prophecy Sun token count
+  - remove Pixi landscape rendering classes and keep play-area spacing aligned to Angular landscape panel footprint
+- Status: completed
+- Files:
+  - `angular-frontend/src/app/components/match/landscapes/match-landscapes-overlay.component.ts`
+  - `angular-frontend/src/app/components/match/landscapes/match-landscapes-overlay.component.html`
+  - `angular-frontend/src/app/components/match/landscapes/match-landscapes-overlay.component.scss`
+  - `angular-frontend/src/app/components/match/landscapes/landscape-layout.constants.ts`
+  - `angular-frontend/src/app/components/card-like/card-like.component.ts`
+  - `angular-frontend/src/app/components/card-like/card-like.component.html`
+  - `angular-frontend/src/app/app.component.ts`
+  - `angular-frontend/src/app/app.component.html`
+  - `angular-frontend/src/app/app.component.scss`
+  - `angular-frontend/src/app/components/match/views/scenes/match-scene.ts`
+  - `angular-frontend/src/app/components/match/views/other-card-like-view.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/event-card.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/landmark-card.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/project-card.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/prophecy-card.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/way-card.ts` (deleted)

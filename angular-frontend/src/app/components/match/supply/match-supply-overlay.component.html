@@ -36,11 +36,16 @@
                   {{ pile.trait.cardName }}
                 </div>
               }
-              @if (pile.tokenBadges.length > 0) {
+              @if (pile.tokenBadgeStacks.length > 0) {
                 <div class="pile-token-badges">
-                  @for (badge of pile.tokenBadges; track badge.id) {
-                    <div class="pile-token-badge" [style.background]="badge.color">
-                      {{ badge.label }}
+                  @for (stack of pile.tokenBadgeStacks; track stack.id) {
+                    <div class="pile-token-badge-stack">
+                      <div class="pile-token-badge" [style.background]="stack.color">
+                        {{ stack.label }}
+                      </div>
+                      @if (stack.count > 1) {
+                        <div class="pile-token-badge-count">{{ stack.count }}</div>
+                      }
                     </div>
                   }
                 </div>
@@ -88,11 +93,16 @@
                   {{ pile.trait.cardName }}
                 </div>
               }
-              @if (pile.tokenBadges.length > 0) {
+              @if (pile.tokenBadgeStacks.length > 0) {
                 <div class="pile-token-badges">
-                  @for (badge of pile.tokenBadges; track badge.id) {
-                    <div class="pile-token-badge" [style.background]="badge.color">
-                      {{ badge.label }}
+                  @for (stack of pile.tokenBadgeStacks; track stack.id) {
+                    <div class="pile-token-badge-stack">
+                      <div class="pile-token-badge" [style.background]="stack.color">
+                        {{ stack.label }}
+                      </div>
+                      @if (stack.count > 1) {
+                        <div class="pile-token-badge-count">{{ stack.count }}</div>
+                      }
                     </div>
                   }
                 </div>
@@ -147,11 +157,16 @@
                 {{ pile.trait.cardName }}
               </div>
             }
-            @if (pile.tokenBadges.length > 0) {
+            @if (pile.tokenBadgeStacks.length > 0) {
               <div class="pile-token-badges">
-                @for (badge of pile.tokenBadges; track badge.id) {
-                  <div class="pile-token-badge" [style.background]="badge.color">
-                    {{ badge.label }}
+                @for (stack of pile.tokenBadgeStacks; track stack.id) {
+                  <div class="pile-token-badge-stack">
+                    <div class="pile-token-badge" [style.background]="stack.color">
+                      {{ stack.label }}
+                    </div>
+                    @if (stack.count > 1) {
+                      <div class="pile-token-badge-count">{{ stack.count }}</div>
+                    }
                   </div>
                 }
               </div>
