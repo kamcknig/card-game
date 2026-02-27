@@ -28,7 +28,7 @@ templates/CSS.
 - [x] Chunk 4: Way picker moved to Angular
 - [x] Chunk 5: supply area family converted (`basic-supply`, `kingdom-supply`)
 - [x] Chunk 6: non-supply landscapes converted
-- [ ] Chunk 7: hand/play/deck/discard area converted
+- [x] Chunk 7: hand/play/deck/discard area converted
 - [ ] Chunk 8: shared primitives converted (card/pile/token/badges/buttons)
 - [ ] Chunk 9: remove Pixi bootstrap (`PIXI_APP`, factory, canvas mount)
 - [ ] Chunk 10: remove Pixi dependencies from `angular-frontend/package.json`
@@ -161,3 +161,37 @@ templates/CSS.
   - `angular-frontend/src/app/components/match/views/project-card.ts` (deleted)
   - `angular-frontend/src/app/components/match/views/prophecy-card.ts` (deleted)
   - `angular-frontend/src/app/components/match/views/way-card.ts` (deleted)
+
+### Chunk 7 notes
+
+- Goal: move hand/play/deck/discard rendering from Pixi views to Angular overlay UI.
+- Scope:
+  - add Angular player-area overlay for:
+    - hand card stacks
+    - play area card row
+    - deck/discard stack views
+    - phase/resource status controls (coffers, villagers, debt)
+    - state/artifact prompt buttons
+    - active-duration-card access button
+  - preserve card tap interactions (`cardTapped`) with lock flow
+  - preserve card Way hover behavior through the shared Angular way picker overlay
+  - remove Pixi hand/play/deck/discard view classes and scene mounting
+  - keep non-supply kingdom Pixi area in place (outside this chunk)
+- Status: completed
+- Files:
+  - `angular-frontend/src/app/components/match/player-area/match-player-area-overlay.component.ts`
+  - `angular-frontend/src/app/components/match/player-area/match-player-area-overlay.component.html`
+  - `angular-frontend/src/app/components/match/player-area/match-player-area-overlay.component.scss`
+  - `angular-frontend/src/app/app.component.ts`
+  - `angular-frontend/src/app/app.component.html`
+  - `angular-frontend/src/app/app.component.scss`
+  - `angular-frontend/src/app/components/match/views/scenes/match-scene.ts`
+  - `angular-frontend/src/app/components/match/views/player-hand.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/play-area.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/deck-stack.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/card-stack.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/phase-status.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/active-duration-card-list.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/coffers-exchange-view.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/villagers-spend-view.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/debt-pay-view.ts` (deleted)

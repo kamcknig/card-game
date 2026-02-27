@@ -30,6 +30,7 @@ import { WayPickerOverlayComponent } from './components/way-picker-overlay/way-p
 import { WayPickerOverlayService } from './core/way-picker/way-picker-overlay.service';
 import { MatchSupplyOverlayComponent } from './components/match/supply/match-supply-overlay.component';
 import { MatchLandscapesOverlayComponent } from './components/match/landscapes/match-landscapes-overlay.component';
+import { MatchPlayerAreaOverlayComponent } from './components/match/player-area/match-player-area-overlay.component';
 
 @Component({
   selector: 'app-root',
@@ -46,6 +47,7 @@ import { MatchLandscapesOverlayComponent } from './components/match/landscapes/m
     WayPickerOverlayComponent,
     MatchSupplyOverlayComponent,
     MatchLandscapesOverlayComponent,
+    MatchPlayerAreaOverlayComponent,
     NgClass,
   ],
   templateUrl: './app.component.html',

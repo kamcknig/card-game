@@ -1,10 +1,8 @@
 import { Application, Assets, Container, Graphics, Rectangle, Text } from 'pixi.js';
 import {Scene} from '../../../../core/scene/scene';
-import {PlayerHandView} from '../player-hand';
 import {createAppButton} from '../../../../core/create-app-button';
 import {matchStartedStore, matchStore} from '../../../../state/match-state';
 import {playerStore, selfPlayerIdStore,} from '../../../../state/player-state';
-import {PlayAreaView} from '../play-area';
 import {CardId, CardKey, CardLikeId, PlayCardSelectionResult, PlayerId, UserPromptActionArgs} from 'shared/types';
 import {
   awaitingServerLockReleaseStore,
@@ -16,11 +14,9 @@ import {
   selectedPileStore
 } from '../../../../state/interactive-state';
 import {CardView} from '../card-view';
-import {CARD_HEIGHT, STANDARD_GAP} from '../../../../core/app-contants';
+import {STANDARD_GAP} from '../../../../core/app-contants';
 import {resolveCountSpec} from 'shared/resolve-count-spec';
 import {validateCountSpec} from 'shared/validate-count-spec';
-import {CardStackView} from '../card-stack';
-import {DeckStackView} from '../deck-stack';
 import {currentPlayerTurnIdStore, turnPhaseStore} from '../../../../state/turn-state';
 import {AppList} from '../app-list';
 import {SocketService} from '../../../../core/socket-service/socket.service';
@@ -28,33 +24,24 @@ import {selectableCardStore, waySelectableCardStore} from '../../../../state/int
 import {selectablePileStore} from '../../../../state/interactive-pile-logic';
 import {SelectCardArgs} from '../../../../../types';
 import {NonSupplyKingdomView} from '../non-supply-kingdom-view';
-import {getCardSourceStore} from '../../../../state/card-source-store';
 import {CardLikeView} from '../card-like-view';
 import {PileView} from '../pile';
-import {tokenDefinitionStore} from '../../../../state/token-definition-state';
 import {getPixiSceneTheme} from '../../../../theme/pixi-theme';
 import { PromptDialogCoordinatorService } from '../../../../core/prompt-dialog/prompt-dialog-coordinator.service';
 import { WayPickerOverlayService } from '../../../../core/way-picker/way-picker-overlay.service';
 import {
   SUPPLY_BASIC_PANEL_WIDTH_PX,
-  SUPPLY_KINGDOM_PANEL_HEIGHT_PX,
   SUPPLY_KINGDOM_PANEL_WIDTH_PX
 } from '../../supply/supply-layout.constants';
-import { getLandscapePanelHeightPx } from '../../landscapes/landscape-layout.constants';
 
 export class MatchScene extends Scene {
   private static readonly WAY_PICKER_PANEL_WIDTH_PX = 220;
   private static readonly WAY_PICKER_EDGE_OVERLAP_PX = 5;
   private _board: Container = new Container();
-  private _playerHand: PlayerHandView | undefined;
-  private _deck: CardStackView | undefined;
-  private _discard: CardStackView | undefined;
   private _cleanup: (() => void)[] = [];
-  private _playArea: PlayAreaView | undefined;
   private _selecting: boolean = false;
   private _selectingPiles: boolean = false;
   private _scoreViewRight: number = 0;
-  private _scoreViewBottom: number = 0;
   private _nonSupplyView: NonSupplyKingdomView | undefined;
   private _selfId: PlayerId = selfPlayerIdStore.get()!;
   // Semantic Pixi color roles resolved from app-level CSS theme tokens.
@@ -66,7 +53,6 @@ export class MatchScene extends Scene {
 
   public setScoreViewRect(rect: Rectangle): void {
     this._scoreViewRight = rect.x + rect.width;
-    this._scoreViewBottom = rect.y + rect.height;
     this.onRendererResize();
   }
 
@@ -206,36 +192,6 @@ export class MatchScene extends Scene {
 
     this._nonSupplyView = this.addChild(new NonSupplyKingdomView());
     this._nonSupplyView.scale = .9;
-
-    this._playArea = this.addChild(new PlayAreaView());
-
-    this._deck = new DeckStackView({
-      $cardIds: getCardSourceStore('playerDeck', this._selfId),
-      label: 'DECK',
-      cardFacing: 'back',
-      alwaysShowCountBadge: true,
-      shadowGroupOffsetPx: 30,
-      tokenPlayerId: this._selfId,
-      $match: matchStore,
-      $tokenDefinitions: tokenDefinitionStore
-    });
-    this.addChild(this._deck);
-
-    this._discard = new CardStackView({
-      $cardIds: getCardSourceStore('playerDiscard', this._selfId),
-      label: 'DISCARD',
-      showCountBadge: false,
-      cardFacing: 'front'
-    });
-    this.addChild(this._discard);
-
-    this._playerHand = new PlayerHandView(
-      this._selfId,
-      this._socketService,
-      this._promptDialogCoordinator,
-    );
-
-    this.addChild(this._playerHand);
   }
 
   // Triggers the "next phase" action using the same server-lock behavior as legacy Pixi controls.
@@ -727,10 +683,8 @@ export class MatchScene extends Scene {
       cancelButton.button.on('pointerdown', () => doneListener(true));
     }
 
-    doSelectButtonContainer.x = Math.floor(
-      (this._playerHand?.x ?? 0) + (this._playerHand?.width ?? 0) * .5 - doSelectButtonContainer.width * .5
-    );
-    doSelectButtonContainer.y = Math.floor((this._playerHand?.y ?? 0) - doSelectButtonContainer.height - STANDARD_GAP);
+    doSelectButtonContainer.x = Math.floor(this._app.renderer.width * .5 - doSelectButtonContainer.width * .5);
+    doSelectButtonContainer.y = Math.floor(this._app.renderer.height - doSelectButtonContainer.height - STANDARD_GAP * 2);
     this.addChild(doSelectButtonContainer);
 
     const cleanupSelection = () => {
@@ -790,56 +744,13 @@ export class MatchScene extends Scene {
   }
 
   private onRendererResize = (): void => {
-    // Keep play-area/non-supply layout aligned to the Angular supply overlay footprint.
+    // Keep remaining Pixi board layout aligned to the Angular supply overlay footprint.
     const basicLeft = STANDARD_GAP;
-    const kingdomTop = STANDARD_GAP;
     const kingdomLeft = Math.max(this._scoreViewRight, basicLeft + SUPPLY_BASIC_PANEL_WIDTH_PX) + STANDARD_GAP;
-
-    // Position the landscape area if events, landmarks, or projects are present.
-    const numEvents = matchStore.get()?.events.length ?? 0;
-    const numLandmarks = matchStore.get()?.landmarks.length ?? 0;
-    const numProjects = matchStore.get()?.projects.length ?? 0;
-    const numWays = matchStore.get()?.ways.length ?? 0;
-    const numProphecies = matchStore.get()?.prophecies.length ?? 0;
-    const numOtherCardLikes = numEvents + numLandmarks + numProjects + numWays + numProphecies;
 
     if (this._nonSupplyView) {
       this._nonSupplyView.x = kingdomLeft + SUPPLY_KINGDOM_PANEL_WIDTH_PX + STANDARD_GAP;
       this._nonSupplyView.y = STANDARD_GAP;
-    }
-
-    if (this._playArea && this._nonSupplyView && this._playerHand) {
-      this._playArea.x = kingdomLeft;
-
-      const landscapePanelTop = kingdomTop + SUPPLY_KINGDOM_PANEL_HEIGHT_PX + STANDARD_GAP;
-      const landscapePanelHeight = getLandscapePanelHeightPx(numOtherCardLikes);
-      const otherCardLikesBottom = numOtherCardLikes > 0
-        ? landscapePanelTop + landscapePanelHeight
-        : kingdomTop + SUPPLY_KINGDOM_PANEL_HEIGHT_PX;
-      const top = Math.max(
-        kingdomTop + SUPPLY_KINGDOM_PANEL_HEIGHT_PX,
-        this._nonSupplyView.y + this._nonSupplyView.height,
-        otherCardLikesBottom
-      );
-      this._playArea.y = top + STANDARD_GAP;
-
-      const height = this._playerHand.y - this._playArea.y;
-      this._playArea.verticalSpace = Math.max(400, height - STANDARD_GAP);
-    }
-
-    if (this._playerHand) {
-      this._playerHand.x = this._app.renderer.width * .5 - this._playerHand.width * .5;
-      this._playerHand.y = this._app.renderer.height - this._playerHand.height;
-
-      if (this._discard) {
-        this._discard.y = this._app.renderer.height - CARD_HEIGHT * .5;
-        this._discard.x = this._playerHand.x + this._playerHand.width + STANDARD_GAP;
-      }
-
-      if (this._deck) {
-        this._deck.y = this._app.renderer.height - CARD_HEIGHT * .50;
-        this._deck.x = this._playerHand.x - this._deck.width - STANDARD_GAP;
-      }
     }
   }
 

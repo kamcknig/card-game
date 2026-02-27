@@ -41,6 +41,12 @@ app-match-landscapes-overlay {
   z-index: 2;
 }
 
+app-match-player-area-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
 app-match-configuration {
   height: 100%;
   max-height: 100%;
