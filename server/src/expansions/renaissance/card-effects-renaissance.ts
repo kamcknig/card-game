@@ -575,6 +575,82 @@ const expansion: CardExpansionModule = {
       loggerService.debug(`[hideout effect] trashed Victory card, gaining ${curseCard}`);
     },
   },
+  'inventor': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      const inventorCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
+      const turnStatsIndex = turnHistoryIndex;
+      const playedThisTurn = cardEffectArgs.match.stats.playedCardsByTurn[turnStatsIndex] ?? [];
+      const inventorPlayInstance = playedThisTurn
+        .filter((playedCardId) => playedCardId === cardEffectArgs.cardId)
+        .length;
+
+      // Inventor gains first, using current prices before this play's cost reduction applies.
+      const gainableCards = cardEffectArgs.findCardService.findCards({ all: [
+        { location: ['basicSupply', 'kingdomSupply'] },
+        { playerId: cardEffectArgs.playerId, kind: 'upTo', amount: { treasure: 4 } },
+      ] });
+      if (!gainableCards.length) {
+        loggerService.debug('[inventor effect] no cards in supply costing up to 4 before reduction');
+      } else {
+        const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Gain a card costing up to $4',
+          restrict: gainableCards.map((card) => card.id),
+          count: 1,
+        }) as CardId | null;
+        if (!selectedCardId) {
+          loggerService.warn('[inventor effect] no card selected to gain');
+        } else {
+          const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+          loggerService.debug(`[inventor effect] gaining ${selectedCard}`);
+          await cardEffectArgs.actionService.run('gainCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: selectedCardId,
+            to: { location: 'playerDiscard' },
+          }, {
+            loggingContext: { source: cardEffectArgs.cardId },
+          });
+        }
+      }
+
+      // After the gain resolves, cards everywhere cost $1 less for this player this turn.
+      const allCards = cardEffectArgs.cardLibrary.getAllCardsAsArray();
+      loggerService.debug(`[inventor effect] applying -$1 cost reduction to ${allCards.length} card(s) this turn`);
+      const ruleUnsubs = allCards.map((card) =>
+        cardEffectArgs.cardPriceController.registerRule(card, (_targetCard, context) => {
+          if (context.playerId !== cardEffectArgs.playerId) {
+            return { restricted: false, cost: { treasure: 0 } };
+          }
+          if (getCurrentPlayer(context.match).id !== cardEffectArgs.playerId) {
+            return { restricted: false, cost: { treasure: 0 } };
+          }
+          return { restricted: false, cost: { treasure: -1 } };
+        })
+      );
+
+      // Remove this play instance's temporary cost reduction at this turn's end.
+      cardEffectArgs.reactionManager.registerSystemTemplate(
+        inventorCard,
+        'endTurn',
+        {
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
+          triggeredEffectFn: async () => {
+            loggerService.debug(
+              `[inventor endTurn effect] removing ${ruleUnsubs.length} cost-reduction rule(s) for this play`,
+            );
+            ruleUnsubs.forEach((unsub) => unsub());
+          },
+        },
+        { idSuffix: `cleanup:${inventorPlayInstance}` },
+      );
+    },
+  },
   'improve': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;

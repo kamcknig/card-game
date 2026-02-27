@@ -70,6 +70,16 @@
     ],
     "abilityText": "+1 Card\n+2 Actions\nTrash a card from your hand. If it's a Victory card, gain a Curse."
   },
+  "inventor": {
+    "cardName": "Inventor",
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION"
+    ],
+    "abilityText": "Gain a card costing up to $4, then cards cost $1 less this turn."
+  },
   "improve": {
     "cardName": "Improve",
     "cost": {
