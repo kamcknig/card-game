@@ -102,8 +102,6 @@ ferryman
 - ronin
 - tanuki
 
-Work on UI for shadow cards
-
 ### alchemy
 
 - possession
