@@ -36,6 +36,9 @@
 - need to be able to search for and select split piles. shouldn't be able to
   search for individual cards in a split pile. i think i'll need images for the
   piles for this
+- there are a lot of patterns where non duration reactions are registered, and then a 2nd reaction has to be registered
+  for endTurn to remove them. Can we automate reemoving these types of reactions instead of always having to have the
+  endTurn cleanup manually within the card/landscape effects?
 
 # Higher priority
 
@@ -97,10 +100,6 @@ ferryman
 ### rising sun
 
 - divine-wind (prophecy)
-- fishmonger
-- ninja
-- ronin
-- tanuki
 
 ### alchemy
 

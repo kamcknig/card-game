@@ -1,4 +1,5 @@
 import { CardEffectFunctionContext, CardExpansionModule } from '@server-types/index.ts';
+import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { BaseCardMetadata, Card, CardCost, CardId, CardKey, PlayerId } from 'shared/types/index.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
@@ -656,6 +657,34 @@ const cards: CardExpansionModule = {
       });
     },
   },
+  'ninja': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.log('[ninja effect] resolving card');
+
+      // Ninja is a Shadow cantrip attack: draw first, then attack each other player.
+      await cardEffectArgs.actionService.run('drawCard', {
+        playerId: cardEffectArgs.playerId,
+        count: 1,
+      });
+
+      const targetPlayerIds = getOrderedOtherAttackTargets(cardEffectArgs);
+      if (targetPlayerIds.length < 1) {
+        loggerService.debug('[ninja effect] no non-immune attack targets');
+        return;
+      }
+
+      loggerService.debug(`[ninja effect] forcing discard-down for targets ${targetPlayerIds.join(', ')}`);
+      for (const targetPlayerId of targetPlayerIds) {
+        await discardDownTo(cardEffectArgs, {
+          playerId: targetPlayerId,
+          targetHandSize: 3,
+          prompt: 'Discard down to 3 cards in hand',
+          logTag: 'ninja effect',
+        });
+      }
+    },
+  },
   'litter': {
     registerEffects: () => async (cardEffectArgs) => {
       await cardEffectArgs.actionService.run('drawCard', {
@@ -947,6 +976,48 @@ const cards: CardExpansionModule = {
       );
     },
   },
+  'ronin': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.log('[ronin effect] resolving card');
+
+      const targetHandSize = 7;
+      const startingHandSize = cardEffectArgs.cardSourceController
+        .getSource('playerHand', cardEffectArgs.playerId)
+        .length;
+      if (startingHandSize >= targetHandSize) {
+        loggerService.debug('[ronin effect] hand is already 7 or more cards; no draw needed');
+        return;
+      }
+
+      let drawCount = 0;
+      while (cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId).length < targetHandSize) {
+        // Stop early when there are no cards left to draw from deck or discard.
+        const playerDeck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+        const playerDiscard = cardEffectArgs.cardSourceController.getSource('playerDiscard', cardEffectArgs.playerId);
+        if ((playerDeck.length + playerDiscard.length) < 1) {
+          loggerService.debug(`[ronin effect] no cards left to draw after ${drawCount} draw(s)`);
+          return;
+        }
+
+        const drawnCardId = await cardEffectArgs.actionService.run('drawCard', {
+          playerId: cardEffectArgs.playerId,
+          count: 1,
+        }) as CardId | null;
+        if (!drawnCardId) {
+          loggerService.debug(`[ronin effect] draw action returned no card after ${drawCount} draw(s)`);
+          return;
+        }
+
+        drawCount++;
+      }
+
+      const endingHandSize = cardEffectArgs.cardSourceController
+        .getSource('playerHand', cardEffectArgs.playerId)
+        .length;
+      loggerService.debug(`[ronin effect] reached hand size ${endingHandSize} after ${drawCount} draw(s)`);
+    },
+  },
   'riverboat': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
@@ -1204,6 +1275,78 @@ const cards: CardExpansionModule = {
       }
 
       await gainCurseForOtherPlayers(cardEffectArgs, 'snake-witch effect');
+    },
+  },
+  'tanuki': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.log('[tanuki effect] resolving card');
+
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      if (hand.length < 1) {
+        loggerService.debug('[tanuki effect] no card in hand to trash');
+        return;
+      }
+
+      const selectedTrashCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Trash a card from your hand',
+        restrict: hand,
+        count: 1,
+      }) as CardId | null;
+      if (!selectedTrashCardId) {
+        loggerService.warn('[tanuki effect] no card selected to trash');
+        return;
+      }
+
+      const trashedCard = cardEffectArgs.cardLibrary.getCard(selectedTrashCardId);
+      const trashedCardCostForGainSelection = getEffectiveCostForPlayer(
+        cardEffectArgs.cardPriceController,
+        cardEffectArgs.playerId,
+        trashedCard,
+      );
+      const maxGainCost: CardCost = {
+        treasure: (trashedCardCostForGainSelection.treasure ?? 0) + 2,
+        potion: trashedCardCostForGainSelection.potion ?? 0,
+        debt: trashedCardCostForGainSelection.debt ?? 0,
+      };
+
+      await cardEffectArgs.actionService.run('trashCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedTrashCardId,
+      });
+
+      // "Up to $2 more" preserves potion/debt ceilings and increases coin by two.
+      const gainableCards = getTopSupplyCards(cardEffectArgs)
+        .filter((candidateCard) =>
+          compareCardCosts(
+            getEffectiveCostForPlayer(cardEffectArgs.cardPriceController, cardEffectArgs.playerId, candidateCard),
+            maxGainCost,
+          ) <= 0
+        );
+      if (gainableCards.length < 1) {
+        loggerService.debug('[tanuki effect] no top-of-pile card available within +$2 cost limit');
+        return;
+      }
+
+      const selectedGainCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Gain a card costing up to $2 more than the trashed card',
+        restrict: gainableCards.map((card) => card.id),
+        count: 1,
+      }) as CardId | null;
+      if (!selectedGainCardId) {
+        loggerService.warn('[tanuki effect] no card selected to gain');
+        return;
+      }
+
+      const gainedCard = cardEffectArgs.cardLibrary.getCard(selectedGainCardId);
+      loggerService.info(`[tanuki effect] trashing ${trashedCard} to gain ${gainedCard}`);
+      await cardEffectArgs.actionService.run('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedGainCardId,
+        to: { location: 'playerDiscard' },
+      });
     },
   },
   'tea-house': {

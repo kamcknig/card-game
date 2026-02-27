@@ -97,6 +97,18 @@
     "targetScheme": "ALL_OTHER",
     "abilityText": "+1Sun\nChoose two different options: +2 Actions; +$2; each other player gains a Curse; gain a Silver."
   },
+  "ninja": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": [
+      "ACTION",
+      "ATTACK",
+      "SHADOW"
+    ],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+1 Card\nEach other player discards down to 3 cards in hand.\nYou can play this from your deck as if in your hand."
+  },
   "litter": {
     "cost": {
       "treasure": 5
@@ -155,6 +167,16 @@
     ],
     "abilityText": "+1Sun\nTrash up to 2 cards from your hand. At the start of Clean-up, if you didn't gain any cards in your Buy phase this turn, gain a card costing up to $4."
   },
+  "ronin": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION",
+      "SHADOW"
+    ],
+    "abilityText": "Draw until you have 7 cards in hand.\nYou can play this from your deck as if in your hand."
+  },
   "riverboat": {
     "cost": {
       "treasure": 3
@@ -206,6 +228,16 @@
     ],
     "targetScheme": "ALL_OTHER",
     "abilityText": "+1 Card\n+1 Action\nIf your hand has no duplicate cards, you may reveal it and return this to its pile, to have each other player gain a Curse."
+  },
+  "tanuki": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": [
+      "ACTION",
+      "SHADOW"
+    ],
+    "abilityText": "Trash a card from your hand. Gain a card costing up to $2 more than it.\nYou can play this from your deck as if in your hand."
   },
   "tea-house": {
     "cost": {
