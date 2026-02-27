@@ -77,6 +77,7 @@ export class CardLikeComponent {
   // Opens a detail view when right-clicking the card-like.
   onContextMenu(event: MouseEvent) {
     event.preventDefault();
+    event.stopPropagation();
     if (!this.detailPath()) return;
     void displayCardDetail({ detailImagePath: this.detailPath()! });
   }

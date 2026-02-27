@@ -29,7 +29,7 @@ templates/CSS.
 - [x] Chunk 5: supply area family converted (`basic-supply`, `kingdom-supply`)
 - [x] Chunk 6: non-supply landscapes converted
 - [x] Chunk 7: hand/play/deck/discard area converted
-- [ ] Chunk 8: shared primitives converted (card/pile/token/badges/buttons)
+- [x] Chunk 8: shared primitives converted (card/pile/token/badges/buttons)
 - [ ] Chunk 9: remove Pixi bootstrap (`PIXI_APP`, factory, canvas mount)
 - [ ] Chunk 10: remove Pixi dependencies from `angular-frontend/package.json`
 
@@ -195,3 +195,43 @@ templates/CSS.
   - `angular-frontend/src/app/components/match/views/coffers-exchange-view.ts` (deleted)
   - `angular-frontend/src/app/components/match/views/villagers-spend-view.ts` (deleted)
   - `angular-frontend/src/app/components/match/views/debt-pay-view.ts` (deleted)
+
+### Chunk 8 notes
+
+- Goal: remove remaining shared Pixi card/pile/token/button primitives by migrating non-supply piles and select-pile controls to Angular overlays.
+- Scope:
+  - add Angular non-supply kingdom overlay:
+    - non-supply pile panel rendering (including Loot pile behavior)
+    - pile highlights for `selectable-card`, `selected-card`, `selectable-pile`, and `selected-pile`
+    - pile token badges/chips and trait tag support
+    - non-supply pile tap + Way hover behavior with existing lock flow
+  - add Angular pile-selection action overlay:
+    - bottom-center confirm/cancel controls for select-pile prompts
+    - remove Pixi `createAppButton`/`AppList` dependency in `MatchScene#doSelectPiles`
+  - remove remaining Pixi non-supply/shared primitive classes/files
+  - adjust hand phase-status bar positioning so the bar sits above the hand panel with aligned left edges
+- Status: completed
+- Files:
+  - `angular-frontend/src/app/components/match/non-supply/match-non-supply-overlay.component.ts`
+  - `angular-frontend/src/app/components/match/non-supply/match-non-supply-overlay.component.html`
+  - `angular-frontend/src/app/components/match/non-supply/match-non-supply-overlay.component.scss`
+  - `angular-frontend/src/app/components/match/pile-selection/pile-selection-action-overlay.component.ts`
+  - `angular-frontend/src/app/components/match/pile-selection/pile-selection-action-overlay.component.html`
+  - `angular-frontend/src/app/components/match/pile-selection/pile-selection-action-overlay.component.scss`
+  - `angular-frontend/src/app/state/pile-selection-overlay-state.ts`
+  - `angular-frontend/src/app/components/match/views/scenes/match-scene.ts`
+  - `angular-frontend/src/app/components/match/player-area/match-player-area-overlay.component.html`
+  - `angular-frontend/src/app/components/match/player-area/match-player-area-overlay.component.scss`
+  - `angular-frontend/src/app/app.component.ts`
+  - `angular-frontend/src/app/app.component.html`
+  - `angular-frontend/src/app/app.component.scss`
+  - `angular-frontend/src/app/core/create-app-button.ts` (deleted)
+  - `angular-frontend/src/app/core/card/create-card-view.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/app-list.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/non-supply-kingdom-view.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/pile.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/card-view.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/card-like-view.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/token-badge-view.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/count-badge-view.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/pull-out.ts` (deleted)

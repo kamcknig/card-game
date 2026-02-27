@@ -47,6 +47,18 @@ app-match-player-area-overlay {
   z-index: 2;
 }
 
+app-match-non-supply-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
+app-pile-selection-action-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+}
+
 app-match-configuration {
   height: 100%;
   max-height: 100%;
@@ -56,6 +68,7 @@ app-match-configuration {
 
 app-match-hud {
   display: none;
+  z-index: 20;
 }
 
 app-match-hud.match-started {

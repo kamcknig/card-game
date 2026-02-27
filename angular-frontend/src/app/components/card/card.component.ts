@@ -29,6 +29,8 @@ type CardTokenBadge = {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CardComponent {
+  private static readonly CARD_BACK_DETAIL_IMAGE_PATH = '/assets/card-images/base-v2/detail/card-back.jpg';
+
   private readonly _nanoStores = inject(NanostoresService);
   private readonly _sanitizer = inject(DomSanitizer);
 
@@ -86,8 +88,28 @@ export class CardComponent {
   // Opens a detail view when right-clicking the card.
   onContextMenu(event: MouseEvent) {
     event.preventDefault();
-    if (!this.detailPath()) return;
-    void displayCardDetail(this.cardId());
+    event.stopPropagation();
+
+    const card = this.card();
+    if (!card) {
+      return;
+    }
+
+    const forcedFacing = this.forceFacing();
+    const effectiveFacing = forcedFacing ?? card.facing ?? 'front';
+    const displayedFacing = card.owner === this._selfPlayerId() && !forcedFacing ? 'front' : effectiveFacing;
+    const detailImagePath = displayedFacing === 'back'
+      ? CardComponent.CARD_BACK_DETAIL_IMAGE_PATH
+      : card.detailImagePath;
+
+    if (!detailImagePath) {
+      return;
+    }
+
+    void displayCardDetail({
+      detailImagePath,
+      kingdom: card.kingdom,
+    });
   }
 
   // Computes token badge data for tokens located on this card.

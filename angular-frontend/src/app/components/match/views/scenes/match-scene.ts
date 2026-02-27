@@ -1,9 +1,8 @@
 import { Application, Assets, Container, Graphics, Rectangle, Text } from 'pixi.js';
 import {Scene} from '../../../../core/scene/scene';
-import {createAppButton} from '../../../../core/create-app-button';
 import {matchStartedStore, matchStore} from '../../../../state/match-state';
 import {playerStore, selfPlayerIdStore,} from '../../../../state/player-state';
-import {CardId, CardKey, CardLikeId, PlayCardSelectionResult, PlayerId, UserPromptActionArgs} from 'shared/types';
+import {CardId, CardKey, PlayCardSelectionResult, PlayerId, UserPromptActionArgs} from 'shared/types';
 import {
   awaitingServerLockReleaseStore,
   clientSelectableCardsOverrideStore,
@@ -13,36 +12,24 @@ import {
   selectedCardStore,
   selectedPileStore
 } from '../../../../state/interactive-state';
-import {CardView} from '../card-view';
-import {STANDARD_GAP} from '../../../../core/app-contants';
 import {resolveCountSpec} from 'shared/resolve-count-spec';
 import {validateCountSpec} from 'shared/validate-count-spec';
 import {currentPlayerTurnIdStore, turnPhaseStore} from '../../../../state/turn-state';
-import {AppList} from '../app-list';
 import {SocketService} from '../../../../core/socket-service/socket.service';
-import {selectableCardStore, waySelectableCardStore} from '../../../../state/interactive-logic';
-import {selectablePileStore} from '../../../../state/interactive-pile-logic';
+import {waySelectableCardStore} from '../../../../state/interactive-logic';
 import {SelectCardArgs} from '../../../../../types';
-import {NonSupplyKingdomView} from '../non-supply-kingdom-view';
-import {CardLikeView} from '../card-like-view';
-import {PileView} from '../pile';
 import {getPixiSceneTheme} from '../../../../theme/pixi-theme';
 import { PromptDialogCoordinatorService } from '../../../../core/prompt-dialog/prompt-dialog-coordinator.service';
 import { WayPickerOverlayService } from '../../../../core/way-picker/way-picker-overlay.service';
 import {
-  SUPPLY_BASIC_PANEL_WIDTH_PX,
-  SUPPLY_KINGDOM_PANEL_WIDTH_PX
-} from '../../supply/supply-layout.constants';
+  pileSelectionOverlayActionStore,
+  pileSelectionOverlayStore
+} from '../../../../state/pile-selection-overlay-state';
 
 export class MatchScene extends Scene {
-  private static readonly WAY_PICKER_PANEL_WIDTH_PX = 220;
-  private static readonly WAY_PICKER_EDGE_OVERLAP_PX = 5;
-  private _board: Container = new Container();
   private _cleanup: (() => void)[] = [];
   private _selecting: boolean = false;
   private _selectingPiles: boolean = false;
-  private _scoreViewRight: number = 0;
-  private _nonSupplyView: NonSupplyKingdomView | undefined;
   private _selfId: PlayerId = selfPlayerIdStore.get()!;
   // Semantic Pixi color roles resolved from app-level CSS theme tokens.
   private readonly _theme = getPixiSceneTheme();
@@ -51,9 +38,7 @@ export class MatchScene extends Scene {
     return !this._selecting && !this._selectingPiles && !awaitingServerLockReleaseStore.get();
   }
 
-  public setScoreViewRect(rect: Rectangle): void {
-    this._scoreViewRight = rect.x + rect.width;
-    this.onRendererResize();
+  public setScoreViewRect(_rect: Rectangle): void {
   }
 
   constructor(
@@ -73,25 +58,20 @@ export class MatchScene extends Scene {
 
     await this.loadAssets();
 
-    this.createBoard();
     // Ensure UI lock state doesn't persist across page refreshes.
     awaitingServerLockReleaseStore.set(false);
     promptInteractionLockStore.set(false);
 
     this._cleanup.push(matchStartedStore.subscribe(val => this.onMatchStarted(val)));
 
-    this._app.renderer.on('resize', this.onRendererResize);
     this._socketService.on('ping', this.onPing);
     this._socketService.on('selectCard', this.doSelectCards);
     this._socketService.on('userPrompt', this.onUserPrompt);
 
     this._cleanup.push(() => {
-      this._app.renderer.off('resize');
+      this._socketService.off('ping');
       this._socketService.off('selectCard');
       this._socketService.off('userPrompt');
-      this.off('pointerdown');
-      this.off('pointermove');
-      this.off('pointerleave');
     });
 
     this._cleanup.push(currentPlayerTurnIdStore.subscribe(this.onCurrentPlayerTurnUpdated));
@@ -117,10 +97,6 @@ export class MatchScene extends Scene {
     setTimeout(() => {
       this._socketService.emit('clientReady', this._selfId, true);
     });
-
-    setTimeout(() => {
-      this.onRendererResize();
-    }, 100);
   }
 
   private onPing = async (pingCount: number) => {
@@ -187,13 +163,6 @@ export class MatchScene extends Scene {
     clearInterval(i);
   }
 
-  private createBoard() {
-    this.addChild(this._board);
-
-    this._nonSupplyView = this.addChild(new NonSupplyKingdomView());
-    this._nonSupplyView.scale = .9;
-  }
-
   // Triggers the "next phase" action using the same server-lock behavior as legacy Pixi controls.
   public requestNextPhase() {
     this.executeTurnActionWithServerLock('nextPhaseComplete', () => {
@@ -229,12 +198,9 @@ export class MatchScene extends Scene {
   }
 
   private onMatchStarted = (started: boolean) => {
-    if (!started) return
+    if (!started) return;
 
-    this.eventMode = 'static';
-    this.on('pointerdown', this.onPointerDown);
-    this.on('pointermove', this.onPointerMove);
-    this.on('pointerleave', this.onPointerLeave);
+    this.eventMode = 'none';
   }
 
   private onRemoved = () => {
@@ -296,11 +262,6 @@ export class MatchScene extends Scene {
     this._wayPickerOverlay.hidePicker();
   };
 
-  // Returns the currently displayed way-picker card id, if any.
-  private getActiveWayPickerCardId(): CardId | null {
-    return this._wayPickerOverlay.activePicker()?.cardId ?? null;
-  }
-
   // Returns true when a select-card payload explicitly represents an Action-play choice.
   private supportsActionPlaySelectionIntent(intent?: SelectCardArgs['selectionIntent']): boolean {
     if (!intent || intent.kind !== 'play-card') {
@@ -309,208 +270,6 @@ export class MatchScene extends Scene {
     return intent.cardTypes.includes('ACTION');
   }
 
-  // Reuses the standard card-tap lock flow for both normal and Way plays.
-  private emitCardTapWithLock(cardId: CardId, emitTap: () => void) {
-    awaitingServerLockReleaseStore.set(true);
-    const updated = (finishedPlayerId: PlayerId, finishedCardId?: CardId) => {
-      if (finishedPlayerId !== this._selfId || finishedCardId !== cardId) return;
-      this._socketService.off('cardTappedComplete', updated);
-      awaitingServerLockReleaseStore.set(false);
-    };
-    this._socketService.on('cardTappedComplete', updated);
-    emitTap();
-  }
-
-  // Resolves the card view from any nested display object target.
-  private getCardViewFromTarget(target: any): CardView | null {
-    let current = target;
-    while (current) {
-      if (current instanceof CardView) {
-        return current;
-      }
-      current = current.parent;
-    }
-    return null;
-  }
-
-  // Resolves viewport-fixed way-picker panel coordinates for one hovered card.
-  private resolveWayPickerPosition(cardView: CardView): { left: number; top: number } {
-    const globalCardPosition = cardView.getGlobalPosition();
-    const canvasRect = this._app.canvas.getBoundingClientRect();
-
-    const panelWidth = MatchScene.WAY_PICKER_PANEL_WIDTH_PX;
-    const maxLeft = Math.max(STANDARD_GAP, window.innerWidth - panelWidth - STANDARD_GAP);
-
-    let left = Math.floor(canvasRect.left + globalCardPosition.x + cardView.width - MatchScene.WAY_PICKER_EDGE_OVERLAP_PX);
-    let top = Math.floor(canvasRect.top + globalCardPosition.y);
-
-    if (left > maxLeft) {
-      left = Math.floor(canvasRect.left + globalCardPosition.x - panelWidth + MatchScene.WAY_PICKER_EDGE_OVERLAP_PX);
-    }
-
-    left = Math.max(STANDARD_GAP, Math.min(left, maxLeft));
-    top = Math.max(STANDARD_GAP, top);
-
-    return { left, top };
-  }
-
-  // Handles one Angular way-picker selection and forwards it through the existing server event flow.
-  private readonly onWayPickerWaySelected = (selectedCardId: CardId, selectedWayId: CardLikeId) => {
-    if (!this.uiInteractive) {
-      return;
-    }
-
-    if (!waySelectableCardStore.get().includes(selectedCardId)) {
-      return;
-    }
-
-    const selectedWay = matchStore.get()?.ways.find((way) => way.id === selectedWayId);
-    if (!selectedWay) {
-      return;
-    }
-
-    console.debug(`[way picker] playing card ${selectedCardId} as way ${selectedWay.cardKey}`);
-    this.emitCardTapWithLock(selectedCardId, () => {
-      this._socketService.emit('cardTappedAsWay', this._selfId, selectedCardId, selectedWayId);
-    });
-  };
-
-  // Creates and positions the Angular way picker for the currently hovered card.
-  private showWayPickerForCard(cardView: CardView) {
-    const activeWays = matchStore.get()?.ways ?? [];
-    if (activeWays.length === 0) {
-      this.closeWayPicker();
-      return;
-    }
-
-    const sortedWayCardLikeIds = [...activeWays]
-      .sort((a, b) => a.cardKey.localeCompare(b.cardKey))
-      .map((way) => way.id);
-    if (sortedWayCardLikeIds.length === 0) {
-      this.closeWayPicker();
-      return;
-    }
-
-    const position = this.resolveWayPickerPosition(cardView);
-    this._wayPickerOverlay.showPicker(
-      {
-        cardId: cardView.card.id,
-        wayCardLikeIds: sortedWayCardLikeIds,
-        left: position.left,
-        top: position.top,
-      },
-      this.onWayPickerWaySelected
-    );
-  }
-
-  // Tracks hover state and opens/closes the Angular way picker for eligible cards.
-  private onPointerMove = (event: PointerEvent) => {
-    if (!this.uiInteractive || this._selectingPiles || this._selecting) {
-      this.closeWayPicker();
-      return;
-    }
-
-    const activeWayPickerCardId = this.getActiveWayPickerCardId();
-    const hoveredCardView = this.getCardViewFromTarget(event.target as any);
-    if (!hoveredCardView) {
-      if (activeWayPickerCardId !== null) {
-        this._wayPickerOverlay.scheduleClose();
-      } else {
-        this.closeWayPicker();
-      }
-      return;
-    }
-
-    if (!waySelectableCardStore.get().includes(hoveredCardView.card.id)) {
-      if (activeWayPickerCardId !== null) {
-        this._wayPickerOverlay.scheduleClose();
-      } else {
-        this.closeWayPicker();
-      }
-      return;
-    }
-
-    this._wayPickerOverlay.cancelScheduledClose();
-    this.showWayPickerForCard(hoveredCardView);
-  };
-
-  // Schedules way-picker close when pointer exits canvas so overlay hover can keep it open.
-  private onPointerLeave = () => {
-    if (this.getActiveWayPickerCardId() !== null) {
-      this._wayPickerOverlay.scheduleClose();
-      return;
-    }
-    this.closeWayPicker();
-  };
-
-  // todo move the selection stuff to another class, SelectionManager?
-  private onPointerDown(event: PointerEvent) {
-    if (this._selectingPiles) {
-      const pileView = this.getPileViewFromTarget(event.target as any);
-      if (!pileView?.pileKey) {
-        return;
-      }
-      const selectablePiles = selectablePileStore.get();
-      if (!selectablePiles.includes(pileView.pileKey)) {
-        return;
-      }
-      const selected = selectedPileStore.get();
-      const idx = selected.indexOf(pileView.pileKey);
-      if (idx >= 0) {
-        selected.splice(idx, 1);
-      }
-      else {
-        selected.push(pileView.pileKey);
-      }
-      selectedPileStore.set([...selected]);
-      return;
-    }
-
-    if (!(event.target instanceof CardLikeView)) {
-      return;
-    }
-
-    if (event.ctrlKey) {
-      return;
-    }
-
-    // Right-click should only open the detail view, never trigger selection/gain.
-    if (event.button === 2) {
-      return;
-    }
-
-    const view = event.target;
-    const cardId = view.cardId;
-
-    if (this._selecting) {
-      if (!selectableCardStore.get()
-        .includes(cardId)) {
-        return;
-      }
-      let current = selectedCardStore.get();
-      const idx = current.findIndex(c => c === cardId);
-      if (idx > -1) {
-        current.splice(idx, 1);
-      }
-      else {
-        current.push(cardId);
-      }
-      selectedCardStore.set([...current]);
-    }
-    else {
-      if (!this.uiInteractive) {
-        return;
-      }
-
-      if (selectableCardStore.get()
-        .includes(cardId)) {
-        this.closeWayPicker();
-        this.emitCardTapWithLock(cardId, () => {
-          this._socketService.emit(view instanceof CardView ? 'cardTapped' : 'cardLikeTapped', this._selfId, cardId);
-        });
-      }
-    }
-  }
 
   // Normalizes modal prompt responses to card-selection payloads used by server selectCard flow.
   private parsePromptSelectionResult(response: unknown): PlayCardSelectionResult {
@@ -649,67 +408,40 @@ export class MatchScene extends Scene {
     // Hide turn action controls while pile-selection prompt is active.
     promptInteractionLockStore.set(true);
 
-    const doSelectButtonContainer = new AppList({
-      type: 'horizontal',
-      elementsMargin: STANDARD_GAP,
-      padding: STANDARD_GAP
-    });
-
-    const doneSelectingBtn = new Container();
-    const button = createAppButton({
-      text: args.prompt ?? 'Select pile',
-      style: {
-        fill: this._theme.text.onOverlay,
-        fontSize: 36,
-      },
-    });
-    button.button.label = 'doneSelectingPileButton';
-    doneSelectingBtn.eventMode = 'static';
-    doneSelectingBtn.on('removed', () => doneSelectingBtn.removeAllListeners());
-    doneSelectingBtn.addChild(button.button);
-
-    doSelectButtonContainer.addChild(doneSelectingBtn);
-
-    if (isOptional) {
-      const cancelButton = createAppButton({
-        text: 'Cancel',
-        style: {
-          fill: this._theme.text.onOverlay,
-          fontSize: 36,
-        },
-      });
-      doSelectButtonContainer.addChildAt(cancelButton.button, 0);
-      cancelButton.button.on('removed', () => cancelButton.button.removeAllListeners());
-      cancelButton.button.on('pointerdown', () => doneListener(true));
-    }
-
-    doSelectButtonContainer.x = Math.floor(this._app.renderer.width * .5 - doSelectButtonContainer.width * .5);
-    doSelectButtonContainer.y = Math.floor(this._app.renderer.height - doSelectButtonContainer.height - STANDARD_GAP * 2);
-    this.addChild(doSelectButtonContainer);
-
     const cleanupSelection = () => {
+      pileSelectionOverlayStore.set({
+        visible: false,
+        prompt: 'Select pile',
+        optional: false,
+        submitEnabled: false,
+      });
+      pileSelectionOverlayActionStore.set(null);
       selectedPileStore.set([]);
       clientSelectablePilesOverrideStore.set(null);
       clientSelectableCardsOverrideStore.set(null);
       this._selectingPiles = false;
       promptInteractionLockStore.set(false);
-      doSelectButtonContainer.removeChildren();
-      doSelectButtonContainer.removeFromParent();
     };
 
     let selectedListenerCleanup: () => void = () => undefined;
+    let actionListenerCleanup: () => void = () => undefined;
+    let completed = false;
 
     const doneListener = (cancelled?: boolean) => {
+      if (completed) {
+        return;
+      }
+      completed = true;
       const selectedPiles = cancelled ? [] : selectedPileStore.get();
       selectedListenerCleanup();
+      actionListenerCleanup();
       cleanupSelection();
       this._socketService.emit('userInputReceived', signalId, selectedPiles);
     };
 
-    const updateButtonState = (selected: readonly CardKey[]) => {
+    const updateSelectionState = (selected: readonly CardKey[]) => {
       const valid = validateCountSpec(selectCount, selected.length);
-      button.button.alpha = valid ? 1 : .6;
-      button.button.eventMode = valid ? 'static' : 'none';
+      pileSelectionOverlayStore.setKey('submitEnabled', valid);
       if (!isOptional && typeof selectCount !== 'number' && selectCount.kind === 'exact' && selected.length === selectCount.count) {
         doneListener();
       }
@@ -722,36 +454,32 @@ export class MatchScene extends Scene {
       }
     };
 
-    selectedListenerCleanup = selectedPileStore.subscribe(selected => {
-      updateButtonState(selected);
+    pileSelectionOverlayStore.set({
+      visible: true,
+      prompt: args.prompt ?? 'Select pile',
+      optional: isOptional,
+      submitEnabled: false,
+    });
+    pileSelectionOverlayActionStore.set(null);
+
+    actionListenerCleanup = pileSelectionOverlayActionStore.subscribe((action) => {
+      if (!action) {
+        return;
+      }
+      if (action.action === 'cancel') {
+        doneListener(true);
+        return;
+      }
+      if (action.action === 'submit' && pileSelectionOverlayStore.get().submitEnabled) {
+        doneListener();
+      }
     });
 
-    doneSelectingBtn.on('pointerdown', () => doneListener());
+    selectedListenerCleanup = selectedPileStore.subscribe(selected => {
+      updateSelectionState(selected);
+    });
 
-    updateButtonState(selectedPileStore.get());
-  }
-
-  // Walks up the display tree to find the pile view under a pointer event.
-  private getPileViewFromTarget(target: any): PileView | null {
-    let current = target;
-    while (current) {
-      if (current instanceof PileView) {
-        return current;
-      }
-      current = current.parent;
-    }
-    return null;
-  }
-
-  private onRendererResize = (): void => {
-    // Keep remaining Pixi board layout aligned to the Angular supply overlay footprint.
-    const basicLeft = STANDARD_GAP;
-    const kingdomLeft = Math.max(this._scoreViewRight, basicLeft + SUPPLY_BASIC_PANEL_WIDTH_PX) + STANDARD_GAP;
-
-    if (this._nonSupplyView) {
-      this._nonSupplyView.x = kingdomLeft + SUPPLY_KINGDOM_PANEL_WIDTH_PX + STANDARD_GAP;
-      this._nonSupplyView.y = STANDARD_GAP;
-    }
+    updateSelectionState(selectedPileStore.get());
   }
 
 }

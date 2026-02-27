@@ -1,0 +1,85 @@
+@if (visible() && hasColumns()) {
+  @let layout = panelLayout();
+  <div class="non-supply-overlay-root">
+    <section
+      class="non-supply-panel"
+      [style.left.px]="layout.left"
+      [style.top.px]="layout.top"
+    >
+      <div class="kingdom-columns">
+        @for (column of kingdomColumns(); track column.trackKey) {
+          <div class="kingdom-column">
+            @for (section of column.sections; track section.trackKey) {
+              <div class="kingdom-section">
+                <div class="kingdom-title">{{ section.displayName }}</div>
+                <div class="kingdom-piles" [class.loot-piles]="section.isLoot">
+                  @for (pile of section.rows; track pile.trackKey) {
+                    <button
+                      type="button"
+                      class="non-supply-pile"
+                      [class.selectable-card]="pile.selectableCard"
+                      [class.selected-card]="pile.selectedCard"
+                      [class.way-selectable]="pile.waySelectable"
+                      [class.selectable-pile]="pile.selectablePile"
+                      [class.selected-pile]="pile.selectedPile"
+                      [class.empty-pile-state]="pile.empty"
+                      (click)="onPileClick(pile, $event)"
+                      (mouseenter)="onPileMouseEnter(pile, $event)"
+                      (mouseleave)="onPileMouseLeave(pile)"
+                    >
+                      @if (pile.cardId !== null) {
+                        <app-card
+                          [cardId]="pile.cardId"
+                          [size]="'half'"
+                          [forceFacing]="pile.forceFacing"
+                        ></app-card>
+                      } @else {
+                        <div class="empty-pile">Empty</div>
+                      }
+
+                      @if (pile.count > 0) {
+                        <div class="pile-count-badge">{{ pile.count }}</div>
+                      }
+
+                      @if (pile.trait) {
+                        <div class="pile-trait-tag" (contextmenu)="onTraitContextMenu($event, pile)">
+                          {{ pile.trait.cardName }}
+                        </div>
+                      }
+
+                      @if (pile.tokenBadgeStacks.length > 0) {
+                        <div class="pile-token-badges">
+                          @for (stack of pile.tokenBadgeStacks; track stack.id) {
+                            <div class="pile-token-badge-stack">
+                              <div class="pile-token-badge" [style.background]="stack.color">
+                                {{ stack.label }}
+                              </div>
+                              @if (stack.count > 1) {
+                                <div class="pile-token-badge-count">{{ stack.count }}</div>
+                              }
+                            </div>
+                          }
+                        </div>
+                      }
+
+                      @if (pile.tokenChips.length > 0) {
+                        <div class="pile-token-chips">
+                          @for (chip of pile.tokenChips; track chip.id) {
+                            <div class="pile-token-chip">
+                              <img [src]="chip.imagePath" alt="" />
+                              <span [style.color]="chip.textColor">{{ chip.count }}</span>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </section>
+  </div>
+}

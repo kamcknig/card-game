@@ -83,7 +83,7 @@
       </section>
 
       <section
-        class="hand-panel"
+        class="hand-panel-shell"
         [style.max-width.px]="resolvedLayout.handMaxWidth"
       >
         <div class="phase-status-bar">
@@ -179,65 +179,67 @@
           </div>
         </div>
 
-        @if (availableCubeTokens().length > 0 || availableTokenBadges().length > 0) {
-          <div class="token-tray-group">
-            <div class="token-tray-label">Available Tokens</div>
-            <div class="token-tray">
-              @for (cube of availableCubeTokens(); track cube.id) {
-                <div class="cube-token" [style.background]="cube.color"></div>
-              }
-              @for (badge of availableTokenBadges(); track badge.id) {
-                <div class="token-badge" [style.background]="badge.color">
-                  {{ badge.label }}
-                  @if (badge.count > 1) {
-                    <span>{{ badge.count }}</span>
-                  }
-                </div>
-              }
+        <section class="hand-panel">
+          @if (availableCubeTokens().length > 0 || availableTokenBadges().length > 0) {
+            <div class="token-tray-group">
+              <div class="token-tray-label">Available Tokens</div>
+              <div class="token-tray">
+                @for (cube of availableCubeTokens(); track cube.id) {
+                  <div class="cube-token" [style.background]="cube.color"></div>
+                }
+                @for (badge of availableTokenBadges(); track badge.id) {
+                  <div class="token-badge" [style.background]="badge.color">
+                    {{ badge.label }}
+                    @if (badge.count > 1) {
+                      <span>{{ badge.count }}</span>
+                    }
+                  </div>
+                }
+              </div>
             </div>
-          </div>
-        }
-
-        @if (activeTokenBadges().length > 0) {
-          <div class="token-tray-group">
-            <div class="token-tray-label">Active Tokens</div>
-            <div class="token-tray">
-              @for (badge of activeTokenBadges(); track badge.id) {
-                <div class="token-badge" [style.background]="badge.color">
-                  {{ badge.label }}
-                  @if (badge.count > 1) {
-                    <span>{{ badge.count }}</span>
-                  }
-                </div>
-              }
-            </div>
-          </div>
-        }
-
-        <div class="hand-cards" [class.compact]="resolvedLayout.handCompact">
-          @for (handGroup of handGroups(); track handGroup.trackKey; let index = $index) {
-            <button
-              type="button"
-              class="board-card hand-card-entry"
-              [style.z-index]="index + 1"
-              [class.selectable-card]="handGroup.selectable"
-              [class.selected-card]="handGroup.selected"
-              [class.way-selectable]="handGroup.waySelectable"
-              (click)="onCardClick(handGroup.cardId, $event)"
-              (mouseenter)="onCardMouseEnter(handGroup.cardId, $event)"
-              (mouseleave)="onCardMouseLeave(handGroup.cardId)"
-            >
-              <app-card
-                [cardId]="handGroup.cardId"
-                [size]="'full'"
-                [forceFacing]="'front'"
-              ></app-card>
-              @if (handGroup.count > 1) {
-                <div class="stack-count-badge">{{ handGroup.count }}</div>
-              }
-            </button>
           }
-        </div>
+
+          @if (activeTokenBadges().length > 0) {
+            <div class="token-tray-group">
+              <div class="token-tray-label">Active Tokens</div>
+              <div class="token-tray">
+                @for (badge of activeTokenBadges(); track badge.id) {
+                  <div class="token-badge" [style.background]="badge.color">
+                    {{ badge.label }}
+                    @if (badge.count > 1) {
+                      <span>{{ badge.count }}</span>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          <div class="hand-cards" [class.compact]="resolvedLayout.handCompact">
+            @for (handGroup of handGroups(); track handGroup.trackKey; let index = $index) {
+              <button
+                type="button"
+                class="board-card hand-card-entry"
+                [style.z-index]="index + 1"
+                [class.selectable-card]="handGroup.selectable"
+                [class.selected-card]="handGroup.selected"
+                [class.way-selectable]="handGroup.waySelectable"
+                (click)="onCardClick(handGroup.cardId, $event)"
+                (mouseenter)="onCardMouseEnter(handGroup.cardId, $event)"
+                (mouseleave)="onCardMouseLeave(handGroup.cardId)"
+              >
+                <app-card
+                  [cardId]="handGroup.cardId"
+                  [size]="'full'"
+                  [forceFacing]="'front'"
+                ></app-card>
+                @if (handGroup.count > 1) {
+                  <div class="stack-count-badge">{{ handGroup.count }}</div>
+                }
+              </button>
+            }
+          </div>
+        </section>
       </section>
 
       @let discard = discardPile();

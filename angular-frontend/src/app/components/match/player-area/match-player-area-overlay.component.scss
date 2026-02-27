@@ -107,30 +107,36 @@
   font-size: 12px;
 }
 
+.hand-panel-shell {
+  position: relative;
+  min-width: 460px;
+  max-width: 1120px;
+  pointer-events: none;
+}
+
 .hand-panel {
   border: 1px solid var(--theme-border-strong);
-  border-top-left-radius: 0;
-  border-top-right-radius: 6px;
-  border-bottom-right-radius: 6px;
-  border-bottom-left-radius: 6px;
+  border-radius: 6px;
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
   padding: 10px;
   box-sizing: border-box;
   pointer-events: auto;
-  min-width: 460px;
-  max-width: 1120px;
 }
 
 .phase-status-bar {
+  position: absolute;
+  left: 0;
+  bottom: 100%;
   border: 1px solid var(--theme-border-strong);
   border-radius: 6px 6px 0 0;
-  border-bottom: none;
   background: rgba(0, 0, 0, 0.6);
   padding: 6px 10px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  pointer-events: auto;
+  max-width: 100%;
 }
 
 .phase-status-text {

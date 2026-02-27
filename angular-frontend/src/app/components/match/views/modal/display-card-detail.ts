@@ -8,18 +8,6 @@ type CardDetailArg =
   | { detailImagePaths: string[]; kingdom?: string; };
 
 export async function displayCardDetail(arg: CardDetailArg) {
-  // Suppress the browser context menu triggered by the same right-click that opened this detail dialog.
-  const suppressImmediateContextMenu = () => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    const suppressor = (event: MouseEvent) => {
-      event.preventDefault();
-      event.stopPropagation();
-    };
-    window.addEventListener('contextmenu', suppressor, { capture: true, once: true });
-  };
-
   const detailImagePaths: string[] = [];
   let pileKey: string | undefined;
   if (typeof arg === 'number') {
@@ -49,6 +37,5 @@ export async function displayCardDetail(arg: CardDetailArg) {
     return;
   }
 
-  suppressImmediateContextMenu();
   openCardDetailDialog(normalizedPaths);
 }
