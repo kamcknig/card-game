@@ -79,6 +79,16 @@ export class AppComponent implements AfterViewInit {
     this.matchScene()?.setScoreViewRect(rect);
   }
 
+  // Relays HUD "next phase" actions to the active Pixi match scene.
+  onNextPhaseRequested() {
+    this.matchScene()?.requestNextPhase();
+  }
+
+  // Relays HUD "play all treasures" actions to the active Pixi match scene.
+  onPlayAllTreasuresRequested() {
+    this.matchScene()?.requestPlayAllTreasures();
+  }
+
   // Creates/destroys the Pixi match scene when UI scene changes.
   private async syncScene(scene: SceneNames) {
     if (scene === 'match') {

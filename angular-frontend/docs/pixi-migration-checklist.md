@@ -24,7 +24,7 @@ templates/CSS.
 - [x] Create migration tracker document
 - [x] Chunk 1: waiting/pause/dialog-style transient overlays moved to Angular
 - [x] Chunk 2: remaining transient prompt-adjacent overlays moved to Angular
-- [ ] Chunk 3: turn action controls moved to Angular
+- [x] Chunk 3: turn action controls moved to Angular
 - [ ] Chunk 4: Way picker moved to Angular
 - [ ] Chunk 5: supply area family converted (`basic-supply`, `kingdom-supply`)
 - [ ] Chunk 6: non-supply landscapes converted
@@ -76,3 +76,21 @@ templates/CSS.
   - `angular-frontend/src/app/components/prompt-dialog/content/prompt-select-pile-content.component.ts`
   - `angular-frontend/src/app/components/prompt-dialog/content/prompt-select-pile-content.component.html`
   - `angular-frontend/src/app/components/prompt-dialog/content/prompt-select-pile-content.component.scss`
+
+### Chunk 3 notes
+
+- Goal: move turn action controls from Pixi hand view into Angular HUD.
+- Scope:
+  - `NEXT` / phase-end button moved to Angular HUD
+  - `PLAY ALL TREASURE` button moved to Angular HUD
+  - App-to-scene wiring for turn action callbacks
+  - remove Pixi hand turn-button rendering/events
+- Status: completed
+- Files:
+  - `angular-frontend/src/app/components/match/views/player-hand.ts`
+  - `angular-frontend/src/app/components/match/views/scenes/match-scene.ts`
+  - `angular-frontend/src/app/components/match/match-hud/match-hud.component.ts`
+  - `angular-frontend/src/app/components/match/match-hud/match-hud.component.html`
+  - `angular-frontend/src/app/components/match/match-hud/match-hud.component.scss`
+  - `angular-frontend/src/app/app.component.ts`
+  - `angular-frontend/src/app/app.component.html`

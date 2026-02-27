@@ -250,20 +250,6 @@ export class MatchScene extends Scene {
       this._socketService,
       this._promptDialogCoordinator,
     );
-    this._playerHand.on('nextPhase', this.onNextPhasePressed);
-
-    this._cleanup.push(() => this._playerHand?.off('nextPhase'));
-
-    this._playerHand.on('playAllTreasure', () => {
-      awaitingServerLockReleaseStore.set(true);
-      this._socketService.on('playAllTreasureComplete', () => {
-        this._socketService.off('playAllTreasureComplete');
-        awaitingServerLockReleaseStore.set(false);
-      });
-      this._socketService.emit('playAllTreasure', this._selfId);
-    });
-
-    this._cleanup.push(() => this._playerHand?.off('playAllTreasure'));
 
     this.addChild(this._playerHand);
     // Keep the Way picker above all board elements.
@@ -272,17 +258,38 @@ export class MatchScene extends Scene {
     this._wayPickerContainer.eventMode = 'passive';
   }
 
-  private onNextPhasePressed = (e: PointerEvent) => {
+  // Triggers the "next phase" action using the same server-lock behavior as legacy Pixi controls.
+  public requestNextPhase() {
+    this.executeTurnActionWithServerLock('nextPhaseComplete', () => {
+      this._socketService.emit('nextPhase');
+    });
+  }
+
+  // Triggers the "play all treasures" action during the buy phase.
+  public requestPlayAllTreasures() {
+    if (turnPhaseStore.get() !== 'buy') {
+      return;
+    }
+    this.executeTurnActionWithServerLock('playAllTreasureComplete', () => {
+      this._socketService.emit('playAllTreasure', this._selfId);
+    });
+  }
+
+  // Applies lock/unlock behavior around turn actions that wait for a server completion event.
+  private executeTurnActionWithServerLock(
+    completionEvent: 'nextPhaseComplete' | 'playAllTreasureComplete',
+    emitAction: () => void
+  ) {
     if (!this.uiInteractive) {
-      return
+      return;
     }
 
     awaitingServerLockReleaseStore.set(true);
-    this._socketService.on('nextPhaseComplete', () => {
-      this._socketService.off('nextPhaseComplete');
+    this._socketService.on(completionEvent, () => {
+      this._socketService.off(completionEvent);
       awaitingServerLockReleaseStore.set(false);
     });
-    this._socketService.emit('nextPhase');
+    emitAction();
   }
 
   private onMatchStarted = (started: boolean) => {

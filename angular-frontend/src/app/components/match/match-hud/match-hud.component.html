@@ -53,6 +53,27 @@
   }
 </div>
 
+@if (canUseTurnActions()) {
+  <div class="turn-actions">
+    @if (showPlayAllTreasures()) {
+      <button
+        type="button"
+        class="turn-action-button play-all-treasures-button"
+        (click)="onPlayAllTreasuresRequested()"
+      >
+        PLAY ALL TREASURE
+      </button>
+    }
+    <button
+      type="button"
+      class="turn-action-button next-phase-button"
+      (click)="onNextPhaseRequested()"
+    >
+      {{ nextPhaseLabel() }}
+    </button>
+  </div>
+}
+
 <div class="hud-log-stack">
   <app-game-log [entries]="logEntries()"></app-game-log>
 

@@ -14,7 +14,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ScoreComponent } from './score/score.component';
 import { GameLogComponent } from './game-log/game-log.component';
 import { NanostoresService } from '@nanostores/angular';
-import { playerIdStore, playerStore } from '../../../state/player-state';
+import { playerIdStore, playerStore, selfPlayerIdStore } from '../../../state/player-state';
 import { combineLatest, combineLatestWith, filter, map, of, switchMap } from 'rxjs';
 import { Card, CardLikeId, Match, Mats, PlayerId, SetAsideSourceDescriptor } from 'shared/types';
 import { logEntryIdsStore, logStore } from '../../../state/log-state';
@@ -35,6 +35,8 @@ import { matchStore } from '../../../state/match-state';
 import { findCardLikeEntryInMatch, MatchCardLikeEntry } from 'shared/find-card-like-in-match';
 import { gamePausedStore } from '../../../state/game-logic';
 import { waitingOnPlayerIdStore } from '../../../state/match-ui-overlay-state';
+import { currentPlayerTurnIdStore, turnPhaseStore } from '../../../state/turn-state';
+import { awaitingServerLockReleaseStore, promptInteractionLockStore } from '../../../state/interactive-state';
 import {
   getSourceAccentColorForCard,
   getSourceAccentColorForCardLikeKind,
@@ -97,12 +99,69 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
   });
 
   scoreViewResize = output<Rectangle>();
+  nextPhaseRequested = output<void>();
+  playAllTreasuresRequested = output<void>();
   scoreViewResizer: ResizeObserver | undefined;
 
   private _disconnectedHumanIds: PlayerId[] = [];
 
   readonly playerIds = toSignal(this._nanoService.useStore(playerIdStore), {
     initialValue: playerIdStore.get()
+  });
+
+  readonly selfPlayerId = toSignal(this._nanoService.useStore(selfPlayerIdStore), {
+    initialValue: selfPlayerIdStore.get(),
+  });
+
+  readonly currentPlayerTurnId = toSignal(this._nanoService.useStore(currentPlayerTurnIdStore), {
+    initialValue: currentPlayerTurnIdStore.get(),
+  });
+
+  readonly turnPhase = toSignal(this._nanoService.useStore(turnPhaseStore), {
+    initialValue: turnPhaseStore.get(),
+  });
+
+  readonly awaitingServerLockRelease = toSignal(this._nanoService.useStore(awaitingServerLockReleaseStore), {
+    initialValue: awaitingServerLockReleaseStore.get(),
+  });
+
+  readonly promptInteractionLocked = toSignal(this._nanoService.useStore(promptInteractionLockStore), {
+    initialValue: promptInteractionLockStore.get(),
+  });
+
+  readonly selfHandCardIds = toSignal(this.createSelfHandCardStream(), {
+    initialValue: [] as number[],
+  });
+
+  // Keeps turn action controls limited to the active player while no prompt/server lock is active.
+  readonly canUseTurnActions = computed(() => {
+    const selfPlayerId = this.selfPlayerId();
+    return (
+      selfPlayerId !== undefined &&
+      this.currentPlayerTurnId() === selfPlayerId &&
+      !this.awaitingServerLockRelease() &&
+      !this.promptInteractionLocked()
+    );
+  });
+
+  readonly nextPhaseLabel = computed(() => {
+    const phase = this.turnPhase();
+    switch (phase) {
+      case 'action':
+        return 'END ACTIONS';
+      case 'buy':
+        return 'END BUYS';
+      default:
+        return 'NEXT';
+    }
+  });
+
+  readonly showPlayAllTreasures = computed(() => {
+    if (!this.canUseTurnActions() || this.turnPhase() !== 'buy') {
+      return false;
+    }
+    const cardsById = this._cards() ?? {};
+    return this.selfHandCardIds().some((cardId) => cardsById[cardId]?.type?.includes('TREASURE'));
   });
 
   readonly selfMats = toSignal(this.createSelfMatsStream(), {
@@ -228,6 +287,16 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
     debugOverlayVisibleStore.set(!debugOverlayVisibleStore.get());
   }
 
+  // Forwards "next phase" requests to the active match scene via AppComponent output binding.
+  onNextPhaseRequested() {
+    this.nextPhaseRequested.emit();
+  }
+
+  // Forwards "play all treasures" requests to the active match scene via AppComponent output binding.
+  onPlayAllTreasuresRequested() {
+    this.playAllTreasuresRequested.emit();
+  }
+
   // Returns true when the id is a concrete card instance (not a card-like).
   isCardInstance(cardLikeId: CardLikeId): boolean {
     return !!this._cards()?.[cardLikeId];
@@ -345,6 +414,18 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
       return;
     }
     this._socketService.emit('resignMatch');
+  }
+
+  // Switches hand-source subscription when self player id becomes available.
+  private createSelfHandCardStream() {
+    return this._nanoService.useStore(selfPlayerIdStore).pipe(
+      switchMap((selfPlayerId) => {
+        if (selfPlayerId === undefined) {
+          return of([] as number[]);
+        }
+        return this._nanoService.useStore(getCardSourceStore('playerHand', selfPlayerId));
+      })
+    );
   }
 
   // Builds grouped per-player mats from tagged card source keys.

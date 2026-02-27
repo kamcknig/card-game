@@ -5,10 +5,8 @@ import { atom, computed } from 'nanostores';
 import { CARD_HEIGHT, CARD_WIDTH, SMALL_CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
 import { PhaseStatus } from './phase-status';
 import { AppButton, createAppButton } from '../../../core/create-app-button';
-import { currentPlayerTurnIdStore, turnPhaseStore } from '../../../state/turn-state';
 import { CardStackView } from './card-stack';
 import { List } from '@pixi/ui';
-import { awaitingServerLockReleaseStore, promptInteractionLockStore } from '../../../state/interactive-state';
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { getCardSourceStore } from '../../../state/card-source-store';
 import { matchStore } from '../../../state/match-state';
@@ -22,16 +20,6 @@ import { PromptDialogCoordinatorService } from '../../../core/prompt-dialog/prom
 export class PlayerHandView extends Container {
   private static readonly HAND_CORNER_RADIUS = 5;
   private readonly _phaseStatus: PhaseStatus;
-  private readonly _nextPhaseButton: AppButton = createAppButton({ text: 'NEXT' });
-  private readonly _playAllTreasuresButton: AppButton = createAppButton(
-    {
-      text: 'PLAY ALL\nTREASURE',
-      style: { align: 'center', fill: '#fff4e6', fontSize: 24 }
-    },
-    {
-      color: '#c1aa1f'
-    }
-  );
 
   private readonly _cleanup: (() => void)[] = [];
   private readonly _background: Graphics = new Graphics({ label: 'background' });
@@ -83,7 +71,6 @@ export class PlayerHandView extends Container {
     this.addChild(this._statesButton.button);
     this.addChild(this._artifactsButton.button);
     this.addChild(this._cardList);
-    this.addChild(this._nextPhaseButton.button);
 
     this._background.y = this._phaseStatus.y + this._phaseStatus.height;
     this._cardList.y = this._background.y + STANDARD_GAP;
@@ -91,52 +78,6 @@ export class PlayerHandView extends Container {
     this.drawBackground(CARD_HEIGHT + STANDARD_GAP * 6);
     // Keep hand tray visually separated from board elements.
     this._background.filters = [createPanelShadowFilter()];
-
-    this._cleanup.push(computed(
-      [currentPlayerTurnIdStore, awaitingServerLockReleaseStore, promptInteractionLockStore],
-      (currentPlayerTurnId, waitingServerLockRelease, promptInteractionLocked) =>
-        currentPlayerTurnId === playerId && !waitingServerLockRelease && !promptInteractionLocked
-    ).subscribe(visible => {
-      this._nextPhaseButton.button.visible = visible
-    }));
-
-    this._cleanup.push(
-      computed(
-        [awaitingServerLockReleaseStore, promptInteractionLockStore, turnPhaseStore, currentPlayerTurnIdStore, getCardSourceStore('playerHand', playerId), cardStore],
-        // Emit a new object so visibility updates when any dependency changes.
-        (waiting, promptInteractionLocked, phase, currentPlayerTurnId, hand, cardsById) => ({
-          waiting,
-          promptInteractionLocked,
-          phase,
-          currentPlayerTurnId,
-          hand,
-          cardsById
-        })
-      ).subscribe(this.updatePlayAllTreasureVisibility)
-    );
-
-    this._cleanup.push(turnPhaseStore.subscribe((phase) => {
-      switch (phase) {
-        case 'action':
-          this._nextPhaseButton.text('END ACTIONS');
-          break;
-        case 'buy':
-          this._nextPhaseButton.text('END BUYS');
-          break;
-      }
-      this.updateButtonLayout();
-    }));
-    this.addChild(this._nextPhaseButton.button);
-
-    this._playAllTreasuresButton.button.label = 'playAllTreasureButton';
-    this._playAllTreasuresButton.button.visible = false;
-    this._playAllTreasuresButton.button.on('pointerdown', (event: FederatedPointerEvent) => {
-      if (!this.isPrimaryInteraction(event)) {
-        return;
-      }
-      this.emit('playAllTreasure');
-    });
-    this.addChild(this._playAllTreasuresButton.button);
     this._statesButton.button.on('pointerdown', (event: FederatedPointerEvent) => {
       if (!this.isPrimaryInteraction(event)) {
         return;
@@ -150,9 +91,6 @@ export class PlayerHandView extends Container {
       this.openArtifactsModal();
     });
 
-    this.updatePlayAllTreasureVisibility();
-    this.updateButtonLayout();
-
     this._cleanup.push(getCardSourceStore('playerHand', playerId).subscribe(this.drawHand));
     this._cleanup.push(
       computed(
@@ -160,19 +98,11 @@ export class PlayerHandView extends Container {
         (match, tokenDefinitions) => ({ match, tokenDefinitions })
       ).subscribe(({ match, tokenDefinitions }) => this.drawTokenTray(match, tokenDefinitions))
     );
-    this._nextPhaseButton.button.on('pointerdown', (event: FederatedPointerEvent) => {
-      if (!this.isPrimaryInteraction(event)) {
-        return;
-      }
-      this.emit('nextPhase');
-    });
     this.on('removed', this.onRemoved);
   }
 
   private onRemoved = () => {
     this._cleanup.forEach(c => c());
-    this._nextPhaseButton.button.off('pointerdown');
-    this._playAllTreasuresButton.button.off('pointerdown');
     this._statesButton.button.off('pointerdown');
     this._artifactsButton.button.off('pointerdown');
     this.off('removed');
@@ -327,7 +257,6 @@ export class PlayerHandView extends Container {
     const neededHeight = (this._cardList.y - this._background.y) + CARD_HEIGHT + STANDARD_GAP * 2;
     const height = Math.max(minHeight, neededHeight);
     this.drawBackground(height);
-    this.updateButtonLayout();
   }
 
   // Draws the player-hand background while keeping only the top-left corner square.
@@ -392,51 +321,6 @@ export class PlayerHandView extends Container {
     graphics.closePath();
   }
 
-  // Controls the visibility of the "Play All Treasure" button based on current match state.
-  private updatePlayAllTreasureVisibility = (args?: {
-    waiting: boolean;
-    promptInteractionLocked: boolean;
-    phase: string | undefined;
-    currentPlayerTurnId: number | undefined;
-    hand: ReadonlyArray<number>;
-    cardsById: Record<number, Card>;
-  }) => {
-    const waiting = args?.waiting ?? awaitingServerLockReleaseStore.get();
-    const promptInteractionLocked = args?.promptInteractionLocked ?? promptInteractionLockStore.get();
-    const turnPhase = (args?.phase ?? turnPhaseStore.get()) as string;
-    const currentPlayerTurnId = args?.currentPlayerTurnId ?? currentPlayerTurnIdStore.get();
-    const hand = args?.hand ?? getCardSourceStore('playerHand', this.playerId).get();
-    const cardsById = args?.cardsById ?? cardStore.get();
-
-    if (
-      waiting ||
-      promptInteractionLocked ||
-      turnPhase !== 'buy' ||
-      !this.playerId ||
-      currentPlayerTurnId !== this.playerId ||
-      !hand?.length
-    ) {
-      this._playAllTreasuresButton.button.visible = false;
-      return;
-    }
-
-    const hasTreasure = hand.some(cardId => cardsById[cardId]?.type?.includes('TREASURE'));
-    this._playAllTreasuresButton.button.visible = hasTreasure;
-  };
-
-  // Positions the phase action buttons relative to the background size.
-  private updateButtonLayout() {
-    const width = this._background.width || (CARD_WIDTH + STANDARD_GAP) * 6;
-    const totalHeight = this._background.y + this._background.height;
-    const centerY = totalHeight * .5;
-
-    this._nextPhaseButton.button.x = width - this._nextPhaseButton.button.width - STANDARD_GAP;
-    this._nextPhaseButton.button.y = Math.floor(centerY + this._nextPhaseButton.button.height * .5 + STANDARD_GAP);
-
-    this._playAllTreasuresButton.button.x = width - this._playAllTreasuresButton.button.width - STANDARD_GAP;
-    this._playAllTreasuresButton.button.y = Math.floor(centerY - this._playAllTreasuresButton.button.height * .5 - STANDARD_GAP);
-  }
-  
   // Parses a hex color string into a numeric color for Pixi.
   private parseColor(color: string): number {
     if (!color) return 0xffffff;
