@@ -29,6 +29,12 @@ app-lobby, app-match-hud, app-game-summary {
   overflow: hidden;
 }
 
+app-match-supply-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
 app-match-configuration {
   height: 100%;
   max-height: 100%;

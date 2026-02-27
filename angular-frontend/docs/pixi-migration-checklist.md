@@ -26,7 +26,7 @@ templates/CSS.
 - [x] Chunk 2: remaining transient prompt-adjacent overlays moved to Angular
 - [x] Chunk 3: turn action controls moved to Angular
 - [x] Chunk 4: Way picker moved to Angular
-- [ ] Chunk 5: supply area family converted (`basic-supply`, `kingdom-supply`)
+- [x] Chunk 5: supply area family converted (`basic-supply`, `kingdom-supply`)
 - [ ] Chunk 6: non-supply landscapes converted
 - [ ] Chunk 7: hand/play/deck/discard area converted
 - [ ] Chunk 8: shared primitives converted (card/pile/token/badges/buttons)
@@ -111,3 +111,22 @@ templates/CSS.
   - `angular-frontend/src/app/components/match/views/scenes/match-scene.ts`
   - `angular-frontend/src/app/app.component.ts`
   - `angular-frontend/src/app/app.component.html`
+
+### Chunk 5 notes
+
+- Goal: move basic and kingdom supply rendering from Pixi views to Angular components.
+- Scope:
+  - add Angular supply overlay component for basic + kingdom pile families
+  - migrate supply pile highlights, counts, trait tags, and supply-pile token overlays
+  - preserve supply click behavior (`cardTapped`) and pile-select prompt toggling
+  - keep board layout spacing for non-supply/play area aligned to supply footprint
+- Status: completed
+- Files:
+  - `angular-frontend/src/app/components/match/supply/match-supply-overlay.component.ts`
+  - `angular-frontend/src/app/components/match/supply/match-supply-overlay.component.html`
+  - `angular-frontend/src/app/components/match/supply/match-supply-overlay.component.scss`
+  - `angular-frontend/src/app/components/match/supply/supply-layout.constants.ts`
+  - `angular-frontend/src/app/app.component.ts`
+  - `angular-frontend/src/app/app.component.html`
+  - `angular-frontend/src/app/app.component.scss`
+  - `angular-frontend/src/app/components/match/views/scenes/match-scene.ts`

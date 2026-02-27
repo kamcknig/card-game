@@ -5,7 +5,6 @@ import {createAppButton} from '../../../../core/create-app-button';
 import {matchStartedStore, matchStore} from '../../../../state/match-state';
 import {playerStore, selfPlayerIdStore,} from '../../../../state/player-state';
 import {PlayAreaView} from '../play-area';
-import {KingdomSupplyView} from '../kingdom-supply';
 import {CardId, CardKey, CardLikeId, PlayCardSelectionResult, PlayerId, UserPromptActionArgs} from 'shared/types';
 import {
   awaitingServerLockReleaseStore,
@@ -28,7 +27,6 @@ import {SocketService} from '../../../../core/socket-service/socket.service';
 import {selectableCardStore, waySelectableCardStore} from '../../../../state/interactive-logic';
 import {selectablePileStore} from '../../../../state/interactive-pile-logic';
 import {SelectCardArgs} from '../../../../../types';
-import {BasicSupplyView} from '../basic-supply';
 import {NonSupplyKingdomView} from '../non-supply-kingdom-view';
 import {getCardSourceStore} from '../../../../state/card-source-store';
 import {OtherCardLikeView} from '../other-card-like-view';
@@ -39,18 +37,21 @@ import {getPixiSceneTheme} from '../../../../theme/pixi-theme';
 import { cardStore } from '../../../../state/card-state';
 import { PromptDialogCoordinatorService } from '../../../../core/prompt-dialog/prompt-dialog-coordinator.service';
 import { WayPickerOverlayService } from '../../../../core/way-picker/way-picker-overlay.service';
+import {
+  SUPPLY_BASIC_PANEL_WIDTH_PX,
+  SUPPLY_KINGDOM_PANEL_HEIGHT_PX,
+  SUPPLY_KINGDOM_PANEL_WIDTH_PX
+} from '../../supply/supply-layout.constants';
 
 export class MatchScene extends Scene {
   private static readonly WAY_PICKER_PANEL_WIDTH_PX = 220;
   private static readonly WAY_PICKER_EDGE_OVERLAP_PX = 5;
   private _board: Container = new Container();
-  private _baseSupply: Container = new Container({ scale: 1 });
   private _playerHand: PlayerHandView | undefined;
   private _deck: CardStackView | undefined;
   private _discard: CardStackView | undefined;
   private _cleanup: (() => void)[] = [];
   private _playArea: PlayAreaView | undefined;
-  private _kingdomView: KingdomSupplyView | undefined;
   private _selecting: boolean = false;
   private _selectingPiles: boolean = false;
   private _scoreViewRight: number = 0;
@@ -204,12 +205,6 @@ export class MatchScene extends Scene {
 
   private createBoard() {
     this.addChild(this._board);
-
-    this._baseSupply = this.addChild(new BasicSupplyView());
-    this._baseSupply.scale = .9;
-
-    this._kingdomView = this.addChild(new KingdomSupplyView());
-    this._kingdomView.scale = .9;
 
     this._nonSupplyView = this.addChild(new NonSupplyKingdomView());
     this._nonSupplyView.scale = .9;
@@ -801,16 +796,10 @@ export class MatchScene extends Scene {
   }
 
   private onRendererResize = (): void => {
-    if (this._kingdomView && this._baseSupply) {
-      // Keep basic supply below the score panel while preferring a mid-screen anchor.
-      const minBaseSupplyY = this._scoreViewBottom + STANDARD_GAP;
-      const centeredBaseSupplyY = Math.floor(this._app.renderer.height * .5 - this._baseSupply.height * .5);
-      this._baseSupply.y = Math.max(minBaseSupplyY, centeredBaseSupplyY);
-      this._baseSupply.x = STANDARD_GAP;
-
-      this._kingdomView.y = STANDARD_GAP;
-      this._kingdomView.x = Math.max(this._scoreViewRight, this._baseSupply.x + this._baseSupply.width) + STANDARD_GAP;
-    }
+    // Keep play-area/non-supply layout aligned to the Angular supply overlay footprint.
+    const basicLeft = STANDARD_GAP;
+    const kingdomTop = STANDARD_GAP;
+    const kingdomLeft = Math.max(this._scoreViewRight, basicLeft + SUPPLY_BASIC_PANEL_WIDTH_PX) + STANDARD_GAP;
 
     // Position the landscape area if events, landmarks, or projects are present.
     const numEvents = matchStore.get()?.events.length ?? 0;
@@ -819,20 +808,28 @@ export class MatchScene extends Scene {
     const numWays = matchStore.get()?.ways.length ?? 0;
     const numOtherCardLikes = numEvents + numLandmarks + numProjects + numWays;
 
-    if (this._kingdomView && this._otherCardLikes && numOtherCardLikes > 0) {
-      this._otherCardLikes.x = this._kingdomView.x;
-      this._otherCardLikes.y = this._kingdomView.y + this._kingdomView.height + STANDARD_GAP;
+    if (this._otherCardLikes) {
+      this._otherCardLikes.x = kingdomLeft;
+      this._otherCardLikes.y = kingdomTop + SUPPLY_KINGDOM_PANEL_HEIGHT_PX + STANDARD_GAP;
+      this._otherCardLikes.visible = numOtherCardLikes > 0;
     }
 
-    if (this._kingdomView && this._nonSupplyView) {
-      this._nonSupplyView.x = this._kingdomView.x + this._kingdomView.width + STANDARD_GAP;
+    if (this._nonSupplyView) {
+      this._nonSupplyView.x = kingdomLeft + SUPPLY_KINGDOM_PANEL_WIDTH_PX + STANDARD_GAP;
       this._nonSupplyView.y = STANDARD_GAP;
     }
 
-    if (this._playArea && this._kingdomView && this._nonSupplyView && this._playerHand && this._otherCardLikes) {
-      this._playArea.x = this._kingdomView.x;
+    if (this._playArea && this._nonSupplyView && this._playerHand && this._otherCardLikes) {
+      this._playArea.x = kingdomLeft;
 
-      const top = Math.max(this._kingdomView.y + this._kingdomView.height, this._nonSupplyView.y + this._nonSupplyView.height, this._otherCardLikes.y + this._otherCardLikes.height);
+      const otherCardLikesBottom = numOtherCardLikes > 0
+        ? this._otherCardLikes.y + this._otherCardLikes.height
+        : kingdomTop + SUPPLY_KINGDOM_PANEL_HEIGHT_PX;
+      const top = Math.max(
+        kingdomTop + SUPPLY_KINGDOM_PANEL_HEIGHT_PX,
+        this._nonSupplyView.y + this._nonSupplyView.height,
+        otherCardLikesBottom
+      );
       this._playArea.y = top + STANDARD_GAP;
 
       const height = this._playerHand.y - this._playArea.y;

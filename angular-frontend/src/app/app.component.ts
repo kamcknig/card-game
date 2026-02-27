@@ -28,6 +28,7 @@ import { PromptDialogHostComponent } from './components/prompt-dialog/prompt-dia
 import { PromptDialogCoordinatorService } from './core/prompt-dialog/prompt-dialog-coordinator.service';
 import { WayPickerOverlayComponent } from './components/way-picker-overlay/way-picker-overlay.component';
 import { WayPickerOverlayService } from './core/way-picker/way-picker-overlay.service';
+import { MatchSupplyOverlayComponent } from './components/match/supply/match-supply-overlay.component';
 
 @Component({
   selector: 'app-root',
@@ -42,6 +43,7 @@ import { WayPickerOverlayService } from './core/way-picker/way-picker-overlay.se
     CardDetailDialogComponent,
     PromptDialogHostComponent,
     WayPickerOverlayComponent,
+    MatchSupplyOverlayComponent,
     NgClass,
   ],
   templateUrl: './app.component.html',
@@ -59,6 +61,7 @@ export class AppComponent implements AfterViewInit {
 
   title = 'Dominion Clone';
   matchScene = signal<MatchScene | undefined>(undefined);
+  scoreViewRect = signal<{ x: number; y: number; width: number; height: number } | null>(null);
   scene = toSignal(this._nanoStores.useStore(sceneStore), { initialValue: sceneStore.get() as SceneNames });
   matchStarted = toSignal(this._nanoStores.useStore(matchStartedStore), { initialValue: false });
   matchSummary = toSignal<MatchSummary | undefined>(
@@ -80,6 +83,12 @@ export class AppComponent implements AfterViewInit {
 
   // Relays score view resize events to the active Pixi match scene.
   onScoreViewResize(rect: Rectangle) {
+    this.scoreViewRect.set({
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height,
+    });
     this.matchScene()?.setScoreViewRect(rect);
   }
 
