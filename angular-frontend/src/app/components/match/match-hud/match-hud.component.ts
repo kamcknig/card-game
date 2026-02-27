@@ -33,6 +33,8 @@ import { UiDialogComponent } from '../../ui/dialog/ui-dialog.component';
 import { cardStore } from '../../../state/card-state';
 import { matchStore } from '../../../state/match-state';
 import { findCardLikeEntryInMatch, MatchCardLikeEntry } from 'shared/find-card-like-in-match';
+import { gamePausedStore } from '../../../state/game-logic';
+import { waitingOnPlayerIdStore } from '../../../state/match-ui-overlay-state';
 import {
   getSourceAccentColorForCard,
   getSourceAccentColorForCardLikeKind,
@@ -148,6 +150,16 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
 
   readonly disconnectedHumans = toSignal(this.createDisconnectedHumansStream(), {
     initialValue: [] as { id: PlayerId; name: string }[],
+  });
+
+  // Controls match pause overlay when any human player is disconnected.
+  readonly gamePaused = toSignal(this._nanoService.useStore(gamePausedStore), {
+    initialValue: gamePausedStore.get(),
+  });
+
+  // Resolves current "waiting for player" display name for Angular HUD overlay.
+  readonly waitingOnPlayerName = toSignal(this.createWaitingOnPlayerNameStream(), {
+    initialValue: null as string | null,
   });
 
   // Current game + match identifiers provided by server debug context.
@@ -536,6 +548,20 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
         return combineLatest(ids.map((id) => this._nanoService.useStore(playerStore(id))));
       }),
       map((players) => players.filter((p) => !!p).map((p) => ({ id: p!.id, name: p!.name })))
+    );
+  }
+
+  // Builds waiting overlay text from the active player id payload.
+  private createWaitingOnPlayerNameStream() {
+    return this._nanoService.useStore(waitingOnPlayerIdStore).pipe(
+      switchMap((playerId) => {
+        if (playerId === null) {
+          return of(null);
+        }
+        return this._nanoService.useStore(playerStore(playerId)).pipe(
+          map((player) => player?.name ?? `Player ${playerId}`),
+        );
+      })
     );
   }
 }

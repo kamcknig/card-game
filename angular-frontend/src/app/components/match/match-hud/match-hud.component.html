@@ -1,5 +1,26 @@
 <app-score #scoreView [playerScores]="playerScore()"></app-score>
 
+@let waitingPlayerName = waitingOnPlayerName();
+@if (waitingPlayerName) {
+  <app-ui-dialog
+    [zIndex]="4050"
+    [closeOnBackdrop]="false"
+    [hasBackdrop]="false"
+  >
+    <div class="waiting-dialog-card">
+      Waiting for {{ waitingPlayerName }}
+    </div>
+  </app-ui-dialog>
+}
+
+@if (gamePaused()) {
+  <div class="match-status-overlay pause-overlay">
+    <div class="match-status-chip pause-chip">
+      PLAYER DISCONNECTED
+    </div>
+  </div>
+}
+
 <div class="mat-tab-content">
   @let trashMatValue = trashMat();
   @if (trashMatValue) {

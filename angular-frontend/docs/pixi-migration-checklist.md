@@ -1,0 +1,60 @@
+# PixiJS to Angular Migration Checklist
+
+This document tracks the incremental migration from PixiJS rendering to Angular
+templates/CSS.
+
+## Layout policy
+
+- Do not translate Pixi `x/y` directly into CSS `left/top` for normal layout.
+- Prefer `display: flex` by default.
+- Use `display: grid` only when flex cannot express the structure cleanly.
+- Allow `position: absolute|fixed` only when required:
+  - overlays/modal layers
+  - viewport-anchored HUD elements
+  - tooltip/popover/drag-preview layers
+
+## Current scope defaults
+
+- Migration strategy: UI-slice-first
+- Dependency removal: end-only (remove Pixi packages in final chunk)
+- Responsive scope: desktop-only
+
+## Master checklist
+
+- [x] Create migration tracker document
+- [x] Chunk 1: waiting/pause/dialog-style transient overlays moved to Angular
+- [ ] Chunk 2: remaining transient prompt-adjacent overlays moved to Angular
+- [ ] Chunk 3: turn action controls moved to Angular
+- [ ] Chunk 4: Way picker moved to Angular
+- [ ] Chunk 5: supply area family converted (`basic-supply`, `kingdom-supply`)
+- [ ] Chunk 6: non-supply landscapes converted
+- [ ] Chunk 7: hand/play/deck/discard area converted
+- [ ] Chunk 8: shared primitives converted (card/pile/token/badges/buttons)
+- [ ] Chunk 9: remove Pixi bootstrap (`PIXI_APP`, factory, canvas mount)
+- [ ] Chunk 10: remove Pixi dependencies from `angular-frontend/package.json`
+
+## Chunk acceptance criteria
+
+- [x] No new `pixi.js` imports in migrated chunk files
+- [x] No Pixi coordinate-style absolute positioning for normal layout
+- [x] Existing gameplay/socket behavior unchanged
+- [x] TypeScript check passes:
+  - `cd angular-frontend && npx tsc -p tsconfig.app.json --noEmit`
+
+## Chunk log
+
+### Chunk 1 notes
+
+- Goal: move waiting/pause overlays from Pixi scene rendering into Angular HUD.
+- Scope:
+  - waiting overlay
+  - disconnected pause overlay
+  - keep existing disconnected-player action dialog
+- Status: completed
+- Files:
+  - `angular-frontend/src/app/state/match-ui-overlay-state.ts`
+  - `angular-frontend/src/app/core/socket-service/socket-event-map.ts`
+  - `angular-frontend/src/app/components/match/match-hud/match-hud.component.ts`
+  - `angular-frontend/src/app/components/match/match-hud/match-hud.component.html`
+  - `angular-frontend/src/app/components/match/match-hud/match-hud.component.scss`
+  - `angular-frontend/src/app/components/match/views/scenes/match-scene.ts`

@@ -24,7 +24,6 @@
     "npm:playwright-core@1.51.1": "1.51.1",
     "npm:playwright@*": "1.51.1",
     "npm:playwright@1.51.1": "1.51.1",
-    "npm:types@~0.1.1": "0.1.1",
     "npm:uuid@*": "11.1.0"
   },
   "jsr": {
@@ -2648,8 +2647,7 @@
       "npm:jest@^30.2.0",
       "npm:lint-staged@^16.2.7",
       "npm:lodash-es@4.17.21",
-      "npm:nanostores@0.11.4",
-      "npm:types@~0.1.1"
+      "npm:nanostores@0.11.4"
     ]
   }
 }

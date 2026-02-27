@@ -14,6 +14,46 @@ app-score {
   pointer-events: auto;
 }
 
+.match-status-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  // Overlay visuals should not intercept input by default.
+  pointer-events: none;
+}
+
+.match-status-chip {
+  border: 1px solid var(--theme-border-strong);
+  border-radius: 8px;
+  padding: 14px 18px;
+  color: var(--theme-text-on-dark);
+  font-size: 28px;
+  line-height: 1.2;
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
+}
+
+.pause-overlay {
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-soft));
+  z-index: 20;
+}
+
+.pause-chip {
+  font-size: 36px;
+  font-weight: 700;
+}
+
+.waiting-dialog-card {
+  border: 1px solid var(--theme-border-strong);
+  border-radius: 8px;
+  padding: 14px 18px;
+  color: var(--theme-text-on-dark);
+  font-size: 28px;
+  line-height: 1.2;
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
+}
+
 .mat-tab-content {
   position: fixed;
   right: 0;

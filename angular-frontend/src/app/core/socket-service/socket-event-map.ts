@@ -24,11 +24,16 @@ import {
 } from '../../state/lobby-state';
 import { debugRuntimeContextStore } from '../../state/debug-runtime-state';
 import { selectableSearchCatalogStore } from '../../state/selectable-search-state';
+import { waitingOnPlayerIdStore } from '../../state/match-ui-overlay-state';
 
 export type SocketEventMap = Partial<{ [p in ClientListenEventNames]: ClientListenEvents[p] }>;
 
 export const socketToGameEventMap = (): SocketEventMap => {
   const map = {} as SocketEventMap;
+  // Clears transient HUD overlays when leaving match-scoped flows.
+  const clearMatchUiOverlays = () => {
+    waitingOnPlayerIdStore.set(null);
+  };
 
   map['addLogEntry'] = (logEntries: LogEntry[]) => {
     for (const logEntry of logEntries) {
@@ -38,6 +43,7 @@ export const socketToGameEventMap = (): SocketEventMap => {
 
   map['matchConfigurationUpdated'] = config => {
     matchConfigurationStore.set(config);
+    clearMatchUiOverlays();
     // Enter configuration scene when one lobby game is actively joined.
     sceneStore.set('configuration');
   };
@@ -66,6 +72,7 @@ export const socketToGameEventMap = (): SocketEventMap => {
       void s.play().catch(() => null);
     }
 
+    clearMatchUiOverlays();
     matchSummaryStore.set(summary);
     sceneStore.set('gameSummary');
   };
@@ -78,6 +85,7 @@ export const socketToGameEventMap = (): SocketEventMap => {
     lobbyGamesStore.set(games);
     // Keep lobby as default scene while no active game is tracked.
     if (!activeLobbyGameIdStore.get()) {
+      clearMatchUiOverlays();
       debugRuntimeContextStore.set(undefined);
       sceneStore.set('lobby');
     }
@@ -101,6 +109,7 @@ export const socketToGameEventMap = (): SocketEventMap => {
     if (payload.gameId && activeGameId === payload.gameId && payload.reason !== 'alreadyInGame') {
       activeLobbyGameIdStore.set(undefined);
     }
+    clearMatchUiOverlays();
     debugRuntimeContextStore.set(undefined);
     lobbyJoinRejectedStore.set(payload);
     lobbyStatusMessageStore.set(payload.message);
@@ -109,6 +118,7 @@ export const socketToGameEventMap = (): SocketEventMap => {
 
   map['kickedFromGame'] = payload => {
     activeLobbyGameIdStore.set(undefined);
+    clearMatchUiOverlays();
     debugRuntimeContextStore.set(undefined);
     lobbyStatusMessageStore.set(payload.message);
     sceneStore.set('lobby');
@@ -116,6 +126,7 @@ export const socketToGameEventMap = (): SocketEventMap => {
 
   map['bannedFromGame'] = payload => {
     activeLobbyGameIdStore.set(undefined);
+    clearMatchUiOverlays();
     debugRuntimeContextStore.set(undefined);
     lobbyStatusMessageStore.set(payload.message);
     sceneStore.set('lobby');
@@ -130,6 +141,7 @@ export const socketToGameEventMap = (): SocketEventMap => {
   };
 
   map['matchReady'] = async () => {
+    clearMatchUiOverlays();
     const cardsById = cardStore.get();
     if (!cardsById || Object.keys(cardsById).length === 0) {
       console.warn('missing card library on matchReady, skipping setup');
@@ -332,6 +344,20 @@ export const socketToGameEventMap = (): SocketEventMap => {
 
   map['setPlayer'] = player => {
     selfPlayerIdStore.set(player.id);
-  }
+  };
+
+  // Drives Angular "waiting" HUD overlay from server wait-state events.
+  map['waitingForPlayer'] = (playerId) => {
+    waitingOnPlayerIdStore.set(playerId);
+  };
+
+  // Clears "waiting" HUD overlay when matching wait-state completes.
+  map['doneWaitingForPlayer'] = (playerId) => {
+    const currentWaitingPlayerId = waitingOnPlayerIdStore.get();
+    if (playerId === undefined || currentWaitingPlayerId === playerId) {
+      waitingOnPlayerIdStore.set(null);
+    }
+  };
+
   return map;
 }

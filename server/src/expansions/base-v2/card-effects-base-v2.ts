@@ -236,7 +236,7 @@ const expansionModule: CardExpansionModule = {
   bureaucrat: {
     registerEffects:
       () =>
-      async ({ loggerService, reactionContext, match, cardLibrary, actionService, playerId, ...args }) => {
+      async ({ loggerService, reactionContext, match, actionService, playerId, ...args }) => {
         // Gain a Silver onto your deck. Each other player reveals a Victory card
         // from their hand and puts it onto their deck (or reveals a hand with no Victory cards).
         const silverCardId = args.findCardService
@@ -283,32 +283,41 @@ const expansionModule: CardExpansionModule = {
             }
           } else {
             let cardToReveal: Card;
+            const uniqueVictoryCardKeys = new Set(victoryCardsInHand.map(card => card.cardKey));
 
-            if (hand.length === 1 || hand[0].cardKey === hand[1].cardKey) {
-              loggerService.debug(`[BUREAUCRAT EFFECT] only one card to reveal or cards are the same, auto selecting`);
-              cardToReveal = hand[0];
+            if (victoryCardsInHand.length === 1 || uniqueVictoryCardKeys.size === 1) {
+              loggerService.debug('[BUREAUCRAT EFFECT] one unique victory option, auto selecting');
+              cardToReveal = victoryCardsInHand[0];
             } else {
-              loggerService.debug(`[BUREAUCRAT EFFECT] prompting user to select card to reveal...`);
-
-              const selectedCardId = await actionService.run('selectSingleCard', {
-                prompt: 'Reveal victory card',
+              loggerService.debug('[BUREAUCRAT EFFECT] prompting user to select victory card to reveal...');
+              // Prompt with explicit victory options from hand so the target always gets a visible choice.
+              const selectedCardIds = await args.promptService.requestResult<CardId[]>({
                 playerId: targetPlayerId,
-                count: 1,
-                restrict: {
-                  all: [
-                    {
-                      location: 'playerHand',
-                      playerId,
-                    },
-                    { cardType: 'VICTORY' },
-                  ],
+                prompt: 'Reveal a Victory card',
+                content: {
+                  type: 'select',
+                  cardIds: victoryCardsInHand.map(card => card.id),
+                  selectCount: 1,
                 },
               });
-              if (!selectedCardId) {
-                loggerService.debug('[BUREAUCRAT EFFECT] no victory card selected to reveal');
-                return;
+
+              const selectedCardId = selectedCardIds?.[0];
+              const selectedCard = victoryCardsInHand.find(card => card.id === selectedCardId);
+              if (!selectedCard) {
+                loggerService.warn('[BUREAUCRAT EFFECT] no valid victory card selected, defaulting to first');
+                cardToReveal = victoryCardsInHand[0];
+              } else {
+                cardToReveal = selectedCard;
               }
-              cardToReveal = cardLibrary.getCard(selectedCardId);
+            }
+
+            if (!args.findCardService.findCards({
+              location: 'playerHand',
+              playerId: targetPlayerId,
+              cardIds: [cardToReveal.id],
+            }).length) {
+              loggerService.warn('[BUREAUCRAT EFFECT] selected card left hand before move, skipping target resolution');
+              continue;
             }
 
             loggerService.debug(`[BUREAUCRAT EFFECT] revealing ${cardToReveal}...`);
@@ -318,7 +327,7 @@ const expansionModule: CardExpansionModule = {
               cardId: cardToReveal.id,
             });
 
-            loggerService.debug(`[BUREAUCRAT EFFECT] moving card to deck`);
+            loggerService.debug('[BUREAUCRAT EFFECT] moving revealed victory card to deck');
 
             await actionService.run('moveCard', {
               toPlayerId: targetPlayerId,

@@ -26,7 +26,6 @@ import {currentPlayerTurnIdStore, turnPhaseStore} from '../../../../state/turn-s
 import {isNumber, isUndefined} from 'es-toolkit/compat';
 import {AppList} from '../app-list';
 import {SocketService} from '../../../../core/socket-service/socket.service';
-import {gamePausedStore} from '../../../../state/game-logic';
 import {selectableCardStore, waySelectableCardStore} from '../../../../state/interactive-logic';
 import {selectablePileStore} from '../../../../state/interactive-pile-logic';
 import {SelectCardArgs} from '../../../../../types';
@@ -107,22 +106,17 @@ export class MatchScene extends Scene {
     this._socketService.on('ping', this.onPing);
     this._socketService.on('selectCard', this.doSelectCards);
     this._socketService.on('userPrompt', this.onUserPrompt);
-    this._socketService.on('waitingForPlayer', this.onWaitingOnPlayer);
-    this._socketService.on('doneWaitingForPlayer', this.onDoneWaitingForPlayer);
 
     this._cleanup.push(() => {
       this._app.renderer.off('resize');
       this._socketService.off('selectCard');
       this._socketService.off('userPrompt');
-      this._socketService.off('waitingForPlayer');
-      this._socketService.off('doneWaitingForPlayer');
       this.off('pointerdown');
       this.off('pointermove');
       this.off('pointerleave');
     });
 
     this._cleanup.push(currentPlayerTurnIdStore.subscribe(this.onCurrentPlayerTurnUpdated));
-    this._cleanup.push(gamePausedStore.subscribe(this.onPauseGameUpdated));
     // Close any active Way picker when phase flow changes.
     this._cleanup.push(turnPhaseStore.subscribe(() => this.closeWayPicker()));
     this._cleanup.push(promptInteractionLockStore.subscribe((locked) => {
@@ -159,34 +153,6 @@ export class MatchScene extends Scene {
       console.error('Could not play start turn sound');
       console.debug(error);
     }
-  }
-
-
-  private onPauseGameUpdated = (paused: boolean) => {
-    if (paused) {
-      const c = new Container({ label: 'pause' });
-      const g = new Graphics({ label: 'pause' });
-      g.rect(0, 0, this._app.renderer.width, this._app.renderer.height)
-        .fill({ color: this._theme.overlay.color, alpha: this._theme.overlay.softAlpha });
-      c.addChild(g);
-
-      const t = new Text({
-        text: 'PLAYER DISCONNECTED',
-        style: { fill: this._theme.text.onOverlay, fontSize: 36 },
-        anchor: .5
-      });
-
-      t.x = Math.floor(this._app.renderer.width * .5);
-      t.y = Math.floor(this._app.renderer.height * .5);
-
-      c.addChild(t);
-      this.addChild(c);
-      return;
-    }
-
-    const c = this.getChildByLabel('pause');
-    c?.removeFromParent();
-    c?.destroy();
   }
 
   private onCurrentPlayerTurnUpdated = async (playerId: number) => {
@@ -318,37 +284,6 @@ export class MatchScene extends Scene {
       awaitingServerLockReleaseStore.set(false);
     });
     this._socketService.emit('nextPhase');
-  }
-
-  private onWaitingOnPlayer = (playerId: number) => {
-    const c = new Container({ label: 'waitingOnPlayer' });
-
-    const t = new Text({
-      text: `Waiting for ${playerStore(playerId).get()?.name}`,
-      style: {
-        fontSize: 36,
-        fill: this._theme.text.onOverlay,
-      },
-      anchor: .5,
-    });
-
-    const g = new Graphics();
-    g.roundRect(0, 0, t.width + STANDARD_GAP * 2, t.height + STANDARD_GAP * 2)
-      .fill({ color: this._theme.overlay.color, alpha: this._theme.overlay.strongAlpha });
-
-    c.addChild(g);
-    t.x = c.width * .5;
-    t.y = c.height * .5;
-    c.addChild(t);
-
-    this.addChild(c);
-    c.x = this._app.renderer.width * .5 - c.width * .5;
-    c.y = this._app.renderer.height * .5 - c.height * .5;
-  }
-
-  private onDoneWaitingForPlayer = () => {
-    this.getChildByLabel('waitingOnPlayer')
-      ?.removeFromParent();
   }
 
   private onMatchStarted = (started: boolean) => {
