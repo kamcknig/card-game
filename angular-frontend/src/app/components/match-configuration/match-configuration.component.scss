@@ -484,9 +484,26 @@ $match-config-single-column-breakpoint: 940px;
 .saved-config-choice {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex: 1;
   min-width: 0;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 6px 8px;
+  background: transparent;
+  color: var(--theme-text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.saved-config-choice:hover {
+  border-color: var(--theme-border-action);
+}
+
+.saved-config-choice.active {
+  border-color: var(--theme-border-action);
+  box-shadow: 0 0 0 1px rgba(0, 213, 255, 0.35);
 }
 
 .saved-config-delete-button {

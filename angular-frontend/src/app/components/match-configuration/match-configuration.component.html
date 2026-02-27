@@ -500,15 +500,14 @@
         <div class="saved-config-list">
           @for (entry of savedConfigurations(); track entry.key) {
             <div class="saved-config-item">
-              <label class="saved-config-choice">
-                <input
-                  type="radio"
-                  name="savedConfig"
-                  [checked]="selectedLoadConfigurationKey() === entry.key"
-                  (change)="selectLoadConfiguration(entry.key)"
-                />
+              <button
+                class="saved-config-choice"
+                type="button"
+                [class.active]="selectedLoadConfigurationKey() === entry.key"
+                (click)="loadSavedConfiguration(entry.key)"
+              >
                 <span>{{ entry.name }}</span>
-              </label>
+              </button>
               <button class="saved-config-delete-button" type="button" (click)="deleteSavedConfiguration(entry.key, $event)">x</button>
             </div>
           }
@@ -518,7 +517,6 @@
         <div class="config-dialog-error">{{ statusMessage }}</div>
       }
       <div class="config-dialog-actions">
-        <button (click)="submitLoadDialog()" [disabled]="!selectedLoadConfigurationKey()">Load</button>
         <button (click)="closeLoadDialog()">Cancel</button>
       </div>
     </section>

@@ -26,6 +26,8 @@ import { LobbyComponent } from './components/lobby/lobby.component';
 import { CardDetailDialogComponent } from './components/card-detail-dialog/card-detail-dialog.component';
 import { PromptDialogHostComponent } from './components/prompt-dialog/prompt-dialog-host.component';
 import { PromptDialogCoordinatorService } from './core/prompt-dialog/prompt-dialog-coordinator.service';
+import { WayPickerOverlayComponent } from './components/way-picker-overlay/way-picker-overlay.component';
+import { WayPickerOverlayService } from './core/way-picker/way-picker-overlay.service';
 
 @Component({
   selector: 'app-root',
@@ -39,6 +41,7 @@ import { PromptDialogCoordinatorService } from './core/prompt-dialog/prompt-dial
     LobbyComponent,
     CardDetailDialogComponent,
     PromptDialogHostComponent,
+    WayPickerOverlayComponent,
     NgClass,
   ],
   templateUrl: './app.component.html',
@@ -52,6 +55,7 @@ export class AppComponent implements AfterViewInit {
   private readonly _nanoStores = inject(NanostoresService);
   private readonly _app = inject(PIXI_APP);
   private readonly _promptDialogCoordinator = inject(PromptDialogCoordinatorService);
+  private readonly _wayPickerOverlay = inject(WayPickerOverlayService);
 
   title = 'Dominion Clone';
   matchScene = signal<MatchScene | undefined>(undefined);
@@ -99,6 +103,7 @@ export class AppComponent implements AfterViewInit {
         this._socketService,
         this._app as Application,
         this._promptDialogCoordinator,
+        this._wayPickerOverlay,
       );
       await sceneInstance.initialize();
       this._app.stage.addChild(sceneInstance);

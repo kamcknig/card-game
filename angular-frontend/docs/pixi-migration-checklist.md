@@ -25,7 +25,7 @@ templates/CSS.
 - [x] Chunk 1: waiting/pause/dialog-style transient overlays moved to Angular
 - [x] Chunk 2: remaining transient prompt-adjacent overlays moved to Angular
 - [x] Chunk 3: turn action controls moved to Angular
-- [ ] Chunk 4: Way picker moved to Angular
+- [x] Chunk 4: Way picker moved to Angular
 - [ ] Chunk 5: supply area family converted (`basic-supply`, `kingdom-supply`)
 - [ ] Chunk 6: non-supply landscapes converted
 - [ ] Chunk 7: hand/play/deck/discard area converted
@@ -92,5 +92,22 @@ templates/CSS.
   - `angular-frontend/src/app/components/match/match-hud/match-hud.component.ts`
   - `angular-frontend/src/app/components/match/match-hud/match-hud.component.html`
   - `angular-frontend/src/app/components/match/match-hud/match-hud.component.scss`
+  - `angular-frontend/src/app/app.component.ts`
+  - `angular-frontend/src/app/app.component.html`
+
+### Chunk 4 notes
+
+- Goal: move the board-level Way picker UI from Pixi rendering to Angular overlay UI.
+- Scope:
+  - add Angular way-picker overlay component/service
+  - replace Pixi way-picker container rendering in `MatchScene`
+  - keep existing `cardTappedAsWay` socket behavior + lock flow
+- Status: completed
+- Files:
+  - `angular-frontend/src/app/core/way-picker/way-picker-overlay.service.ts`
+  - `angular-frontend/src/app/components/way-picker-overlay/way-picker-overlay.component.ts`
+  - `angular-frontend/src/app/components/way-picker-overlay/way-picker-overlay.component.html`
+  - `angular-frontend/src/app/components/way-picker-overlay/way-picker-overlay.component.scss`
+  - `angular-frontend/src/app/components/match/views/scenes/match-scene.ts`
   - `angular-frontend/src/app/app.component.ts`
   - `angular-frontend/src/app/app.component.html`

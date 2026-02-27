@@ -443,17 +443,12 @@ export class MatchConfigurationComponent implements OnDestroy {
     this.dialogStatusMessage.set(null);
   }
 
-  // Updates the selected saved-configuration key for the load dialog.
-  selectLoadConfiguration(key: string) {
+  // Loads one saved configuration directly from its list entry click.
+  loadSavedConfiguration(key: string) {
+    if (!this.isGameOwner()) return;
     this.selectedLoadConfigurationKey.set(key);
-  }
-
-  // Loads the currently selected saved configuration.
-  submitLoadDialog() {
-    const selectedKey = this.selectedLoadConfigurationKey();
-    if (!selectedKey) return;
     this.dialogStatusMessage.set(null);
-    this._socketService.emit('loadSavedMatchConfiguration', selectedKey);
+    this._socketService.emit('loadSavedMatchConfiguration', key);
   }
 
   // Deletes a saved configuration entry from the load dialog list.
