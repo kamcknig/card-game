@@ -30,24 +30,31 @@ export type CardStackArgs = {
   $tokenDefinitions?: ReadableAtom<Record<TokenId, TokenDefinition>>;
 }
 
+export type CardStackCardRenderLayout = {
+  facing: CardView['facing'];
+  y: number;
+};
+
 export class CardStackView extends Container {
-  private readonly _$cardIds: ReadableAtom<number[]>;
+  protected readonly _$cardIds: ReadableAtom<number[]>;
   private readonly _background: Container = new Container();
-  private readonly _cardContainer: Container<CardView> = new Container({ x: STANDARD_GAP * .8, y: STANDARD_GAP * .8 });
+  protected readonly _cardContainer: Container<CardView> = new Container({ x: STANDARD_GAP * .8, y: STANDARD_GAP * .8 });
+  protected readonly _stackOverlayContainer: Container = new Container({ label: 'stackOverlayContainer' });
   private readonly _tokenContainer: Container<TokenBadgeView> = new Container({ label: 'tokenContainer' });
   private readonly _cleanup: (() => void)[] = [];
   private readonly _showCountBadge: boolean = true;
   private readonly _label: string | undefined;
   private readonly _labelText: Text | undefined;
-  private readonly _cardFacing: CardView['facing'];
+  protected readonly _cardFacing: CardView['facing'];
   private readonly _selectedBadgeCount: CountBadgeView = new CountBadgeView({ label: 'selectedBadgeCount' });
   private readonly _badgeCount: CountBadgeView = new CountBadgeView({ label: 'badgeCount' });
-  private readonly _sscale: number;
+  protected readonly _sscale: number;
   private readonly _alwaysShowCountBadge?: boolean;
   private _tokenBadges: TokenBadgeData[] = [];
   private readonly _tokenPlayerId?: PlayerId;
   private readonly _matchStore?: ReadableAtom<Match | null>;
   private readonly _tokenDefinitionsStore?: ReadableAtom<Record<TokenId, TokenDefinition>>;
+  private readonly _cardBaseYById: Map<number, number> = new Map();
 
   private readonly _showBackground: boolean;
 
@@ -109,6 +116,8 @@ export class CardStackView extends Container {
     }
 
     this.addChild(this._cardContainer);
+    // Overlay container is reserved for stack-specific badges above cards.
+    this.addChild(this._stackOverlayContainer);
     // Token container sits above the card stack for deck tokens.
     this.addChild(this._tokenContainer);
 
@@ -144,6 +153,16 @@ export class CardStackView extends Container {
     this.removeAllListeners();
   }
 
+  // Returns optional per-card layout overrides without mutating source order/state.
+  protected buildCardRenderLayout(_cardIds: readonly number[]): Map<number, CardStackCardRenderLayout> {
+    return new Map();
+  }
+
+  // Draws stack overlays (group badges, labels) after cards are positioned.
+  protected drawStackOverlays(_cardIds: readonly number[]): void {
+    this._stackOverlayContainer.removeChildren().forEach((child) => child.destroy());
+  }
+
   private onSelectedCardsUpdated = (selectedCardIds: readonly number[] = []) => {
     const sortedCardViews = this._cardContainer.children.sort(
       (a, b) => selectedCardIds.includes(a.card.id) ? -1 : selectedCardIds.includes(b.card.id) ? 1 : 0
@@ -152,10 +171,11 @@ export class CardStackView extends Container {
     for (const [idx, cardView] of sortedCardViews.entries()) {
       this._cardContainer.addChildAt(cardView, idx);
       const card = cardView.card;
+      const baseY = this._cardBaseYById.get(card.id) ?? 0;
       if (selectedCardIds.includes(card.id)) {
-        cardView.y = -60;
+        cardView.y = baseY - 60;
       } else {
-        cardView.y = 0;
+        cardView.y = baseY;
       }
       cardView.y *= this._sscale;
     }
@@ -163,6 +183,9 @@ export class CardStackView extends Container {
 
   private drawDeck = (cardIds: readonly number[]) => {
     this._cardContainer.removeChildren();
+    this._cardBaseYById.clear();
+
+    const renderLayoutByCardId = this.buildCardRenderLayout(cardIds);
 
     for (const cardId of cardIds) {
       const cardData = cardStore.get()[cardId];
@@ -171,11 +194,19 @@ export class CardStackView extends Container {
         console.warn(`[card-stack] missing card data for id ${cardId}`);
         continue;
       }
+
+      const renderLayout = renderLayoutByCardId.get(cardId);
+      const cardFacing = renderLayout?.facing ?? cardData?.facing ?? this._cardFacing;
+      const cardBaseY = renderLayout?.y ?? 0;
       const c = this._cardContainer.addChild(createCardView(cardData));
       c.size = 'full';
-      c.facing = cardData?.facing ?? this._cardFacing;
+      c.facing = cardFacing;
       c.scale = this._sscale;
+      c.y = cardBaseY * this._sscale;
+      this._cardBaseYById.set(cardId, cardBaseY);
     }
+
+    this.drawStackOverlays(cardIds);
 
     if (this._showBackground) {
       const g = this._background.getChildByLabel('graphics') as Graphics;

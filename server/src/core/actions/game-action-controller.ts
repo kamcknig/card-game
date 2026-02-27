@@ -3317,11 +3317,18 @@ export class GameActionController implements GameActionDefinitionMap {
 
     if (turnPhase === 'action') {
       const hasActions = match.playerActions > 0;
-      const hasActionCards = this.findCardService.findCards({ location: 'playerHand', playerId: currentPlayer.id })
-        .some((cardId) => cardId.type.includes('ACTION'));
+      // Action-phase selectable cards already include legal hand Actions and playable Shadow Actions in deck.
+      const selectableActionCards = match.selectableCards[currentPlayer.id] ?? [];
+      const hasActionPhasePlayableCards = selectableActionCards.length > 0;
 
-      if (!hasActions || !hasActionCards) {
-        this.loggerService.debug('[checkForRemainingPlayerActions action] skipping to next phase');
+      this.loggerService.debug(
+        `[checkForRemainingPlayerActions action] playerActions=${match.playerActions} selectableActionCards=${selectableActionCards.length}`,
+      );
+
+      if (!hasActions || !hasActionPhasePlayableCards) {
+        this.loggerService.debug(
+          `[checkForRemainingPlayerActions action] skipping to next phase (hasActions=${hasActions}, hasActionPhasePlayableCards=${hasActionPhasePlayableCards})`,
+        );
         await this.nextPhase();
         return;
       }

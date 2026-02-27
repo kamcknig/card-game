@@ -22,6 +22,7 @@ import {CARD_HEIGHT, EVENT_WIDTH, STANDARD_GAP} from '../../../../core/app-conta
 import {resolveCountSpec} from 'shared/resolve-count-spec';
 import {validateCountSpec} from 'shared/validate-count-spec';
 import {CardStackView} from '../card-stack';
+import {DeckStackView} from '../deck-stack';
 import {currentPlayerTurnIdStore, turnPhaseStore} from '../../../../state/turn-state';
 import {isNumber, isUndefined} from 'es-toolkit/compat';
 import {AppList} from '../app-list';
@@ -256,11 +257,12 @@ export class MatchScene extends Scene {
 
     this._playArea = this.addChild(new PlayAreaView());
 
-    this._deck = new CardStackView({
+    this._deck = new DeckStackView({
       $cardIds: getCardSourceStore('playerDeck', this._selfId),
       label: 'DECK',
       cardFacing: 'back',
       alwaysShowCountBadge: true,
+      shadowGroupOffsetPx: 30,
       tokenPlayerId: this._selfId,
       $match: matchStore,
       $tokenDefinitions: tokenDefinitionStore

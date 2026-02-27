@@ -57,6 +57,16 @@
     ],
     "abilityText": "+1 Card\n+1 Action\nThe next time you play a non-Command Action card this turn, replay it afterwards."
   },
+  "fishmonger": {
+    "cost": {
+      "treasure": 2
+    },
+    "type": [
+      "ACTION",
+      "SHADOW"
+    ],
+    "abilityText": "+1 Buy\n+$1\nYou can play this from your deck as if in your hand."
+  },
   "gold-mine": {
     "cost": {
       "treasure": 5

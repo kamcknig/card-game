@@ -518,6 +518,17 @@ const cards: CardExpansionModule = {
       );
     },
   },
+  'fishmonger': {
+    registerEffects: () => async (cardEffectArgs) => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.log('[fishmonger effect] resolving card');
+
+      // Shadow "play from deck" permission is handled by core card interactivity; this effect only resolves payload.
+      await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
+      loggerService.debug('[fishmonger effect] granted +1 Buy and +$1');
+    },
+  },
   'gold-mine': {
     registerEffects: () => async (cardEffectArgs) => {
       const loggerService = cardEffectArgs.loggerService;
