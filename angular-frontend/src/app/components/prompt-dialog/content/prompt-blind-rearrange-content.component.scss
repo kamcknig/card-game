@@ -1,0 +1,17 @@
+.blind-rearrange-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-width: 360px;
+}
+
+.blind-rearrange-slider {
+  width: min(680px, calc(100vw - 180px));
+}
+
+.blind-rearrange-value {
+  color: var(--theme-text-on-dark);
+  font-size: 18px;
+  font-weight: 600;
+}

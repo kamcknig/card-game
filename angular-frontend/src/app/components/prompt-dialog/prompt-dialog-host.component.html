@@ -1,0 +1,99 @@
+@let request = activeRequest();
+@if (request) {
+  <app-ui-dialog
+    [zIndex]="4300"
+    [closeOnBackdrop]="false"
+    [backdropVariant]="'strong'"
+    [panelClass]="'prompt-dialog-overlay'">
+    <div class="prompt-dialog-panel">
+      @if (showDisplayCloseButton() || showFallbackCloseButton()) {
+        <button type="button" class="prompt-close-button" (click)="onDisplayClose()">X</button>
+      }
+
+      @if (request.args.prompt) {
+        <div class="prompt-dialog-title">{{ request.args.prompt }}</div>
+      }
+
+      @let promptContent = request.args.content;
+      @if (promptContent) {
+        <div class="prompt-dialog-body">
+          @switch (promptContent.type) {
+            @case ('select') {
+              <app-prompt-select-content
+                [content]="promptContent"
+                (validationUpdated)="onValidationUpdated($event)"
+                (resultsUpdated)="onResultsUpdated($event)"
+                (selectedWayUpdated)="onSelectedWayUpdated($event)"
+                (finished)="onContentFinished()"
+              ></app-prompt-select-content>
+            }
+
+            @case ('display-cards') {
+              <app-prompt-select-content
+                [content]="promptContent"
+                (validationUpdated)="onValidationUpdated($event)"
+                (resultsUpdated)="onResultsUpdated($event)"
+                (finished)="onContentFinished()"
+              ></app-prompt-select-content>
+            }
+
+            @case ('number-input') {
+              <app-prompt-number-input-content
+                [content]="promptContent"
+                (validationUpdated)="onValidationUpdated($event)"
+                (resultsUpdated)="onResultsUpdated($event)"
+              ></app-prompt-number-input-content>
+            }
+
+            @case ('name-card') {
+              <app-prompt-name-card-content
+                [selfPlayerId]="request.selfPlayerId"
+                (resultsUpdated)="onResultsUpdated($event)"
+                (finished)="onContentFinished()"
+              ></app-prompt-name-card-content>
+            }
+
+            @case ('overpay') {
+              <app-prompt-overpay-content
+                [content]="promptContent"
+                (validationUpdated)="onValidationUpdated($event)"
+                (resultsUpdated)="onResultsUpdated($event)"
+              ></app-prompt-overpay-content>
+            }
+
+            @case ('rearrange') {
+              <app-prompt-rearrange-content
+                [content]="promptContent"
+                (validationUpdated)="onValidationUpdated($event)"
+                (resultsUpdated)="onResultsUpdated($event)"
+              ></app-prompt-rearrange-content>
+            }
+
+            @case ('blind-rearrange') {
+              <app-prompt-blind-rearrange-content
+                [content]="promptContent"
+                (validationUpdated)="onValidationUpdated($event)"
+                (resultsUpdated)="onResultsUpdated($event)"
+              ></app-prompt-blind-rearrange-content>
+            }
+          }
+        </div>
+      }
+
+      @let actionButtons = resolvedActionButtons();
+      @if (actionButtons?.length) {
+        <div class="prompt-dialog-actions">
+          @for (actionButton of actionButtons; track actionButton.action) {
+            <button
+              type="button"
+              class="prompt-action-button"
+              [disabled]="isActionDisabled(actionButton.action)"
+              (click)="onActionSelected(actionButton.action)">
+              {{ actionButton.label }}
+            </button>
+          }
+        </div>
+      }
+    </div>
+  </app-ui-dialog>
+}

@@ -1,0 +1,12 @@
+<div class="blind-rearrange-content">
+  <input
+    class="blind-rearrange-slider"
+    type="range"
+    min="0"
+    [max]="maxValue()"
+    [value]="selectedSplitIndex()"
+    step="1"
+    (input)="onSplitChanged($any($event.target).value)" />
+
+  <div class="blind-rearrange-value">Split at: {{ selectedSplitIndex() }}</div>
+</div>

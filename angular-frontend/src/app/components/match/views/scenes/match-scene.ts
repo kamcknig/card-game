@@ -17,7 +17,6 @@ import {
   selectedPileStore
 } from '../../../../state/interactive-state';
 import {CardView} from '../card-view';
-import {userPromptModal} from '../modal/user-prompt-modal';
 import {CARD_HEIGHT, EVENT_WIDTH, STANDARD_GAP} from '../../../../core/app-contants';
 import {resolveCountSpec} from 'shared/resolve-count-spec';
 import {validateCountSpec} from 'shared/validate-count-spec';
@@ -41,9 +40,12 @@ import {tokenDefinitionStore} from '../../../../state/token-definition-state';
 import {getPixiSceneTheme} from '../../../../theme/pixi-theme';
 import { debugRuntimeContextStore } from '../../../../state/debug-runtime-state';
 import { cardStore } from '../../../../state/card-state';
+import { PromptDialogCoordinatorService } from '../../../../core/prompt-dialog/prompt-dialog-coordinator.service';
+import { displayCardDetail } from '../modal/display-card-detail';
 
 export class MatchScene extends Scene {
   private static readonly DEFAULT_TOOLTIP_CLOSE_DELAY_MS = 160;
+  private static readonly WAY_PICKER_EDGE_OVERLAP_PX = 5;
   private _board: Container = new Container();
   private _baseSupply: Container = new Container({ scale: 1 });
   private _playerHand: PlayerHandView | undefined;
@@ -80,7 +82,8 @@ export class MatchScene extends Scene {
 
   constructor(
     private _socketService: SocketService,
-    private _app: Application
+    private _app: Application,
+    private readonly _promptDialogCoordinator: PromptDialogCoordinatorService,
   ) {
     super();
 
@@ -277,7 +280,11 @@ export class MatchScene extends Scene {
     });
     this.addChild(this._discard);
 
-    this._playerHand = new PlayerHandView(this._selfId, this._socketService);
+    this._playerHand = new PlayerHandView(
+      this._selfId,
+      this._socketService,
+      this._promptDialogCoordinator,
+    );
     this._playerHand.on('nextPhase', this.onNextPhasePressed);
 
     this._cleanup.push(() => this._playerHand?.off('nextPhase'));
@@ -390,12 +397,7 @@ export class MatchScene extends Scene {
     // Lock turn action controls while prompt input is active.
     promptInteractionLockStore.set(true);
     try {
-      const result = await userPromptModal(
-        this._app,
-        this._socketService,
-        args,
-        this._selfId
-      );
+      const result = await this.openPromptUi(args);
       if (waitForInput) {
         this._socketService.emit('userInputReceived', signalId, result);
       }
@@ -403,6 +405,16 @@ export class MatchScene extends Scene {
       this._selecting = false;
       promptInteractionLockStore.set(false);
     }
+  }
+
+  // Opens prompt UI through the Angular prompt dialog host.
+  private async openPromptUi(args: UserPromptActionArgs): Promise<unknown> {
+    if (!this._promptDialogCoordinator.supportsPrompt(args)) {
+      console.warn('[match scene] unsupported prompt payload for Angular dialog host');
+      return { action: 0 };
+    }
+
+    return await this._promptDialogCoordinator.openPrompt(args, this._selfId);
   }
 
   // Clears and hides the Way picker container.
@@ -559,6 +571,7 @@ export class MatchScene extends Scene {
         }
 
         if (event.button === 2) {
+          void displayCardDetail({ detailImagePath: way.detailImagePath });
           return;
         }
 
@@ -605,14 +618,14 @@ export class MatchScene extends Scene {
 
     const globalCardPosition = cardView.getGlobalPosition();
     const localCardPosition = this.toLocal(globalCardPosition);
-    let pickerX = Math.floor(localCardPosition.x + cardView.width + STANDARD_GAP);
+    let pickerX = Math.floor(localCardPosition.x + cardView.width - MatchScene.WAY_PICKER_EDGE_OVERLAP_PX);
     let pickerY = Math.floor(localCardPosition.y - Math.floor(pickerPadding * .5));
 
     const maxX = this._app.renderer.width - panelWidth - STANDARD_GAP;
     const maxY = this._app.renderer.height - totalHeight - STANDARD_GAP;
 
     if (pickerX > maxX) {
-      pickerX = Math.floor(localCardPosition.x - panelWidth - STANDARD_GAP);
+      pickerX = Math.floor(localCardPosition.x - panelWidth + MatchScene.WAY_PICKER_EDGE_OVERLAP_PX);
     }
 
     pickerX = Math.max(STANDARD_GAP, Math.min(pickerX, maxX));
@@ -891,12 +904,7 @@ export class MatchScene extends Scene {
           modalArgs.validationAction = 1;
         }
 
-        const modalResult = await userPromptModal(
-          this._app,
-          this._socketService,
-          modalArgs,
-          this._selfId,
-        );
+        const modalResult = await this.openPromptUi(modalArgs);
         const parsedSelection = this.parsePromptSelectionResult(modalResult);
         const payload: CardId[] | PlayCardSelectionResult = supportsWaySelection
           ? {

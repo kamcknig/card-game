@@ -1,0 +1,66 @@
+<div class="prompt-select-content" #promptRoot>
+  @if (cardEntries().length > 0) {
+    <div class="selection-row">
+      @for (entry of cardEntries(); track entry.key) {
+        <button
+          type="button"
+          class="selection-entry"
+          [class.selectable]="entry.selectable && !displayOnly()"
+          [class.selected]="isSelected(entry)"
+          [class.non-selectable]="!entry.selectable && !displayOnly()"
+          (mouseenter)="onEntryMouseEnter(entry, $event)"
+          (mouseleave)="onEntryMouseLeave(entry)"
+          (click)="toggleEntry(entry)">
+          <app-card
+            [cardId]="entry.sourceId"
+            [size]="'half'"
+            [forceFacing]="entry.forceFacing"
+          ></app-card>
+        </button>
+      }
+    </div>
+  }
+
+  @if (cardLikeEntries().length > 0) {
+    <div class="selection-row card-like-row">
+      @for (entry of cardLikeEntries(); track entry.key) {
+        <button
+          type="button"
+          class="selection-entry"
+          [class.selectable]="entry.selectable && !displayOnly()"
+          [class.selected]="isSelected(entry)"
+          [class.non-selectable]="!entry.selectable && !displayOnly()"
+          (click)="toggleEntry(entry)">
+          <app-card-like
+            [cardLikeId]="entry.sourceId"
+            [size]="'half'"
+          ></app-card-like>
+        </button>
+      }
+    </div>
+  }
+
+  @if (showWayTooltip()) {
+    <div
+      class="way-picker"
+      [style.left.px]="wayTooltipPosition().left"
+      [style.top.px]="wayTooltipPosition().top"
+      (mouseenter)="onWayTooltipMouseEnter()"
+      (mouseleave)="onWayTooltipMouseLeave()">
+      <div class="way-picker-list">
+        @for (way of sortedWays(); track way.id) {
+          <button
+            type="button"
+            class="way-entry"
+            [class.selected-way]="isSelectedWay(way.id)"
+            (click)="selectWay(way.id)">
+            <app-card-like
+              [cardLikeId]="way.id"
+              [size]="'half'"
+            ></app-card-like>
+          </button>
+        }
+      </div>
+    </div>
+  }
+</div>

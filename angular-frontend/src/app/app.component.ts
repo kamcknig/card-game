@@ -24,6 +24,8 @@ import { matchStartedStore, matchSummaryStore } from './state/match-state';
 import { MatchHudComponent } from './components/match/match-hud/match-hud.component';
 import { LobbyComponent } from './components/lobby/lobby.component';
 import { CardDetailDialogComponent } from './components/card-detail-dialog/card-detail-dialog.component';
+import { PromptDialogHostComponent } from './components/prompt-dialog/prompt-dialog-host.component';
+import { PromptDialogCoordinatorService } from './core/prompt-dialog/prompt-dialog-coordinator.service';
 
 @Component({
   selector: 'app-root',
@@ -36,6 +38,7 @@ import { CardDetailDialogComponent } from './components/card-detail-dialog/card-
     MatchHudComponent,
     LobbyComponent,
     CardDetailDialogComponent,
+    PromptDialogHostComponent,
     NgClass,
   ],
   templateUrl: './app.component.html',
@@ -48,6 +51,7 @@ export class AppComponent implements AfterViewInit {
   private readonly _socketService = inject(SocketService);
   private readonly _nanoStores = inject(NanostoresService);
   private readonly _app = inject(PIXI_APP);
+  private readonly _promptDialogCoordinator = inject(PromptDialogCoordinatorService);
 
   title = 'Dominion Clone';
   matchScene = signal<MatchScene | undefined>(undefined);
@@ -81,7 +85,11 @@ export class AppComponent implements AfterViewInit {
       if (this.matchScene()) {
         return;
       }
-      const sceneInstance = new MatchScene(this._socketService, this._app as Application);
+      const sceneInstance = new MatchScene(
+        this._socketService,
+        this._app as Application,
+        this._promptDialogCoordinator,
+      );
       await sceneInstance.initialize();
       this._app.stage.addChild(sceneInstance);
       this.matchScene.set(sceneInstance);

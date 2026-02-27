@@ -15,10 +15,9 @@ import { matchStore } from '../../../state/match-state';
 import { tokenDefinitionStore } from '../../../state/token-definition-state';
 import { TokenBadgeView } from './token-badge-view';
 import { getTokenShortLabel } from './token-utils';
-import { applicationStore } from '../../../state/app-state';
-import { userPromptModal } from './modal/user-prompt-modal';
 import { CubeTokenView } from './cube-token-view';
 import { createPanelShadowFilter } from './panel-shadow-filter';
+import { PromptDialogCoordinatorService } from '../../../core/prompt-dialog/prompt-dialog-coordinator.service';
 
 export class PlayerHandView extends Container {
   private static readonly HAND_CORNER_RADIUS = 5;
@@ -63,6 +62,7 @@ export class PlayerHandView extends Container {
   constructor(
     private playerId: number,
     private readonly _socketService: SocketService,
+    private readonly _promptDialogCoordinator: PromptDialogCoordinatorService,
   ) {
     super();
 
@@ -181,12 +181,7 @@ export class PlayerHandView extends Container {
   // Opens the states modal for the current player.
   private openStatesModal() {
     if (!this._currentStateIds.length) return;
-    const app = applicationStore.get();
-    if (!app) {
-      console.warn('[player hand] application not ready for states modal');
-      return;
-    }
-    void userPromptModal(app, this._socketService, {
+    void this._promptDialogCoordinator.openPrompt({
       playerId: this.playerId,
       prompt: 'States',
       content: {
@@ -194,18 +189,16 @@ export class PlayerHandView extends Container {
         cardIds: [],
         cardLikeIds: this._currentStateIds,
       },
-    }, this.playerId);
+    }, this.playerId).catch((error) => {
+      console.warn('[player hand] failed to open states prompt dialog');
+      console.debug(error);
+    });
   }
 
   // Opens the artifacts modal for the current player.
   private openArtifactsModal() {
     if (!this._currentArtifactIds.length) return;
-    const app = applicationStore.get();
-    if (!app) {
-      console.warn('[player hand] application not ready for artifacts modal');
-      return;
-    }
-    void userPromptModal(app, this._socketService, {
+    void this._promptDialogCoordinator.openPrompt({
       playerId: this.playerId,
       prompt: 'Artifacts',
       content: {
@@ -213,7 +206,10 @@ export class PlayerHandView extends Container {
         cardIds: [],
         cardLikeIds: this._currentArtifactIds,
       },
-    }, this.playerId);
+    }, this.playerId).catch((error) => {
+      console.warn('[player hand] failed to open artifacts prompt dialog');
+      console.debug(error);
+    });
   }
 
   // Renders any unplaced tokens owned by this player in the token tray.
