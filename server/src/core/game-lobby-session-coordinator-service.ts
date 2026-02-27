@@ -19,6 +19,7 @@ export interface GameLobbyCallbacks {
   onSaveMatchConfiguration: (playerId: PlayerId, name: string) => void;
   onRequestSavedMatchConfigurationList: (playerId: PlayerId) => void;
   onLoadSavedMatchConfiguration: (playerId: PlayerId, key: string) => void | Promise<void>;
+  onDeleteSavedMatchConfiguration: (playerId: PlayerId, key: string) => void;
   // Notifies outer orchestrators that game state changed (players/owner/match status).
   onGameStateChanged?: () => void;
 }
@@ -530,6 +531,7 @@ export class GameLobbySessionCoordinatorService {
       onSaveMatchConfiguration: (name: string) => callbacks.onSaveMatchConfiguration(ownerId, name),
       onRequestSavedMatchConfigurationList: () => callbacks.onRequestSavedMatchConfigurationList(ownerId),
       onLoadSavedMatchConfiguration: (key: string) => callbacks.onLoadSavedMatchConfiguration(ownerId, key),
+      onDeleteSavedMatchConfiguration: (key: string) => callbacks.onDeleteSavedMatchConfiguration(ownerId, key),
       onSearchCards: (playerId, searchTerm) => {
         const cards = this.expansionSearchService.searchKingdomCards(searchTerm);
         this.loggerService.debug(

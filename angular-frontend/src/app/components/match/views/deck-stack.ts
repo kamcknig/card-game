@@ -1,6 +1,7 @@
 import { cardStore } from '../../../state/card-state';
 import { CountBadgeView } from './count-badge-view';
 import { CardStackArgs, CardStackCardRenderLayout, CardStackView } from './card-stack';
+import { selectedCardStore } from '../../../state/interactive-state';
 
 type DeckStackArgs = CardStackArgs & {
   shadowGroupOffsetPx?: number;
@@ -89,14 +90,18 @@ export class DeckStackView extends CardStackView {
   // Adds per-group shadow counters in the top-left corner of each grouped stack.
   protected override drawStackOverlays(_cardIds: readonly number[]): void {
     super.drawStackOverlays(_cardIds);
+    const selectedCardIds = new Set(selectedCardStore.get());
 
     for (const group of this._shadowGroups) {
+      // Keep the group badge aligned with a lifted selected shadow stack.
+      const hasSelectedCardInGroup = group.members.some((member) => selectedCardIds.has(member.cardId));
+      const selectedYOffset = hasSelectedCardInGroup ? -60 : 0;
       const badge = new CountBadgeView({
         count: group.count,
         label: `shadow-group-count:${group.cardKey}:${group.topGlobalIndex}`,
       });
       badge.x = this._cardContainer.x + 5;
-      badge.y = this._cardContainer.y + 5 + group.offsetY * this._sscale;
+      badge.y = this._cardContainer.y + 5 + (group.offsetY + selectedYOffset) * this._sscale;
       badge.scale = this._sscale;
       this._stackOverlayContainer.addChild(badge);
     }

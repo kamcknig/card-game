@@ -55,23 +55,28 @@
     "order": 11
   },
   {
+    "title": "Nocturne",
+    "name": "nocturne",
+    "order": 12
+  },
+  {
     "title": "Menagerie",
     "name": "menagerie",
-    "order": 12
+    "order": 13
   },
   {
     "title": "Allies",
     "name": "allies",
-    "order": 13
+    "order": 14
   },
   {
     "title": "Plunder",
     "name": "plunder",
-    "order": 14
+    "order": 15
   },
   {
     "title": "Rising Sun",
     "name": "rising-sun",
-    "order": 15
+    "order": 16
   }
 ]

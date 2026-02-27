@@ -55,6 +55,7 @@ export class CardStackView extends Container {
   private readonly _matchStore?: ReadableAtom<Match | null>;
   private readonly _tokenDefinitionsStore?: ReadableAtom<Record<TokenId, TokenDefinition>>;
   private readonly _cardBaseYById: Map<number, number> = new Map();
+  private readonly _cardBaseOrderById: Map<number, number> = new Map();
 
   private readonly _showBackground: boolean;
 
@@ -165,7 +166,12 @@ export class CardStackView extends Container {
 
   private onSelectedCardsUpdated = (selectedCardIds: readonly number[] = []) => {
     const sortedCardViews = this._cardContainer.children.sort(
-      (a, b) => selectedCardIds.includes(a.card.id) ? -1 : selectedCardIds.includes(b.card.id) ? 1 : 0
+      (a, b) => {
+        // Preserve base render order for all cards, even when selected.
+        const aBaseOrder = this._cardBaseOrderById.get(a.card.id) ?? 0;
+        const bBaseOrder = this._cardBaseOrderById.get(b.card.id) ?? 0;
+        return aBaseOrder - bBaseOrder;
+      }
     );
 
     for (const [idx, cardView] of sortedCardViews.entries()) {
@@ -179,15 +185,19 @@ export class CardStackView extends Container {
       }
       cardView.y *= this._sscale;
     }
+
+    // Re-render stack overlays so selection-dependent badges stay aligned with moved cards.
+    this.drawStackOverlays(this._$cardIds.get());
   }
 
   private drawDeck = (cardIds: readonly number[]) => {
     this._cardContainer.removeChildren();
     this._cardBaseYById.clear();
+    this._cardBaseOrderById.clear();
 
     const renderLayoutByCardId = this.buildCardRenderLayout(cardIds);
 
-    for (const cardId of cardIds) {
+    for (const [cardOrder, cardId] of cardIds.entries()) {
       const cardData = cardStore.get()[cardId];
       // Guard against stale card sources pointing at missing card data.
       if (!cardData) {
@@ -204,6 +214,7 @@ export class CardStackView extends Container {
       c.scale = this._sscale;
       c.y = cardBaseY * this._sscale;
       this._cardBaseYById.set(cardId, cardBaseY);
+      this._cardBaseOrderById.set(cardId, cardOrder);
     }
 
     this.drawStackOverlays(cardIds);

@@ -127,7 +127,17 @@ export class NonSupplyKingdomView extends Container {
     }
 
     const isLootPile = kingdomName === 'loot';
-    const displayRows = kingdom.startingCards;
+    // Non-loot piles should render one row per card key, not one row per physical starting copy.
+    const seenCardKeys = new Set<string>();
+    const displayRows = isLootPile
+      ? kingdom.startingCards
+      : kingdom.startingCards.filter((card) => {
+          if (seenCardKeys.has(card.cardKey)) {
+            return false;
+          }
+          seenCardKeys.add(card.cardKey);
+          return true;
+        });
     const rowIds = displayRows.map((card, idx) => isLootPile ? `loot:${idx}` : card.cardKey);
 
     // Remove stale rows that are no longer present in the current pile view model.

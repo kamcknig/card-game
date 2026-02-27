@@ -519,6 +519,13 @@ export type MatchConfigurationLoadResult = {
   message?: string;
 };
 
+// Delete-operation result payload for match-configuration persistence.
+export type MatchConfigurationDeleteResult = {
+  ok: boolean;
+  key: string;
+  message?: string;
+};
+
 export type ServerEmitEvents = {
   addLogEntry: (logEntry: LogEntry[]) => void;
   cardEffectsComplete: (playerId: PlayerId, cardId?: CardId) => void;
@@ -567,6 +574,8 @@ export type ServerEmitEvents = {
   matchConfigurationSaveCompleted: (result: MatchConfigurationSaveResult) => void;
   // Load result for a match-configuration load request.
   matchConfigurationLoadCompleted: (result: MatchConfigurationLoadResult) => void;
+  // Delete result for a match-configuration delete request.
+  matchConfigurationDeleteCompleted: (result: MatchConfigurationDeleteResult) => void;
   searchCardResponse: (cardData: CardNoId[]) => void;
   // Sends event search results to the client.
   searchEventResponse: (eventData: EventNoId[]) => void;
@@ -633,6 +642,8 @@ export interface ServerListenEvents {
   requestSavedMatchConfigurationList: () => void;
   // Loads a saved match configuration by key.
   loadSavedMatchConfiguration: (key: string) => void;
+  // Deletes a saved match configuration by key.
+  deleteSavedMatchConfiguration: (key: string) => void;
   searchCards: (playerId: PlayerId, searchStr: string) => void;
   // Requests event search results from the server.
   searchEvents: (playerId: PlayerId, searchStr: string) => void;

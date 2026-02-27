@@ -16,6 +16,7 @@ import {
   EventNoId,
   ExpansionListElement,
   LandmarkNoId,
+  MatchConfigurationDeleteResult,
   MatchConfigurationLoadResult,
   MatchConfigurationSaveNameCheckResult,
   MatchConfigurationSaveResult,
@@ -108,6 +109,8 @@ export class MatchConfigurationComponent implements OnDestroy {
   readonly savedConfigurations = signal<SavedMatchConfigurationEntry[]>([]);
   // Currently selected saved configuration key in load dialog.
   readonly selectedLoadConfigurationKey = signal<string | null>(null);
+  // Last successfully loaded on-disk configuration display name for save-dialog defaults.
+  readonly loadedConfigurationName = signal<string | null>(null);
   // Baseline snapshot used to determine if configuration has changed since last save/load baseline.
   readonly configurationSaveBaseline = signal<MatchConfiguration | null>(null);
   // When true, baseline will be refreshed on next matchConfiguration update.
@@ -123,10 +126,10 @@ export class MatchConfigurationComponent implements OnDestroy {
     return compare(structuredClone(baseline), structuredClone(current)).length > 0;
   });
 
-  // Save dialog submit state requires valid non-blank name not already taken.
+  // Save dialog submit state requires a valid non-blank name.
   readonly canSubmitSaveDialog = computed(() => {
     const check = this.saveNameCheck();
-    if (!check || !check.isValid || check.exists) {
+    if (!check || !check.isValid) {
       return false;
     }
     return this.saveDialogName().trim().length > 0
@@ -186,6 +189,25 @@ export class MatchConfigurationComponent implements OnDestroy {
       lookup[expansionName] = true;
     }
     return lookup;
+  });
+  // True when expansion selection currently includes one or more entries.
+  readonly canSelectNoExpansions = computed(() => {
+    if (!this.isGameOwner()) {
+      return false;
+    }
+    return (this.matchConfiguration()?.expansions?.length ?? 0) > 0;
+  });
+  // True when at least one available expansion is not currently selected.
+  readonly canSelectAllExpansions = computed(() => {
+    if (!this.isGameOwner()) {
+      return false;
+    }
+    const expansionItems = this.expansionList();
+    if (expansionItems.length < 1) {
+      return false;
+    }
+    const selectedLookup = this.selectedExpansionLookup();
+    return expansionItems.some((expansion) => selectedLookup[expansion.name] !== true);
   });
 
   // Derived selection lists rendered by each landscape section.
@@ -264,6 +286,7 @@ export class MatchConfigurationComponent implements OnDestroy {
     this._socketService.on('matchConfigurationSaveCompleted', this.onSaveCompleted);
     this._socketService.on('savedMatchConfigurationList', this.onSavedConfigurationListReceived);
     this._socketService.on('matchConfigurationLoadCompleted', this.onLoadCompleted);
+    this._socketService.on('matchConfigurationDeleteCompleted', this.onDeleteCompleted);
 
     // Initialize baseline from first loaded configuration, and refresh it after successful loads.
     effect(() => {
@@ -289,6 +312,7 @@ export class MatchConfigurationComponent implements OnDestroy {
     this._socketService.off('matchConfigurationSaveCompleted', this.onSaveCompleted);
     this._socketService.off('savedMatchConfigurationList', this.onSavedConfigurationListReceived);
     this._socketService.off('matchConfigurationLoadCompleted', this.onLoadCompleted);
+    this._socketService.off('matchConfigurationDeleteCompleted', this.onDeleteCompleted);
   }
 
   // Toggles expansion selection in match configuration.
@@ -306,6 +330,24 @@ export class MatchConfigurationComponent implements OnDestroy {
     }
 
     this.emitMatchConfigurationUpdate({ expansions: currentExpansions });
+  }
+
+  // Selects all expansions currently available in the expansion list.
+  onSelectAllExpansions() {
+    if (!this.isGameOwner()) return;
+    const currentConfig = this.matchConfiguration();
+    if (!currentConfig) return;
+
+    this.emitMatchConfigurationUpdate({ expansions: [...this.expansionList()] });
+  }
+
+  // Clears all selected expansions from match configuration.
+  onSelectNoExpansions() {
+    if (!this.isGameOwner()) return;
+    const currentConfig = this.matchConfiguration();
+    if (!currentConfig) return;
+
+    this.emitMatchConfigurationUpdate({ expansions: [] });
   }
 
   // Adds a single computer player to the lobby.
@@ -330,10 +372,14 @@ export class MatchConfigurationComponent implements OnDestroy {
     setTimeout(() => this._saveDialogNameInput?.nativeElement.focus(), 0);
     this.loadDialogVisible.set(false);
     this.dialogStatusMessage.set(null);
-    const existingName = this.saveDialogName().trim();
-    if (existingName.length > 0) {
+    const loadedName = this.loadedConfigurationName()?.trim() ?? '';
+    if (loadedName.length > 0) {
+      this.saveDialogName.set(loadedName);
+    }
+    const defaultName = this.saveDialogName().trim();
+    if (defaultName.length > 0) {
       this.saveNameCheckPending.set(true);
-      this._socketService.emit('checkMatchConfigurationSaveName', existingName);
+      this._socketService.emit('checkMatchConfigurationSaveName', defaultName);
     } else {
       this.saveNameCheck.set(null);
       this.saveNameCheckPending.set(false);
@@ -408,6 +454,18 @@ export class MatchConfigurationComponent implements OnDestroy {
     if (!selectedKey) return;
     this.dialogStatusMessage.set(null);
     this._socketService.emit('loadSavedMatchConfiguration', selectedKey);
+  }
+
+  // Deletes a saved configuration entry from the load dialog list.
+  deleteSavedConfiguration(key: string, event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!this.isGameOwner()) return;
+    this.dialogStatusMessage.set(null);
+    if (this.selectedLoadConfigurationKey() === key) {
+      this.selectedLoadConfigurationKey.set(null);
+    }
+    this._socketService.emit('deleteSavedMatchConfiguration', key);
   }
 
   // Opens a single shared selection modal configured for the requested selection type.
@@ -703,6 +761,13 @@ export class MatchConfigurationComponent implements OnDestroy {
     this.emitMatchConfigurationUpdate({ bannedKingdoms: this.sortByCardKey(updatedBanned) });
   }
 
+  // Removes all banned kingdom cards from configuration.
+  clearBannedKingdoms() {
+    if (!this.isGameOwner()) return;
+    if (this.bannedKingdoms().length < 1) return;
+    this.emitMatchConfigurationUpdate({ bannedKingdoms: [] });
+  }
+
   // Handles debounced save-name availability responses from server.
   private onSaveNameChecked = (result: MatchConfigurationSaveNameCheckResult) => {
     const currentName = this.saveDialogName().trim();
@@ -729,18 +794,37 @@ export class MatchConfigurationComponent implements OnDestroy {
 
   // Handles saved configuration list updates from server.
   private onSavedConfigurationListReceived = (entries: SavedMatchConfigurationEntry[]) => {
-    this.savedConfigurations.set([...entries]);
+    const nextEntries = [...entries];
+    this.savedConfigurations.set(nextEntries);
+    const selectedKey = this.selectedLoadConfigurationKey();
+    if (selectedKey && !nextEntries.some((entry) => entry.key === selectedKey)) {
+      this.selectedLoadConfigurationKey.set(null);
+    }
   };
 
   // Handles load-completion responses from server.
   private onLoadCompleted = (result: MatchConfigurationLoadResult) => {
     if (result.ok) {
+      const loadedEntryName = this.savedConfigurations()
+        .find((entry) => entry.key === result.key)
+        ?.name
+        ?.trim();
+      this.loadedConfigurationName.set(loadedEntryName && loadedEntryName.length > 0 ? loadedEntryName : result.key);
       this.refreshSaveBaselineOnNextConfigUpdate.set(true);
       this.dialogStatusMessage.set(null);
       this.closeLoadDialog();
       return;
     }
     this.dialogStatusMessage.set(result.message ?? `Failed to load '${result.key}'.`);
+  };
+
+  // Handles delete-completion responses from server.
+  private onDeleteCompleted = (result: MatchConfigurationDeleteResult) => {
+    if (result.ok) {
+      this.dialogStatusMessage.set(null);
+      return;
+    }
+    this.dialogStatusMessage.set(result.message ?? `Failed to delete '${result.key}'.`);
   };
 
   // Emits a match-configuration patch while preserving untouched fields.

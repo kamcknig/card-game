@@ -192,7 +192,7 @@ Install dependencies in each package before running:
 Key commands:
 - `cd server && deno task dev:watch`: run server with file watch and required permissions.
 - `cd angular-frontend && npm run start`: run Angular dev server (`http://localhost:4200`).
-- `cd angular-frontend && npm run build`: production client build.
+- `cd angular-frontend && npm run build`: production client build (optional for routine frontend code validation).
 - `cd angular-frontend && npm test`: run unit tests (Karma/Jasmine).
 - `cd server && deno lint src/`: lint server TypeScript.
 
@@ -206,6 +206,8 @@ Key commands:
 - Frontend unit tests live next to source as `*.spec.ts` under `angular-frontend/src/app/**`.
 - Use `npm test` in `angular-frontend` for local verification.
 - For routine code changes, do not start the frontend or backend apps just to validate changes; type checking is sufficient.
+- For frontend changes, required validation is TypeScript checking only: `cd angular-frontend && npx tsc -p tsconfig.app.json --noEmit`.
+- Do not require `npm run build`/`ng build` for routine frontend changes.
 - Server currently has lint/task-based validation but no established unit test suite; add targeted tests with new frontend behavior and regression-prone logic.
 
 ## Commit & Pull Request Guidelines

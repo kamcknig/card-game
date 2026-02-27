@@ -4,6 +4,7 @@ import {
   CardId,
   DebugRuntimeContext,
   ExpansionListElement,
+  MatchConfigurationDeleteResult,
   MatchConfigurationLoadResult,
   MatchConfigurationSaveNameCheckResult,
   MatchConfigurationSaveResult,
@@ -242,6 +243,7 @@ export class Game {
         onSaveMatchConfiguration: this.onSaveMatchConfiguration,
         onRequestSavedMatchConfigurationList: this.onRequestSavedMatchConfigurationList,
         onLoadSavedMatchConfiguration: this.onLoadSavedMatchConfiguration,
+        onDeleteSavedMatchConfiguration: this.onDeleteSavedMatchConfiguration,
         onGameStateChanged: this.onGameStateChanged,
       },
       registerRemovalVoteHandler: this.registerRemovalVoteHandler,
@@ -261,6 +263,7 @@ export class Game {
         onSaveMatchConfiguration: this.onSaveMatchConfiguration,
         onRequestSavedMatchConfigurationList: this.onRequestSavedMatchConfigurationList,
         onLoadSavedMatchConfiguration: this.onLoadSavedMatchConfiguration,
+        onDeleteSavedMatchConfiguration: this.onDeleteSavedMatchConfiguration,
         onGameStateChanged: this.onGameStateChanged,
       },
     });
@@ -406,6 +409,25 @@ export class Game {
       key: loadResult.key,
     };
     this.runtimeState.socketMap.get(playerId)?.emit('matchConfigurationLoadCompleted', result);
+  };
+
+  // Deletes one saved configuration and emits the current saved list back to owner.
+  private onDeleteSavedMatchConfiguration = (playerId: PlayerId, key: string): void => {
+    const deleteResult = this.matchConfigurationSaveService.deleteConfiguration(key);
+    const result: MatchConfigurationDeleteResult = deleteResult.ok
+      ? {
+          ok: true,
+          key: deleteResult.key,
+        }
+      : {
+          ok: false,
+          key: deleteResult.key,
+          message: deleteResult.message,
+        };
+    this.runtimeState.socketMap.get(playerId)?.emit('matchConfigurationDeleteCompleted', result);
+    if (result.ok) {
+      this.emitSavedConfigurationList(playerId);
+    }
   };
 
   // Emits the saved-configuration list to one owner client.

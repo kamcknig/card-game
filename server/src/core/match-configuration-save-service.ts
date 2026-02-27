@@ -89,14 +89,6 @@ export class MatchConfigurationSaveService {
       };
     }
 
-    if (check.exists) {
-      return {
-        ok: false,
-        name: check.normalizedName,
-        message: `A saved configuration named '${check.normalizedName}' already exists.`,
-      };
-    }
-
     const saveDirectory = getSavedMatchConfigurationDirectory();
     const saveFilePath = this.getSaveFilePath(check.normalizedName);
     const trimmedName = name.trim();
@@ -109,7 +101,9 @@ export class MatchConfigurationSaveService {
     try {
       Deno.mkdirSync(saveDirectory, { recursive: true });
       Deno.writeTextFileSync(saveFilePath, JSON.stringify(payload, null, 2));
-      this.loggerService.info(`[match config saves] saved configuration '${payload.name}' (${check.normalizedName})`);
+      this.loggerService.info(
+        `[match config saves] ${check.exists ? 'overwrote' : 'saved'} configuration '${payload.name}' (${check.normalizedName})`,
+      );
       return {
         ok: true,
         name: payload.name,

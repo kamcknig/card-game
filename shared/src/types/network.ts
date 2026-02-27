@@ -2,6 +2,7 @@
 export type {
   DebugRuntimeContext,
   ExpansionListElement,
+  MatchConfigurationDeleteResult,
   MatchConfigurationLoadResult,
   MatchConfigurationSaveNameCheckResult,
   MatchConfigurationSaveResult,

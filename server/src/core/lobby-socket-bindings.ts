@@ -9,6 +9,7 @@ export interface OwnerLobbyHandlers {
   onSaveMatchConfiguration: (name: string) => void;
   onRequestSavedMatchConfigurationList: () => void;
   onLoadSavedMatchConfiguration: (key: string) => void;
+  onDeleteSavedMatchConfiguration: (key: string) => void;
   onSearchCards: (playerId: PlayerId, searchTerm: string) => void;
   onSearchEvents: (playerId: PlayerId, searchTerm: string) => void;
   onSearchLandmarks: (playerId: PlayerId, searchTerm: string) => void;
@@ -33,6 +34,7 @@ export class LobbySocketBindings {
     socket.on('saveMatchConfiguration', handlers.onSaveMatchConfiguration);
     socket.on('requestSavedMatchConfigurationList', handlers.onRequestSavedMatchConfigurationList);
     socket.on('loadSavedMatchConfiguration', handlers.onLoadSavedMatchConfiguration);
+    socket.on('deleteSavedMatchConfiguration', handlers.onDeleteSavedMatchConfiguration);
     socket.on('searchCards', handlers.onSearchCards);
     socket.on('searchEvents', handlers.onSearchEvents);
     socket.on('searchLandmarks', handlers.onSearchLandmarks);
@@ -53,6 +55,7 @@ export class LobbySocketBindings {
     socket.off('saveMatchConfiguration');
     socket.off('requestSavedMatchConfigurationList');
     socket.off('loadSavedMatchConfiguration');
+    socket.off('deleteSavedMatchConfiguration');
     socket.off('searchCards');
     socket.off('searchEvents');
     socket.off('searchLandmarks');
