@@ -1,22 +1,17 @@
 import {
-  AfterViewInit,
   ChangeDetectionStrategy,
   Component,
-  ElementRef,
   effect,
   inject,
   signal,
-  ViewChild
 } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { NgClass, NgSwitch, NgSwitchCase } from '@angular/common';
 import { SocketService } from './core/socket-service/socket.service';
 import { NanostoresService } from '@nanostores/angular';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { Application, Rectangle } from 'pixi.js';
 import { SceneNames, sceneStore } from './state/game-state';
 import { MatchScene } from './components/match/views/scenes/match-scene';
-import { PIXI_APP } from './core/pixi-application.token';
 import { MatchConfigurationComponent } from './components/match-configuration/match-configuration.component';
 import { GameSummaryComponent } from './components/game-summary/game-summary.component';
 import { MatchSummary } from 'shared/types';
@@ -58,12 +53,9 @@ import { PileSelectionActionOverlayComponent } from './components/match/pile-sel
   styleUrl: './app.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class AppComponent implements AfterViewInit {
-  @ViewChild('pixiContainer', { static: true }) pixiContainer!: ElementRef;
-
+export class AppComponent {
   private readonly _socketService = inject(SocketService);
   private readonly _nanoStores = inject(NanostoresService);
-  private readonly _app = inject(PIXI_APP);
   private readonly _promptDialogCoordinator = inject(PromptDialogCoordinatorService);
   private readonly _wayPickerOverlay = inject(WayPickerOverlayService);
 
@@ -83,14 +75,8 @@ export class AppComponent implements AfterViewInit {
     void this.syncScene(scene);
   });
 
-  async ngAfterViewInit() {
-    if (!this._app) throw new Error('No app is initialized');
-    this._app.resizeTo = this.pixiContainer.nativeElement;
-    this.pixiContainer.nativeElement.appendChild(this._app.canvas);
-  }
-
-  // Relays score view resize events to the active Pixi match scene.
-  onScoreViewResize(rect: Rectangle) {
+  // Relays score view resize events to match overlays and controller state.
+  onScoreViewResize(rect: { x: number; y: number; width: number; height: number }) {
     this.scoreViewRect.set({
       x: rect.x,
       y: rect.y,
@@ -118,19 +104,17 @@ export class AppComponent implements AfterViewInit {
       }
       const sceneInstance = new MatchScene(
         this._socketService,
-        this._app as Application,
         this._promptDialogCoordinator,
         this._wayPickerOverlay,
       );
       await sceneInstance.initialize();
-      this._app.stage.addChild(sceneInstance);
       this.matchScene.set(sceneInstance);
       return;
     }
 
     const existingScene = this.matchScene();
     if (existingScene) {
-      this._app.stage.removeChild(existingScene);
+      existingScene.destroy();
       this.matchScene.set(undefined);
     }
   }

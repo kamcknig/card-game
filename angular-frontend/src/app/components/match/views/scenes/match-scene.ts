@@ -1,6 +1,4 @@
-import { Application, Assets, Container, Graphics, Rectangle, Text } from 'pixi.js';
-import {Scene} from '../../../../core/scene/scene';
-import {matchStartedStore, matchStore} from '../../../../state/match-state';
+import {matchStore} from '../../../../state/match-state';
 import {playerStore, selfPlayerIdStore,} from '../../../../state/player-state';
 import {CardId, CardKey, PlayCardSelectionResult, PlayerId, UserPromptActionArgs} from 'shared/types';
 import {
@@ -18,7 +16,6 @@ import {currentPlayerTurnIdStore, turnPhaseStore} from '../../../../state/turn-s
 import {SocketService} from '../../../../core/socket-service/socket.service';
 import {waySelectableCardStore} from '../../../../state/interactive-logic';
 import {SelectCardArgs} from '../../../../../types';
-import {getPixiSceneTheme} from '../../../../theme/pixi-theme';
 import { PromptDialogCoordinatorService } from '../../../../core/prompt-dialog/prompt-dialog-coordinator.service';
 import { WayPickerOverlayService } from '../../../../core/way-picker/way-picker-overlay.service';
 import {
@@ -26,43 +23,38 @@ import {
   pileSelectionOverlayStore
 } from '../../../../state/pile-selection-overlay-state';
 
-export class MatchScene extends Scene {
+type RectLike = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+export class MatchScene {
   private _cleanup: (() => void)[] = [];
   private _selecting: boolean = false;
   private _selectingPiles: boolean = false;
   private _selfId: PlayerId = selfPlayerIdStore.get()!;
-  // Semantic Pixi color roles resolved from app-level CSS theme tokens.
-  private readonly _theme = getPixiSceneTheme();
 
   private get uiInteractive(): boolean {
     return !this._selecting && !this._selectingPiles && !awaitingServerLockReleaseStore.get();
   }
 
-  public setScoreViewRect(_rect: Rectangle): void {
+  public setScoreViewRect(_rect: RectLike): void {
   }
 
   constructor(
     private _socketService: SocketService,
-    private _app: Application,
     private readonly _promptDialogCoordinator: PromptDialogCoordinatorService,
     private readonly _wayPickerOverlay: WayPickerOverlayService,
   ) {
-    super();
-
     if (!this._selfId) throw new Error('self id not set in match scene');
-    this.on('removed', this.onRemoved);
   }
 
-  override async initialize() {
-    super.initialize();
-
-    await this.loadAssets();
-
+  async initialize() {
     // Ensure UI lock state doesn't persist across page refreshes.
     awaitingServerLockReleaseStore.set(false);
     promptInteractionLockStore.set(false);
-
-    this._cleanup.push(matchStartedStore.subscribe(val => this.onMatchStarted(val)));
 
     this._socketService.on('ping', this.onPing);
     this._socketService.on('selectCard', this.doSelectCards);
@@ -124,45 +116,6 @@ export class MatchScene extends Scene {
     }
   }
 
-  private async loadAssets() {
-    const c = new Container();
-    const g = c.addChild(new Graphics());
-    g.rect(0, 0, this._app.renderer.width, this._app.renderer.height)
-      .fill({ color: this._theme.overlay.color, alpha: this._theme.overlay.mediumAlpha });
-    let ellipsisCount = 0;
-    const t = new Text({
-      text: 'LOADING...',
-      style: {
-        fontSize: 24,
-        fill: this._theme.text.onOverlay,
-      },
-      x: this._app.renderer.width * .5,
-      y: this._app.renderer.height * .5,
-      anchor: .5
-    });
-    c.addChild(t);
-    const i = setInterval(() => {
-      ellipsisCount = (ellipsisCount % 3) + 1; // Cycles: 1 → 2 → 3 → 1 ...
-      const dots = '.'.repeat(ellipsisCount);
-      t.text = `LOADING${dots}`;
-    }, 300);
-
-    this._app.stage.addChild(c);
-
-    const startTime = Date.now();
-
-    await Assets.loadBundle('cardLibrary');
-
-    const endTime = Date.now();
-
-    if (endTime - startTime < 1500) {
-      await new Promise(resolve => setTimeout(resolve, 1500 - (endTime - startTime)));
-    }
-
-    c.removeFromParent();
-    clearInterval(i);
-  }
-
   // Triggers the "next phase" action using the same server-lock behavior as legacy Pixi controls.
   public requestNextPhase() {
     this.executeTurnActionWithServerLock('nextPhaseComplete', () => {
@@ -197,16 +150,11 @@ export class MatchScene extends Scene {
     emitAction();
   }
 
-  private onMatchStarted = (started: boolean) => {
-    if (!started) return;
-
-    this.eventMode = 'none';
-  }
-
-  private onRemoved = () => {
+  public destroy = () => {
     this.closeWayPicker();
     this.resetPromptPlaySelectionState();
     this._cleanup.forEach(c => c());
+    this._cleanup = [];
     awaitingServerLockReleaseStore.set(false);
     promptInteractionLockStore.set(false);
   }

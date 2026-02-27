@@ -24,7 +24,6 @@ import { CardLikeComponent } from '../../card-like/card-like.component';
 import { playerScoreStore } from '../../../state/player-logic';
 import { LogEntryMessage } from '../../../../types';
 import { MatPlayerContent } from './types';
-import { Rectangle } from 'pixi.js';
 import { cardSourceStore, cardSourceTagMapStore, getCardSourceStore } from '../../../state/card-source-store';
 import { disconnectedHumanIdsStore } from '../../../state/game-state';
 import { SocketService } from '../../../core/socket-service/socket.service';
@@ -44,6 +43,7 @@ import {
 } from '../../../core/source-accent-colors';
 
 type Mat = MatTabModel;
+type RectLike = { x: number; y: number; width: number; height: number };
 
 @Component({
   selector: 'app-match-hud',
@@ -98,7 +98,7 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
     return mat ? this.getMatLabel(mat) : '';
   });
 
-  scoreViewResize = output<Rectangle>();
+  scoreViewResize = output<RectLike>();
   nextPhaseRequested = output<void>();
   playAllTreasuresRequested = output<void>();
   scoreViewResizer: ResizeObserver | undefined;
@@ -239,7 +239,12 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
     this.scoreViewResizer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const rect = entry.target.getBoundingClientRect();
-        this.scoreViewResize.emit(new Rectangle(rect.x, rect.y, rect.width, rect.height));
+        this.scoreViewResize.emit({
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        });
       }
     });
 

@@ -30,7 +30,7 @@ templates/CSS.
 - [x] Chunk 6: non-supply landscapes converted
 - [x] Chunk 7: hand/play/deck/discard area converted
 - [x] Chunk 8: shared primitives converted (card/pile/token/badges/buttons)
-- [ ] Chunk 9: remove Pixi bootstrap (`PIXI_APP`, factory, canvas mount)
+- [x] Chunk 9: remove Pixi bootstrap (`PIXI_APP`, factory, canvas mount)
 - [ ] Chunk 10: remove Pixi dependencies from `angular-frontend/package.json`
 
 ## Chunk acceptance criteria
@@ -235,3 +235,28 @@ templates/CSS.
   - `angular-frontend/src/app/components/match/views/token-badge-view.ts` (deleted)
   - `angular-frontend/src/app/components/match/views/count-badge-view.ts` (deleted)
   - `angular-frontend/src/app/components/match/views/pull-out.ts` (deleted)
+
+### Chunk 9 notes
+
+- Goal: remove Pixi app bootstrap wiring while preserving match interaction flow through Angular.
+- Scope:
+  - remove Pixi app initializer/injection token wiring from Angular app config
+  - remove Pixi canvas host mount from app root template/component styles
+  - convert `MatchScene` from Pixi scene class to a pure controller class for:
+    - socket event subscriptions (`selectCard`, `userPrompt`, `ping`)
+    - turn action requests (`nextPhase`, `playAllTreasure`)
+    - prompt/selection lock coordination
+  - keep scene lifecycle in `AppComponent` using controller init/destroy instead of Pixi stage add/remove
+  - remove obsolete Pixi bootstrap/support files
+- Status: completed
+- Files:
+  - `angular-frontend/src/app/app.config.ts`
+  - `angular-frontend/src/app/app.component.ts`
+  - `angular-frontend/src/app/app.component.html`
+  - `angular-frontend/src/app/app.component.scss`
+  - `angular-frontend/src/app/components/match/views/scenes/match-scene.ts`
+  - `angular-frontend/src/app/components/match/match-hud/match-hud.component.ts`
+  - `angular-frontend/src/app/core/pixi-application.factory.ts` (deleted)
+  - `angular-frontend/src/app/core/pixi-application.token.ts` (deleted)
+  - `angular-frontend/src/app/core/scene/scene.ts` (deleted)
+  - `angular-frontend/src/app/state/app-state.ts` (deleted)
