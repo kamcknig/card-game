@@ -69,7 +69,7 @@ export class AppComponent {
     { initialValue: undefined }
   );
 
-  // Keep Pixi scene lifecycle aligned to Angular scene state.
+  // Keep match controller lifecycle aligned to Angular scene state.
   private readonly _syncSceneEffect = effect(() => {
     const scene = this.scene();
     void this.syncScene(scene);
@@ -86,17 +86,17 @@ export class AppComponent {
     this.matchScene()?.setScoreViewRect(rect);
   }
 
-  // Relays HUD "next phase" actions to the active Pixi match scene.
+  // Relays HUD "next phase" actions to the active match controller.
   onNextPhaseRequested() {
     this.matchScene()?.requestNextPhase();
   }
 
-  // Relays HUD "play all treasures" actions to the active Pixi match scene.
+  // Relays HUD "play all treasures" actions to the active match controller.
   onPlayAllTreasuresRequested() {
     this.matchScene()?.requestPlayAllTreasures();
   }
 
-  // Creates/destroys the Pixi match scene when UI scene changes.
+  // Creates/destroys the match controller when UI scene changes.
   private async syncScene(scene: SceneNames) {
     if (scene === 'match') {
       if (this.matchScene()) {

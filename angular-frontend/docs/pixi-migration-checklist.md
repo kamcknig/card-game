@@ -31,7 +31,7 @@ templates/CSS.
 - [x] Chunk 7: hand/play/deck/discard area converted
 - [x] Chunk 8: shared primitives converted (card/pile/token/badges/buttons)
 - [x] Chunk 9: remove Pixi bootstrap (`PIXI_APP`, factory, canvas mount)
-- [ ] Chunk 10: remove Pixi dependencies from `angular-frontend/package.json`
+- [x] Chunk 10: remove Pixi dependencies from `angular-frontend/package.json`
 
 ## Chunk acceptance criteria
 
@@ -260,3 +260,37 @@ templates/CSS.
   - `angular-frontend/src/app/core/pixi-application.token.ts` (deleted)
   - `angular-frontend/src/app/core/scene/scene.ts` (deleted)
   - `angular-frontend/src/app/state/app-state.ts` (deleted)
+
+### Chunk 10 notes
+
+- Goal: remove remaining Pixi package dependencies and leftover Pixi references from Angular source.
+- Scope:
+  - remove Pixi dependencies from `angular-frontend/package.json`:
+    - `pixi.js`
+    - `pixi-filters`
+    - `@pixi/ui`
+    - `@pixi/devtools`
+  - remove dead Pixi-only files no longer referenced after chunk 9:
+    - `boon-indicator-view.ts`
+    - `hex-indicator-view.ts`
+    - `cube-token-view.ts`
+    - `panel-shadow-filter.ts`
+    - `theme/pixi-theme.ts`
+  - remove leftover Pixi asset-bundle wiring in socket event handling (`Assets.addBundle(...)`)
+  - remove/update remaining code comments that referenced Pixi behavior where no longer applicable
+- Status: completed
+- Files:
+  - `angular-frontend/package.json`
+  - `angular-frontend/src/app/core/socket-service/socket-event-map.ts`
+  - `angular-frontend/src/app/app.component.ts`
+  - `angular-frontend/src/app/components/match/match-hud/match-hud.component.scss`
+  - `angular-frontend/src/app/components/match/views/token-utils.ts`
+  - `angular-frontend/src/app/components/match/landscapes/match-landscapes-overlay.component.ts`
+  - `angular-frontend/src/app/components/match/supply/supply-layout.constants.ts`
+  - `angular-frontend/src/app/components/match/supply/match-supply-overlay.component.ts`
+  - `angular-frontend/src/app/components/match/views/scenes/match-scene.ts`
+  - `angular-frontend/src/app/components/match/views/boon-indicator-view.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/hex-indicator-view.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/cube-token-view.ts` (deleted)
+  - `angular-frontend/src/app/components/match/views/panel-shadow-filter.ts` (deleted)
+  - `angular-frontend/src/app/theme/pixi-theme.ts` (deleted)

@@ -107,7 +107,7 @@ export class MatchLandscapesOverlayComponent {
     };
   });
 
-  // Landscape cards keep the legacy order from the previous Pixi panel.
+  // Landscape cards keep the legacy board order.
   readonly landscapes = computed(() => {
     const match = this._match();
     if (!match) {
@@ -151,7 +151,7 @@ export class MatchLandscapesOverlayComponent {
 
   readonly landscapeCardWidthPx = LANDSCAPE_CARD_WIDTH_PX;
 
-  // Handles card-like taps using the same client lock flow as the Pixi scene.
+  // Handles card-like taps using the shared client lock flow.
   onLandscapeClick(landscape: LandscapeCardViewModel, event: MouseEvent): void {
     event.preventDefault();
     event.stopPropagation();

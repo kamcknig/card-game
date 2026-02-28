@@ -85,7 +85,7 @@ export const getSupplyPileTokenVisualMap = (
   return visualByPile;
 };
 
-// Parses a hex color string into a numeric color for Pixi usage.
+// Parses a hex color string into a numeric value used by token visual models.
 const parseColor = (color: string): number => {
   if (!color) {
     return 0xffffff;

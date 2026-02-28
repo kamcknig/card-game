@@ -10,7 +10,6 @@ import { gameOwnerIdStore, sceneStore } from '../../state/game-state';
 import { expansionListStore } from '../../state/expansion-list-state';
 import { cardStore } from '../../state/card-state';
 import { tokenDefinitionStore } from '../../state/token-definition-state';
-import { Assets } from 'pixi.js';
 import { applyPatch, Operation } from 'fast-json-patch';
 import { ClientListenEventNames, ClientListenEvents } from '../../../types';
 import { logManager } from '../log-manager';
@@ -183,88 +182,6 @@ export const socketToGameEventMap = (): SocketEventMap => {
       return prev;
     }, [] as CardKey[]);
     kingdomSupplies.set(kingdoms ?? []);
-
-    const baseBundle: Record<string, string> = {
-      'card-back-full': `/assets/card-images/base-v2/full-size/card-back.jpg`,
-      'card-back-detail': `/assets/card-images/base-v2/detail/card-back.jpg`,
-      'card-back-half': `/assets/card-images/base-v2/half-size/card-back.jpg`,
-      'treasure-bg': '/assets/ui-icons/treasure-bg.png',
-      'potion-icon': '/assets/ui-icons/potion.png',
-      // Shared debt icon for Empires-style costs.
-      'debt-icon': '/assets/ui-icons/64px-debt.png',
-      // Rising Sun sun token icon rendered on prophecy landscapes.
-      'sun-token-icon': '/assets/ui-icons/sun-token.png',
-      // Shared debt pile token chip rendered on pile overlays.
-      'debt-token-chip': '/assets/ui-icons/debt-icon.png',
-    };
-
-    const finalBundle = Object.values(cardsById).reduce((prev, c) => {
-      prev[`${c.cardKey}-detail`] ??= c.detailImagePath;
-      prev[`${c.cardKey}-full`] ??= c.fullImagePath;
-      prev[`${c.cardKey}-half`] ??= c.halfImagePath;
-      return prev;
-    }, baseBundle);
-
-    for (const event of matchStore.get()?.events ?? []) {
-      finalBundle[`${event.cardKey}-full`] ??= event.fullImagePath;
-      finalBundle[`${event.cardKey}-detail`] ??= event.detailImagePath;
-    }
-
-    // Ensure landmark images are loaded alongside events.
-    for (const landmark of matchStore.get()?.landmarks ?? []) {
-      finalBundle[`${landmark.cardKey}-full`] ??= landmark.fullImagePath;
-      finalBundle[`${landmark.cardKey}-detail`] ??= landmark.detailImagePath;
-    }
-
-    // Ensure project images are loaded alongside other landscapes.
-    for (const project of matchStore.get()?.projects ?? []) {
-      finalBundle[`${project.cardKey}-full`] ??= project.fullImagePath;
-      finalBundle[`${project.cardKey}-detail`] ??= project.detailImagePath;
-    }
-
-    // Ensure way images are loaded alongside other landscapes.
-    for (const way of matchStore.get()?.ways ?? []) {
-      finalBundle[`${way.cardKey}-full`] ??= way.fullImagePath;
-      finalBundle[`${way.cardKey}-detail`] ??= way.detailImagePath;
-    }
-
-    // Ensure trait images are loaded for pile-attached trait badges and detail dialogs.
-    for (const trait of matchStore.get()?.traits ?? []) {
-      finalBundle[`${trait.cardKey}-full`] ??= trait.fullImagePath;
-      finalBundle[`${trait.cardKey}-detail`] ??= trait.detailImagePath;
-    }
-
-    // Ensure prophecy images are loaded for prophecy landscape rendering.
-    for (const prophecy of matchStore.get()?.prophecies ?? []) {
-      finalBundle[`${prophecy.cardKey}-full`] ??= prophecy.fullImagePath;
-      finalBundle[`${prophecy.cardKey}-detail`] ??= prophecy.detailImagePath;
-    }
-
-    // Ensure boon images are loaded for card-like selection prompts.
-    for (const boon of matchStore.get()?.boons?.cards ?? []) {
-      finalBundle[`${boon.cardKey}-full`] ??= boon.fullImagePath;
-      finalBundle[`${boon.cardKey}-detail`] ??= boon.detailImagePath;
-    }
-
-    // Ensure hex images are loaded for card-like selection prompts.
-    for (const hex of matchStore.get()?.hexes?.cards ?? []) {
-      finalBundle[`${hex.cardKey}-full`] ??= hex.fullImagePath;
-      finalBundle[`${hex.cardKey}-detail`] ??= hex.detailImagePath;
-    }
-
-    // Ensure state images are loaded for state display prompts.
-    for (const state of matchStore.get()?.states?.cards ?? []) {
-      finalBundle[`${state.cardKey}-full`] ??= state.fullImagePath;
-      finalBundle[`${state.cardKey}-detail`] ??= state.detailImagePath;
-    }
-
-    // Ensure artifact images are loaded for artifact display prompts.
-    for (const artifact of matchStore.get()?.artifacts?.cards ?? []) {
-      finalBundle[`${artifact.cardKey}-full`] ??= artifact.fullImagePath;
-      finalBundle[`${artifact.cardKey}-detail`] ??= artifact.detailImagePath;
-    }
-
-    Assets.addBundle('cardLibrary', finalBundle);
 
     sceneStore.set('match');
   };

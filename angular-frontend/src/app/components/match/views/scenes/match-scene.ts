@@ -116,7 +116,7 @@ export class MatchScene {
     }
   }
 
-  // Triggers the "next phase" action using the same server-lock behavior as legacy Pixi controls.
+  // Triggers the "next phase" action using the shared server-lock behavior.
   public requestNextPhase() {
     this.executeTurnActionWithServerLock('nextPhaseComplete', () => {
       this._socketService.emit('nextPhase');

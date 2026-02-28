@@ -447,7 +447,7 @@ export class MatchSupplyOverlayComponent {
     return `/assets/ui-icons/${assetKey}.png`;
   }
 
-  // Converts numeric token colors from Pixi helpers to CSS hex strings.
+  // Converts numeric token colors to CSS hex strings.
   private toColorHex(color: number): string {
     const normalized = Number.isFinite(color) ? Math.max(0, Math.min(0xffffff, Math.floor(color))) : 0xffffff;
     return `#${normalized.toString(16).padStart(6, '0')}`;
