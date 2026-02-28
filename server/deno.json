@@ -13,7 +13,10 @@
   "tasks": {
     "dev:watch": "deno run --inspect --check --env-file --allow-sys --allow-read --allow-write --allow-net --allow-env --watch src/server.ts",
     "dev:runbrowsers": "deno run scripts/run-browsers.js",
-    "fmt": "oxfmt --write src/"
+    "fmt": "oxfmt --write src/",
+    "test:unit": "deno test --allow-env --allow-read --allow-sys=cpus src/",
+    "test:unit:watch": "deno test --allow-env --allow-read --allow-sys=cpus --watch src/",
+    "test:unit:coverage": "deno test --allow-env --allow-read --allow-sys=cpus --clean --coverage=coverage src/ && deno coverage coverage --lcov --output=coverage/lcov.info"
   },
   "lint": {
     "include": [
@@ -46,6 +49,7 @@
     "@expansions/": "./src/expansions/",
     "@denosaurs/event": "jsr:@denosaurs/event@^2.0.2",
     "@timepp/enhanced-deno-log": "jsr:@timepp/enhanced-deno-log@^0.4.1",
+    "@std/assert": "jsr:@std/assert@^1.0.13",
     "@std/path": "jsr:@std/path@^1.0.8",
     "@types/jest": "npm:@types/jest@^30.0.0",
     "es-toolkit": "jsr:@es-toolkit/es-toolkit@^1.33.0",

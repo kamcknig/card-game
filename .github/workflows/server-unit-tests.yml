@@ -1,0 +1,40 @@
+name: Server Unit Tests
+
+on:
+  push:
+    paths:
+      - 'server/**'
+      - 'shared/**'
+      - '.github/workflows/server-unit-tests.yml'
+  pull_request:
+    paths:
+      - 'server/**'
+      - 'shared/**'
+      - '.github/workflows/server-unit-tests.yml'
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: '2.7.1'
+
+      - name: Run server unit tests with coverage
+        run: deno task test:unit:coverage
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-coverage
+          path: server/coverage
+          if-no-files-found: error
