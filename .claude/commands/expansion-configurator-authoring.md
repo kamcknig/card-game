@@ -22,6 +22,7 @@ Do not use this skill for:
 ## Required Companion Skills
 
 - Always apply `/debug-logger` for implementation/refactor work done under this skill so logs are added or validated alongside behavior changes in configurator logic.
+- Always apply `/server-unit-testing` to write or update unit tests for new or changed configurator logic. Tests should cover add/remove symmetry, idempotent recomputation, and edge cases.
 - Apply `/debug-openapi-maintainer` whenever the task adds, removes, or changes any `/debug/*` route, `server/src/core/debug-openapi-spec.ts`, debug docs endpoints, or `server/docs/README-debug-api.md`. Do not ship debug-route behavior changes without matching OpenAPI/doc updates when `/debug-openapi-maintainer` conditions are met.
 - Apply `/match-state-integrity` whenever configurator changes alter the initial match state shape, add or remove state fields, or affect serialization/merge/import invariants for configured state.
 
@@ -49,7 +50,8 @@ Do not use this skill for:
 6. Log why setup entries are added, retained, or removed per `/debug-logger` workflow.
 7. If any debug route or debug API documentation surface was touched, invoke `/debug-openapi-maintainer` workflow and update behavior/spec/docs together.
 8. If configurator changes alter the initial match state shape or affect serialization/merge invariants, invoke `/match-state-integrity` workflow to validate state invariants.
-9. Run `deno check` on touched configurator and config files.
+9. Write or update unit tests per `/server-unit-testing` workflow for new or changed configurator logic.
+10. Run `deno check` on touched configurator and config files.
 
 ## Stability Rules
 
@@ -71,6 +73,7 @@ Do not use this skill for:
 - `/debug-logger` companion requirements were satisfied.
 - `/debug-openapi-maintainer` companion requirements were satisfied when debug API surfaces changed.
 - `/match-state-integrity` companion requirements were satisfied when state shape, patches, or serialization were affected.
+- `/server-unit-testing` companion requirements were satisfied — unit tests cover new or changed configurator logic.
 - All touched files pass `deno check`.
 
 ## Validation Commands

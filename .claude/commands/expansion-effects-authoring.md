@@ -5,6 +5,7 @@ Implement or update Dominion expansion card and card-like effects (cards, events
 ## Required Companion Skills
 
 - Always apply `/debug-logger` for implementation/refactor work done under this skill so logs are added or validated alongside behavior changes.
+- Always apply `/server-unit-testing` to write or update unit tests for new or changed card/card-like effect logic. Tests should cover effect branches, edge cases, and interaction with shared utilities.
 - Apply `/debug-openapi-maintainer` whenever the task adds, removes, or changes any `/debug/*` route, `server/src/core/debug-openapi-spec.ts`, debug docs endpoints, or `server/docs/README-debug-api.md`.
 - Do not ship debug-route behavior changes without matching OpenAPI/doc updates when `/debug-openapi-maintainer` conditions are met.
 - Apply `/match-state-integrity` whenever changes add, modify, or remove fields on `Match` or related runtime state stores, affect patch generation or snapshot behavior, or alter serialization/merge/import invariants.
@@ -48,7 +49,8 @@ Implement or update Dominion expansion card and card-like effects (cards, events
    - registration/unregistration points
 9. If any debug route or debug API documentation surface was touched, invoke `/debug-openapi-maintainer` workflow and update behavior/spec/docs together.
 10. If any `Match` state fields, patch generation, or serialization behavior was changed, invoke `/match-state-integrity` workflow to validate state invariants.
-11. Validate with `deno check` on touched files.
+11. Write or update unit tests per `/server-unit-testing` workflow for new or changed effect logic and any new shared utilities.
+12. Validate with `deno check` on touched files.
 
 ## Shared Utility Reuse Gate
 
@@ -118,5 +120,6 @@ When changing multiple files, run checks for each touched module file directly.
 - `/debug-logger` companion requirements were satisfied.
 - `/debug-openapi-maintainer` companion requirements were satisfied when debug API surfaces changed.
 - `/match-state-integrity` companion requirements were satisfied when state shape, patches, or serialization were affected.
+- `/server-unit-testing` companion requirements were satisfied — unit tests cover new or changed effect logic and shared utilities.
 - All touched files pass `deno check`.
 - Shared utility reuse was evaluated first, and no duplicate local helper behavior was introduced.
