@@ -1,5 +1,5 @@
 import { assertEquals } from '@std/assert';
-import { LoggerBackendProvider, LoggerService } from '../logger-service.ts';
+import { LoggerBackend, LoggerBackendProvider, LoggerService } from '../logger-service.ts';
 import { ServerConfigService } from '../server-config-service.ts';
 
 // Captured log entry shape for assertions.
@@ -207,4 +207,167 @@ Deno.test('LoggerService passes multiple arguments through to backend', () => {
 
   assertEquals(entries.length, 1);
   assertEquals(entries[0].args, ['count', 42, { extra: true }]);
+});
+
+// --- LoggerBackendProvider enhanced backend & withAnsiColor ---
+
+Deno.test('LoggerBackendProvider enhanced backend exercises withAnsiColor with string first arg', () => {
+  const provider = new LoggerBackendProvider(new ServerConfigService());
+  const backend = provider.getBackend();
+
+  // Exercises enhanced backend methods (lines 110-118) and withAnsiColor string path.
+  backend.log('log message');
+  backend.info('info message');
+  backend.debug('debug message');
+  backend.warn('warn message');
+  backend.error('error message');
+});
+
+Deno.test('LoggerBackendProvider enhanced backend exercises withAnsiColor with non-string first arg', () => {
+  const provider = new LoggerBackendProvider(new ServerConfigService());
+  const backend = provider.getBackend();
+
+  // Exercises withAnsiColor non-string first arg path.
+  backend.info({ key: 'value' });
+  backend.debug(42);
+});
+
+Deno.test('LoggerBackendProvider enhanced backend exercises withAnsiColor with empty args', () => {
+  const provider = new LoggerBackendProvider(new ServerConfigService());
+  const backend = provider.getBackend();
+
+  // Exercises withAnsiColor early return for empty args.
+  backend.info();
+});
+
+// --- LoggerBackendProvider configureBackend edge case ---
+
+Deno.test('LoggerBackendProvider.configureBackend handles undefined backend gracefully', () => {
+  const provider = new LoggerBackendProvider(new ServerConfigService());
+  // Exercises the ?? {} fallback in configureBackend.
+  provider.configureBackend(undefined as unknown as Partial<LoggerBackend>);
+  const backend = provider.getBackend();
+
+  assertEquals(typeof backend.log, 'function');
+});
+
+// --- LoggerBackendProvider initializeBackend error handling ---
+
+Deno.test('LoggerBackendProvider falls back when LOG_TO_FILE has invalid value', () => {
+  const original = Deno.env.get('LOG_TO_FILE');
+  Deno.env.set('LOG_TO_FILE', 'invalid');
+  try {
+    const provider = new LoggerBackendProvider(new ServerConfigService());
+    const backend = provider.getBackend();
+
+    // initializeBackend catch block sets fileLoggingEnabled = false.
+    assertEquals(typeof backend.log, 'function');
+    // writeToFile should return early since fileLoggingEnabled is false.
+    provider.writeToFile('info', {}, ['should not write']);
+  } finally {
+    if (original !== undefined) {
+      Deno.env.set('LOG_TO_FILE', original);
+    } else {
+      Deno.env.delete('LOG_TO_FILE');
+    }
+  }
+});
+
+Deno.test('LoggerBackendProvider falls back when LOG_FILE_MAX_BYTES has invalid value', () => {
+  const original = Deno.env.get('LOG_FILE_MAX_BYTES');
+  Deno.env.set('LOG_FILE_MAX_BYTES', 'not-a-number');
+  try {
+    const provider = new LoggerBackendProvider(new ServerConfigService());
+    provider.configureBackend({
+      log: () => {},
+      info: () => {},
+      debug: () => {},
+      warn: () => {},
+      error: () => {},
+    });
+
+    // initializeBackend catch block sets logFileMaxBytes to default 5MB.
+    assertEquals(typeof provider.getBackend().log, 'function');
+  } finally {
+    if (original !== undefined) {
+      Deno.env.set('LOG_FILE_MAX_BYTES', original);
+    } else {
+      Deno.env.delete('LOG_FILE_MAX_BYTES');
+    }
+  }
+});
+
+// --- LoggerBackendProvider writeToFile with file logging enabled ---
+
+Deno.test('LoggerBackendProvider.writeToFile exercises path computation with server context', () => {
+  const original = Deno.env.get('LOG_TO_FILE');
+  Deno.env.set('LOG_TO_FILE', 'true');
+  try {
+    const provider = new LoggerBackendProvider(new ServerConfigService());
+    provider.configureBackend({
+      log: () => {},
+      info: () => {},
+      debug: () => {},
+      warn: () => {},
+      error: () => {},
+    });
+
+    // writeToFile runs formatDateKey and resolveBucketDirectory (server path)
+    // before mkdirSync fails without --allow-write. Error caught gracefully.
+    provider.writeToFile('info', {}, ['server context message']);
+  } finally {
+    if (original !== undefined) {
+      Deno.env.set('LOG_TO_FILE', original);
+    } else {
+      Deno.env.delete('LOG_TO_FILE');
+    }
+  }
+});
+
+Deno.test('LoggerBackendProvider.writeToFile exercises resolveBucketDirectory with game context', () => {
+  const original = Deno.env.get('LOG_TO_FILE');
+  Deno.env.set('LOG_TO_FILE', 'true');
+  try {
+    const provider = new LoggerBackendProvider(new ServerConfigService());
+    provider.configureBackend({
+      log: () => {},
+      info: () => {},
+      debug: () => {},
+      warn: () => {},
+      error: () => {},
+    });
+
+    // resolveBucketDirectory resolves to game log directory.
+    provider.writeToFile('info', { gameId: 'test-game' }, ['game context']);
+  } finally {
+    if (original !== undefined) {
+      Deno.env.set('LOG_TO_FILE', original);
+    } else {
+      Deno.env.delete('LOG_TO_FILE');
+    }
+  }
+});
+
+Deno.test('LoggerBackendProvider.writeToFile exercises resolveBucketDirectory with match context', () => {
+  const original = Deno.env.get('LOG_TO_FILE');
+  Deno.env.set('LOG_TO_FILE', 'true');
+  try {
+    const provider = new LoggerBackendProvider(new ServerConfigService());
+    provider.configureBackend({
+      log: () => {},
+      info: () => {},
+      debug: () => {},
+      warn: () => {},
+      error: () => {},
+    });
+
+    // resolveBucketDirectory resolves to match log directory.
+    provider.writeToFile('info', { gameId: 'test-game', matchScopeId: 1 }, ['match context']);
+  } finally {
+    if (original !== undefined) {
+      Deno.env.set('LOG_TO_FILE', original);
+    } else {
+      Deno.env.delete('LOG_TO_FILE');
+    }
+  }
 });

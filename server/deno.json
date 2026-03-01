@@ -14,9 +14,9 @@
     "dev:watch": "deno run --inspect --check --env-file --allow-sys --allow-read --allow-write --allow-net --allow-env --watch src/server.ts",
     "dev:runbrowsers": "deno run scripts/run-browsers.js",
     "fmt": "oxfmt --write src/",
-    "test:unit": "deno test --allow-env --allow-read --allow-sys=cpus src/",
-    "test:unit:watch": "deno test --allow-env --allow-read --allow-sys=cpus --watch src/",
-    "test:unit:coverage": "deno test --allow-env --allow-read --allow-sys=cpus --clean --coverage=coverage src/ && deno coverage coverage --lcov --output=coverage/lcov.info"
+    "test:unit": "deno test --allow-env --allow-write --allow-read --allow-sys=cpus src/",
+    "test:unit:watch": "deno test --allow-write --allow-env --allow-read --allow-sys=cpus --watch src/",
+    "test:unit:coverage": "deno test --allow-write --allow-env --allow-read --allow-sys=cpus --clean --coverage=coverage src/ && deno coverage coverage --exclude=src/testing/ --lcov --output=coverage/lcov.info && deno coverage coverage --exclude=src/testing/ --html"
   },
   "test": {
     "exclude": [

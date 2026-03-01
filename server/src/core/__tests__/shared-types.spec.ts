@@ -427,3 +427,53 @@ Deno.test('Artifact.toString returns formatted artifact string', () => {
 
   assertEquals(artifact.toString(), '[ARTIFACT 1201 - lantern]');
 });
+
+// --- Player Deno.customInspect ---
+
+Deno.test('Player Deno.customInspect returns toString value', () => {
+  const player = new Player({
+    id: 7,
+    name: 'Diana',
+    sessionId: 's',
+    socketId: 's',
+    connected: true,
+    ready: true,
+    color: 'purple',
+  });
+
+  const inspectFn = player[Symbol.for('Deno.customInspect') as unknown as keyof Player] as () => string;
+  assertEquals(inspectFn.call(player), '[PLAYER 7 - Diana]');
+});
+
+// --- Card partOfSupply default and Deno.customInspect ---
+
+Deno.test('Card constructor defaults partOfSupply to true when not provided', () => {
+  const card = new Card({
+    ...createCardLikeArgs({ id: 103, cardKey: 'mine' }),
+    abilityText: 'Trash a Treasure...',
+    expansionName: 'base-v2',
+    halfImagePath: '/half/mine.jpg',
+    kingdom: 'mine',
+    type: ['ACTION'],
+    mat: undefined,
+    // partOfSupply NOT provided; should default to true.
+  } as Card);
+
+  assertEquals(card.partOfSupply, true);
+});
+
+Deno.test('Card Deno.customInspect returns toString value', () => {
+  const card = new Card({
+    ...createCardLikeArgs({ id: 104, cardKey: 'chapel' }),
+    abilityText: 'Trash up to 4 cards...',
+    expansionName: 'base-v2',
+    halfImagePath: '/half/chapel.jpg',
+    kingdom: 'chapel',
+    type: ['ACTION'],
+    partOfSupply: true,
+    mat: undefined,
+  });
+
+  const inspectFn = card[Symbol.for('Deno.customInspect') as unknown as keyof Card] as () => string;
+  assertEquals(inspectFn.call(card), '[CARD 104 - chapel]');
+});

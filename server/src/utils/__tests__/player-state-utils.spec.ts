@@ -107,3 +107,14 @@ Deno.test('playerHasState returns true only for matching card key', () => {
   assertEquals(playerHasState(match, 1, 'haunted'), true);
   assertEquals(playerHasState(match, 1, 'blessed'), false);
 });
+
+Deno.test('getPlayerStates handles null cards array via ?? fallback', () => {
+  const match = createInitialMatchState();
+  // states exists but cards is null — exercises the ?? [] fallback in the filter.
+  match.states = {
+    cards: null as unknown as State[],
+    byPlayer: { 1: [1001] },
+  };
+
+  assertEquals(getPlayerStates(match, 1), []);
+});
