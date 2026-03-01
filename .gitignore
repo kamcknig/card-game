@@ -16,3 +16,5 @@ preselected-landmarks.json
 .codex/*
 !.codex/skills/
 !.codex/skills/**
+
+.claude/settings.local.json
