@@ -40,3 +40,30 @@ Deno.test('getConfiguredSupplyPileKeys returns an empty list when no supply is c
 
   assertEquals(result, []);
 });
+
+Deno.test('getConfiguredSupplyPileKeys handles undefined basicSupply', () => {
+  const match = { config: { kingdomSupply: [{ name: 'village', cards: [] }] } } as unknown as Match;
+
+  const result = getConfiguredSupplyPileKeys(match);
+
+  assertEquals(result, ['village']);
+});
+
+Deno.test('getConfiguredSupplyPileKeys handles undefined kingdomSupply', () => {
+  const match = { config: { basicSupply: [{ name: 'copper', cards: [] }] } } as unknown as Match;
+
+  const result = getConfiguredSupplyPileKeys(match);
+
+  assertEquals(result, ['copper']);
+});
+
+Deno.test('getConfiguredSupplyPileKeys preserves basic-before-kingdom ordering', () => {
+  const match = createMatch({
+    basicNames: ['copper', 'silver', 'gold'],
+    kingdomNames: ['village', 'market'],
+  });
+
+  const result = getConfiguredSupplyPileKeys(match);
+
+  assertEquals(result, ['copper', 'silver', 'gold', 'village', 'market']);
+});

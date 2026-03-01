@@ -36,3 +36,54 @@ Deno.test('getPileDefinitionCard returns undefined when pile has no cards', () =
 
   assertEquals(result, undefined);
 });
+
+Deno.test('getPileDefinitionCard returns card without overrides when randomizerData has no cost or type', () => {
+  const card = createTestCard({
+    cardKey: 'split-bottom',
+    cost: { treasure: 3 },
+    type: ['ACTION'],
+    randomizerData: { randomizer: 'split-pile' },
+  });
+
+  const result = getPileDefinitionCard([card], 'split-pile');
+
+  // Cost and type stay at original values since randomizerData has no overrides.
+  assertEquals(result?.cost, { treasure: 3 });
+  assertEquals(result?.type, ['ACTION']);
+});
+
+Deno.test('getPileDefinitionCard matches by cardKey when card has no randomizerData', () => {
+  const card = createTestCard({ cardKey: 'village', cost: { treasure: 3 }, type: ['ACTION'] });
+
+  const result = getPileDefinitionCard([card], 'village');
+
+  assertStrictEquals(result, card);
+});
+
+Deno.test('getPileDefinitionCard applies only cost override when type is absent in randomizerData', () => {
+  const card = createTestCard({
+    cardKey: 'split-card',
+    cost: { treasure: 2 },
+    type: ['TREASURE'],
+    randomizerData: { randomizer: 'pile', cost: { treasure: 5 } },
+  });
+
+  const result = getPileDefinitionCard([card], 'pile');
+
+  assertEquals(result?.cost, { treasure: 5 });
+  assertEquals(result?.type, ['TREASURE']);
+});
+
+Deno.test('getPileDefinitionCard applies only type override when cost is absent in randomizerData', () => {
+  const card = createTestCard({
+    cardKey: 'split-card',
+    cost: { treasure: 2 },
+    type: ['TREASURE'],
+    randomizerData: { randomizer: 'pile', type: ['ACTION', 'VICTORY'] },
+  });
+
+  const result = getPileDefinitionCard([card], 'pile');
+
+  assertEquals(result?.cost, { treasure: 2 });
+  assertEquals(result?.type, ['ACTION', 'VICTORY']);
+});

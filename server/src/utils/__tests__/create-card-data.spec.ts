@@ -29,3 +29,42 @@ Deno.test('createCardData adds half image path and preserves explicit overrides'
   assertEquals(card.halfImagePath, './assets/card-images/base-v2/half-size/village.jpg');
   assertEquals(card.fullImagePath, './assets/card-images/base-v2/full-size/village.jpg');
 });
+
+Deno.test('createCardData defaults kingdom to cardKey when no explicit kingdom or randomizer', () => {
+  const card = createCardData('smithy', 'base-v2', {});
+
+  assertEquals(card.kingdom, 'smithy');
+});
+
+Deno.test('createCardData defaults kingdom to cardKey ignoring randomizerData randomizer', () => {
+  // createCardData uses templateData.kingdom ?? cardKey for the kingdom field,
+  // so randomizerData.randomizer does not affect the card-level kingdom.
+  const card = createCardData('encampment', 'empires', {
+    randomizerData: { randomizer: 'encampment-plunder' },
+  });
+
+  assertEquals(card.kingdom, 'encampment');
+});
+
+Deno.test('createCardLike uses explicit kingdom over randomizer', () => {
+  const cardLike = createCardLike('ruined-library', 'dark-ages', {
+    randomizerData: { randomizer: 'ruins' },
+    kingdom: 'explicit-kingdom',
+  });
+
+  assertEquals((cardLike as unknown as { kingdom: string }).kingdom, 'explicit-kingdom');
+});
+
+Deno.test('createCardLike defaults cardName from formatted card key', () => {
+  const cardLike = createCardLike('haunted-woods', 'adventures', {});
+
+  assertEquals(cardLike.cardName, 'Haunted Woods');
+});
+
+Deno.test('createCardLike falls back to cardKey as kingdom when randomizerData randomizer is undefined', () => {
+  const cardLike = createCardLike('patrol', 'intrigue', {
+    randomizerData: { randomizer: undefined } as unknown as { randomizer: string },
+  });
+
+  assertEquals((cardLike as unknown as { kingdom: string }).kingdom, 'patrol');
+});

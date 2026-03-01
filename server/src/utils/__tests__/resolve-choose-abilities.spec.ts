@@ -104,3 +104,175 @@ Deno.test('resolveChooseAbilities returns early when no options exist', async ()
   assertEquals(result, []);
   assertEquals(promptService.requestedActions.length, 0);
 });
+
+Deno.test('resolveChooseAbilities player declines extra option with action 0', async () => {
+  const promptService = new PromptServiceStub();
+  // First action is mandatory pick; second is the "NO EXTRA OPTION" decline.
+  promptService.enqueueActions(1, 0);
+
+  const { loggerService } = createTestLogger();
+  const resolvedLabels: string[] = [];
+
+  const result = await resolveChooseAbilities({
+    context: {
+      cardId: 300,
+      playerId: 1,
+      promptService,
+      loggerService,
+      reactionContext: {
+        chooseAbilityModifiersByCardId: {
+          300: { additionalChoices: 1 },
+        },
+      },
+    },
+    logTag: 'decline-test',
+    options: [
+      { action: 1, label: 'first', resolve: async () => { resolvedLabels.push('first'); } },
+      { action: 2, label: 'second', resolve: async () => { resolvedLabels.push('second'); } },
+    ],
+    baseChoiceCount: 1,
+  });
+
+  assertEquals(result, [1]);
+  assertEquals(resolvedLabels, ['first']);
+});
+
+Deno.test('resolveChooseAbilities player declines extra option with null', async () => {
+  const promptService = new PromptServiceStub();
+  // Mandatory pick, then null decline.
+  promptService.enqueueActions(1, null);
+
+  const { loggerService } = createTestLogger();
+
+  const result = await resolveChooseAbilities({
+    context: {
+      cardId: 301,
+      playerId: 1,
+      promptService,
+      loggerService,
+      reactionContext: {
+        chooseAbilityModifiersByCardId: {
+          301: { additionalChoices: 1 },
+        },
+      },
+    },
+    logTag: 'null-decline-test',
+    options: [
+      { action: 1, label: 'first', resolve: async () => {} },
+      { action: 2, label: 'second', resolve: async () => {} },
+    ],
+    baseChoiceCount: 1,
+  });
+
+  assertEquals(result, [1]);
+});
+
+Deno.test('resolveChooseAbilities clamps baseChoiceCount to option count', async () => {
+  const promptService = new PromptServiceStub();
+  // Only two options but baseChoiceCount is 5; should only prompt twice.
+  promptService.enqueueActions(1, 2);
+
+  const { loggerService } = createTestLogger();
+
+  const result = await resolveChooseAbilities({
+    context: {
+      cardId: 400,
+      playerId: 1,
+      promptService,
+      loggerService,
+      reactionContext: {},
+    },
+    logTag: 'clamp-test',
+    options: [
+      { action: 1, label: 'first', resolve: async () => {} },
+      { action: 2, label: 'second', resolve: async () => {} },
+    ],
+    baseChoiceCount: 5,
+  });
+
+  assertEquals(result, [1, 2]);
+  assertEquals(promptService.requestedActions.length, 2);
+});
+
+Deno.test('resolveChooseAbilities skips extra choices when allowOptionalExtraChoice is false', async () => {
+  const promptService = new PromptServiceStub();
+  promptService.enqueueActions(1);
+
+  const { loggerService } = createTestLogger();
+
+  const result = await resolveChooseAbilities({
+    context: {
+      cardId: 500,
+      playerId: 1,
+      promptService,
+      loggerService,
+      reactionContext: {
+        chooseAbilityModifiersByCardId: {
+          500: { additionalChoices: 2 },
+        },
+      },
+    },
+    logTag: 'no-extra-test',
+    options: [
+      { action: 1, label: 'first', resolve: async () => {} },
+      { action: 2, label: 'second', resolve: async () => {} },
+    ],
+    baseChoiceCount: 1,
+    allowOptionalExtraChoice: false,
+  });
+
+  assertEquals(result, [1]);
+  // Only one prompt for the mandatory choice; no extra choice prompts.
+  assertEquals(promptService.requestedActions.length, 1);
+});
+
+Deno.test('resolveChooseAbilities with no reactionContext modifiers has zero extra choices', async () => {
+  const promptService = new PromptServiceStub();
+  promptService.enqueueActions(2);
+
+  const { loggerService } = createTestLogger();
+
+  const result = await resolveChooseAbilities({
+    context: {
+      cardId: 600,
+      playerId: 1,
+      promptService,
+      loggerService,
+      reactionContext: undefined,
+    },
+    logTag: 'no-modifier-test',
+    options: [
+      { action: 1, label: 'first', resolve: async () => {} },
+      { action: 2, label: 'second', resolve: async () => {} },
+    ],
+    baseChoiceCount: 1,
+  });
+
+  assertEquals(result, [2]);
+  assertEquals(promptService.requestedActions.length, 1);
+});
+
+Deno.test('resolveChooseAbilities uses custom prompt text', async () => {
+  const promptService = new PromptServiceStub();
+  promptService.enqueueActions(1);
+
+  const { loggerService } = createTestLogger();
+
+  await resolveChooseAbilities({
+    context: {
+      cardId: 700,
+      playerId: 1,
+      promptService,
+      loggerService,
+      reactionContext: {},
+    },
+    logTag: 'prompt-test',
+    prompt: 'Pick your ability',
+    options: [
+      { action: 1, label: 'first', resolve: async () => {} },
+    ],
+    baseChoiceCount: 1,
+  });
+
+  assertEquals(promptService.requestedActions[0].prompt, 'Pick your ability');
+});

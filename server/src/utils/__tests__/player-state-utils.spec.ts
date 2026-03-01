@@ -54,3 +54,56 @@ Deno.test('player-state utils return empty/false/undefined for missing ownership
   assertEquals(playerHasState(match, 1, 'haunted'), false);
   assertEquals(getPlayerStateByKey(match, 1, 'haunted'), undefined);
 });
+
+Deno.test('player-state utils handle undefined match.states gracefully', () => {
+  const match = createInitialMatchState();
+  // match.states is undefined by default from initial state factory.
+
+  assertEquals(getPlayerStateIds(match, 1), []);
+  assertEquals(getPlayerStates(match, 1), []);
+  assertEquals(playerHasState(match, 1, 'haunted'), false);
+  assertEquals(getPlayerStateByKey(match, 1, 'haunted'), undefined);
+});
+
+Deno.test('getPlayerStates filters cards to only those owned by the player', () => {
+  const haunted = createRuntimeState({ id: 1001, cardKey: 'haunted' });
+  const blessed = createRuntimeState({ id: 1002, cardKey: 'blessed' });
+  const cursed = createRuntimeState({ id: 1003, cardKey: 'cursed' });
+  const match = createInitialMatchState();
+  match.states = {
+    cards: [haunted, blessed, cursed],
+    byPlayer: {
+      1: [1001, 1003],
+      2: [1002],
+    },
+  };
+
+  const states = getPlayerStates(match, 1);
+
+  assertEquals(states.length, 2);
+  assertStrictEquals(states[0], haunted);
+  assertStrictEquals(states[1], cursed);
+});
+
+Deno.test('getPlayerStateByKey returns undefined when player has states but not the requested key', () => {
+  const haunted = createRuntimeState({ id: 1001, cardKey: 'haunted' });
+  const match = createInitialMatchState();
+  match.states = {
+    cards: [haunted],
+    byPlayer: { 1: [1001] },
+  };
+
+  assertEquals(getPlayerStateByKey(match, 1, 'blessed'), undefined);
+});
+
+Deno.test('playerHasState returns true only for matching card key', () => {
+  const haunted = createRuntimeState({ id: 1001, cardKey: 'haunted' });
+  const match = createInitialMatchState();
+  match.states = {
+    cards: [haunted],
+    byPlayer: { 1: [1001] },
+  };
+
+  assertEquals(playerHasState(match, 1, 'haunted'), true);
+  assertEquals(playerHasState(match, 1, 'blessed'), false);
+});

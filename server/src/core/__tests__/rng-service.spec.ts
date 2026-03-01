@@ -30,3 +30,23 @@ Deno.test('RngService.nextIndex throws when length is zero or less', () => {
   assertThrows(() => rngService.nextIndex(0), Error, 'length > 0');
   assertThrows(() => rngService.nextIndex(-1), Error, 'length > 0');
 });
+
+Deno.test('RngService.nextIndex returns zero when length is one', () => {
+  const rngService = new FixedRngService(0.5);
+
+  assertEquals(rngService.nextIndex(1), 0);
+});
+
+Deno.test('RngService.nextFloat returns a value in [0, 1)', () => {
+  const rngService = new RngService();
+  const value = rngService.nextFloat();
+
+  assertEquals(value >= 0, true);
+  assertEquals(value < 1, true);
+});
+
+Deno.test('RngService.nextIndex maps mid-range random to middle index', () => {
+  const rngService = new FixedRngService(0.5);
+
+  assertEquals(rngService.nextIndex(10), 5);
+});
