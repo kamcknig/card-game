@@ -18,6 +18,11 @@
     "test:unit:watch": "deno test --allow-env --allow-read --allow-sys=cpus --watch src/",
     "test:unit:coverage": "deno test --allow-env --allow-read --allow-sys=cpus --clean --coverage=coverage src/ && deno coverage coverage --lcov --output=coverage/lcov.info"
   },
+  "test": {
+    "exclude": [
+      "src/testing/"
+    ]
+  },
   "lint": {
     "include": [
       "src/"

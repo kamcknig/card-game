@@ -252,6 +252,7 @@ Key commands:
 - Do not use `deno run` for long-running tasks without permission
 - Other Deno tasks are allowed when they produce expected bounded output
 - Use `deno check` for type checking (not `deno run --check`)
+- Use `--no-lock` for relevant deno commands because the deno bundled with claude is not up to date
 
 ## Testing Guidelines
 

@@ -252,6 +252,35 @@ Deno.test('resolveChooseAbilities with no reactionContext modifiers has zero ext
   assertEquals(promptService.requestedActions.length, 1);
 });
 
+Deno.test('resolveChooseAbilities falls back to first remaining option when selected action is unrecognized', async () => {
+  const promptService = new PromptServiceStub();
+  // Queue an action that doesn't match any option.
+  promptService.enqueueActions(999);
+
+  const { loggerService } = createTestLogger();
+  const resolvedLabels: string[] = [];
+
+  const result = await resolveChooseAbilities({
+    context: {
+      cardId: 800,
+      playerId: 1,
+      promptService,
+      loggerService,
+      reactionContext: {},
+    },
+    logTag: 'fallback-test',
+    options: [
+      { action: 1, label: 'first', resolve: async () => { resolvedLabels.push('first'); } },
+      { action: 2, label: 'second', resolve: async () => { resolvedLabels.push('second'); } },
+    ],
+    baseChoiceCount: 1,
+  });
+
+  // Falls back to first remaining option when find returns undefined.
+  assertEquals(result, [1]);
+  assertEquals(resolvedLabels, ['first']);
+});
+
 Deno.test('resolveChooseAbilities uses custom prompt text', async () => {
   const promptService = new PromptServiceStub();
   promptService.enqueueActions(1);

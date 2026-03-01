@@ -1,6 +1,7 @@
 import { assertEquals } from '@std/assert';
 import type { EffectTarget, Match } from 'shared/types/index.ts';
 import { createInitialMatchState } from '../../core/match-state-factory.ts';
+import { createTestLogger } from '../../testing/create-test-logger.ts';
 import { createTestPlayer } from '../../testing/create-test-player.ts';
 import { findOrderedTargets } from '../find-ordered-targets.ts';
 
@@ -149,4 +150,62 @@ Deno.test('findOrderedTargets resolves ALL with startingPlayerId as the last pla
   });
 
   assertEquals(result, [3, 1, 2]);
+});
+
+// --- Tests with loggerService to exercise optional chaining branches ---
+
+Deno.test('findOrderedTargets ALL with loggerService logs target info', () => {
+  const match = createMatchWithPlayers();
+  const { entries, loggerService } = createTestLogger();
+
+  findOrderedTargets({
+    match,
+    startingPlayerId: 1,
+    appliesTo: 'ALL',
+    loggerService,
+  });
+
+  assertEquals(entries.some(e => e.level === 'info'), true);
+});
+
+Deno.test('findOrderedTargets ALL_OTHER with loggerService logs target info', () => {
+  const match = createMatchWithPlayers();
+  const { entries, loggerService } = createTestLogger();
+
+  findOrderedTargets({
+    match,
+    startingPlayerId: 2,
+    appliesTo: 'ALL_OTHER',
+    loggerService,
+  });
+
+  assertEquals(entries.some(e => e.level === 'info'), true);
+});
+
+Deno.test('findOrderedTargets ANY with loggerService logs error', () => {
+  const match = createMatchWithPlayers();
+  const { entries, loggerService } = createTestLogger();
+
+  findOrderedTargets({
+    match,
+    startingPlayerId: 1,
+    appliesTo: 'ANY',
+    loggerService,
+  });
+
+  assertEquals(entries.some(e => e.level === 'error'), true);
+});
+
+Deno.test('findOrderedTargets X_OTHER with loggerService logs error', () => {
+  const match = createMatchWithPlayers();
+  const { entries, loggerService } = createTestLogger();
+
+  findOrderedTargets({
+    match,
+    startingPlayerId: 1,
+    appliesTo: '2_OTHER' as EffectTarget,
+    loggerService,
+  });
+
+  assertEquals(entries.some(e => e.level === 'info' || e.level === 'error'), true);
 });

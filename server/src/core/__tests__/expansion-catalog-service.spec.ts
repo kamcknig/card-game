@@ -43,3 +43,22 @@ Deno.test('ExpansionCatalogService stores and retrieves raw card templates', () 
   assertEquals(expansionCatalogService.getRawCard('workshop'), card);
   assertEquals(expansionCatalogService.getRawCardLibrary().workshop, card);
 });
+
+Deno.test('ExpansionCatalogService.getExpansionLibrary returns all stored expansions', () => {
+  const expansionCatalogService = new ExpansionCatalogService();
+  const expansion1 = createTestExpansionData({ name: 'base' });
+  const expansion2 = createTestExpansionData({ name: 'intrigue' });
+
+  expansionCatalogService.setExpansion('base', expansion1);
+  expansionCatalogService.setExpansion('intrigue', expansion2);
+
+  const library = expansionCatalogService.getExpansionLibrary();
+  assertEquals(library['base'], expansion1);
+  assertEquals(library['intrigue'], expansion2);
+});
+
+Deno.test('ExpansionCatalogService.getRawCard returns undefined for unknown key', () => {
+  const expansionCatalogService = new ExpansionCatalogService();
+
+  assertEquals(expansionCatalogService.getRawCard('nonexistent'), undefined);
+});

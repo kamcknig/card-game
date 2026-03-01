@@ -18,3 +18,5 @@ preselected-landmarks.json
 !.codex/skills/**
 
 .claude/settings.local.json
+
+server/coverage/
