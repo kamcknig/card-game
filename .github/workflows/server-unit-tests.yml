@@ -29,6 +29,9 @@ jobs:
         with:
           deno-version: '2.7.1'
 
+      - name: Install dependencies
+        run: deno install
+
       - name: Run server unit tests with coverage
         run: deno task test:unit:coverage
 
