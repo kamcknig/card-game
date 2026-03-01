@@ -29,8 +29,12 @@ jobs:
         with:
           deno-version: '2.7.1'
 
-      - name: Install dependencies
+      - name: Install server dependencies
         run: deno install
+
+      - name: Install shared dependencies
+        working-directory: shared
+        run: npm install
 
       - name: Run server unit tests with coverage
         run: deno task test:unit:coverage
