@@ -1,7 +1,3 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 See <https://wiki.dominionstrategy.com/index.php/Main_Page> for Dominion rules,
 setup, expansions, and clarifications.
 
@@ -250,9 +246,6 @@ Key commands:
 - `cd angular-frontend && npm run build`: production client build (optional for routine frontend code validation).
 - `cd angular-frontend && npm test`: run unit tests (Karma/Jasmine).
 - `cd server && deno lint src/`: lint server TypeScript.
-- `cd server && deno task test:unit`: run server unit tests.
-- `cd server && deno task test:unit:watch`: run server unit tests with file watch.
-- `cd server && deno check src/server.ts`: type-check server code.
 
 ## Tooling Rules
 
