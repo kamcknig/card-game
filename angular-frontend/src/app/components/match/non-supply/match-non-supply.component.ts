@@ -4,6 +4,7 @@ import { NanostoresService } from '@nanostores/angular';
 import { Card, CardId, CardKey, CardLikeId, Match, PlayerId, TokenDefinition, TokenId, Trait } from 'shared/types';
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { CardComponent } from '../../card/card.component';
+import { TokenImageBadgeComponent } from '../token-image-badge/token-image-badge.component';
 import { cardStore } from '../../../state/card-state';
 import { nonSupplyKingdomMapStore } from '../../../state/card-source-logic';
 import { matchStore } from '../../../state/match-state';
@@ -33,6 +34,7 @@ type NonSupplyTokenBadgeViewModel = {
   label: string;
   color: string;
   imagePath?: string;
+  badgeImagePath?: string;
 };
 
 type NonSupplyTokenBadgeStackViewModel = {
@@ -41,6 +43,7 @@ type NonSupplyTokenBadgeStackViewModel = {
   color: string;
   count: number;
   imagePath?: string;
+  badgeImagePath?: string;
 };
 
 type NonSupplyTokenChipViewModel = {
@@ -96,6 +99,7 @@ const WAY_PICKER_EDGE_OVERLAP_PX = 5;
   selector: 'app-match-non-supply',
   imports: [
     CardComponent,
+    TokenImageBadgeComponent,
   ],
   templateUrl: './match-non-supply.component.html',
   styleUrl: './match-non-supply.component.scss',
@@ -217,6 +221,7 @@ export class MatchNonSupplyComponent {
             label: badge.label,
             color: this.toColorHex(badge.color),
             imagePath: badge.imagePath,
+            badgeImagePath: badge.badgeImagePath,
           }))),
           tokenChips: tokenVisual.tokenChips.map((chip) => ({
             id: chip.id,
@@ -511,9 +516,9 @@ export class MatchNonSupplyComponent {
   }
 
   private buildTokenBadgeStacks(badges: NonSupplyTokenBadgeViewModel[]): NonSupplyTokenBadgeStackViewModel[] {
-    const grouped = new Map<string, { firstId: string; label: string; color: string; count: number; imagePath?: string }>();
+    const grouped = new Map<string, { firstId: string; label: string; color: string; count: number; imagePath?: string; badgeImagePath?: string }>();
     for (const badge of badges) {
-      const key = `${badge.label}:${badge.color}:${badge.imagePath ?? ''}`;
+      const key = `${badge.label}:${badge.color}:${badge.imagePath ?? ''}:${badge.badgeImagePath ?? ''}`;
       const existing = grouped.get(key);
       if (existing) {
         existing.count += 1;
@@ -525,6 +530,7 @@ export class MatchNonSupplyComponent {
         color: badge.color,
         count: 1,
         imagePath: badge.imagePath,
+        badgeImagePath: badge.badgeImagePath,
       });
     }
 
@@ -534,6 +540,7 @@ export class MatchNonSupplyComponent {
       color: group.color,
       count: group.count,
       imagePath: group.imagePath,
+      badgeImagePath: group.badgeImagePath,
     }));
   }
 

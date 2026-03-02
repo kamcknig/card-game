@@ -71,12 +71,19 @@
           @if (deck.tokenBadges.length > 0) {
             <div class="stack-token-badges">
               @for (badge of deck.tokenBadges; track badge.id) {
-                <div class="stack-token-badge" [style.background]="badge.color">
-                  {{ badge.label }}
-                  @if (badge.count > 1) {
-                    <span>{{ badge.count }}</span>
-                  }
-                </div>
+                @if (badge.imagePath) {
+                  <app-token-image-badge
+                    [imagePath]="badge.imagePath"
+                    [highlightColor]="badge.color"
+                  ></app-token-image-badge>
+                } @else {
+                  <div class="stack-token-badge" [style.background]="badge.color">
+                    {{ badge.label }}
+                    @if (badge.count > 1) {
+                      <span>{{ badge.count }}</span>
+                    }
+                  </div>
+                }
               }
             </div>
           }
@@ -190,12 +197,19 @@
                   <div class="cube-token" [style.background]="cube.color"></div>
                 }
                 @for (badge of availableTokenBadges(); track badge.id) {
-                  <div class="token-badge" [style.background]="badge.color">
-                    {{ badge.label }}
-                    @if (badge.count > 1) {
-                      <span>{{ badge.count }}</span>
-                    }
-                  </div>
+                  @if (badge.imagePath) {
+                    <app-token-image-badge
+                      [imagePath]="badge.imagePath"
+                      [highlightColor]="badge.color"
+                    ></app-token-image-badge>
+                  } @else {
+                    <div class="token-badge" [style.background]="badge.color">
+                      {{ badge.label }}
+                      @if (badge.count > 1) {
+                        <span>{{ badge.count }}</span>
+                      }
+                    </div>
+                  }
                 }
               </div>
             </div>
@@ -206,12 +220,19 @@
               <div class="token-tray-label">Active Tokens</div>
               <div class="token-tray">
                 @for (badge of activeTokenBadges(); track badge.id) {
-                  <div class="token-badge" [style.background]="badge.color">
-                    {{ badge.label }}
-                    @if (badge.count > 1) {
-                      <span>{{ badge.count }}</span>
-                    }
-                  </div>
+                  @if (badge.imagePath) {
+                    <app-token-image-badge
+                      [imagePath]="badge.imagePath"
+                      [highlightColor]="badge.color"
+                    ></app-token-image-badge>
+                  } @else {
+                    <div class="token-badge" [style.background]="badge.color">
+                      {{ badge.label }}
+                      @if (badge.count > 1) {
+                        <span>{{ badge.count }}</span>
+                      }
+                    </div>
+                  }
                 }
               </div>
             </div>

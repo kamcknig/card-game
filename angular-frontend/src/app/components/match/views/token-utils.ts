@@ -24,8 +24,8 @@ export const getTokenShortLabel = (tokenId: TokenId, tokenDefinition?: TokenDefi
   return labelMap[tokenId] ?? tokenDefinition?.name ?? 'T';
 };
 
-// Maps token ids to optional image paths for image-based badge rendering.
-export const getTokenImagePath = (tokenId: TokenId): string | undefined => {
+// Maps token ids to image paths for overlay-style badge rendering (count + desaturation filter).
+export const getTokenOverlayImagePath = (tokenId: TokenId): string | undefined => {
   const imageMap: Record<string, string> = {
     // Victory token shield used by Aqueduct and other landmarks.
     'prosperity:victory': '/assets/ui-icons/victory-shield.png',
@@ -33,8 +33,23 @@ export const getTokenImagePath = (tokenId: TokenId): string | undefined => {
   return imageMap[tokenId];
 };
 
+// Maps token ids to image paths for TokenImageBadgeComponent rendering (player ring, no count).
+export const getTokenBadgeImagePath = (tokenId: TokenId): string | undefined => {
+  const imageMap: Record<string, string> = {
+    // Trashing token used by Plan (Adventures).
+    'adventures:trashing': '/assets/ui-icons/trash.png',
+  };
+  return imageMap[tokenId];
+};
+
+// Returns the image path for any token that has a dedicated icon, regardless of rendering style.
+// Used by the player area where all image tokens render via TokenImageBadgeComponent.
+export const getTokenImagePath = (tokenId: TokenId): string | undefined => {
+  return getTokenOverlayImagePath(tokenId) ?? getTokenBadgeImagePath(tokenId);
+};
+
 export type PileTokenVisual = {
-  tokenBadges: Array<{ id: string; label: string; color: number; imagePath?: string }>;
+  tokenBadges: Array<{ id: string; label: string; color: number; imagePath?: string; badgeImagePath?: string }>;
   tokenChips: Array<{ id: string; assetKey: string; count: number; textColor?: string }>;
 };
 
@@ -79,7 +94,10 @@ export const getSupplyPileTokenVisualMap = (
 
     const tokenDefinition = tokenDefinitions[token.tokenId];
     const label = getTokenShortLabel(token.tokenId, tokenDefinition);
-    const imagePath = getTokenImagePath(token.tokenId);
+    // Overlay images render with desaturation filter and a count overlay.
+    const imagePath = getTokenOverlayImagePath(token.tokenId);
+    // Badge images render via TokenImageBadgeComponent with a player-colored ring.
+    const badgeImagePath = getTokenBadgeImagePath(token.tokenId);
     const color = parseColor(
       token.ownerId !== undefined && token.ownerId !== null
         ? playerColorMap.get(token.ownerId) ?? '#ffffff'
@@ -90,6 +108,7 @@ export const getSupplyPileTokenVisualMap = (
       label,
       color,
       imagePath,
+      badgeImagePath,
     });
   }
 

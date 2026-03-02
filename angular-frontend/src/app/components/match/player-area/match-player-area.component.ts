@@ -53,7 +53,8 @@ import {
   SUPPLY_PANEL_GAP_PX
 } from '../supply/supply-layout.constants';
 import { getLandscapePanelHeightPx } from '../landscapes/landscape-layout.constants';
-import { getTokenShortLabel } from '../views/token-utils';
+import { TokenImageBadgeComponent } from '../token-image-badge/token-image-badge.component';
+import { getTokenImagePath, getTokenShortLabel } from '../views/token-utils';
 
 type RectLike = {
   x: number;
@@ -85,6 +86,7 @@ type TokenBadgeViewModel = {
   label: string;
   color: string;
   count: number;
+  imagePath?: string;
 };
 
 type TokenCubeViewModel = {
@@ -129,6 +131,7 @@ const PLAYER_BOTTOM_ROW_RESERVE_PX = 400;
   selector: 'app-match-player-area',
   imports: [
     CardComponent,
+    TokenImageBadgeComponent,
   ],
   templateUrl: './match-player-area.component.html',
   styleUrl: './match-player-area.component.scss',
@@ -465,6 +468,7 @@ export class MatchPlayerAreaComponent {
         id: token.id,
         label: getTokenShortLabel(token.tokenId, tokenDefinitions[token.tokenId]),
         color: playerColorMap.get(token.ownerId ?? selfPlayerId) ?? '#ffffff',
+        imagePath: getTokenImagePath(token.tokenId),
       }));
 
     return this.buildTokenBadgeStacks(tokenBadges);
@@ -489,6 +493,7 @@ export class MatchPlayerAreaComponent {
         id: token.id,
         label: getTokenShortLabel(token.tokenId, tokenDefinitions[token.tokenId]),
         color: playerColorMap.get(token.ownerId ?? selfPlayerId) ?? '#ffffff',
+        imagePath: getTokenImagePath(token.tokenId),
       }));
 
     return this.buildTokenBadgeStacks(tokenBadges);
@@ -873,6 +878,7 @@ export class MatchPlayerAreaComponent {
           id: token.id,
           label: getTokenShortLabel(token.tokenId, tokenDefinitions[token.tokenId]),
           color: playerColorMap.get(token.ownerId ?? selfPlayerId) ?? '#ffffff',
+          imagePath: getTokenImagePath(token.tokenId),
         }));
       tokenBadges = this.buildTokenBadgeStacks(deckTokens);
     }
@@ -955,10 +961,10 @@ export class MatchPlayerAreaComponent {
   }
 
   // Groups matching token badges into one badge with a count.
-  private buildTokenBadgeStacks(badges: Array<{ id: string; label: string; color: string }>): TokenBadgeViewModel[] {
+  private buildTokenBadgeStacks(badges: Array<{ id: string; label: string; color: string; imagePath?: string }>): TokenBadgeViewModel[] {
     const grouped = new Map<string, TokenBadgeViewModel>();
     for (const badge of badges) {
-      const key = `${badge.label}:${badge.color}`;
+      const key = `${badge.label}:${badge.color}:${badge.imagePath ?? ''}`;
       const existing = grouped.get(key);
       if (existing) {
         existing.count += 1;
@@ -969,6 +975,7 @@ export class MatchPlayerAreaComponent {
         label: badge.label,
         color: badge.color,
         count: 1,
+        imagePath: badge.imagePath,
       });
     }
     return [...grouped.values()].sort((left, right) => {

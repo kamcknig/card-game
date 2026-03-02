@@ -36,7 +36,12 @@
                   <div class="pile-token-badges">
                     @for (stack of pile.tokenBadgeStacks; track stack.id) {
                       <div class="pile-token-badge-stack">
-                        @if (stack.imagePath) {
+                        @if (stack.badgeImagePath) {
+                          <app-token-image-badge
+                            [imagePath]="stack.badgeImagePath"
+                            [highlightColor]="stack.color"
+                          ></app-token-image-badge>
+                        } @else if (stack.imagePath) {
                           <div class="pile-token-badge-image">
                             <img [src]="stack.imagePath" alt="" />
                             <span class="pile-token-badge-image-count">{{ stack.count }}</span>
@@ -70,7 +75,7 @@
                   <span>{{ pile.treasureCost }}</span>
                 </div>
                 @if (pile.potionCost > 0) {
-                  <div class="cost-chip">
+                  <div class="cost-chip potion-cost">
                     <img src="/assets/ui-icons/potion.png" alt="" />
                     @if (pile.potionCost > 1) { <span>{{ pile.potionCost }}</span> }
                   </div>
@@ -120,7 +125,12 @@
                   <div class="pile-token-badges">
                     @for (stack of pile.tokenBadgeStacks; track stack.id) {
                       <div class="pile-token-badge-stack">
-                        @if (stack.imagePath) {
+                        @if (stack.badgeImagePath) {
+                          <app-token-image-badge
+                            [imagePath]="stack.badgeImagePath"
+                            [highlightColor]="stack.color"
+                          ></app-token-image-badge>
+                        } @else if (stack.imagePath) {
                           <div class="pile-token-badge-image">
                             <img [src]="stack.imagePath" alt="" />
                             <span class="pile-token-badge-image-count">{{ stack.count }}</span>
@@ -154,7 +164,7 @@
                   <span>{{ pile.treasureCost }}</span>
                 </div>
                 @if (pile.potionCost > 0) {
-                  <div class="cost-chip">
+                  <div class="cost-chip potion-cost">
                     <img src="/assets/ui-icons/potion.png" alt="" />
                     @if (pile.potionCost > 1) { <span>{{ pile.potionCost }}</span> }
                   </div>
@@ -211,7 +221,12 @@
                 <div class="pile-token-badges">
                   @for (stack of pile.tokenBadgeStacks; track stack.id) {
                     <div class="pile-token-badge-stack">
-                      @if (stack.imagePath) {
+                      @if (stack.badgeImagePath) {
+                        <app-token-image-badge
+                          [imagePath]="stack.badgeImagePath"
+                          [highlightColor]="stack.color"
+                        ></app-token-image-badge>
+                      } @else if (stack.imagePath) {
                         <div class="pile-token-badge-image">
                           <img [src]="stack.imagePath" alt="" />
                           <span class="pile-token-badge-image-count">{{ stack.count }}</span>
