@@ -32,6 +32,7 @@ type NonSupplyTokenBadgeViewModel = {
   id: string;
   label: string;
   color: string;
+  imagePath?: string;
 };
 
 type NonSupplyTokenBadgeStackViewModel = {
@@ -39,6 +40,7 @@ type NonSupplyTokenBadgeStackViewModel = {
   label: string;
   color: string;
   count: number;
+  imagePath?: string;
 };
 
 type NonSupplyTokenChipViewModel = {
@@ -53,6 +55,9 @@ type NonSupplyPileRowViewModel = {
   pileKey: string;
   cardId: CardId | null;
   count: number;
+  treasureCost: number;
+  potionCost: number;
+  debtCost: number;
   forceFacing: 'front' | 'back';
   empty: boolean;
   selectableCard: boolean;
@@ -197,6 +202,9 @@ export class MatchNonSupplyComponent {
           pileKey,
           cardId,
           count: sortedPileCards.length,
+          treasureCost: representativeCard?.cost?.treasure ?? 0,
+          potionCost: representativeCard?.cost?.potion ?? 0,
+          debtCost: representativeCard?.cost?.debt ?? 0,
           forceFacing: isLoot ? 'back' : 'front',
           empty: sortedPileCards.length < 1,
           selectableCard: cardId !== null && selectableCards.has(cardId),
@@ -208,6 +216,7 @@ export class MatchNonSupplyComponent {
             id: badge.id,
             label: badge.label,
             color: this.toColorHex(badge.color),
+            imagePath: badge.imagePath,
           }))),
           tokenChips: tokenVisual.tokenChips.map((chip) => ({
             id: chip.id,
@@ -458,6 +467,9 @@ export class MatchNonSupplyComponent {
       pileKey: kingdomName,
       cardId: null,
       count: 0,
+      treasureCost: 0,
+      potionCost: 0,
+      debtCost: 0,
       forceFacing: kingdomName === 'loot' ? 'back' : 'front',
       empty: true,
       selectableCard: false,
@@ -499,9 +511,9 @@ export class MatchNonSupplyComponent {
   }
 
   private buildTokenBadgeStacks(badges: NonSupplyTokenBadgeViewModel[]): NonSupplyTokenBadgeStackViewModel[] {
-    const grouped = new Map<string, { firstId: string; label: string; color: string; count: number }>();
+    const grouped = new Map<string, { firstId: string; label: string; color: string; count: number; imagePath?: string }>();
     for (const badge of badges) {
-      const key = `${badge.label}:${badge.color}`;
+      const key = `${badge.label}:${badge.color}:${badge.imagePath ?? ''}`;
       const existing = grouped.get(key);
       if (existing) {
         existing.count += 1;
@@ -512,6 +524,7 @@ export class MatchNonSupplyComponent {
         label: badge.label,
         color: badge.color,
         count: 1,
+        imagePath: badge.imagePath,
       });
     }
 
@@ -520,6 +533,7 @@ export class MatchNonSupplyComponent {
       label: group.label,
       color: group.color,
       count: group.count,
+      imagePath: group.imagePath,
     }));
   }
 

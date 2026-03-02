@@ -22,18 +22,21 @@
             ></app-card-like>
 
             @if (landscape.showCost) {
-              <div class="landscape-cost-overlay">
-                <div class="cost-chip">{{ landscape.treasureCost }}</div>
+              <div class="cost-overlay">
+                <div class="cost-chip">
+                  <img src="/assets/ui-icons/coin.png" alt="" />
+                  <span>{{ landscape.treasureCost }}</span>
+                </div>
                 @if (landscape.potionCost > 0) {
-                  <div class="cost-chip icon-chip">
-                    <img src="/assets/ui-icons/potion-icon.png" alt="" />
+                  <div class="cost-chip">
+                    <img src="/assets/ui-icons/potion.png" alt="" />
                     @if (landscape.potionCost > 1) {
                       <span>{{ landscape.potionCost }}</span>
                     }
                   </div>
                 }
                 @if (landscape.debtCost > 0) {
-                  <div class="cost-chip icon-chip">
+                  <div class="cost-chip">
                     <img src="/assets/ui-icons/debt-icon.png" alt="" />
                     <span>{{ landscape.debtCost }}</span>
                   </div>

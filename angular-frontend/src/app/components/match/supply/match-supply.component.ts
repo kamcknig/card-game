@@ -33,6 +33,7 @@ type SupplyTokenBadgeViewModel = {
   id: string;
   label: string;
   color: string;
+  imagePath?: string;
 };
 
 type SupplyTokenBadgeStackViewModel = {
@@ -40,6 +41,7 @@ type SupplyTokenBadgeStackViewModel = {
   label: string;
   color: string;
   count: number;
+  imagePath?: string;
 };
 
 type SupplyTokenChipViewModel = {
@@ -55,6 +57,9 @@ type SupplyPileViewModel = {
   pileKey: string;
   cardId: CardId | null;
   count: number;
+  treasureCost: number;
+  potionCost: number;
+  debtCost: number;
   trait: Trait | null;
   tokenBadgeStacks: SupplyTokenBadgeStackViewModel[];
   tokenChips: SupplyTokenChipViewModel[];
@@ -379,11 +384,15 @@ export class MatchSupplyComponent {
       pileKey,
       cardId,
       count: sortedPileCards.length,
+      treasureCost: representativeCard?.cost?.treasure ?? 0,
+      potionCost: representativeCard?.cost?.potion ?? 0,
+      debtCost: representativeCard?.cost?.debt ?? 0,
       trait,
       tokenBadgeStacks: this.buildTokenBadgeStacks(tokenVisual.tokenBadges.map((badge) => ({
         id: badge.id,
         label: badge.label,
         color: this.toColorHex(badge.color),
+        imagePath: badge.imagePath,
       }))),
       tokenChips: tokenVisual.tokenChips.map((chip) => ({
         id: chip.id,
@@ -454,9 +463,9 @@ export class MatchSupplyComponent {
 
   // Groups identical pile token badges and renders them as one stack with a count.
   private buildTokenBadgeStacks(badges: SupplyTokenBadgeViewModel[]): SupplyTokenBadgeStackViewModel[] {
-    const grouped = new Map<string, { firstId: string; label: string; color: string; count: number }>();
+    const grouped = new Map<string, { firstId: string; label: string; color: string; count: number; imagePath?: string }>();
     for (const badge of badges) {
-      const key = `${badge.label}:${badge.color}`;
+      const key = `${badge.label}:${badge.color}:${badge.imagePath ?? ''}`;
       const existing = grouped.get(key);
       if (existing) {
         existing.count += 1;
@@ -467,6 +476,7 @@ export class MatchSupplyComponent {
         label: badge.label,
         color: badge.color,
         count: 1,
+        imagePath: badge.imagePath,
       });
     }
 
@@ -476,6 +486,7 @@ export class MatchSupplyComponent {
         label: group.label,
         color: group.color,
         count: group.count,
+        imagePath: group.imagePath,
       };
     });
   }
