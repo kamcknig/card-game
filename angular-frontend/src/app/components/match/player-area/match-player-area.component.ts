@@ -109,6 +109,7 @@ type CardPileViewModel = {
   cardId: CardId | null;
   forceFacing: 'front' | 'back';
   count: number;
+  showCount: boolean;
   selectable: boolean;
   selected: boolean;
   waySelectable: boolean;
@@ -888,6 +889,7 @@ export class MatchPlayerAreaComponent {
     return {
       cardId,
       count,
+      showCount: pileType !== 'discard',
       forceFacing: topCard && pileType === 'deck' && topCard.type.includes('SHADOW') ? 'front' : (pileType === 'deck' ? 'back' : 'front'),
       selectable: cardId !== null && selectableCards.has(cardId),
       selected: cardId !== null && selectedCards.has(cardId),
