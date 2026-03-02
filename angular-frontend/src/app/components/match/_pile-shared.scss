@@ -39,19 +39,6 @@
     pointer-events: none;
   }
 
-  .pile-count-badge {
-    min-width: 30px;
-    height: 30px;
-    border-radius: 999px;
-    border: 1px solid var(--theme-border-strong);
-    background: rgba(0, 0, 0, 0.75);
-    color: var(--theme-text-on-dark);
-    font-size: 18px;
-    font-weight: 700;
-    line-height: 27px;
-    text-align: center;
-  }
-
   .pile-trait-tag {
     position: absolute;
     top: 10px;

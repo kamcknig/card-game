@@ -4,6 +4,7 @@ import { NanostoresService } from '@nanostores/angular';
 import { Card, CardId, CardKey, CardLikeId, Match, PlayerId, TokenDefinition, TokenId, Trait } from 'shared/types';
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { CardComponent } from '../../card/card.component';
+import { CountBadgeComponent } from '../count-badge/count-badge.component';
 import { TokenImageBadgeComponent } from '../token-image-badge/token-image-badge.component';
 import { cardStore } from '../../../state/card-state';
 import { cardOverrideStore } from '../../../state/card-logic';
@@ -100,6 +101,7 @@ const WAY_PICKER_EDGE_OVERLAP_PX = 5;
   selector: 'app-match-non-supply',
   imports: [
     CardComponent,
+    CountBadgeComponent,
     TokenImageBadgeComponent,
   ],
   templateUrl: './match-non-supply.component.html',

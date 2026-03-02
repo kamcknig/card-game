@@ -38,7 +38,7 @@
 
                       <div class="pile-indicators">
                         @if (pile.count > 0) {
-                          <div class="pile-count-badge">{{ pile.count }}</div>
+                          <app-count-badge [count]="pile.count"></app-count-badge>
                         }
                         @if (pile.tokenBadgeStacks.length > 0) {
                           <div class="pile-token-badges">

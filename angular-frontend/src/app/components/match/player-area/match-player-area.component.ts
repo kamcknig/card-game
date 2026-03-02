@@ -53,6 +53,7 @@ import {
   SUPPLY_PANEL_GAP_PX
 } from '../supply/supply-layout.constants';
 import { getLandscapePanelHeightPx } from '../landscapes/landscape-layout.constants';
+import { CountBadgeComponent } from '../count-badge/count-badge.component';
 import { TokenImageBadgeComponent } from '../token-image-badge/token-image-badge.component';
 import { getTokenImagePath, getTokenShortLabel } from '../views/token-utils';
 
@@ -131,6 +132,7 @@ const PLAYER_BOTTOM_ROW_RESERVE_PX = 400;
   selector: 'app-match-player-area',
   imports: [
     CardComponent,
+    CountBadgeComponent,
     TokenImageBadgeComponent,
   ],
   templateUrl: './match-player-area.component.html',

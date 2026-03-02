@@ -397,21 +397,11 @@
   box-shadow: 0 0 0 2px rgba(0, 213, 255, 0.9);
 }
 
-.stack-count-badge {
+// Count badge positioned at top-left of deck, discard, and hand group stacks.
+app-count-badge {
   position: absolute;
   top: 4px;
   left: 4px;
-  min-width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  border: 1px solid var(--theme-border-strong);
-  background: rgba(0, 0, 0, 0.75);
-  color: var(--theme-text-on-dark);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 20px;
-  text-align: center;
-  pointer-events: none;
 }
 
 .stack-token-badges {

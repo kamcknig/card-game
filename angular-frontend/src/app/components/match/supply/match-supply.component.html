@@ -31,7 +31,7 @@
                 <div class="empty-pile">Empty</div>
               }
               <div class="pile-indicators">
-                <div class="pile-count-badge">{{ pile.count }}</div>
+                <app-count-badge [count]="pile.count"></app-count-badge>
                 @if (pile.tokenBadgeStacks.length > 0) {
                   <div class="pile-token-badges">
                     @for (stack of pile.tokenBadgeStacks; track stack.id) {
@@ -120,7 +120,7 @@
                 <div class="empty-pile">Empty</div>
               }
               <div class="pile-indicators">
-                <div class="pile-count-badge">{{ pile.count }}</div>
+                <app-count-badge [count]="pile.count"></app-count-badge>
                 @if (pile.tokenBadgeStacks.length > 0) {
                   <div class="pile-token-badges">
                     @for (stack of pile.tokenBadgeStacks; track stack.id) {
@@ -216,7 +216,7 @@
               <div class="empty-pile">Empty</div>
             }
             <div class="pile-indicators">
-              <div class="pile-count-badge">{{ pile.count }}</div>
+              <app-count-badge [count]="pile.count"></app-count-badge>
               @if (pile.tokenBadgeStacks.length > 0) {
                 <div class="pile-token-badges">
                   @for (stack of pile.tokenBadgeStacks; track stack.id) {
