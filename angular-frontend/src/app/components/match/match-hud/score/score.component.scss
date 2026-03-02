@@ -67,21 +67,10 @@
 
 .player-main {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-.player-topline,
-.player-bottomline {
-  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-}
-
-.player-bottomline {
-  justify-content: flex-start;
+  min-width: 0;
 }
 
 .score-cluster {
@@ -91,8 +80,9 @@
 }
 
 .player-name {
-  font-size: 15px;
+  font-size: 21px;
   font-weight: 700;
+  line-height: 1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

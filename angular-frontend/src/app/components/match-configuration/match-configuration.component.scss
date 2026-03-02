@@ -94,7 +94,7 @@ $match-config-single-column-breakpoint: 940px;
   flex-wrap: wrap;
   gap: 20px;
   // Cap card-like sections to 3 columns (Events/Landmarks/Artifacts/etc).
-  max-width: calc((280px * 3) + (20px * 2));
+  max-width: calc((var(--card-landscape-width) * 3) + (20px * 2));
 }
 
 .card-likes-section {
@@ -133,7 +133,7 @@ $match-config-single-column-breakpoint: 940px;
 .traits-section,
 .allies-section,
 .prophecies-section {
-  flex: 0 0 280px;
+  flex: 0 0 var(--card-landscape-width);
 }
 
 .banned-card-item {
@@ -206,7 +206,7 @@ $match-config-single-column-breakpoint: 940px;
   gap: 10px;
   justify-content: flex-start;
   // Cap card-like list width so at most 3 cards render per row.
-  max-width: calc((280px * 3) + (10px * 2));
+  max-width: calc((var(--card-landscape-width) * 3) + (10px * 2));
 }
 
 .events-section .event-slot,
@@ -288,8 +288,8 @@ $match-config-single-column-breakpoint: 940px;
 /* Event slot styling mirrors kingdom slots */
 .event-slot {
   border: 2px solid var(--theme-border-strong);
-  width: 280px;
-  height: 124px;
+  width: var(--card-landscape-width);
+  height: var(--card-landscape-height);
 
   .no-event {
     font-size: 32px;
@@ -303,8 +303,8 @@ $match-config-single-column-breakpoint: 940px;
 /* Landmark slot styling mirrors event slots */
 .landmark-slot {
   border: 2px solid var(--theme-border-strong);
-  width: 280px;
-  height: 124px;
+  width: var(--card-landscape-width);
+  height: var(--card-landscape-height);
 
   .no-landmark {
     font-size: 32px;
@@ -318,8 +318,8 @@ $match-config-single-column-breakpoint: 940px;
 /* Artifact slot styling mirrors event slots */
 .artifact-slot {
   border: 2px solid var(--theme-border-strong);
-  width: 280px;
-  height: 124px;
+  width: var(--card-landscape-width);
+  height: var(--card-landscape-height);
 
   .no-artifact {
     font-size: 32px;
@@ -333,8 +333,8 @@ $match-config-single-column-breakpoint: 940px;
 /* Project slot styling mirrors event slots */
 .project-slot {
   border: 2px solid var(--theme-border-strong);
-  width: 280px;
-  height: 124px;
+  width: var(--card-landscape-width);
+  height: var(--card-landscape-height);
 
   .no-project {
     font-size: 32px;
@@ -348,8 +348,8 @@ $match-config-single-column-breakpoint: 940px;
 /* Way slot styling mirrors event slots */
 .way-slot {
   border: 2px solid var(--theme-border-strong);
-  width: 280px;
-  height: 124px;
+  width: var(--card-landscape-width);
+  height: var(--card-landscape-height);
 
   .no-way {
     font-size: 32px;
@@ -363,8 +363,8 @@ $match-config-single-column-breakpoint: 940px;
 /* Ally slot styling mirrors event slots */
 .ally-slot {
   border: 2px solid var(--theme-border-strong);
-  width: 280px;
-  height: 124px;
+  width: var(--card-landscape-width);
+  height: var(--card-landscape-height);
 
   .no-ally {
     font-size: 32px;
@@ -378,8 +378,8 @@ $match-config-single-column-breakpoint: 940px;
 /* Trait slot styling mirrors event slots */
 .trait-slot {
   border: 2px solid var(--theme-border-strong);
-  width: 280px;
-  height: 124px;
+  width: var(--card-landscape-width);
+  height: var(--card-landscape-height);
 
   .no-trait {
     font-size: 32px;
@@ -393,8 +393,8 @@ $match-config-single-column-breakpoint: 940px;
 /* Prophecy slot styling mirrors event slots */
 .prophecy-slot {
   border: 2px solid var(--theme-border-strong);
-  width: 280px;
-  height: 124px;
+  width: var(--card-landscape-width);
+  height: var(--card-landscape-height);
 
   .no-prophecy {
     font-size: 32px;

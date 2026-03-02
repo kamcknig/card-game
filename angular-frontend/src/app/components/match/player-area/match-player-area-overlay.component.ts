@@ -45,12 +45,13 @@ import {
   turnPhaseStore
 } from '../../../state/turn-state';
 import { cofferStore, debtStore, villagerStore } from '../../../state/resource-logic';
-import { CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
+import { CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
 import {
   SUPPLY_BASIC_PANEL_WIDTH_PX,
-  SUPPLY_KINGDOM_PANEL_WIDTH_PX,
+  SUPPLY_KINGDOM_PANEL_HEIGHT_PX,
   SUPPLY_PANEL_GAP_PX
 } from '../supply/supply-layout.constants';
+import { getLandscapePanelHeightPx } from '../landscapes/landscape-layout.constants';
 import { getTokenShortLabel } from '../views/token-utils';
 
 type RectLike = {
@@ -114,6 +115,14 @@ const CUBE_TOKEN_ID = 'cube-token';
 const VICTORY_TOKEN_ID = 'prosperity:victory';
 const WAY_PICKER_PANEL_WIDTH_PX = 220;
 const WAY_PICKER_EDGE_OVERLAP_PX = 5;
+
+// Width of the HUD game log panel (fixed after resize removal).
+const HUD_LOG_PANEL_WIDTH_PX = 300;
+// Right margin of the HUD log stack from the viewport edge.
+const HUD_LOG_RIGHT_MARGIN_PX = 10;
+// Vertical space reserved at the bottom for the hand panel (including token trays),
+// deck/discard stacks, and the phase-status bar so the play area does not overlap them.
+const PLAYER_BOTTOM_ROW_RESERVE_PX = 400;
 
 @Component({
   selector: 'app-match-player-area-overlay',
@@ -221,20 +230,43 @@ export class MatchPlayerAreaOverlayComponent {
   private readonly _villagerSpendAmount = signal(0);
   private readonly _debtPayAmount = signal(0);
 
+  /** Computes absolute positioning boundaries for the play area panel and hand layout. */
   readonly layout = computed(() => {
     const rect = this.scoreRect();
     const viewport = this._viewport();
-    const basicLeft = SUPPLY_PANEL_GAP_PX;
-    const boardLeft = Math.max(
+    const match = this._match();
+    const gap = SUPPLY_PANEL_GAP_PX;
+
+    // Left edge: right of the basic supply panel with margin.
+    const basicLeft = gap;
+    const playAreaLeft = Math.max(
       (rect?.x ?? 0) + (rect?.width ?? 0),
       basicLeft + SUPPLY_BASIC_PANEL_WIDTH_PX
-    ) + SUPPLY_PANEL_GAP_PX;
+    ) + gap;
+
+    // Top edge: below the kingdom panel and optional landscape panel.
+    const landscapeCount = this.countLandscapes(match);
+    const landscapePanelHeight = getLandscapePanelHeightPx(landscapeCount);
+    let playAreaTop: number;
+    if (landscapePanelHeight > 0) {
+      // Landscape top matches the landscape overlay component's own formula.
+      const landscapeTop = gap + SUPPLY_KINGDOM_PANEL_HEIGHT_PX + gap;
+      playAreaTop = landscapeTop + landscapePanelHeight + gap;
+    } else {
+      // Without landscapes, position below the kingdom panel with a gap.
+      playAreaTop = gap + SUPPLY_KINGDOM_PANEL_HEIGHT_PX + gap;
+    }
+
+    // Right edge: left of the HUD log stack.
+    const playAreaRight = HUD_LOG_RIGHT_MARGIN_PX + HUD_LOG_PANEL_WIDTH_PX + gap;
+
     return {
-      boardLeft,
-      boardMaxWidth: Math.max(320, viewport.width - boardLeft - SUPPLY_PANEL_GAP_PX),
+      playAreaTop,
+      playAreaLeft,
+      playAreaRight,
+      playAreaBottom: PLAYER_BOTTOM_ROW_RESERVE_PX,
       handMaxWidth: Math.max(460, viewport.width - (CARD_WIDTH * 2 + STANDARD_GAP * 8)),
       handCompact: viewport.width < 1680,
-      deckDiscardMargin: Math.max(8, Math.floor((viewport.width - (boardLeft + SUPPLY_KINGDOM_PANEL_WIDTH_PX)) * 0.2)),
     };
   });
 
@@ -722,6 +754,19 @@ export class MatchPlayerAreaOverlayComponent {
       return;
     }
     this._socketService.emit('payDebt', selfPlayerId, amount);
+  }
+
+  // Counts total landscape-type entries (events, landmarks, projects, ways, prophecies)
+  // used to compute how far down the play area panel should start.
+  private countLandscapes(match: Match | Readonly<Match> | null | undefined): number {
+    if (!match) {
+      return 0;
+    }
+    return (match.events?.length ?? 0)
+      + (match.landmarks?.length ?? 0)
+      + (match.projects?.length ?? 0)
+      + (match.ways?.length ?? 0)
+      + (match.prophecies?.length ?? 0);
   }
 
   private closeResourceControls(): void {

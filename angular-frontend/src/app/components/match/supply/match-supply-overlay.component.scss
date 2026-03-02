@@ -2,7 +2,6 @@
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 2;
 }
 
 .supply-overlay-root {
@@ -40,8 +39,8 @@
 
 .supply-pile {
   position: relative;
-  width: 175px;
-  min-height: 175px;
+  width: var(--card-width);
+  min-height: var(--card-small-height);
   border: none;
   border-radius: 6px;
   background: transparent;
@@ -88,8 +87,8 @@
 }
 
 .empty-pile {
-  width: 175px;
-  height: 175px;
+  width: var(--card-width);
+  height: var(--card-small-height);
   border-radius: 4px;
   border: 1px solid var(--theme-border-strong);
   color: var(--theme-text-on-dark);

@@ -2,41 +2,15 @@
   color: white;
   background-color: rgba(0, 0, 0, 0.6);
   border-radius: 5px;
+  width: 300px;
   height: 55vh;
   position: relative;
 
-  .resize-container {
-    display: flex;
-    height: 100%;
-    position: relative;
-    // Inset the scroll viewport from the parent edges.
-    padding-top: 6px;
-    padding-bottom: 6px;
-    box-sizing: border-box;
-  }
-
-  .resize-handle {
-    width: 10px;
-    height: auto;
-    cursor: col-resize;
-    box-shadow: inset 3px 0 4px -2px rgba(255, 255, 255, 1);
-    z-index: 2;
-    position: relative;
-    flex-shrink: 0;
-  }
-
   .log-content {
-    position: relative;
-    width: 300px;
-    min-width: 300px;
-    padding-left: 10px;
-    padding-right: 10px;
-    // Keep a small breathing room inside the log content itself.
-    padding-top: 6px;
-    padding-bottom: 6px;
-    min-height: 0;
+    height: 100%;
+    padding: 10px;
+    box-sizing: border-box;
     overflow: auto;
-    flex-grow: 1;
   }
 
   :not(:last-child) {

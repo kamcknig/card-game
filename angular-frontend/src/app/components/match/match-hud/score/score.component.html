@@ -19,25 +19,21 @@
           <span class="player-accent-dot" aria-hidden="true"></span>
 
           <div class="player-main">
-            <div class="player-topline">
-              <span class="player-name">{{ playerScore.name }}</span>
-            </div>
+            <span class="player-name">{{ playerScore.name }}</span>
 
-            <div class="player-bottomline">
-              <div class="score-cluster">
-                <span class="score-value">{{ playerScore.score }}</span>
-                <div class="victory-token-wrap">
-                  <img
-                    class="victory-token-icon"
-                    ngSrc="/assets/ui-icons/victory-shield.png"
-                    width="24"
-                    height="24"
-                    alt="victory point token"
-                  >
-                  @if ((victoryTokenCounts[playerScore.id] ?? 0) > 0) {
-                    <span class="victory-token-count">{{ victoryTokenCounts[playerScore.id] ?? 0 }}</span>
-                  }
-                </div>
+            <div class="score-cluster">
+              <span class="score-value">{{ playerScore.score }}</span>
+              <div class="victory-token-wrap">
+                <img
+                  class="victory-token-icon"
+                  ngSrc="/assets/ui-icons/victory-shield.png"
+                  width="24"
+                  height="24"
+                  alt="victory point token"
+                >
+                @if ((victoryTokenCounts[playerScore.id] ?? 0) > 0) {
+                  <span class="victory-token-count">{{ victoryTokenCounts[playerScore.id] ?? 0 }}</span>
+                }
               </div>
             </div>
           </div>

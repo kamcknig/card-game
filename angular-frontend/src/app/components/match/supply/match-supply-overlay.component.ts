@@ -19,7 +19,6 @@ import { WayPickerOverlayService } from '../../../core/way-picker/way-picker-ove
 import {
   SUPPLY_BASIC_PANEL_HEIGHT_PX,
   SUPPLY_BASIC_PANEL_WIDTH_PX,
-  SUPPLY_KINGDOM_PANEL_WIDTH_PX,
   SUPPLY_PANEL_GAP_PX
 } from './supply-layout.constants';
 

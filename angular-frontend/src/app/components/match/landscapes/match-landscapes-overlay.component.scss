@@ -2,7 +2,6 @@
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 2;
 }
 
 .landscape-overlay-root {
@@ -24,7 +23,7 @@
 .landscape-grid {
   --landscape-columns: 1;
   display: grid;
-  grid-template-columns: repeat(var(--landscape-columns), 280px);
+  grid-template-columns: repeat(var(--landscape-columns), var(--card-landscape-width));
   column-gap: 10px;
   row-gap: 10px;
 }

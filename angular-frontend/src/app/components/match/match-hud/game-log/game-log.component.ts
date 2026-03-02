@@ -2,9 +2,7 @@ import { AfterViewInit, ChangeDetectionStrategy, Component, DestroyRef, ElementR
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { NanostoresService } from '@nanostores/angular';
 import { logStore } from '../../../../state/log-state';
-import { finalize, fromEvent, merge, switchMap, takeUntil, throttleTime } from 'rxjs';
 import { LogEntryMessage } from '../../../../../types';
-import { DOCUMENT } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 type SanitizedLogEntry = LogEntryMessage & { safeMessage: SafeHtml; };
@@ -19,11 +17,9 @@ type SanitizedLogEntry = LogEntryMessage & { safeMessage: SafeHtml; };
 export class GameLogComponent implements AfterViewInit {
   private readonly _sanitizer = inject(DomSanitizer);
   private readonly _nanoService = inject(NanostoresService);
-  private readonly _document = inject(DOCUMENT);
   private readonly _destroyRef = inject(DestroyRef);
 
   @ViewChild('logContent', { read: ElementRef }) logContent!: ElementRef;
-  @ViewChild('resizeHandle') resizeHandle!: ElementRef;
 
   entries = input<readonly LogEntryMessage[] | null>(null);
 
@@ -37,45 +33,11 @@ export class GameLogComponent implements AfterViewInit {
   });
 
   ngAfterViewInit() {
+    // Auto-scroll to bottom when new log entries arrive.
     this._nanoService.useStore(logStore)
       .pipe(takeUntilDestroyed(this._destroyRef))
       .subscribe(() => {
         setTimeout(() => this.logContent.nativeElement.scrollTop = this.logContent.nativeElement.scrollHeight, 10);
-      });
-
-    let startDragX: number;
-    let startWidth: number;
-    fromEvent<MouseEvent>(this.resizeHandle.nativeElement, 'mousedown')
-      .pipe(
-        switchMap((event) => {
-          this._document.body.style.userSelect = 'none';
-          startDragX = event.clientX;
-          startWidth = this.logContent.nativeElement.clientWidth;
-
-          return fromEvent<MouseEvent>(window, 'mousemove').pipe(
-            takeUntil(merge(
-              fromEvent<MouseEvent>(window, 'mouseup')
-            )),
-            throttleTime(50),
-            finalize(() => {
-              this._document.body.style.userSelect = '';
-            })
-          );
-        }),
-        takeUntilDestroyed(this._destroyRef),
-      )
-      .subscribe((event) => {
-        let diff = startDragX - event.clientX;
-
-        let newWidth = 0;
-        if (diff > 0) {
-          newWidth = Math.min(800, startWidth + diff);
-        }
-        else {
-          newWidth = Math.max(300, startWidth + diff);
-        }
-
-        (this.logContent.nativeElement as HTMLElement).style.width = `${newWidth}px`;
       });
   }
 }

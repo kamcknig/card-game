@@ -117,7 +117,7 @@ app-score {
 }
 
 .card-item {
-  margin-bottom: -150px;
+  margin-bottom: calc(-1 * var(--card-small-height));
 }
 
 .hud-log-stack {

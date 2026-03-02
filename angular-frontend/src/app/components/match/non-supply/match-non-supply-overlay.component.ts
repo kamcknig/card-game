@@ -407,10 +407,13 @@ export class MatchNonSupplyOverlayComponent {
     emitTap();
   }
 
+  // Resolves which starting card entries to render as rows for a non-supply pile.
+  // Loot is a single shuffled deck so it always renders as one row regardless of
+  // how many unique loot card types exist.
   private resolveDisplayStartingCards(kingdomName: string, startingCards: readonly { cardKey: string }[], cards: readonly Card[]) {
     if (kingdomName === 'loot') {
       if (startingCards.length > 0) {
-        return [...startingCards];
+        return [startingCards[0]];
       }
       const topCard = cards[cards.length - 1];
       return topCard ? [{ cardKey: topCard.cardKey }] : [];

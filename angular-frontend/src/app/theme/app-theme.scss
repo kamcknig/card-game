@@ -55,4 +55,11 @@
   --theme-overlay-alpha-soft: 0.5;
   --theme-overlay-alpha-medium: 0.6;
   --theme-overlay-alpha-strong: 0.8;
+
+  /* Card dimensions — single source of truth for card sizing across the UI. */
+  --card-width: 150px;
+  --card-height: 240px;
+  --card-small-height: 150px;
+  --card-landscape-width: 280px;
+  --card-landscape-height: 124px;
 }
