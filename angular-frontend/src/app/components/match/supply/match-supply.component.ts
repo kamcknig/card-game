@@ -10,6 +10,7 @@ import { getCardSourceStore } from '../../../state/card-source-store';
 import { awaitingServerLockReleaseStore, promptInteractionLockStore, selectedCardStore, selectedPileStore } from '../../../state/interactive-state';
 import { selectablePileStore } from '../../../state/interactive-pile-logic';
 import { selectableCardStore, waySelectableCardStore } from '../../../state/interactive-logic';
+import { cardOverrideStore } from '../../../state/card-logic';
 import { basicSupplies, kingdomSupplies } from '../../../state/match-logic';
 import { matchStore } from '../../../state/match-state';
 import { selfPlayerIdStore } from '../../../state/player-state';
@@ -125,6 +126,11 @@ export class MatchSupplyComponent {
 
   private readonly _tokenDefinitions = toSignal(this._nanoStores.useStore(tokenDefinitionStore), {
     initialValue: tokenDefinitionStore.get(),
+  });
+
+  // Per-card cost overrides for the viewing player (e.g. Ferry's -$2).
+  private readonly _cardOverrides = toSignal(this._nanoStores.useStore(cardOverrideStore), {
+    initialValue: cardOverrideStore.get(),
   });
 
   private readonly _selfPlayerId = toSignal(this._nanoStores.useStore(selfPlayerIdStore), {
@@ -376,6 +382,10 @@ export class MatchSupplyComponent {
     const trait = this._traitByPile()[pileKey] ?? null;
     const cardId = pileCard?.id ?? null;
 
+    // Use the effective cost from card overrides if available, otherwise fall back to the base cost.
+    const overrides = this._cardOverrides();
+    const effectiveCost = (representativeCard && overrides[representativeCard.id]?.cost) ?? representativeCard?.cost;
+
     const selectableCards = new Set(this._selectableCards() ?? []);
     const selectedCards = new Set(this._selectedCards() ?? []);
     const waySelectableCards = new Set(this._waySelectableCards() ?? []);
@@ -388,9 +398,9 @@ export class MatchSupplyComponent {
       pileKey,
       cardId,
       count: sortedPileCards.length,
-      treasureCost: representativeCard?.cost?.treasure ?? 0,
-      potionCost: representativeCard?.cost?.potion ?? 0,
-      debtCost: representativeCard?.cost?.debt ?? 0,
+      treasureCost: effectiveCost?.treasure ?? 0,
+      potionCost: effectiveCost?.potion ?? 0,
+      debtCost: effectiveCost?.debt ?? 0,
       trait,
       tokenBadgeStacks: this.buildTokenBadgeStacks(tokenVisual.tokenBadges.map((badge) => ({
         id: badge.id,

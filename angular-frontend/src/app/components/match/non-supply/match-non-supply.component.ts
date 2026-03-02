@@ -6,6 +6,7 @@ import { SocketService } from '../../../core/socket-service/socket.service';
 import { CardComponent } from '../../card/card.component';
 import { TokenImageBadgeComponent } from '../token-image-badge/token-image-badge.component';
 import { cardStore } from '../../../state/card-state';
+import { cardOverrideStore } from '../../../state/card-logic';
 import { nonSupplyKingdomMapStore } from '../../../state/card-source-logic';
 import { matchStore } from '../../../state/match-state';
 import { selfPlayerIdStore } from '../../../state/player-state';
@@ -129,6 +130,11 @@ export class MatchNonSupplyComponent {
     initialValue: tokenDefinitionStore.get(),
   });
 
+  // Per-card cost overrides for the viewing player (e.g. Ferry's -$2).
+  private readonly _cardOverrides = toSignal(this._nanoStores.useStore(cardOverrideStore), {
+    initialValue: cardOverrideStore.get(),
+  });
+
   private readonly _selfPlayerId = toSignal(this._nanoStores.useStore(selfPlayerIdStore), {
     initialValue: selfPlayerIdStore.get(),
   });
@@ -201,14 +207,18 @@ export class MatchNonSupplyComponent {
           ? tokenVisualByPile[pileKey] ?? { tokenBadges: [], tokenChips: [] }
           : { tokenBadges: [], tokenChips: [] };
 
+        // Use the effective cost from card overrides if available, otherwise fall back to the base cost.
+        const overrides = this._cardOverrides();
+        const effectiveCost = (representativeCard && overrides[representativeCard.id]?.cost) ?? representativeCard?.cost;
+
         return {
           trackKey: `${kingdomName}:${startingCard.cardKey}:${rowIndex}`,
           pileKey,
           cardId,
           count: sortedPileCards.length,
-          treasureCost: representativeCard?.cost?.treasure ?? 0,
-          potionCost: representativeCard?.cost?.potion ?? 0,
-          debtCost: representativeCard?.cost?.debt ?? 0,
+          treasureCost: effectiveCost?.treasure ?? 0,
+          potionCost: effectiveCost?.potion ?? 0,
+          debtCost: effectiveCost?.debt ?? 0,
           forceFacing: isLoot ? 'back' : 'front',
           empty: sortedPileCards.length < 1,
           selectableCard: cardId !== null && selectableCards.has(cardId),
