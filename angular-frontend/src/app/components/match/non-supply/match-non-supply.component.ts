@@ -88,15 +88,15 @@ const WAY_PICKER_PANEL_WIDTH_PX = 220;
 const WAY_PICKER_EDGE_OVERLAP_PX = 5;
 
 @Component({
-  selector: 'app-match-non-supply-overlay',
+  selector: 'app-match-non-supply',
   imports: [
     CardComponent,
   ],
-  templateUrl: './match-non-supply-overlay.component.html',
-  styleUrl: './match-non-supply-overlay.component.scss',
+  templateUrl: './match-non-supply.component.html',
+  styleUrl: './match-non-supply.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MatchNonSupplyOverlayComponent {
+export class MatchNonSupplyComponent {
   private readonly _nanoStores = inject(NanostoresService);
   private readonly _socketService = inject(SocketService);
   private readonly _wayPickerOverlay = inject(WayPickerOverlayService);

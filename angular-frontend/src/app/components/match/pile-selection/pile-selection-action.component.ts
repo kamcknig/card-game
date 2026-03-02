@@ -4,12 +4,12 @@ import { NanostoresService } from '@nanostores/angular';
 import { pileSelectionOverlayActionStore, pileSelectionOverlayStore } from '../../../state/pile-selection-overlay-state';
 
 @Component({
-  selector: 'app-pile-selection-action-overlay',
-  templateUrl: './pile-selection-action-overlay.component.html',
-  styleUrl: './pile-selection-action-overlay.component.scss',
+  selector: 'app-pile-selection-action',
+  templateUrl: './pile-selection-action.component.html',
+  styleUrl: './pile-selection-action.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class PileSelectionActionOverlayComponent {
+export class PileSelectionActionComponent {
   private readonly _nanoStores = inject(NanostoresService);
   private _nonce = 0;
 

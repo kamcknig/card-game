@@ -125,15 +125,15 @@ const HUD_LOG_RIGHT_MARGIN_PX = 10;
 const PLAYER_BOTTOM_ROW_RESERVE_PX = 400;
 
 @Component({
-  selector: 'app-match-player-area-overlay',
+  selector: 'app-match-player-area',
   imports: [
     CardComponent,
   ],
-  templateUrl: './match-player-area-overlay.component.html',
-  styleUrl: './match-player-area-overlay.component.scss',
+  templateUrl: './match-player-area.component.html',
+  styleUrl: './match-player-area.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MatchPlayerAreaOverlayComponent {
+export class MatchPlayerAreaComponent {
   private readonly _nanoStores = inject(NanostoresService);
   private readonly _socketService = inject(SocketService);
   private readonly _wayPickerOverlay = inject(WayPickerOverlayService);

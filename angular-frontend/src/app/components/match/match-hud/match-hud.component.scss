@@ -147,7 +147,6 @@ app-game-log {
   border-radius: 5px;
   background-color: rgba(0, 0, 0, 0.6);
   pointer-events: auto;
-  z-index: 25;
 }
 
 .hud-menu-icon {
@@ -213,7 +212,6 @@ app-game-log {
   position: fixed;
   top: 10px;
   right: 10px;
-  z-index: 80;
   min-width: 210px;
   max-width: 360px;
   padding: 8px 10px;

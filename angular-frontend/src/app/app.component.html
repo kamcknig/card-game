@@ -1,34 +1,36 @@
 <ng-container [ngSwitch]="scene()">
   <app-lobby *ngSwitchCase="'lobby'"></app-lobby>
   <app-match-configuration *ngSwitchCase="'configuration'"></app-match-configuration>
+  <app-game-summary [matchSummary]="matchSummary()!" *ngSwitchCase="'gameSummary'"></app-game-summary>
+</ng-container>
+
+@if (scene() === 'match' && matchStarted()) {
+  <app-match-supply
+    [visible]="true"
+    [scoreRect]="scoreViewRect()"
+  ></app-match-supply>
+  <app-match-landscapes
+    [visible]="true"
+    [scoreRect]="scoreViewRect()"
+  ></app-match-landscapes>
+  <app-match-player-area
+    [visible]="true"
+    [scoreRect]="scoreViewRect()"
+  ></app-match-player-area>
+  <app-match-non-supply
+    [visible]="true"
+    [scoreRect]="scoreViewRect()"
+  ></app-match-non-supply>
+  <app-pile-selection-action></app-pile-selection-action>
+}
+
+@if (scene() === 'match') {
   <app-match-hud
     [ngClass]="{'match-started': matchStarted()}"
     (scoreViewResize)="onScoreViewResize($event)"
     (nextPhaseRequested)="onNextPhaseRequested()"
     (playAllTreasuresRequested)="onPlayAllTreasuresRequested()"
-    *ngSwitchCase="'match'">
-  </app-match-hud>
-  <app-game-summary [matchSummary]="matchSummary()!" *ngSwitchCase="'gameSummary'"></app-game-summary>
-</ng-container>
-
-@if (scene() === 'match' && matchStarted()) {
-  <app-match-supply-overlay
-    [visible]="true"
-    [scoreRect]="scoreViewRect()"
-  ></app-match-supply-overlay>
-  <app-match-landscapes-overlay
-    [visible]="true"
-    [scoreRect]="scoreViewRect()"
-  ></app-match-landscapes-overlay>
-  <app-match-player-area-overlay
-    [visible]="true"
-    [scoreRect]="scoreViewRect()"
-  ></app-match-player-area-overlay>
-  <app-match-non-supply-overlay
-    [visible]="true"
-    [scoreRect]="scoreViewRect()"
-  ></app-match-non-supply-overlay>
-  <app-pile-selection-action-overlay></app-pile-selection-action-overlay>
+  ></app-match-hud>
 }
 
 <app-card-detail-dialog></app-card-detail-dialog>

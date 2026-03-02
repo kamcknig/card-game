@@ -4,63 +4,40 @@
   pointer-events: none;
 }
 
-.non-supply-overlay-root {
+.supply-overlay-root {
   position: fixed;
   inset: 0;
   pointer-events: none;
 }
 
-.non-supply-panel {
+.supply-panel {
   position: fixed;
   border: 1px solid var(--theme-border-strong);
   border-radius: 6px;
-  background: rgba(0, 0, 0, var(--theme-overlay-alpha-medium));
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
   padding: 10px;
-  box-sizing: border-box;
   pointer-events: none;
 }
 
-.kingdom-columns {
+.basic-columns {
   display: flex;
-  align-items: flex-start;
-  gap: 30px;
+  gap: 10px;
 }
 
-.kingdom-column {
+.pile-column {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.kingdom-section {
-  border: 1px solid var(--theme-border-strong);
-  border-radius: 6px;
-  background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
-  padding: 10px;
-  pointer-events: auto;
+.kingdom-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  column-gap: 32px;
+  row-gap: 10px;
 }
 
-.kingdom-title {
-  color: var(--theme-text-on-dark);
-  font-size: 18px;
-  line-height: 1.2;
-  margin-bottom: 10px;
-}
-
-.kingdom-piles {
-  display: flex;
-  flex-direction: column;
-}
-
-.kingdom-piles .non-supply-pile + .non-supply-pile {
-  margin-top: -130px;
-}
-
-.kingdom-piles.loot-piles .non-supply-pile + .non-supply-pile {
-  margin-top: 0;
-}
-
-.non-supply-pile {
+.supply-pile {
   position: relative;
   width: var(--card-width);
   min-height: var(--card-small-height);
@@ -75,37 +52,37 @@
   overflow: visible;
 }
 
-.non-supply-pile::after {
+.supply-pile::before {
   content: '';
   position: absolute;
   inset: -3px;
   border: 3px solid transparent;
   border-radius: 8px;
   pointer-events: none;
-  z-index: 3;
 }
 
-.non-supply-pile.selectable-card,
-.non-supply-pile.selectable-pile {
+.supply-pile.selectable-card,
+.supply-pile.selectable-pile {
   cursor: pointer;
 }
 
-.non-supply-pile.selectable-card::after,
-.non-supply-pile.selectable-pile::after {
+.supply-pile.selectable-card::after,
+.supply-pile.selectable-pile::after {
   border-color: #ffaaaa;
 }
 
-.non-supply-pile.selected-card::after,
-.non-supply-pile.selected-pile::after {
+.supply-pile.selected-card,
+.supply-pile.selected-pile {
+  cursor: pointer;
+}
+
+.supply-pile.selected-card::after,
+.supply-pile.selected-pile::after {
   border-color: #6dff8c;
 }
 
-.non-supply-pile.way-selectable {
+.supply-pile.way-selectable {
   box-shadow: 0 0 0 2px rgba(0, 213, 255, 0.9);
-}
-
-.non-supply-pile.empty-pile-state {
-  filter: saturate(0.4) brightness(0.6);
 }
 
 .empty-pile {
@@ -136,7 +113,6 @@
   line-height: 20px;
   text-align: center;
   pointer-events: none;
-  z-index: 3;
 }
 
 .pile-trait-tag {
@@ -160,7 +136,6 @@
   padding: 4px 0;
   box-sizing: border-box;
   pointer-events: auto;
-  z-index: 3;
 }
 
 .pile-token-badges {
@@ -171,13 +146,14 @@
   flex-direction: column;
   gap: 4px;
   pointer-events: none;
-  z-index: 3;
+  overflow: visible;
 }
 
 .pile-token-badge-stack {
   position: relative;
   width: 31px;
   height: 31px;
+  overflow: visible;
 }
 
 .pile-token-badge {
@@ -222,7 +198,6 @@
   flex-direction: column;
   gap: 2px;
   pointer-events: none;
-  z-index: 3;
 }
 
 .pile-token-chip {
@@ -245,5 +220,5 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  text-shadow: 0 0 1px #000000;
+  text-shadow: 0 0 1px #000;
 }

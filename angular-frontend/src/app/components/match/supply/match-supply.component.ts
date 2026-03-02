@@ -66,15 +66,15 @@ type SupplyPileViewModel = {
 };
 
 @Component({
-  selector: 'app-match-supply-overlay',
+  selector: 'app-match-supply',
   imports: [
     CardComponent,
   ],
-  templateUrl: './match-supply-overlay.component.html',
-  styleUrl: './match-supply-overlay.component.scss',
+  templateUrl: './match-supply.component.html',
+  styleUrl: './match-supply.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MatchSupplyOverlayComponent {
+export class MatchSupplyComponent {
   private static readonly WAY_PICKER_PANEL_WIDTH_PX = 220;
   private static readonly WAY_PICKER_EDGE_OVERLAP_PX = 5;
 
@@ -276,12 +276,12 @@ export class MatchSupplyOverlayComponent {
     }
 
     const rect = anchorElement.getBoundingClientRect();
-    const panelWidth = MatchSupplyOverlayComponent.WAY_PICKER_PANEL_WIDTH_PX;
+    const panelWidth = MatchSupplyComponent.WAY_PICKER_PANEL_WIDTH_PX;
     const maxLeft = Math.max(SUPPLY_PANEL_GAP_PX, window.innerWidth - panelWidth - SUPPLY_PANEL_GAP_PX);
-    let left = Math.floor(rect.right - MatchSupplyOverlayComponent.WAY_PICKER_EDGE_OVERLAP_PX);
+    let left = Math.floor(rect.right - MatchSupplyComponent.WAY_PICKER_EDGE_OVERLAP_PX);
     const top = Math.max(SUPPLY_PANEL_GAP_PX, Math.floor(rect.top));
     if (left > maxLeft) {
-      left = Math.floor(rect.left - panelWidth + MatchSupplyOverlayComponent.WAY_PICKER_EDGE_OVERLAP_PX);
+      left = Math.floor(rect.left - panelWidth + MatchSupplyComponent.WAY_PICKER_EDGE_OVERLAP_PX);
     }
     left = Math.max(SUPPLY_PANEL_GAP_PX, Math.min(left, maxLeft));
 

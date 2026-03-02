@@ -23,11 +23,11 @@ import { PromptDialogHostComponent } from './components/prompt-dialog/prompt-dia
 import { PromptDialogCoordinatorService } from './core/prompt-dialog/prompt-dialog-coordinator.service';
 import { WayPickerOverlayComponent } from './components/way-picker-overlay/way-picker-overlay.component';
 import { WayPickerOverlayService } from './core/way-picker/way-picker-overlay.service';
-import { MatchSupplyOverlayComponent } from './components/match/supply/match-supply-overlay.component';
-import { MatchLandscapesOverlayComponent } from './components/match/landscapes/match-landscapes-overlay.component';
-import { MatchPlayerAreaOverlayComponent } from './components/match/player-area/match-player-area-overlay.component';
-import { MatchNonSupplyOverlayComponent } from './components/match/non-supply/match-non-supply-overlay.component';
-import { PileSelectionActionOverlayComponent } from './components/match/pile-selection/pile-selection-action-overlay.component';
+import { MatchSupplyComponent } from './components/match/supply/match-supply.component';
+import { MatchLandscapesComponent } from './components/match/landscapes/match-landscapes.component';
+import { MatchPlayerAreaComponent } from './components/match/player-area/match-player-area.component';
+import { MatchNonSupplyComponent } from './components/match/non-supply/match-non-supply.component';
+import { PileSelectionActionComponent } from './components/match/pile-selection/pile-selection-action.component';
 
 @Component({
   selector: 'app-root',
@@ -42,11 +42,11 @@ import { PileSelectionActionOverlayComponent } from './components/match/pile-sel
     CardDetailDialogComponent,
     PromptDialogHostComponent,
     WayPickerOverlayComponent,
-    MatchSupplyOverlayComponent,
-    MatchLandscapesOverlayComponent,
-    MatchPlayerAreaOverlayComponent,
-    MatchNonSupplyOverlayComponent,
-    PileSelectionActionOverlayComponent,
+    MatchSupplyComponent,
+    MatchLandscapesComponent,
+    MatchPlayerAreaComponent,
+    MatchNonSupplyComponent,
+    PileSelectionActionComponent,
     NgClass,
   ],
   templateUrl: './app.component.html',

@@ -57,15 +57,15 @@ const SUN_TOKEN_ID = 'rising-sun:sun';
 const CUBE_TOKEN_ID = 'cube-token';
 
 @Component({
-  selector: 'app-match-landscapes-overlay',
+  selector: 'app-match-landscapes',
   imports: [
     CardLikeComponent,
   ],
-  templateUrl: './match-landscapes-overlay.component.html',
-  styleUrl: './match-landscapes-overlay.component.scss',
+  templateUrl: './match-landscapes.component.html',
+  styleUrl: './match-landscapes.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MatchLandscapesOverlayComponent {
+export class MatchLandscapesComponent {
   private readonly _nanoStores = inject(NanostoresService);
   private readonly _socketService = inject(SocketService);
 

@@ -225,7 +225,6 @@
   border: 1px solid var(--theme-border-strong);
   border-radius: 6px;
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
-  z-index: 2;
 }
 
 .resource-controls-popover button {
@@ -334,14 +333,13 @@
   isolation: isolate;
 }
 
-.board-card::after {
+.board-card::before {
   content: '';
   position: absolute;
   inset: -3px;
   border: 3px solid transparent;
   border-radius: 8px;
   pointer-events: none;
-  z-index: 2;
 }
 
 .board-card.selectable-card {
@@ -375,7 +373,6 @@
   line-height: 20px;
   text-align: center;
   pointer-events: none;
-  z-index: 3;
 }
 
 .stack-token-badges {
@@ -386,7 +383,6 @@
   flex-direction: column;
   gap: 3px;
   pointer-events: none;
-  z-index: 3;
 }
 
 .stack-token-badge {
