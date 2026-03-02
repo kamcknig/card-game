@@ -37,6 +37,10 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   const usesPathfindingToken = config.events.some(event => event.cardKey === 'pathfinding');
   // Determine whether Inheritance is in the event lineup and needs the Estate token.
   const usesInheritanceToken = config.events.some(event => event.cardKey === 'inheritance');
+  // Determine whether Bridge Troll or Ball needs the -$1 token at game start.
+  const usesMinusCoinToken =
+    config.kingdomSupply.some(supply => supply.name === 'bridge-troll') ||
+    config.events.some(event => event.cardKey === 'ball');
   // Register the -$1 token reaction handler for all Adventures games.
   registrar('onGameStartSetup', async args => {
     for (const player of args.match.players) {
@@ -74,14 +78,11 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
           // Consume the -$1 token once when a positive treasure gain occurs.
           trigger.args.count = Math.max(0, trigger.args.count - 1);
-          // Carry the treasure source into the token consumption log.
-          await actionService.run(
-            'removeToken',
-            { tokenInstanceId: tokenEntry[0] },
-            {
-              loggingContext: { source: trigger.args.source },
-            },
-          );
+          // Return the -$1 token to the player's available area after consumption.
+          await actionService.run('moveToken', {
+            tokenInstanceId: tokenEntry[0],
+            location: { type: 'playerAvailable', playerId: player.id },
+          });
         },
       });
       args.reactionManager.registerReactionTemplate({
@@ -348,6 +349,22 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
               overrides: { actionCost: 0, moveCard: false },
             });
           },
+        });
+      }
+    });
+  }
+  if (usesMinusCoinToken) {
+    registrar('onGameStartSetup', async args => {
+      // Bridge Troll / Ball supply a -$1 token per player at game start.
+      for (const player of args.match.players) {
+        const alreadyOwned = Object.values(args.match.tokens ?? {}).some(
+          token => token.ownerId === player.id && token.tokenId === adventuresTokenIds.minusCoin,
+        );
+        if (alreadyOwned) continue;
+        await args.actionService.run('placeToken', {
+          tokenId: adventuresTokenIds.minusCoin,
+          ownerId: player.id,
+          location: { type: 'playerAvailable', playerId: player.id },
         });
       }
     });

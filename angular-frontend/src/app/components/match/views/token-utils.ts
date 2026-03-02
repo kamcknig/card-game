@@ -47,6 +47,8 @@ export const getTokenBadgeImagePath = (tokenId: TokenId): string | undefined => 
     'adventures:plus-buy': '/assets/ui-icons/plus-one-buy-token.png',
     'adventures:plus-card': '/assets/ui-icons/plus-one-draw-token.png',
     'adventures:plus-coin': '/assets/ui-icons/plus-one-treasure-token.png',
+    // Bridge Troll -$1 token (Adventures) — placed on attacked players.
+    'adventures:minus-coin': '/assets/ui-icons/minus-one-treasure-token.png',
     // Relic -1 card token (Adventures) — placed on a player.
     'adventures:minus-card': '/assets/ui-icons/minus-one-card-token.png',
     // Inheritance estate token (Adventures) — marks set-aside card.

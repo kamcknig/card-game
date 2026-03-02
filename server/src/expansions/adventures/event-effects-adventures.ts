@@ -94,26 +94,28 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      // Take the -$1 token once if the player does not already have it.
-      const alreadyHasToken = Object.values(cardEffectArgs.match.tokens ?? {}).some(
+      // Move the -$1 token from available to active if not already in front of the player.
+      const alreadyActiveToken = Object.values(cardEffectArgs.match.tokens ?? {}).some(
         token =>
           token.tokenId === adventuresTokenIds.minusCoin &&
           token.ownerId === cardEffectArgs.playerId &&
           token.location.type === 'player' &&
           token.location.playerId === cardEffectArgs.playerId,
       );
-      if (!alreadyHasToken) {
-        loggerService.debug(`[ball effect] placing -$1 token for player ${cardEffectArgs.playerId}`);
-        await cardEffectArgs.actionService.run(
-          'placeToken',
-          {
-            tokenId: adventuresTokenIds.minusCoin,
-            ownerId: cardEffectArgs.playerId,
-            location: { type: 'player', playerId: cardEffectArgs.playerId },
-            sourceCardId: event.id,
-          },
-          { loggingContext: { source: event.id } },
+      if (!alreadyActiveToken) {
+        const availableToken = Object.values(cardEffectArgs.match.tokens ?? {}).find(
+          token =>
+            token.tokenId === adventuresTokenIds.minusCoin &&
+            token.ownerId === cardEffectArgs.playerId &&
+            token.location.type === 'playerAvailable',
         );
+        if (availableToken) {
+          loggerService.debug(`[ball effect] moving -$1 token to active for player ${cardEffectArgs.playerId}`);
+          await cardEffectArgs.actionService.run('moveToken', {
+            tokenInstanceId: availableToken.id,
+            location: { type: 'player', playerId: cardEffectArgs.playerId },
+          });
+        }
       }
 
       const cards = cardEffectArgs.findCardService.findCards({

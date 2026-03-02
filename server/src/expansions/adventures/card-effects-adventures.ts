@@ -293,25 +293,27 @@ const expansion: CardExpansionModule = {
       }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
 
       for (const targetPlayerId of targetPlayerIds) {
-        const alreadyHasToken = Object.values(cardEffectArgs.match.tokens ?? {}).some(
+        const alreadyActiveToken = Object.values(cardEffectArgs.match.tokens ?? {}).some(
           token =>
             token.tokenId === adventuresTokenIds.minusCoin &&
             token.ownerId === targetPlayerId &&
             token.location.type === 'player' &&
             token.location.playerId === targetPlayerId,
         );
-        if (alreadyHasToken) continue;
-        // Place the -$1 token in front of each affected player.
-        // Include the source card so the token placement log can attribute it.
-        await cardEffectArgs.actionService.run(
-          'placeToken',
-          {
-            tokenId: adventuresTokenIds.minusCoin,
-            ownerId: targetPlayerId,
-            location: { type: 'player', playerId: targetPlayerId },
-          },
-          { loggingContext: { source: cardEffectArgs.cardId } },
+        if (alreadyActiveToken) continue;
+        // Move the existing -$1 token from available to active, or create one if absent.
+        const availableToken = Object.values(cardEffectArgs.match.tokens ?? {}).find(
+          token =>
+            token.tokenId === adventuresTokenIds.minusCoin &&
+            token.ownerId === targetPlayerId &&
+            token.location.type === 'playerAvailable',
         );
+        if (availableToken) {
+          await cardEffectArgs.actionService.run('moveToken', {
+            tokenInstanceId: availableToken.id,
+            location: { type: 'player', playerId: targetPlayerId },
+          });
+        }
       }
 
       const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
