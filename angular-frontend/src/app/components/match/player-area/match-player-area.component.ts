@@ -6,6 +6,7 @@ import {
   effect,
   inject,
   input,
+  output,
   signal
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -141,6 +142,9 @@ export class MatchPlayerAreaComponent {
 
   scoreRect = input<RectLike | null>(null);
   visible = input(false);
+
+  nextPhaseRequested = output<void>();
+  playAllTreasuresRequested = output<void>();
 
   private readonly _viewport = signal({
     width: window.innerWidth,
@@ -374,6 +378,40 @@ export class MatchPlayerAreaComponent {
     };
   });
 
+  // Controls visibility of turn action buttons (next phase, play all treasures).
+  readonly canUseTurnActions = computed(() => {
+    const selfPlayerId = this._selfPlayerId();
+    return (
+      selfPlayerId !== undefined
+      && this._currentPlayerTurnId() === selfPlayerId
+      && !this._awaitingServerLockRelease()
+      && !this._promptInteractionLocked()
+    );
+  });
+
+  // Label for the next-phase button based on current turn phase.
+  readonly nextPhaseLabel = computed(() => {
+    const phase = this._turnPhase();
+    switch (phase) {
+      case 'action':
+        return 'END ACTIONS';
+      case 'buy':
+        return 'END BUYS';
+      default:
+        return 'NEXT';
+    }
+  });
+
+  // Whether the play-all-treasures shortcut should appear.
+  readonly showPlayAllTreasures = computed(() => {
+    if (!this.canUseTurnActions() || this._turnPhase() !== 'buy') {
+      return false;
+    }
+    const cardsById = this._cardsById() ?? {};
+    const handCards = this.resolveCardsBySourceKey(this.selfSourceKey('playerHand'), cardsById);
+    return handCards.some((card) => card.type?.includes('TREASURE'));
+  });
+
   readonly canSpendVillagers = computed(() => {
     const selfPlayerId = this._selfPlayerId();
     if (selfPlayerId === undefined) {
@@ -487,6 +525,16 @@ export class MatchPlayerAreaComponent {
       width: window.innerWidth,
       height: window.innerHeight,
     });
+  }
+
+  // Emits the next-phase request to parent for relay to the match controller.
+  onNextPhaseRequested(): void {
+    this.nextPhaseRequested.emit();
+  }
+
+  // Emits the play-all-treasures request to parent for relay to the match controller.
+  onPlayAllTreasuresRequested(): void {
+    this.playAllTreasuresRequested.emit();
   }
 
   // Forwards card taps using the same lock behavior used by other Angular overlays.

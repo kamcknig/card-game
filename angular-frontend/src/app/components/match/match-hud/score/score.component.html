@@ -4,7 +4,7 @@
   <div class="player-scores-container">
     @for (playerScore of orderedPlayerScores(); track playerScore.id) {
         @let isCurrentPlayer = currentPlayerTurnId() === playerScore.id;
-        <article
+        <div
           class="player-score-row"
           [ngClass]="{'current-player': isCurrentPlayer}"
           [style.--player-accent]="playerScore.accentColor"
@@ -37,7 +37,7 @@
               </div>
             </div>
           </div>
-        </article>
+        </div>
     }
   </div>
 </div>

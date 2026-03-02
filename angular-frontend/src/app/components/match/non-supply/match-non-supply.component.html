@@ -11,7 +11,6 @@
           <div class="kingdom-column">
             @for (section of column.sections; track section.trackKey) {
               <div class="kingdom-section">
-                <div class="kingdom-title">{{ section.displayName }}</div>
                 <div class="kingdom-piles" [class.loot-piles]="section.isLoot">
                   @for (pile of section.rows; track pile.trackKey) {
                     <button

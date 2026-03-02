@@ -217,27 +217,50 @@
             </div>
           }
 
-          <div class="hand-cards" [class.compact]="resolvedLayout.handCompact">
-            @for (handGroup of handGroups(); track handGroup.trackKey; let index = $index) {
-              <button
-                type="button"
-                class="board-card hand-card-entry"
-                [class.selectable-card]="handGroup.selectable"
-                [class.selected-card]="handGroup.selected"
-                [class.way-selectable]="handGroup.waySelectable"
-                (click)="onCardClick(handGroup.cardId, $event)"
-                (mouseenter)="onCardMouseEnter(handGroup.cardId, $event)"
-                (mouseleave)="onCardMouseLeave(handGroup.cardId)"
-              >
-                <app-card
-                  [cardId]="handGroup.cardId"
-                  [size]="'full'"
-                  [forceFacing]="'front'"
-                ></app-card>
-                @if (handGroup.count > 1) {
-                  <div class="stack-count-badge">{{ handGroup.count }}</div>
+          <div class="hand-content-row">
+            <div class="hand-cards" [class.compact]="resolvedLayout.handCompact">
+              @for (handGroup of handGroups(); track handGroup.trackKey; let index = $index) {
+                <button
+                  type="button"
+                  class="board-card hand-card-entry"
+                  [class.selectable-card]="handGroup.selectable"
+                  [class.selected-card]="handGroup.selected"
+                  [class.way-selectable]="handGroup.waySelectable"
+                  (click)="onCardClick(handGroup.cardId, $event)"
+                  (mouseenter)="onCardMouseEnter(handGroup.cardId, $event)"
+                  (mouseleave)="onCardMouseLeave(handGroup.cardId)"
+                >
+                  <app-card
+                    [cardId]="handGroup.cardId"
+                    [size]="'full'"
+                    [forceFacing]="'front'"
+                  ></app-card>
+                  @if (handGroup.count > 1) {
+                    <div class="stack-count-badge">{{ handGroup.count }}</div>
+                  }
+                </button>
+              }
+            </div>
+
+            @if (canUseTurnActions()) {
+              <div class="turn-actions">
+                @if (showPlayAllTreasures()) {
+                  <button
+                    type="button"
+                    class="turn-action-button play-all-treasures-button"
+                    (click)="onPlayAllTreasuresRequested()"
+                  >
+                    PLAY ALL TREASURE
+                  </button>
                 }
-              </button>
+                <button
+                  type="button"
+                  class="turn-action-button next-phase-button"
+                  (click)="onNextPhaseRequested()"
+                >
+                  {{ nextPhaseLabel() }}
+                </button>
+              </div>
             }
           </div>
         </section>
