@@ -38,6 +38,19 @@ export const getTokenBadgeImagePath = (tokenId: TokenId): string | undefined => 
   const imageMap: Record<string, string> = {
     // Trashing token used by Plan (Adventures).
     'adventures:trashing': '/assets/ui-icons/trash.png',
+    // Journey token (Adventures) — flips between face-up/face-down each turn.
+    'adventures:journey': '/assets/ui-icons/journey-token.png',
+    // Ferry token (Adventures) — reduces cost of a pile by $2.
+    'adventures:minus-cost-two': '/assets/ui-icons/minus-two-cost-token.png',
+    // Teacher +1 tokens (Adventures) — placed on action supply piles.
+    'adventures:plus-action': '/assets/ui-icons/plus-one-action-token.png',
+    'adventures:plus-buy': '/assets/ui-icons/plus-one-buy-token.png',
+    'adventures:plus-card': '/assets/ui-icons/plus-one-draw-token.png',
+    'adventures:plus-coin': '/assets/ui-icons/plus-one-treasure-token.png',
+    // Relic -1 card token (Adventures) — placed on a player.
+    'adventures:minus-card': '/assets/ui-icons/minus-one-card-token.png',
+    // Inheritance estate token (Adventures) — marks set-aside card.
+    'adventures:estate': '/assets/ui-icons/estate-token.png',
   };
   return imageMap[tokenId];
 };
