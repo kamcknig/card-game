@@ -346,11 +346,11 @@
   cursor: pointer;
 }
 
-.board-card.selectable-card::after {
+.board-card.selectable-card::before {
   border-color: #ffaaaa;
 }
 
-.board-card.selected-card::after {
+.board-card.selected-card::before {
   border-color: #6dff8c;
 }
 

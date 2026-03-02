@@ -66,8 +66,8 @@
   cursor: pointer;
 }
 
-.supply-pile.selectable-card::after,
-.supply-pile.selectable-pile::after {
+.supply-pile.selectable-card::before,
+.supply-pile.selectable-pile::before {
   border-color: #ffaaaa;
 }
 
@@ -76,8 +76,8 @@
   cursor: pointer;
 }
 
-.supply-pile.selected-card::after,
-.supply-pile.selected-pile::after {
+.supply-pile.selected-card::before,
+.supply-pile.selected-pile::before {
   border-color: #6dff8c;
 }
 

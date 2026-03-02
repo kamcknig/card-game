@@ -89,13 +89,13 @@
   cursor: pointer;
 }
 
-.non-supply-pile.selectable-card::after,
-.non-supply-pile.selectable-pile::after {
+.non-supply-pile.selectable-card::before,
+.non-supply-pile.selectable-pile::before {
   border-color: #ffaaaa;
 }
 
-.non-supply-pile.selected-card::after,
-.non-supply-pile.selected-pile::after {
+.non-supply-pile.selected-card::before,
+.non-supply-pile.selected-pile::before {
   border-color: #6dff8c;
 }
 
