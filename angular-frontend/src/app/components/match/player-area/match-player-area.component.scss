@@ -81,7 +81,6 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
   pointer-events: auto;
 }
 
@@ -95,6 +94,21 @@
   font-size: 12px;
   letter-spacing: 0.2px;
   font-weight: 700;
+  background: var(--theme-panel-bg);
+  border: 1px solid var(--theme-border-strong);
+  padding: 4px 10px;
+}
+
+// Label positioned above the stack card; bottom edge flush with the card top.
+.stack-label-top {
+  border-radius: 6px 6px 0 0;
+  border-bottom: none;
+}
+
+// Label positioned below the stack card; top edge flush with the card bottom.
+.stack-label-bottom {
+  border-radius: 0 0 6px 6px;
+  border-top: none;
 }
 
 .empty-stack {

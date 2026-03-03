@@ -47,6 +47,7 @@
     <section class="player-bottom-row">
       @let deck = deckPile();
       <section class="stack-panel">
+        <div class="stack-label stack-label-top">DECK</div>
         <button
           type="button"
           class="board-card stack-card"
@@ -90,7 +91,6 @@
             </div>
           }
         </button>
-        <div class="stack-label">DECK</div>
       </section>
 
       <section
@@ -291,6 +291,7 @@
 
       @let discard = discardPile();
       <section class="stack-panel">
+        <div class="stack-label stack-label-top">DISCARD</div>
         <button
           type="button"
           class="board-card stack-card"
@@ -315,7 +316,6 @@
             <app-count-badge [count]="discard.count"></app-count-badge>
           }
         </button>
-        <div class="stack-label">DISCARD</div>
       </section>
     </section>
   </div>
