@@ -217,37 +217,6 @@
         </div>
       </section>
 
-      <!-- ░░░  Artifacts  ░░░ -->
-      <section class="artifacts-section">
-        <h2 class="section-title">Artifacts</h2>
-
-        <div class="artifacts-list">
-          @for (artifact of preSelectedArtifacts(); track artifact?.cardKey ?? $index) {
-            <div
-              class="artifact-slot"
-              [ngStyle]="{'cursor': isOwner && artifact === null ? 'pointer' : 'default'}"
-              (click)="artifact === null && isOwner ? openSelectionModal('artifacts') : null"
-            >
-              @if (artifact !== null && isOwner) {
-                <div (click)="deleteArtifact(artifact)" class="close-button">X</div>
-              }
-              <div>
-                @if (artifact !== null) {
-                  <img
-                    alt="{{artifact.cardName}} image"
-                    ngSrc="{{artifact.fullImagePath}}"
-                    height="124"
-                    width="280"
-                  />
-                } @else {
-                  <span class="no-artifact">?</span>
-                }
-              </div>
-            </div>
-          }
-        </div>
-      </section>
-
       <!-- ░░░  Projects  ░░░ -->
       <section class="projects-section">
         <h2 class="section-title">Projects</h2>

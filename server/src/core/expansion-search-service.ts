@@ -31,7 +31,6 @@ export class ExpansionSearchService {
   private _cardFuse: Fuse<CardNoId> | undefined;
   private _eventFuse: Fuse<EventNoId> | undefined;
   private _landmarkFuse: Fuse<LandmarkNoId> | undefined;
-  private _artifactFuse: Fuse<ArtifactNoId> | undefined;
   private _projectFuse: Fuse<ProjectNoId> | undefined;
   private _wayFuse: Fuse<WayNoId> | undefined;
   private _traitFuse: Fuse<TraitNoId> | undefined;
@@ -55,7 +54,6 @@ export class ExpansionSearchService {
     const cards = Object.values(rawCardLibrary);
     const events = Object.values(expansionLibrary).flatMap(expansion => Object.values(expansion.events ?? {}));
     const landmarks = Object.values(expansionLibrary).flatMap(expansion => Object.values(expansion.landmarks ?? {}));
-    const artifacts = Object.values(expansionLibrary).flatMap(expansion => Object.values(expansion.artifacts ?? {}));
     const projects = Object.values(expansionLibrary).flatMap(expansion => Object.values(expansion.projects ?? {}));
     const traits = Object.values(expansionLibrary).flatMap(expansion => Object.values(expansion.traits ?? {}));
     const allies = Object.values(expansionLibrary).flatMap(expansion => Object.values(expansion.allies ?? {}));
@@ -63,7 +61,6 @@ export class ExpansionSearchService {
     this._cardFuse = this.createFuse(cards);
     this._eventFuse = this.createFuse(events);
     this._landmarkFuse = this.createFuse(landmarks);
-    this._artifactFuse = this.createFuse(artifacts);
     this._projectFuse = this.createFuse(projects);
     this._traitFuse = this.createFuse(traits);
     this._allyFuse = this.createFuse(allies);
@@ -84,7 +81,7 @@ export class ExpansionSearchService {
       cards: this.sortByName(cards.filter(card => this.isCardEligibleForKingdomSearch(card))),
       events: this.sortByName(events),
       landmarks: this.sortByName(landmarks),
-      artifacts: this.sortByName(artifacts),
+      artifacts: [],
       projects: this.sortByName(projects),
       ways: this.sortByName(ways),
       traits: this.sortByName(traits),
@@ -92,7 +89,7 @@ export class ExpansionSearchService {
       prophecies: this.sortByName(prophecies),
     };
     this.loggerService.debug(
-      `[expansion search] index sizes cards=${cards.length} events=${events.length} landmarks=${landmarks.length} artifacts=${artifacts.length} projects=${projects.length} ways=${ways.length} traits=${traits.length} allies=${allies.length} prophecies=${prophecies.length}`,
+      `[expansion search] index sizes cards=${cards.length} events=${events.length} landmarks=${landmarks.length} projects=${projects.length} ways=${ways.length} traits=${traits.length} allies=${allies.length} prophecies=${prophecies.length}`,
     );
     if (ways.length < 1) {
       // Surface empty-way index explicitly to make way-search diagnostics obvious.
@@ -125,12 +122,9 @@ export class ExpansionSearchService {
     return this._landmarkFuse?.search(searchStr).map(result => result.item) ?? [];
   }
 
-  // Returns matching artifacts for a search term.
-  public searchArtifacts(searchStr: string): ArtifactNoId[] {
-    if (searchStr.trim().length < 1) {
-      return this._selectableCatalog.artifacts;
-    }
-    return this._artifactFuse?.search(searchStr).map(result => result.item) ?? [];
+  // Returns empty results; artifacts are auto-populated by the Renaissance configurator, not manually selectable.
+  public searchArtifacts(_searchStr: string): ArtifactNoId[] {
+    return [];
   }
 
   // Returns matching projects for a search term.

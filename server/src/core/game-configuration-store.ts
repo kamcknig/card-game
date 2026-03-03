@@ -1,6 +1,5 @@
 import {
   AllyNoId,
-  ArtifactNoId,
   CardNoId,
   EventNoId,
   LandmarkNoId,
@@ -28,8 +27,6 @@ export interface GameConfigurationStore {
   persistEvents(events: EventNoId[]): void;
   // Persists the current preselected landmarks.
   persistLandmarks(landmarks: LandmarkNoId[]): void;
-  // Persists the current preselected artifacts.
-  persistArtifacts(artifacts: ArtifactNoId[]): void;
   // Persists the current preselected projects.
   persistProjects(projects: ProjectNoId[]): void;
   // Persists the current preselected ways.
@@ -150,17 +147,6 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
       );
     }
 
-    // Restore preselected artifacts when the file exists.
-    const preselectedArtifacts = this.readJson<ArtifactNoId[]>('preselected-artifacts.json');
-    if (preselectedArtifacts) {
-      defaultConfig.artifacts = preselectedArtifacts;
-      this.logLoadedList(
-        'preselected artifact(s)',
-        preselectedArtifacts.length,
-        preselectedArtifacts.map(artifact => artifact.cardKey),
-      );
-    }
-
     // Restore preselected projects when the file exists.
     const preselectedProjects = this.readJson<ProjectNoId[]>('preselected-projects.json');
     if (preselectedProjects) {
@@ -235,11 +221,6 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
   public persistLandmarks(landmarks: LandmarkNoId[]): void {
     this.ensureMatchDirectory();
     Deno.writeTextFileSync(this.getFilePath('preselected-landmarks.json'), JSON.stringify(landmarks));
-  }
-
-  public persistArtifacts(artifacts: ArtifactNoId[]): void {
-    this.ensureMatchDirectory();
-    Deno.writeTextFileSync(this.getFilePath('preselected-artifacts.json'), JSON.stringify(artifacts));
   }
 
   public persistProjects(projects: ProjectNoId[]): void {

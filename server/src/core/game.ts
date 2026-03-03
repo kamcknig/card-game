@@ -310,13 +310,6 @@ export class Game {
       this.defaultMatchConfiguration.landmarks = structuredClone(newConfig.landmarks);
     }
 
-    const artifactsPatch = jsonPatch.compare(currentConfig.artifacts, newConfig.artifacts);
-    if (artifactsPatch.length) {
-      // Persist selected artifacts between sessions.
-      this.configStore.persistArtifacts(newConfig.artifacts);
-      this.defaultMatchConfiguration.artifacts = structuredClone(newConfig.artifacts);
-    }
-
     const projectsPatch = jsonPatch.compare(currentConfig.projects, newConfig.projects);
     if (projectsPatch.length) {
       // Persist selected projects between sessions.

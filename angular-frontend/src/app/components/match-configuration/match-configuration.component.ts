@@ -11,7 +11,6 @@ import {
 } from '@angular/core';
 import {
   AllyNoId,
-  ArtifactNoId,
   CardNoId,
   EventNoId,
   ExpansionListElement,
@@ -56,7 +55,6 @@ type SelectionModalKind =
   | 'kingdom'
   | 'events'
   | 'landmarks'
-  | 'artifacts'
   | 'projects'
   | 'ways'
   | 'traits'
@@ -143,7 +141,6 @@ export class MatchConfigurationComponent implements OnDestroy {
       || this.bannedKingdoms().length > 0
       || this.selectedEvents().length > 0
       || this.selectedLandmarks().length > 0
-      || this.selectedArtifacts().length > 0
       || this.selectedProjects().length > 0
       || this.selectedWays().length > 0
       || this.selectedTraits().length > 0
@@ -215,7 +212,6 @@ export class MatchConfigurationComponent implements OnDestroy {
   readonly bannedKingdoms = computed(() => this.sortByCardKey(this.matchConfiguration()?.bannedKingdoms ?? []));
   readonly selectedEvents = computed(() => this.sortByCardKey(this.matchConfiguration()?.events ?? []));
   readonly selectedLandmarks = computed(() => this.sortByCardKey(this.matchConfiguration()?.landmarks ?? []));
-  readonly selectedArtifacts = computed(() => this.sortByCardKey(this.matchConfiguration()?.artifacts ?? []));
   readonly selectedProjects = computed(() => this.sortByCardKey(this.matchConfiguration()?.projects ?? []));
   readonly selectedWays = computed(() => this.sortByCardKey(this.matchConfiguration()?.ways ?? []));
   readonly selectedTraits = computed(() => this.sortByCardKey(this.matchConfiguration()?.traits ?? []));
@@ -250,7 +246,6 @@ export class MatchConfigurationComponent implements OnDestroy {
   readonly preSelectedKingdoms = computed(() => this.withKingdomPlaceholders(this.selectedKingdoms()));
   readonly preSelectedEvents = computed(() => this.withTrailingEmptySlot(this.selectedEvents()));
   readonly preSelectedLandmarks = computed(() => this.withTrailingEmptySlot(this.selectedLandmarks()));
-  readonly preSelectedArtifacts = computed(() => this.withTrailingEmptySlot(this.selectedArtifacts()));
   readonly preSelectedProjects = computed(() => this.withTrailingEmptySlot(this.selectedProjects()));
   readonly preSelectedWays = computed(() => this.withTrailingEmptySlot(this.selectedWays()));
   readonly preSelectedTraits = computed(() => this.withTrailingEmptySlot(this.selectedTraits()));
@@ -427,7 +422,6 @@ export class MatchConfigurationComponent implements OnDestroy {
       kingdomSupply: [],
       events: [],
       landmarks: [],
-      artifacts: [],
       projects: [],
       ways: [],
       traits: [],
@@ -502,15 +496,6 @@ export class MatchConfigurationComponent implements OnDestroy {
           kind,
           excludedItems: this.preSelectedLandmarks(),
           catalogKind: 'landmarks',
-          imageSize: 'full',
-          filterBasicCards: false,
-        });
-        return;
-      case 'artifacts':
-        this.activeSelectionModal.set({
-          kind,
-          excludedItems: this.preSelectedArtifacts(),
-          catalogKind: 'artifacts',
           imageSize: 'full',
           filterBasicCards: false,
         });
@@ -592,9 +577,6 @@ export class MatchConfigurationComponent implements OnDestroy {
       case 'landmarks':
         this.onLandmarkSelected(item as LandmarkNoId);
         break;
-      case 'artifacts':
-        this.onArtifactSelected(item as ArtifactNoId);
-        break;
       case 'projects':
         this.onProjectSelected(item as ProjectNoId);
         break;
@@ -634,13 +616,6 @@ export class MatchConfigurationComponent implements OnDestroy {
     if (!this.isGameOwner()) return;
     const remainingLandmarks = this.selectedLandmarks().filter((entry) => entry.cardKey !== landmark.cardKey);
     this.emitMatchConfigurationUpdate({ landmarks: remainingLandmarks });
-  }
-
-  // Removes a selected artifact from the fixed artifact list.
-  deleteArtifact(artifact: ArtifactNoId) {
-    if (!this.isGameOwner()) return;
-    const remainingArtifacts = this.selectedArtifacts().filter((entry) => entry.cardKey !== artifact.cardKey);
-    this.emitMatchConfigurationUpdate({ artifacts: remainingArtifacts });
   }
 
   // Removes a selected project from the fixed project list.
@@ -697,13 +672,6 @@ export class MatchConfigurationComponent implements OnDestroy {
     if (!this.isGameOwner()) return;
     const selectedLandmarks = [...this.selectedLandmarks(), selectedLandmark];
     this.emitMatchConfigurationUpdate({ landmarks: this.sortByCardKey(selectedLandmarks) });
-  }
-
-  // Adds one artifact selected from the search modal.
-  onArtifactSelected(selectedArtifact: ArtifactNoId) {
-    if (!this.isGameOwner()) return;
-    const selectedArtifacts = [...this.selectedArtifacts(), selectedArtifact];
-    this.emitMatchConfigurationUpdate({ artifacts: this.sortByCardKey(selectedArtifacts) });
   }
 
   // Adds one project selected from the search modal.
