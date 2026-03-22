@@ -6,3 +6,7 @@
 **/dist
 **/.git
 **/.gitignore
+**/*.md
+server/.env
+server/scripts
+**/*schema.json
