@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 See <https://wiki.dominionstrategy.com/index.php/Main_Page> for Dominion rules,
 setup, expansions, and clarifications.
 
@@ -144,12 +148,16 @@ Install dependencies in each package before running:
 - `npm install` (root), `cd server && npm install`, `cd angular-frontend && npm install`.
 
 Key commands:
-- `cd server && deno task dev:watch`: run server with file watch and required permissions.
-- `cd angular-frontend && npm run start`: run Angular dev server (`http://localhost:51455`).
+- `npm run watch` (from root): run both server and frontend concurrently.
+- `cd server && deno task dev:watch`: run server with file watch (http://localhost:3001).
+- `cd angular-frontend && npm run start`: run Angular dev server (http://localhost:51455, proxies `/socket.io` and `/debug` to server).
+- `cd server && deno check --no-lock src/server.ts`: type-check server.
+- `cd angular-frontend && npx tsc -p tsconfig.app.json --noEmit`: type-check frontend (preferred routine validation).
 - `cd angular-frontend && npm run build`: production client build (optional for routine frontend code validation).
 - `cd angular-frontend && npm test`: run unit tests (Karma/Jasmine).
 - `cd server && deno lint src/`: lint server TypeScript.
 - `cd server && deno task fmt`: format server code with oxfmt.
+- `cd server && deno task test:unit`: run server unit tests.
 
 ## Tooling Rules
 

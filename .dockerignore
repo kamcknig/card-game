@@ -10,3 +10,7 @@
 server/.env
 server/scripts
 **/*schema.json
+**/.angular
+**/coverage
+**/game-data
+**/logs
