@@ -2,15 +2,7 @@ name: Frontend CI
 
 on:
   push:
-    paths:
-      - 'angular-frontend/**'
-      - 'shared/**'
-      - '.github/workflows/frontend-ci.yml'
   pull_request:
-    paths:
-      - 'angular-frontend/**'
-      - 'shared/**'
-      - '.github/workflows/frontend-ci.yml'
 
 jobs:
   type-check:

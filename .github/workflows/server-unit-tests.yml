@@ -2,15 +2,7 @@ name: Server Unit Tests
 
 on:
   push:
-    paths:
-      - 'server/**'
-      - 'shared/**'
-      - '.github/workflows/server-unit-tests.yml'
   pull_request:
-    paths:
-      - 'server/**'
-      - 'shared/**'
-      - '.github/workflows/server-unit-tests.yml'
 
 jobs:
   unit-tests:
