@@ -44,6 +44,7 @@ import type { LoggerService } from './core/logger-service.ts';
 
 export type AppSocket = Socket<ServerListenEvents, ServerEmitEvents>;
 
+// deno-lint-ignore no-explicit-any -- intentional distributive conditional type pattern
 export type DistributiveOmit<T, K extends PropertyKey> = T extends any ? Omit<T, K> : never;
 
 // Re-export shared find-card filter types used by server consumers.
@@ -275,7 +276,7 @@ export interface GameActionDefinitionMap {
   // Expansions use token actions to place and manage token instances.
   removeToken: (args: { tokenInstanceId: TokenInstanceId }, context?: GameActionContext) => Promise<void>;
   // Removes one Sun token from the active prophecy, if present.
-  removeSunToken: (args?: {}, context?: GameActionContext) => Promise<void>;
+  removeSunToken: (args?: Record<string, never>, context?: GameActionContext) => Promise<void>;
   // Expansions use token actions to place and manage token instances.
   consumeToken: (
     args: {
@@ -885,7 +886,7 @@ export type GameLifecycleCallbackContext = AppContext & {
 
 export type GameLifecycleCallback = (
   args: Omit<GameLifecycleCallbackContext, 'cardId'>,
-  ...rest: any[]
+  ...rest: unknown[]
 ) => Promise<CardLifecycleCallbackResult | void>;
 
 export type GameLifecycleEvent = 'onGameStartSetup' | 'onGameStart' | 'onCardGained';

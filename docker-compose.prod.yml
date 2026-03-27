@@ -1,0 +1,29 @@
+# Production Docker Compose — for local production testing and reference.
+# In production, Azure Container Apps handles orchestration.
+services:
+  server:
+    build:
+      context: .
+      dockerfile: docker/DockerFile_server
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      LOG_TO_FILE: "false"
+      GAME_DATA_ROOT: ./game-data
+      END_MATCH_ON_NO_HUMANS: "true"
+      MATCH_STATE_MERGE_ENABLED: "true"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/DockerFile_web_app
+    ports:
+      - "80:80"
+    environment:
+      # Set to the publicly accessible server address
+      WS_HOST: "http://localhost:3000"
+    restart: unless-stopped
+    depends_on:
+      - server

@@ -35,7 +35,7 @@ export class LandmarkLoaderService {
         };
       }
     } catch (error) {
-      if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
+      if ((error as { code?: string }).code !== 'ERR_MODULE_NOT_FOUND') {
         this.loggerService.warn(
           `[load-landmarks] failed to load expansion landmark library for expansion ${expansionName}`,
         );
@@ -65,7 +65,7 @@ export class LandmarkLoaderService {
         }
       }
     } catch (error) {
-      if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
+      if ((error as { code?: string }).code !== 'ERR_MODULE_NOT_FOUND') {
         this.loggerService.warn(
           `[load-landmarks] failed to load expansion landmark effects for expansion ${expansionName}`,
         );

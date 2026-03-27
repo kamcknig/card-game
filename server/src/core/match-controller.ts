@@ -366,6 +366,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private clientEventRegistrar<T extends keyof ServerListenEvents>(event: T, handler: ServerListenEvents[T]) {
     this._registeredEvents.push(event);
     this.socketMap.forEach(s => {
+      // deno-lint-ignore no-explicit-any -- Socket.IO generic event handler requires any to satisfy overloaded on() signature
       s.on(event, handler as any);
     });
   }

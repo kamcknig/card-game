@@ -22,25 +22,25 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Deno
         uses: denoland/setup-deno@v2
         with:
-          deno-version: '2.7.1'
+          deno-version: '2.7.7'
 
       - name: Install server dependencies
         run: deno install
 
       - name: Install shared dependencies
         working-directory: shared
-        run: npm install
+        run: yarn install
 
       - name: Run server unit tests with coverage
         run: deno task test:unit:coverage
 
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: server-coverage
           path: server/coverage

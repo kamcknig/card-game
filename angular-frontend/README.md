@@ -1,59 +1,82 @@
-# AngularFrontend
+# Web Client
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 19.2.6.
+Angular 19 web client for the Dominion card game.
 
-## Development server
+## Prerequisites
 
-To start a local development server, run:
+- [Node.js](https://nodejs.org/) (v20+)
+- npm or yarn
 
-```bash
-ng serve
-```
-
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Running Locally
 
 ```bash
-ng generate component component-name
+# install dependencies
+npm install
+
+# start dev server (http://localhost:51455)
+npm run start
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+The dev server proxies `/socket.io` and `/debug` requests to the game server at `127.0.0.1:3001` (configured in `src/proxy.conf.json`).
+
+## Server Connection
+
+The client connects to the game server via WebSocket. The server URL is resolved at runtime:
+
+1. If `window.__env.wsHost` is set (injected by `env.js`), that value is used.
+2. Otherwise it defaults to `http://localhost:3000`.
+
+In local development the proxy handles routing, so the default works out of the box as long as the server is running on port 3001.
+
+## Other Commands
 
 ```bash
-ng generate --help
+# type check (preferred validation for routine changes)
+npx tsc -p tsconfig.app.json --noEmit
+
+# production build
+npm run build
+
+# unit tests (Karma/Jasmine)
+npm test
 ```
 
-## Building
+## Docker
 
-To build the project run:
+Build and run from the repository root:
 
 ```bash
-ng build
+# build
+docker build -f docker/DockerFile_web_app -t dominion-web .
+
+# run (nginx on port 80, point WS_HOST to the game server)
+docker run -d -p 8080:80 -e WS_HOST=http://localhost:3000 dominion-web
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+Then open `http://localhost:8080` in your browser.
 
-## Running unit tests
+### Build Args
 
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+| Arg | Default | Description |
+|-----|---------|-------------|
+| `BUILD_CONFIG` | `production` | Angular build configuration passed to `ng build --configuration` |
+
+Example using the development configuration:
 
 ```bash
-ng test
+docker build -f docker/DockerFile_web_app --build-arg BUILD_CONFIG=development -t dominion-web:dev .
 ```
 
-## Running end-to-end tests
+### Runtime Environment Variables
 
-For end-to-end (e2e) testing, run:
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `WS_HOST` | `http://localhost:3000` | WebSocket server URL the client connects to |
+
+The `docker/env.sh` entrypoint script writes `WS_HOST` into `/usr/share/nginx/html/env.js` at container startup, which the Angular app loads via a `<script>` tag in `index.html`.
+
+### Example: Custom Server URL
 
 ```bash
-ng e2e
+docker run -d -p 8080:80 -e WS_HOST=http://192.168.1.100:4000 dominion-web
 ```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.

@@ -109,7 +109,7 @@ const getCheaperTrashCardIds = <
   T extends {
     cardLibrary: { getCard: (cardId: CardId) => unknown };
     cardPriceController: {
-      applyRules: (...args: any[]) => { cost: { treasure: number; potion?: number; debt?: number } };
+      applyRules: (...args: unknown[]) => { cost: { treasure: number; potion?: number; debt?: number } };
     };
     cardSourceController: { getSource: (source: 'trash') => CardId[] };
   },

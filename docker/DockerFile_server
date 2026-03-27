@@ -1,0 +1,23 @@
+FROM denoland/deno:2.7.7
+
+WORKDIR /app
+
+COPY shared/ ./shared/
+COPY server/ ./server/
+
+WORKDIR /app/server
+
+RUN deno install --entrypoint src/server.ts
+
+ENV PORT=3000
+
+EXPOSE $PORT
+
+CMD ["deno", "run", \
+  "--allow-net", \
+  "--allow-env", \
+  "--allow-read", \
+  "--allow-write", \
+  "--allow-sys", \
+  "--node-modules-dir=manual", \
+  "src/server.ts"]

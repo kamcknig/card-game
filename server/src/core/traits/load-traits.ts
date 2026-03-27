@@ -30,7 +30,7 @@ export class TraitLoaderService {
         };
       }
     } catch (error) {
-      if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
+      if ((error as { code?: string }).code !== 'ERR_MODULE_NOT_FOUND') {
         this.loggerService.warn(`[load-traits] failed to load expansion trait library for expansion ${expansionName}`);
         this.loggerService.error(error);
       }

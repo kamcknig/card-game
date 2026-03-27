@@ -34,7 +34,7 @@ export class ProjectLoaderService {
         };
       }
     } catch (error) {
-      if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
+      if ((error as { code?: string }).code !== 'ERR_MODULE_NOT_FOUND') {
         this.loggerService.warn(
           `[load-projects] failed to load expansion project library for expansion ${expansionName}`,
         );
@@ -63,7 +63,7 @@ export class ProjectLoaderService {
         }
       }
     } catch (error) {
-      if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
+      if ((error as { code?: string }).code !== 'ERR_MODULE_NOT_FOUND') {
         this.loggerService.warn(
           `[load-projects] failed to load expansion project effects for expansion ${expansionName}`,
         );

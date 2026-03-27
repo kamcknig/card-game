@@ -34,7 +34,7 @@ export class WayLoaderService {
         };
       }
     } catch (error) {
-      if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
+      if ((error as { code?: string }).code !== 'ERR_MODULE_NOT_FOUND') {
         this.loggerService.warn(`[load-ways] failed to load expansion way library for expansion ${expansionName}`);
         this.loggerService.error(error);
       }
@@ -59,7 +59,7 @@ export class WayLoaderService {
         }
       }
     } catch (error) {
-      if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
+      if ((error as { code?: string }).code !== 'ERR_MODULE_NOT_FOUND') {
         this.loggerService.warn(`[load-ways] failed to load expansion way effects for expansion ${expansionName}`);
         this.loggerService.error(error);
       }

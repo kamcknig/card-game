@@ -1,71 +1,18 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 See <https://wiki.dominionstrategy.com/index.php/Main_Page> for Dominion rules,
 setup, expansions, and clarifications.
 
 # Project Structure & Module Organization
 
 This repository is a small monorepo with three main packages:
-- `server/`: Deno TypeScript game server (`src/core`, `src/expansions`, `src/utils`, `scripts/`).
-- `angular-frontend/`: Angular 19 client (`src/app`, `src/environments`, `public/assets`).
+- `server/`: Deno TypeScript game server (`src/core`, `src/expansions`, `src/utils`, `scripts/`). See `server/CLAUDE.md` for server-specific architecture.
+- `angular-frontend/`: Angular 19 client (`src/app`, `src/environments`, `public/assets`). See `angular-frontend/CLAUDE.md` for frontend-specific architecture.
 - `shared/`: shared TypeScript utilities/types used by server and client.
 
 Top-level files like `docker-compose.yaml`, `Dockerfile`, and `GAME_SUMMARY.md` support local orchestration and game/domain context.
-
-# Architecture Overview
-
-## Server (Deno + Awilix DI)
-
-### Container Scoping
-The server uses Awilix with `InjectionMode.CLASSIC` (constructor injection). Three
-scope levels:
-- **Root scope** (`composition/register-root-services.ts`): Application-lifetime
-  singletons — expansion catalogs, logger backends, socket bindings, scope factories.
-- **Game scope** (`GameScopeFactory`): Per-game lobby state, player sessions.
-- **Match scope** (`MatchScopeFactory`): Per-match action handlers, effects, state.
-
-Entry point: `server/src/server.ts` → `ServerBootstrapService.start()` →
-`ServerStartupService` (loads expansions) → `Deno.serve()` (HTTP + Socket.IO).
-
-### Action Pipeline
-All game mutations flow through a single pipeline:
-`MatchController.runGameAction()` → `GameActionController.invokeAction()`.
-Actions are defined in `server/src/types.ts` (`GameActionDefinitionMap`, 100+ actions).
-Nested actions mutate `match` directly; top-level actions snapshot state before
-execution and compute JSON patches via `fast-json-patch` afterward.
-
-### Effect & Reaction System
-- **On-play effects**: `CardEffectFn` functions receiving `CardEffectFunctionContext`.
-  Registered per-card in expansion card modules.
-- **Triggered reactions**: `Reaction<T>` objects in `ReactionManager`
-  (`server/src/core/reactions/reaction-manager.ts`). Each has a `listeningFor`
-  trigger type, optional `condition`, and `triggeredEffectFn`. System reactions
-  fire first, then per-player reactions in turn order.
-- **Duration effects**: Registered via `registerDurationEffect()` with cleanup
-  predicates (`hasActiveEffects`).
-- **Lifecycle hooks**: `onGameStartSetup`, `onGameStart`, `onCardGained`, `onGain`,
-  `onPlay`, `onCleanup` via `ExpansionCardMetadataRegistryService`.
-
-### Expansion System
-Each expansion lives under `server/src/expansions/<name>/` and provides:
-- `card-library.json`: Card definitions (loaded by `ExpansionLoaderService`).
-- `card-effects-<name>.ts`: Card module exporting `registerEffects`,
-  `registerLifeCycleMethods`, `registerScoringFunction`, etc.
-- `configurator-<name>.ts`: `ExpansionConfiguratorFactory` that registers
-  tokens, reactions, and modifies match configuration.
-
-`ExpansionEffectRegistryService` stores effect factories indexed by `CardKey` and
-materializes fresh effect function maps per match.
-
-### State Management
-`Match` is a mutable object. `MatchController` takes `structuredClone` snapshots
-before top-level actions, then diffs with `fast-json-patch` to produce patches
-broadcast to clients via Socket.IO. `CardSourceController` manages card locations;
-`MatchCardLibrary` tracks card instances by ID.
-
-### Key Server Import Aliases (deno.json)
-- `@shared/` → `../shared/src/`
-- `shared/types/` → `../shared/src/types/`
-- `@server-types/` → `./src/type-groups/`
-- `@expansions/` → `./src/expansions/`
 
 ## Shared Package
 
@@ -75,43 +22,9 @@ via `shared/src/types/index.ts` organized by domain (primitives, card, match,
 network, prompts, filters, etc.). Utilities include `find-card-like-in-match`,
 `compare-card-cost`, `get-player-position-utils`, `validate-cost-spec`.
 
-Frontend imports via tsconfig path `shared/*` → `../shared/src/*`.
-
-## Angular Frontend
-
-### Framework & Rendering
-Angular 19 with experimental zoneless change detection. All components use
-`ChangeDetectionStrategy.OnPush` with signals. Pure DOM rendering (HTML + CSS),
-no Canvas/PixiJS. Standalone components throughout.
-
-### State Management (Nanostores)
-Global reactive atoms and computed stores in `angular-frontend/src/app/state/`.
-Key store files: `match-state.ts`, `card-source-store.ts`, `turn-state.ts`,
-`interactive-state.ts`, `player-state.ts`. Server patches applied via
-`fast-json-patch` trigger nanostore updates → Angular signals → template bindings.
-
-### Communication
-Socket.IO client (`angular-frontend/src/app/core/socket-service/socket.service.ts`)
-with typed events from shared. Event handlers mapped in `socket-event-map.ts`
-route server events to nanostore updates.
-
-### Scene Navigation
-No Angular Router for main views. `AppComponent` switches between 4 scenes
-(`lobby`, `configuration`, `match`, `gameSummary`) driven by `sceneStore`.
-`MatchScene` (plain TypeScript class, not a component) manages game interaction
-logic including prompt coordination and way picker overlay.
-
-### Prompt System
-`PromptDialogCoordinatorService` manages one active prompt at a time. Supported
-types: `select`, `display-cards`, `number-input`, `name-card`, `overpay`,
-`rearrange`, `blind-rearrange`, `select-pile`. `PromptDialogHostComponent`
-renders the appropriate content component.
-
-### Frontend Angular Guidelines
-- Use latest Angular practices including signals; avoid getters in templates.
-- Use standalone components.
-- Use latest Sass/CSS practices (`@use` over `@import`).
-- Prefer flex over grid without reason.
+Import paths:
+- Frontend: tsconfig path `shared/*` → `../shared/src/*`
+- Server: deno.json alias `@shared/` → `../shared/src/`, `shared/types/` → `../shared/src/types/`
 
 # Objective
 
@@ -223,12 +136,6 @@ Use consistent levels and meaningful context:
 - `debug`: low-level state and execution details
 - Use `warn` and `error` where appropriate
 
-## Debugging Resources
-
-If the server is running, current match state is available at:
-
-- <http://192.168.0.149:3001/debug/match-state>
-
 ## Documentation Locations
 
 - Expansion docs: `dominion-docs/expansion-docs`
@@ -241,11 +148,16 @@ Install dependencies in each package before running:
 - `npm install` (root), `cd server && npm install`, `cd angular-frontend && npm install`.
 
 Key commands:
-- `cd server && deno task dev:watch`: run server with file watch and required permissions.
-- `cd angular-frontend && npm run start`: run Angular dev server (`http://localhost:4200`).
+- `npm run watch` (from root): run both server and frontend concurrently.
+- `cd server && deno task dev:watch`: run server with file watch (http://localhost:3001).
+- `cd angular-frontend && npm run start`: run Angular dev server (http://localhost:51455, proxies `/socket.io` and `/debug` to server).
+- `cd server && deno check --no-lock src/server.ts`: type-check server.
+- `cd angular-frontend && npx tsc -p tsconfig.app.json --noEmit`: type-check frontend (preferred routine validation).
 - `cd angular-frontend && npm run build`: production client build (optional for routine frontend code validation).
 - `cd angular-frontend && npm test`: run unit tests (Karma/Jasmine).
 - `cd server && deno lint src/`: lint server TypeScript.
+- `cd server && deno task fmt`: format server code with oxfmt.
+- `cd server && deno task test:unit`: run server unit tests.
 
 ## Tooling Rules
 
@@ -263,6 +175,12 @@ Key commands:
 - Do not require `npm run build`/`ng build` for routine frontend changes.
 - Server currently has lint/task-based validation but no established unit test suite; add targeted tests with new frontend behavior and regression-prone logic.
 - No mandatory testing policy currently defined.
+
+## Debugging Resources
+
+If the server is running, current match state is available at:
+
+- <http://192.168.0.149:3001/debug/match-state>
 
 ## Communication Rules
 

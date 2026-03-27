@@ -45,8 +45,6 @@ const configurator: ExpansionConfiguratorFactory = () => {
     const nonManagedArtifacts = existingArtifacts.filter(artifact => !managedArtifactKeys.has(artifact.cardKey));
 
     if (requiredArtifactKeys.size < 1) {
-      if (existingArtifacts.length !== nonManagedArtifacts.length) {
-      }
       args.config.artifacts = nonManagedArtifacts;
       return args.config;
     }

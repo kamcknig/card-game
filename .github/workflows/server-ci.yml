@@ -1,0 +1,43 @@
+name: Server CI
+
+on:
+  push:
+    paths:
+      - 'server/**'
+      - 'shared/**'
+      - '.github/workflows/server-ci.yml'
+  pull_request:
+    paths:
+      - 'server/**'
+      - 'shared/**'
+      - '.github/workflows/server-ci.yml'
+
+jobs:
+  lint:
+    name: Lint and Type Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: '2.7.7'
+
+      - name: Install server dependencies
+        run: deno install
+
+      - name: Install shared dependencies
+        working-directory: shared
+        run: yarn install
+
+      - name: Lint
+        run: deno lint src/
+
+      - name: Type check
+        run: deno check --no-lock src/server.ts
