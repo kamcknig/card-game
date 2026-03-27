@@ -33,8 +33,8 @@ GitHub Repo (kamcknig/card-game)
 | Resource Group: `turkeysunite` | Pre-existing resource group |
 | Azure Container Registry (ACR) | Store Docker images |
 | Azure Container Apps Environment | Shared networking for containers |
-| Container App: `card-game-server` | Runs Deno game server (Socket.IO/WebSocket) |
-| Container App: `card-game-frontend` | Runs nginx serving Angular static files |
+| Container App: `dominion-clone-server` | Runs Deno game server (Socket.IO/WebSocket) |
+| Container App: `dominion-clone-frontend` | Runs nginx serving Angular static files |
 
 ## Current State Analysis
 
@@ -60,8 +60,8 @@ After implementation:
 1. **CI on every push/PR**: Server lint + type-check + unit tests; frontend type-check
 2. **CD on master merge**: Docker images built and pushed to ACR, then deployed to Azure Container Apps
 3. **Two Azure Container Apps** running in the `turkeysunite` resource group:
-   - `card-game-server`: Deno server with Socket.IO on port 3000, external ingress
-   - `card-game-frontend`: nginx serving Angular app on port 80, external ingress, `WS_HOST` pointing to server FQDN
+   - `dominion-clone-server`: Deno server with Socket.IO on port 3000, external ingress
+   - `dominion-clone-frontend`: nginx serving Angular app on port 80, external ingress, `WS_HOST` pointing to server FQDN
 4. **Rollback capability** via Azure Container Apps revision history
 
 Verification: Visit the frontend FQDN in a browser, create a game lobby, and confirm WebSocket connection succeeds.
@@ -166,8 +166,8 @@ services:
 #### Automated Verification:
 - [ ] `npm run server:watch` starts without error (Ctrl+C after confirming startup)
 - [ ] `npm run web:watch` starts without error (Ctrl+C after confirming startup)
-- [ ] `docker build -f docker/Dockerfile_web_app -t card-game-frontend:test .` succeeds
-- [ ] `docker build -f docker/Dockerfile_server -t card-game-server:test .` succeeds
+- [ ] `docker build -f docker/Dockerfile_web_app -t dominion-clone-frontend:test .` succeeds
+- [ ] `docker build -f docker/Dockerfile_server -t dominion-clone-server:test .` succeeds
 
 #### Manual Verification:
 - [ ] `docker compose -f docker-compose.prod.yml up --build` starts both containers cleanly
@@ -192,8 +192,8 @@ RESOURCE_GROUP="turkeysunite"
 LOCATION="eastus"
 ACR_NAME="turkeysunite"          # must be globally unique, lowercase, alphanumeric
 CONTAINER_ENV="card-game-env"
-SERVER_APP="card-game-server"
-FRONTEND_APP="card-game-frontend"
+SERVER_APP="dominion-clone-server"
+FRONTEND_APP="dominion-clone-frontend"
 ```
 
 #### 2.2 Create Azure Container Registry
@@ -270,7 +270,7 @@ az containerapp show \
   --name $SERVER_APP \
   --resource-group $RESOURCE_GROUP \
   --query "properties.configuration.ingress.fqdn" -o tsv
-# Example: card-game-server.someregion.azurecontainerapps.io
+# Example: dominion-clone-server.someregion.azurecontainerapps.io
 ```
 
 #### 2.6 Create Initial Container Apps (Frontend)
@@ -304,8 +304,8 @@ In the GitHub repository settings under **Settings > Secrets and variables > Act
 | `ACR_USERNAME` | ACR admin username |
 | `ACR_PASSWORD` | ACR admin password |
 | `AZURE_RESOURCE_GROUP` | `turkeysunite` |
-| `AZURE_SERVER_APP_NAME` | `card-game-server` |
-| `AZURE_FRONTEND_APP_NAME` | `card-game-frontend` |
+| `AZURE_SERVER_APP_NAME` | `dominion-clone-server` |
+| `AZURE_FRONTEND_APP_NAME` | `dominion-clone-frontend` |
 
 ### Success Criteria:
 
@@ -458,7 +458,7 @@ On every push to `master`, build both Docker images and push them to Azure Conta
 
 ### Changes Required:
 
-#### 4.1 Add Build and Push Workflow
+#### 4.1 Add Build and Push Workflow [x]
 
 **File**: `.github/workflows/build-and-push.yml` (new)
 
@@ -496,7 +496,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.ACR_LOGIN_SERVER }}/card-game-server
+          images: ${{ secrets.ACR_LOGIN_SERVER }}/dominion-clone-server
           tags: |
             type=sha,prefix=,format=short
             type=raw,value=latest
@@ -529,7 +529,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.ACR_LOGIN_SERVER }}/card-game-frontend
+          images: ${{ secrets.ACR_LOGIN_SERVER }}/dominion-clone-frontend
           tags: |
             type=sha,prefix=,format=short
             type=raw,value=latest
@@ -549,8 +549,8 @@ jobs:
 #### Automated Verification:
 - [ ] Merge a change to `master` — `Build and Push Docker Images` workflow triggers
 - [ ] Both `build-server` and `build-frontend` jobs succeed
-- [ ] `az acr repository list --name turkeysunite` shows `card-game-server` and `card-game-frontend`
-- [ ] `az acr repository show-tags --name turkeysunite --repository card-game-server` shows `latest` and a SHA tag
+- [ ] `az acr repository list --name turkeysunite` shows `dominion-clone-server` and `dominion-clone-frontend`
+- [ ] `az acr repository show-tags --name turkeysunite --repository dominion-clone-server` shows `latest` and a SHA tag
 
 ---
 
@@ -594,7 +594,7 @@ jobs:
         with:
           resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
           containerAppName: ${{ secrets.AZURE_SERVER_APP_NAME }}
-          imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/card-game-server:latest
+          imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/dominion-clone-server:latest
           registryUrl: ${{ secrets.ACR_LOGIN_SERVER }}
           registryUsername: ${{ secrets.ACR_USERNAME }}
           registryPassword: ${{ secrets.ACR_PASSWORD }}
@@ -604,7 +604,7 @@ jobs:
         with:
           resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
           containerAppName: ${{ secrets.AZURE_FRONTEND_APP_NAME }}
-          imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/card-game-frontend:latest
+          imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/dominion-clone-frontend:latest
           registryUrl: ${{ secrets.ACR_LOGIN_SERVER }}
           registryUsername: ${{ secrets.ACR_USERNAME }}
           registryPassword: ${{ secrets.ACR_PASSWORD }}
@@ -630,7 +630,7 @@ Azure Container Apps supports WebSocket connections natively. If the server app 
 
 ```bash
 az containerapp ingress sticky-sessions set \
-  --name card-game-server \
+  --name dominion-clone-server \
   --resource-group turkeysunite \
   --affinity sticky
 ```
@@ -639,8 +639,8 @@ az containerapp ingress sticky-sessions set \
 
 #### Automated Verification:
 - [ ] Push to master, confirm `Build and Push` succeeds, then confirm `Deploy` workflow triggers
-- [ ] `az containerapp show --name card-game-server --resource-group turkeysunite --query "properties.latestRevisionName"` returns new revision name
-- [ ] `az containerapp show --name card-game-frontend --resource-group turkeysunite --query "properties.latestRevisionName"` returns new revision name
+- [ ] `az containerapp show --name dominion-clone-server --resource-group turkeysunite --query "properties.latestRevisionName"` returns new revision name
+- [ ] `az containerapp show --name dominion-clone-frontend --resource-group turkeysunite --query "properties.latestRevisionName"` returns new revision name
 
 #### Manual Verification:
 - [ ] Visit the frontend Container App FQDN in a browser — UI loads
@@ -681,7 +681,7 @@ Azure Container Apps maintains revision history. To roll back to a previous revi
 ```bash
 # List all revisions
 az containerapp revision list \
-  --name card-game-server \
+  --name dominion-clone-server \
   --resource-group turkeysunite \
   --query "[].{name:name,active:properties.active,created:properties.createdTime}" \
   --output table
