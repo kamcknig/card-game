@@ -1208,9 +1208,9 @@ export class ServerSocketGatewayService {
 ### Success Criteria:
 
 #### Automated Verification:
-- [ ] Server type-checks: `cd server && deno check --no-lock src/server.ts`
-- [ ] Server lints: `cd server && deno lint src/`
-- [ ] Frontend type-checks: `cd angular-frontend && npx tsc -p tsconfig.app.json --noEmit`
+- [x] Server type-checks: `cd server && deno check --no-lock src/server.ts`
+- [x] Server lints: `cd server && deno lint src/`
+- [x] Frontend type-checks: `cd angular-frontend && npx tsc -p tsconfig.app.json --noEmit`
 
 #### Manual Verification:
 - [ ] Full flow: login → lobby → create game → play. Socket connects successfully with auth token.
