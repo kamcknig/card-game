@@ -561,7 +561,7 @@ After images are pushed to ACR, deploy the new revision to Azure Container Apps.
 
 ### Changes Required:
 
-#### 5.1 Add Deploy Workflow
+#### 5.1 Add Deploy Workflow [x]
 
 **File**: `.github/workflows/deploy.yml` (new)
 

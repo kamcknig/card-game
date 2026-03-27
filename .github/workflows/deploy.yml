@@ -1,0 +1,63 @@
+# Deploys updated Docker images to Azure Container Apps after a successful
+# build-and-push run on the master branch. Both the server and frontend apps
+# are updated in sequence, and the new revision name is logged for traceability.
+name: Deploy to Azure Container Apps
+
+on:
+  workflow_run:
+    workflows: ["Build and Push Docker Images"]
+    types:
+      - completed
+    branches:
+      - master
+
+jobs:
+  deploy:
+    name: Deploy to Azure Container Apps
+    runs-on: ubuntu-latest
+    # Only deploy when the upstream build-and-push workflow succeeded.
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Log in to Azure
+        uses: azure/login@v3
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Deploys the latest server image to the dominion-clone-server container app.
+      - name: Deploy server container app
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          containerAppName: ${{ secrets.AZURE_SERVER_APP_NAME }}
+          imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/dominion-clone-server:latest
+          registryUrl: ${{ secrets.ACR_LOGIN_SERVER }}
+          registryUsername: ${{ secrets.ACR_USERNAME }}
+          registryPassword: ${{ secrets.ACR_PASSWORD }}
+
+      # Deploys the latest frontend image to the dominion-clone-frontend container app.
+      - name: Deploy frontend container app
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          containerAppName: ${{ secrets.AZURE_FRONTEND_APP_NAME }}
+          imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/dominion-clone-frontend:latest
+          registryUrl: ${{ secrets.ACR_LOGIN_SERVER }}
+          registryUsername: ${{ secrets.ACR_USERNAME }}
+          registryPassword: ${{ secrets.ACR_PASSWORD }}
+
+      # Logs the active revision name for the server app to confirm deployment.
+      - name: Verify server deployment
+        run: |
+          az containerapp show \
+            --name ${{ secrets.AZURE_SERVER_APP_NAME }} \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --query "properties.latestRevisionName" -o tsv
+
+      # Logs the active revision name for the frontend app to confirm deployment.
+      - name: Verify frontend deployment
+        run: |
+          az containerapp show \
+            --name ${{ secrets.AZURE_FRONTEND_APP_NAME }} \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --query "properties.latestRevisionName" -o tsv
