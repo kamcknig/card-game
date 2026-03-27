@@ -27,6 +27,11 @@ jobs:
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
+      # Sets up a buildx builder using the docker-container driver, which is
+      # required for GHA layer cache export support.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       # Generates two tags: a short SHA tag for traceability and `latest` for
       # deployment convenience. Tags are only used when pushing (merge to master).
       - name: Extract image metadata
@@ -63,6 +68,11 @@ jobs:
           registry: ${{ secrets.ACR_LOGIN_SERVER }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
+
+      # Sets up a buildx builder using the docker-container driver, which is
+      # required for GHA layer cache export support.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       # Generates two tags: a short SHA tag for traceability and `latest` for
       # deployment convenience. Tags are only used when pushing (merge to master).
