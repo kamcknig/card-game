@@ -1,193 +1,315 @@
-import { CardId, CardLike, Match, Player } from 'shared/shared-types.ts';
+import { Card, CardId, CardLike, Event, Landmark, Match, Player, Project } from 'shared/types/index.ts';
 import {
+  ActionService,
   CardLifecycleEvent,
   CardLifecycleEventArgMap,
-  FindCardsFn,
+  FindCardService,
   GameLifecycleCallback,
   GameLifecycleEvent,
   GameLifeCycleEventArgsMap,
+  PromptService,
   Reaction,
+  ReactionContext,
+  ReactionSourceType,
   ReactionTemplate,
+  ReactionTemplateOptions,
   ReactionTrigger,
-  RunGameActionDelegate, TriggeredEffectContext,
-  TriggerEventType
-} from '../../types.ts';
+  SupplyGainService,
+  TriggeredEffectContext,
+  TriggerEventType,
+} from '@server-types/index.ts';
 import { MatchCardLibrary } from '../match-card-library.ts';
 import { getOrderStartingFrom } from '../../utils/get-order-starting-from.ts';
 import { groupReactionsByCardKey } from './group-reactions-by-card-key.ts';
+import { initImmunityScope } from '../../utils/reaction-immunity.ts';
 import { buildActionButtons } from './build-action-buttons.ts';
 import { buildActionMap } from './build-action-map.ts';
-import { cardLifecycleMap } from '../card-lifecycle-map.ts';
 import { LogManager } from '../log-manager.ts';
 import { CardPriceRulesController } from '../card-price-rules-controller.ts';
 import { CardSourceController } from '../card-source-controller.ts';
+import { CardInstanceFactoryService } from '../card-instance-factory-service.ts';
+import { ReactionContextFactory } from './reaction-context-factory.ts';
+import { ExpansionCardMetadataRegistryService } from '../expansion-card-metadata-registry-service.ts';
+import { LoggerService } from '../logger-service.ts';
 
 export class ReactionManager {
   private _reactions: Reaction[] = [];
-  private _expansionGameEventHandlers: Record<GameLifecycleEvent, GameLifecycleCallback[]> = {} as Record<GameLifecycleEvent, GameLifecycleCallback[]>
-  
+  private _expansionGameEventHandlers: Record<GameLifecycleEvent, GameLifecycleCallback[]> = {} as Record<
+    GameLifecycleEvent,
+    GameLifecycleCallback[]
+  >;
+  // Tracks duration-trigger IDs so they can be cleaned up when a card leaves play.
+  private _durationTriggerIdsByCardId: Map<CardId, Set<string>> = new Map();
+
   constructor(
-    private readonly _cardSourceController: CardSourceController,
-    private readonly _findCards: FindCardsFn,
+    private readonly cardSourceController: CardSourceController,
+    private readonly findCardService: FindCardService,
+    private readonly supplyGainService: SupplyGainService,
     private readonly cardPriceController: CardPriceRulesController,
     private readonly logManager: LogManager,
-    private readonly _match: Match,
-    private readonly _cardLibrary: MatchCardLibrary,
-    private readonly runGameActionDelegate: RunGameActionDelegate
-  ) {
-  }
-  
-  public endGame() {
-  }
-  
+    private readonly match: Match,
+    private readonly cardLibrary: MatchCardLibrary,
+    private readonly cardInstanceFactoryService: CardInstanceFactoryService,
+    private readonly actionService: ActionService,
+    private readonly promptService: PromptService,
+    private readonly reactionContextFactory: ReactionContextFactory,
+    private readonly expansionCardMetadataRegistryService: ExpansionCardMetadataRegistryService,
+    private readonly loggerService: LoggerService,
+  ) {}
+
+  public endGame() {}
+
   registerGameEvent(event: GameLifecycleEvent, handler: GameLifecycleCallback) {
     this._expansionGameEventHandlers[event] ??= [];
     this._expansionGameEventHandlers[event].push(handler);
   }
-  
+
+  // Associates duration triggers with a card ID for cleanup on leave-play.
+  registerDurationTriggers(cardId: CardId, triggerIds: string[]) {
+    if (!triggerIds.length) return;
+    const existing = this._durationTriggerIdsByCardId.get(cardId) ?? new Set<string>();
+    for (const triggerId of triggerIds) {
+      existing.add(triggerId);
+    }
+    this._durationTriggerIdsByCardId.set(cardId, existing);
+  }
+
+  // Removes any duration triggers associated with the given card ID.
+  cleanupDurationTriggers(cardId: CardId) {
+    const triggerIds = this._durationTriggerIdsByCardId.get(cardId);
+    if (!triggerIds) return;
+    for (const triggerId of triggerIds) {
+      this.unregisterTrigger(triggerId);
+    }
+    this._durationTriggerIdsByCardId.delete(cardId);
+  }
+
   async getReactions(trigger: ReactionTrigger, reactionSet?: Reaction[]) {
     const reactions = reactionSet ?? this._reactions;
     const finalReactions: Reaction[] = [];
     for (const reaction of reactions) {
       if (reaction.listeningFor !== trigger.eventType) continue;
-      
-      console.trace(`[REACTION MANAGER] checking trigger ${trigger} condition for ${reaction.id} reaction`);
-      
+
+      this.loggerService.info(`[REACTION MANAGER] checking trigger ${trigger} condition for ${reaction.id} reaction`);
+
       let include = true;
-      
+
       if (reaction.condition !== undefined) {
-        const result = await reaction.condition({
-          cardSourceController: this._cardSourceController,
-          cardPriceController: this.cardPriceController,
-          reactionManager: this,
-          runGameActionDelegate: this.runGameActionDelegate,
-          findCards: this._findCards,
-          match: this._match,
-          cardLibrary:
-          this._cardLibrary,
-          trigger,
-          reaction
-        });
-        
+        const result = await reaction.condition(
+          this.reactionContextFactory.createConditionContext({
+            reactionManager: this,
+            trigger,
+            reaction,
+          }),
+        );
+
         include = result;
       }
-      
+
       if (include) {
         finalReactions.push(reaction);
       }
     }
-    
+
     return finalReactions;
   }
-  
+
   async getReactionsForPlayer(trigger: ReactionTrigger, playerId: number) {
     const playerReactions = this._reactions.filter(reaction => reaction.playerId === playerId);
     return await this.getReactions(trigger, playerReactions);
   }
-  
+
   unregisterTrigger(triggerId: string) {
     for (let i = this._reactions.length - 1; i >= 0; i--) {
       const trigger = this._reactions[i];
       if (trigger.id === triggerId) {
         this._reactions.splice(i, 1);
-        console.trace(`[REACTION MANAGER] removing trigger reaction ${triggerId} for player ${this._match.players?.find((player) => player.id === trigger.playerId)}`);
+        this.loggerService.info(
+          `[REACTION MANAGER] removing trigger reaction ${triggerId} for player ${this.match.players?.find(
+            player => player.id === trigger.playerId,
+          )}`,
+        );
       }
     }
   }
-  
-  registerSystemTemplate<T extends TriggerEventType>(cardLike: CardLike, event: T, reactionTemplate: Omit<ReactionTemplate<T>, 'id' | 'listeningFor'>): void {
+
+  registerSystemTemplate<T extends TriggerEventType>(
+    cardLike: CardLike,
+    event: T,
+    reactionTemplate: Omit<ReactionTemplate<T>, 'id' | 'listeningFor'>,
+    templateOptions?: ReactionTemplateOptions,
+  ): string {
+    // Support an optional suffix for system reaction IDs.
+    const idSuffix = templateOptions?.idSuffix;
     const systemTemplate = {
       ...reactionTemplate,
-      id: `${cardLike.cardKey}:${cardLike.id}:${event}:system`,
-      system: true
-    }
-    
-    this.registerReactionTemplate(cardLike, event, systemTemplate);
+      id: `${cardLike.cardKey}:${cardLike.id}:${event}:system` + (idSuffix ? `:${idSuffix}` : ''),
+      system: true,
+    };
+
+    return this.registerReactionTemplate(cardLike, event, systemTemplate);
   }
-  
-  registerReactionTemplate<T extends TriggerEventType>(cardLike: CardLike, event: T, reactionTemplate: Omit<ReactionTemplate<T>, 'id' | 'listeningFor' | 'system'>): void
-  registerReactionTemplate<T extends TriggerEventType>(reactionTemplate: ReactionTemplate<T>): void
-  registerReactionTemplate<T extends TriggerEventType>(cardLikeOrTemplate: CardLike | ReactionTemplate<T>, event?: T, reactionTemplate?: Omit<ReactionTemplate<T>, 'id' | 'listeningFor' | 'system'>) {
+
+  registerGlobalSystemTemplate<T extends TriggerEventType>(
+    cardLike: CardLike,
+    event: T,
+    reactionTemplate: Omit<ReactionTemplate<T>, 'id' | 'listeningFor' | 'playerId'>,
+    templateOptions?: ReactionTemplateOptions,
+  ): string {
+    // Global system reactions are evaluated outside player-scoped ownership loops.
+    const idSuffix = templateOptions?.idSuffix;
+    const globalSystemTemplate = {
+      ...reactionTemplate,
+      id: `${cardLike.cardKey}:${cardLike.id}:${event}:system` + (idSuffix ? `:${idSuffix}` : ''),
+      system: true,
+      playerId: undefined,
+    };
+
+    return this.registerReactionTemplate(cardLike, event, globalSystemTemplate);
+  }
+
+  registerReactionTemplate<T extends TriggerEventType>(
+    cardLike: CardLike,
+    event: T,
+    reactionTemplate: Omit<ReactionTemplate<T>, 'id' | 'listeningFor' | 'system'>,
+    templateOptions?: ReactionTemplateOptions,
+  ): string;
+  registerReactionTemplate<T extends TriggerEventType>(reactionTemplate: ReactionTemplate<T>): string;
+  registerReactionTemplate<T extends TriggerEventType>(
+    cardLikeOrTemplate: CardLike | ReactionTemplate<T>,
+    event?: T,
+    reactionTemplate?: Omit<ReactionTemplate<T>, 'id' | 'listeningFor' | 'system'>,
+    templateOptions?: ReactionTemplateOptions,
+  ): string {
     let template: ReactionTemplate<T>;
-    
+
     if (!(cardLikeOrTemplate instanceof CardLike)) {
       template = cardLikeOrTemplate;
-    }
-    else {
+    } else {
+      // Resolve a stable source type for landscape reactions.
+      const sourceType: ReactionSourceType =
+        cardLikeOrTemplate instanceof Event
+          ? 'event'
+          : cardLikeOrTemplate instanceof Landmark
+            ? 'landmark'
+            : cardLikeOrTemplate instanceof Project
+              ? 'project'
+              : cardLikeOrTemplate instanceof Card
+                ? 'card'
+                : 'other';
+      // Allow optional ID suffixes for default reaction IDs.
+      const idSuffix = templateOptions?.idSuffix;
+      const defaultId =
+        `${cardLikeOrTemplate.cardName}:${cardLikeOrTemplate.id}:${event}` + (idSuffix ? `:${idSuffix}` : '');
       template = {
         ...reactionTemplate,
         listeningFor: event,
-        id: reactionTemplate && 'id' in reactionTemplate ? reactionTemplate.id : `${cardLikeOrTemplate.cardName}:${cardLikeOrTemplate.id}:${event}`
+        id: reactionTemplate && 'id' in reactionTemplate ? reactionTemplate.id : defaultId,
+        // Populate reaction source metadata for UI labels.
+        sourceId: reactionTemplate?.sourceId ?? cardLikeOrTemplate.id,
+        sourceKey: reactionTemplate?.sourceKey ?? cardLikeOrTemplate.cardKey,
+        sourceName: reactionTemplate?.sourceName ?? cardLikeOrTemplate.cardName,
+        sourceType: reactionTemplate?.sourceType ?? sourceType,
       } as ReactionTemplate<T>;
     }
-    
-    console.trace(`[REACTION MANAGER] registering trigger template ID ${template.id}, for player ${template.playerId}`);
-    
+
+    this.loggerService.info(
+      `[REACTION MANAGER] registering trigger template ID ${template.id}, for player ${template.playerId}`,
+    );
+
+    // deno-lint-ignore no-explicit-any -- Reaction<T> is not assignable to Reaction<TriggerEventType> due to invariant generics
     this._reactions.push(new Reaction(template) as any);
+    return template.id;
   }
-  
-  async runGameLifecycleEvent<T extends GameLifecycleEvent>(trigger: T, ...args: GameLifeCycleEventArgsMap[T] extends void ? [] : [GameLifeCycleEventArgsMap[T]]) {
+
+  async runGameLifecycleEvent<T extends GameLifecycleEvent>(
+    trigger: T,
+    ...args: GameLifeCycleEventArgsMap[T] extends void ? [] : [GameLifeCycleEventArgsMap[T]]
+  ) {
     for (const handler of this._expansionGameEventHandlers[trigger] ?? []) {
-      await handler({
-        cardSourceController: this._cardSourceController,
-        findCards: this._findCards,
-        cardPriceController: this.cardPriceController,
-        cardLibrary: this._cardLibrary,
-        match: this._match,
-        reactionManager: this,
-        runGameActionDelegate: this.runGameActionDelegate,
-      }, ...args)
+      await handler(
+        this.reactionContextFactory.createGameLifecycleContext({
+          reactionManager: this,
+        }),
+        ...args,
+      );
     }
   }
-  
+
   async runCardLifecycleEvent<T extends CardLifecycleEvent>(trigger: T, args: CardLifecycleEventArgMap[T]) {
-    const card = this._cardLibrary.getCard(args.cardId);
-    
-    const fn = cardLifecycleMap[card.cardKey]?.[trigger];
+    const card = this.cardLibrary.getCard(args.cardId);
+
+    const lifecycleMethods = this.expansionCardMetadataRegistryService.getLifecycleMethods(card.cardKey);
+    const fn = lifecycleMethods?.[trigger];
     if (!fn) {
       return;
     }
-    
-    console.trace(`[REACTION MANAGER] running lifecycle trigger '${trigger}' for card ${card}`);
-    
-    await fn({
-      cardSourceController: this._cardSourceController,
-      runGameActionDelegate: this.runGameActionDelegate,
-      cardPriceController: this.cardPriceController,
-      cardLibrary: this._cardLibrary,
-      match: this._match,
-      reactionManager: this,
-      findCards: this._findCards
-    }, args as any);
+
+    this.loggerService.info(`[REACTION MANAGER] running lifecycle trigger '${trigger}' for card ${card}`);
+
+    await fn(
+      this.reactionContextFactory.createCardLifecycleContext({
+        reactionManager: this,
+      }),
+      // deno-lint-ignore no-explicit-any -- fn is a union of callbacks; TypeScript requires intersection of all arg types at call site, any is the correct escape hatch
+      args as any,
+    );
   }
-  
-  async runTrigger({ trigger, reactionContext }: { trigger: ReactionTrigger, reactionContext?: any }) {
+
+  async runTrigger({ trigger, reactionContext }: { trigger: ReactionTrigger; reactionContext?: ReactionContext }) {
     reactionContext ??= {};
-    
+    // Track immunity scope to ensure context is not reused across triggers.
+    initImmunityScope(reactionContext, trigger, this.loggerService);
+
+    const globalSystemReactions = (
+      await this.getReactions(
+        trigger,
+        this._reactions.filter(reaction => reaction.system && reaction.playerId === undefined),
+      )
+    ).sort((left, right) => left.id.localeCompare(right.id));
+
+    const usedGlobalSystemReactionIds = new Set<string>();
+    const blockedGlobalSystemSourceKeys = new Set<string>();
+
+    for (const globalSystemReaction of globalSystemReactions) {
+      const sourceKey = globalSystemReaction.getSourceKey();
+      if (usedGlobalSystemReactionIds.has(globalSystemReaction.id)) {
+        continue;
+      }
+      if (!globalSystemReaction.allowMultipleInstances && blockedGlobalSystemSourceKeys.has(sourceKey)) {
+        continue;
+      }
+
+      this.loggerService.info(
+        `[REACTION MANAGER] running global system reaction ${globalSystemReaction.id} for trigger ${trigger.eventType}`,
+      );
+      const globalSystemContext = this.buildTriggeredEffectContext(trigger, globalSystemReaction);
+      await this.runReaction(globalSystemReaction, globalSystemContext, reactionContext);
+
+      usedGlobalSystemReactionIds.add(globalSystemReaction.id);
+      if (!globalSystemReaction.allowMultipleInstances) {
+        blockedGlobalSystemSourceKeys.add(sourceKey);
+      }
+    }
+
     // now we get the order of players that could be affected by the play (including the current player),
     // then get reactions for them and run them
-    const targetOrder = getOrderStartingFrom(
-      this._match.players,
-      this._match.currentPlayerTurnIndex,
-    );
-    
+    const targetOrder = getOrderStartingFrom(this.match.players, this.match.currentPlayerTurnIndex);
+
     for (const targetPlayer of targetOrder) {
-      console.trace(`[REACTION MANAGER] checking '${trigger.eventType}' reactions for ${targetPlayer}`);
-      
+      this.loggerService.info(`[REACTION MANAGER] checking '${trigger.eventType}' reactions for ${targetPlayer}`);
+
       const usedReactionIds = new Set<string>();
       const blockedCardKeys = new Set<string>();
       const queuedAutoReactions: Reaction[] = [];
       const queuedAutoIds = new Set<string>();
-      
+
       while (true) {
-        const reactions = (await this.getReactionsForPlayer(
-          trigger,
-          targetPlayer.id,
-        )).filter((r) => {
+        const reactions = (await this.getReactionsForPlayer(trigger, targetPlayer.id)).filter(r => {
           const key = r.getSourceKey();
           return !usedReactionIds.has(r.id) && !blockedCardKeys.has(key);
         });
-        
+
         // Queue auto-resolve reactions to run after player-driven ordering is complete.
         for (const reaction of reactions) {
           if (reaction.autoResolve && !queuedAutoIds.has(reaction.id)) {
@@ -195,136 +317,127 @@ export class ReactionManager {
             queuedAutoIds.add(reaction.id);
           }
         }
-        
-        const promptReactions = reactions.filter((reaction) => !reaction.autoResolve);
-        
-        console.trace(`[REACTION MANAGER] ${targetPlayer} has ${promptReactions.length} remaining reactions`);
-        
+
+        const promptReactions = reactions.filter(reaction => !reaction.autoResolve);
+
+        this.loggerService.info(`[REACTION MANAGER] ${targetPlayer} has ${promptReactions.length} remaining reactions`);
+
         if (!promptReactions.length) break;
-        
+
         const compulsoryReactions = promptReactions.filter(r => r.compulsory && !r.system);
-        
+
         const systemReactions = promptReactions.filter(r => r.system);
-        
+
         if (systemReactions.length) {
           for (const systemReaction of systemReactions) {
-            console.trace(`[REACTION MANAGER] running system reaction ${systemReaction.id} for ${targetPlayer}`);
-            await this.runReaction(systemReaction, trigger, targetPlayer, reactionContext);
+            this.loggerService.info(
+              `[REACTION MANAGER] running system reaction ${systemReaction.id} for ${targetPlayer}`,
+            );
+            const systemContext = this.buildTriggeredEffectContext(trigger, systemReaction);
+            await this.runReaction(systemReaction, systemContext, reactionContext);
+
+            // System reactions are still single-pass for a given trigger dispatch.
+            // Without this, non-once system reactions can be selected again by the
+            // next while-loop iteration and loop forever inside the same trigger run.
+            usedReactionIds.add(systemReaction.id);
+            if (!systemReaction.allowMultipleInstances) {
+              blockedCardKeys.add(systemReaction.getSourceKey());
+            }
           }
-          
+
           continue;
         }
-        
+
         let selectedReaction: Reaction | undefined = undefined;
-        
-        const shouldPrompt = (
+
+        const shouldPrompt =
           promptReactions.length > 1 &&
-          (
-            compulsoryReactions.length !== promptReactions.length || // mix of compulsory + optional
-            !compulsoryReactions.every(r => r.getSourceKey() === compulsoryReactions[0].getSourceKey()) // different
-                                                                                                        // cards
-          )
-        );
-        
+          (compulsoryReactions.length !== promptReactions.length || // mix of compulsory + optional
+            !compulsoryReactions.every(r => r.getSourceKey() === compulsoryReactions[0].getSourceKey())); // different
+          // cards
+
         // when multiple reactions can occur, the user chooses unless they are all compulsory
         // and the same card
         if (shouldPrompt || (promptReactions.length === 1 && compulsoryReactions.length === 0)) {
           const grouped = groupReactionsByCardKey(promptReactions);
-          const actionButtons = buildActionButtons(grouped, this._cardLibrary);
+          const actionButtons = buildActionButtons(grouped, this.cardLibrary, this.loggerService);
           const actionMap = buildActionMap(grouped);
-          
-          console.trace(`[REACTION MANAGER] prompting ${targetPlayer} to choose reaction`);
-          
-          const result = await this.runGameActionDelegate('userPrompt', {
+
+          this.loggerService.info(`[REACTION MANAGER] prompting ${targetPlayer} to choose reaction`);
+
+          const action = await this.promptService.requestAction({
             playerId: targetPlayer.id,
             actionButtons,
             prompt: 'Choose reaction?',
-          }) as { action: number };
-          
-          if (result.action === 0) {
-            console.trace(`[REACTION MANAGER] ${targetPlayer} chose not to react`);
+          });
+
+          if (action === null || action === 0) {
+            this.loggerService.info(`[REACTION MANAGER] ${targetPlayer} chose not to react`);
             break;
+          } else {
+            this.loggerService.info(`[REACTION MANAGER] ${targetPlayer} reacts with ${actionMap.get(action)}`);
           }
-          else {
-            console.trace(`[REACTION MANAGER] ${targetPlayer} reacts with ${actionMap.get(result.action)}`);
-          }
-          
-          selectedReaction = actionMap.get(result.action);
-        }
-        else {
+
+          selectedReaction = actionMap.get(action);
+        } else {
           selectedReaction = compulsoryReactions[0];
         }
-        
+
         if (!selectedReaction) {
-          console.warn(`[REACTION MANAGER] reaction not found in action map`);
+          this.loggerService.warn(`[REACTION MANAGER] reaction not found in action map`);
           continue;
         }
-        
-        await this.runReaction(selectedReaction, trigger, targetPlayer,{
-          cardSourceController: this._cardSourceController,
-          findCards: this._findCards,
-          reactionManager: this,
-          cardPriceController: this.cardPriceController,
-          isRootLog: false,
-          runGameActionDelegate: this.runGameActionDelegate,
-          trigger,
-          cardLibrary: this._cardLibrary,
-          match: this._match,
-          reaction: selectedReaction,
-        }, reactionContext);
-        
+
+        const reactionContextObject = this.buildTriggeredEffectContext(trigger, selectedReaction);
+        await this.runReaction(selectedReaction, reactionContextObject, reactionContext);
+
         usedReactionIds.add(selectedReaction.id);
-        
+
         if (!selectedReaction.allowMultipleInstances) {
           blockedCardKeys.add(selectedReaction.getSourceKey());
         }
       }
-      
+
       // Auto-resolve any queued reactions after player ordering decisions.
       for (const autoReaction of queuedAutoReactions) {
         // Re-check the reaction condition against the latest game state.
         const stillValid = (await this.getReactions(trigger, [autoReaction])).length > 0;
         if (!stillValid) continue;
-        
-        console.trace(`[REACTION MANAGER] auto-resolving reaction ${autoReaction.id} for ${targetPlayer}`);
-        await this.runReaction(autoReaction, trigger, targetPlayer, reactionContext);
+
+        this.loggerService.info(`[REACTION MANAGER] auto-resolving reaction ${autoReaction.id} for ${targetPlayer}`);
+        const autoReactionContext = this.buildTriggeredEffectContext(trigger, autoReaction);
+        await this.runReaction(autoReaction, autoReactionContext, reactionContext);
       }
     }
   }
-  
-  private async runReaction<T extends TriggerEventType>(reaction: Reaction, trigger: ReactionTrigger<T>, targetPlayer: Player, context: TriggeredEffectContext<T>, reactionContext?: any) {
-    const reactionResult = await this.logManager.withIndent(async () => {
+
+  private async runReaction<T extends TriggerEventType>(
+    reaction: Reaction,
+    context: TriggeredEffectContext<T>,
+    reactionContext?: ReactionContext,
+  ) {
+    await this.logManager.withIndent(async () => {
       // Ensure reaction-caused logs are scoped and unwind cleanly.
-      return await reaction.triggeredEffectFn({
-        cardSourceController: this._cardSourceController,
-        findCards: this._findCards,
-        reactionManager: this,
-        cardPriceController: this.cardPriceController,
-        isRootLog: false,
-        runGameActionDelegate: this.runGameActionDelegate,
-        trigger,
-        cardLibrary: this._cardLibrary,
-        match: this._match,
-        reaction,
+      await reaction.triggeredEffectFn({
+        ...context,
+        reactionContext,
       });
     });
-    
-    // right now the only card that created that has a reaction that the
-    // card triggering it needs to know about is moat giving immunity.
-    // every other reaction just returns undefined. so if the reaction
-    // doesn't give a result, don't set it on the context. this might
-    // have to expand later.
-    if (reactionResult !== undefined) {
-      reactionContext[targetPlayer.id] = {
-        reaction,
-        trigger,
-        result: reactionResult,
-      };
-    }
-    
+
     if (reaction.once) {
-      console.trace(`[REACTION MANAGER] selected reaction is single-use, unregistering it`);
+      this.loggerService.info(`[REACTION MANAGER] selected reaction is single-use, unregistering it`);
       this.unregisterTrigger(reaction.id);
     }
+  }
+
+  private buildTriggeredEffectContext<T extends TriggerEventType>(
+    trigger: ReactionTrigger<T>,
+    reaction: Reaction,
+  ): TriggeredEffectContext<T> {
+    return this.reactionContextFactory.createTriggeredEffectContext({
+      reactionManager: this,
+      trigger,
+      reaction,
+    });
   }
 }

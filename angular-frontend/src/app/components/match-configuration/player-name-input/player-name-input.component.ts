@@ -1,17 +1,18 @@
-import { ChangeDetectionStrategy, Component, Input, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { NanostoresService } from '@nanostores/angular';
-import { Player, PlayerId } from 'shared/shared-types';
-import { debounceTime, map, Observable, Subject } from 'rxjs';
-import { AsyncPipe, NgIf, NgStyle } from '@angular/common';
+import { Player, PlayerId } from 'shared/types';
+import { debounceTime, filter, switchMap, Subject } from 'rxjs';
+import { NgIf, NgStyle } from '@angular/common';
 import { playerStore, selfPlayerIdStore } from '../../../state/player-state';
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { gameOwnerIdStore } from '../../../state/game-state';
+import { activeLobbyGameIdStore } from '../../../state/lobby-state';
+import { toObservable, toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-player-name-input',
   standalone: true,
   imports: [
-    AsyncPipe,
     NgIf,
     NgStyle
   ],
@@ -19,44 +20,70 @@ import { gameOwnerIdStore } from '../../../state/game-state';
   templateUrl: './player-name-input.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class PlayerComponent implements OnInit {
-  @Input() playerId!: PlayerId;
+export class PlayerComponent {
+  private readonly _nanoStores = inject(NanostoresService);
+  private readonly _socketService = inject(SocketService);
 
-  $player!: Observable<Player | undefined>;
-  $selfId!: Observable<PlayerId | undefined>;
-  $isOwner!: Observable<boolean | undefined>;
+  playerId = input<PlayerId>(0);
 
-  private nameInput$ = new Subject<string>();
+  // Active player row model.
+  readonly player = toSignal<Player | undefined>(
+    toObservable(this.playerId).pipe(
+      filter((playerId): playerId is PlayerId => playerId > 0),
+      switchMap((playerId) => this._nanoStores.useStore(playerStore(playerId)))
+    ),
+    { initialValue: undefined }
+  );
+  readonly selfId = toSignal(this._nanoStores.useStore(selfPlayerIdStore));
+  private readonly _gameOwnerId = toSignal(this._nanoStores.useStore(gameOwnerIdStore));
+  readonly isOwner = computed(() => this._gameOwnerId() === this.playerId());
+  // True when the viewing client is the game owner and this row is a different player.
+  readonly canModeratePlayer = computed(() => {
+    const ownerId = this._gameOwnerId();
+    const selfId = this.selfId();
+    const rowPlayerId = this.playerId();
+    return ownerId === selfId && rowPlayerId !== selfId;
+  });
 
-  constructor(
-    private _nanoStores: NanostoresService,
-    private _socketService: SocketService
-  ) {
-  }
+  private readonly _nameInput$ = new Subject<string>();
 
-  ngOnInit(): void {
-    this.$player = this._nanoStores.useStore(playerStore(this.playerId));
-    this.$selfId = this._nanoStores.useStore(selfPlayerIdStore);
-    this.$isOwner = this._nanoStores.useStore(gameOwnerIdStore)
-      .pipe(map((ownerId) => ownerId === this.playerId));
+  // Debounces player-name updates before emitting to the server.
+  private readonly _nameInputSubscription = this._nameInput$
+    .pipe(
+      debounceTime(300),
+      takeUntilDestroyed(),
+    )
+    .subscribe((newName) => {
+      const playerId = this.playerId();
+      const store = playerStore(playerId);
+      const current = store.get();
+      if (!current) {
+        return;
+      }
 
-    this.nameInput$
-      .pipe(debounceTime(300)) // 300ms debounce
-      .subscribe(newName => {
-        const store = playerStore(this.playerId);
-        const current = store.get();
-        if (current) {
-          this._socketService.emit('updatePlayerName', this.playerId, newName);
-          store.set({ ...current, name: newName });
-        }
-      });
-  }
+      this._socketService.emit('updatePlayerName', playerId, newName);
+      store.set({ ...current, name: newName });
+    });
 
   onNameChange(newName: string) {
-    this.nameInput$.next(newName);
+    this._nameInput$.next(newName);
   }
 
-  onReadyChange(ready: any) {
-    this._socketService.emit('playerReady', this.playerId, ready);
+  onReadyChange(ready: boolean) {
+    this._socketService.emit('playerReady', this.playerId(), ready);
+  }
+
+  // Kicks this player from the current lobby game when owner moderation is available.
+  onKickPlayer() {
+    const gameId = activeLobbyGameIdStore.get();
+    if (!gameId) return;
+    this._socketService.emit('kickLobbyPlayer', gameId, this.playerId());
+  }
+
+  // Bans this player from the current lobby game when owner moderation is available.
+  onBanPlayer() {
+    const gameId = activeLobbyGameIdStore.get();
+    if (!gameId) return;
+    this._socketService.emit('banLobbyPlayer', gameId, this.playerId());
   }
 }

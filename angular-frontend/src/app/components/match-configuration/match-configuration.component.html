@@ -1,67 +1,137 @@
-<main class="match-config">
-  <!-- ░░░  Player List  ░░░ -->
-  <section class="players">
-    <h2 class="section-title">Players</h2>
-
-    <div class="player-list">
-      @for (id of playerIds$ | async; track id) {
-        <app-player-name-input [playerId]="id"></app-player-name-input>
-      }
-    </div>
-    
-    @if (isGameOwner) {
-      @let playerCount = (playerIds$ | async)?.length ?? 0;
+<app-scene-content [subtitle]="activeGameName()">
+  <div sceneHeaderActions class="header-actions">
+    @if (isGameOwner()) {
       <button
-        class="add-computer-player"
-        (click)="addComputerPlayer()"
-        [disabled]="playerCount >= 6"
-      >
-        Add Computer Player
-      </button>
+        class="secondary-action-button"
+        (click)="openSaveDialog()"
+        [disabled]="!hasConfigurationChanges()"
+      >Save Config</button>
+      <button class="secondary-action-button" (click)="openLoadDialog()">Load Config</button>
+      <button
+        class="secondary-action-button"
+        (click)="clearConfiguration()"
+        [disabled]="!canClearConfiguration()"
+      >Clear Config</button>
     }
-  </section>
+    @if (activeLobbyGameId(); as activeGameId) {
+      <button class="leave-game-button" (click)="leaveGame(activeGameId)">Leave Game</button>
+    }
+  </div>
 
-  <!-- ░░░  Expansion List  ░░░ -->
-  <section class="expansions">
-    <h2 class="section-title">Expansions</h2>
+  @let isOwner = isGameOwner();
+  <section class="match-config-content">
+    <section class="configuration-top-row">
+      <!-- ░░░  Player List  ░░░ -->
+      <section class="players config-section">
+        <h2 class="section-title">Players</h2>
 
-    <div class="expansion-list">
-      @let expansionList = (expansionList$ | async) ?? [];
-      @let selectedExpansions = (matchExpansions$ | async) ?? [];
-      @for (expansion of expansionList; track expansion.name) {
-        <!-- item (selected) -->
-        <div
-          [title]="expansion.title"
-          (click)="isGameOwner ? onToggleExpansion(expansion) : null"
-          [ngStyle]="{'cursor': isGameOwner ? 'pointer' : 'default'}"
-          class="expansion-item"
-          [ngClass]="{'selected': selectedExpansions.includes(expansion.name)}"
-        >
-          <img
-            ngSrc="/assets/expansion-icons/{{expansion.name}}.png"
-            height="1"
-            width="1"
-            alt="{{expansion.title}} icon"
-            class="expansion-icon"
-          />
+        <div class="player-list">
+          @for (id of playerIds(); track id) {
+            <app-player-name-input [playerId]="id"></app-player-name-input>
+          }
         </div>
-      }
-    </div>
-  </section>
 
-  <section>
-      <section class="kingdom-section">
+        @if (isOwner) {
+          <button
+            class="secondary-action-button"
+            (click)="addComputerPlayer()"
+            [disabled]="playerCount() >= 6"
+          >
+            Add Computer Player
+          </button>
+        }
+      </section>
+
+      <!-- ░░░  Expansion List  ░░░ -->
+      <section class="expansions config-section">
+        <div class="section-header-row">
+          <h2 class="section-title">Expansions</h2>
+          @if (isOwner) {
+            <div class="section-header-actions">
+              <button
+                class="secondary-action-button section-inline-action-button"
+                (click)="onSelectNoExpansions()"
+                [disabled]="!canSelectNoExpansions()"
+              >None</button>
+              <button
+                class="secondary-action-button section-inline-action-button"
+                (click)="onSelectAllExpansions()"
+                [disabled]="!canSelectAllExpansions()"
+              >All</button>
+            </div>
+          }
+        </div>
+
+        <div class="expansion-list">
+          @let expansionItems = expansionList();
+          @let expansionLookup = selectedExpansionLookup();
+          @for (expansion of expansionItems; track expansion.name) {
+            <div
+              [title]="expansion.title"
+              (click)="onToggleExpansion(expansion)"
+              [ngStyle]="{'cursor': isOwner ? 'pointer' : 'default'}"
+              class="expansion-item"
+              [ngClass]="{'selected': expansionLookup[expansion.name] === true}"
+            >
+              <img
+                ngSrc="/assets/expansion-icons/{{expansion.name}}.png"
+                height="1"
+                width="1"
+                alt="{{expansion.title}} icon"
+                class="expansion-icon"
+              />
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="banned-cards-section config-section">
+        @let bannedCards = bannedKingdoms();
+        <div class="section-header-row">
+          <h2 class="section-title">Banned cards ({{ bannedCards.length }})</h2>
+          @if (isOwner) {
+            <div class="section-header-actions">
+              <button class="secondary-action-button section-inline-action-button" (click)="openSelectionModal('bannedKingdom')">Select</button>
+              <button
+                class="secondary-action-button section-inline-action-button"
+                (click)="clearBannedKingdoms()"
+                [disabled]="bannedCards.length < 1"
+              >Clear</button>
+            </div>
+          }
+        </div>
+
+        <div class="banned-card-list" [style.height.px]="bannedKingdomStackHeight()">
+          @for (bannedCard of bannedCards; track bannedCard.cardKey; let i = $index) {
+            <span class="banned-card-item" [style.--banned-stack-index]="i">
+              <img
+                alt="{{bannedCard.cardName}} image"
+                ngSrc="{{bannedCard.halfImagePath}}"
+                height="122"
+                width="122"
+              />
+              @if (isOwner) {
+                <span (click)="deleteBannedKingdom(bannedCard)" class="close-button">X</span>
+              }
+            </span>
+          }
+        </div>
+      </section>
+    </section>
+
+    <section class="kingdom-row">
+      <section class="kingdom-section config-section">
         <h2 class="section-title">Kingdom</h2>
 
         <div class="kingdom-list">
           <!-- Track by cardKey, fallback to index for null slots to keep keys unique. -->
-          @for (kingdom of preSelectedKingdoms; track kingdom?.cardKey ?? $index) {
+          @for (kingdom of preSelectedKingdoms(); track kingdom?.cardKey ?? $index) {
             <div
               class="kingdom"
-              [ngStyle]="{'cursor': isGameOwner && kingdom === null ? 'pointer' : 'default'}"
-              (click)="kingdom === null && isGameOwner ? selectingKingdom = true : null"
+              [ngStyle]="{'cursor': isOwner && kingdom === null ? 'pointer' : 'default'}"
+              (click)="kingdom === null && isOwner ? openSelectionModal('kingdom') : null"
             >
-              @if (kingdom !== null && isGameOwner) {
+              @if (kingdom !== null && isOwner) {
                 <div (click)="deleteKingdom(kingdom)" class="close-button">X</div>
               }
               <div>
@@ -80,19 +150,23 @@
           }
         </div>
       </section>
+    </section>
 
+    <section class="card-likes-section config-section">
+      <h2 class="section-title">Landscapes</h2>
+      <section class="card-like-row">
       <!-- ░░░  Events  ░░░ -->
       <section class="events-section">
         <h2 class="section-title">Events</h2>
 
         <div class="events-list">
-          @for (event of preSelectedEvents; track event?.cardKey ?? $index) {
+          @for (event of preSelectedEvents(); track event?.cardKey ?? $index) {
             <div
               class="event-slot"
-              [ngStyle]="{'cursor': isGameOwner && event === null ? 'pointer' : 'default'}"
-              (click)="event === null && isGameOwner ? selectingEvents = true : null"
+              [ngStyle]="{'cursor': isOwner && event === null ? 'pointer' : 'default'}"
+              (click)="event === null && isOwner ? openSelectionModal('events') : null"
             >
-              @if (event !== null && isGameOwner) {
+              @if (event !== null && isOwner) {
                 <div (click)="deleteEvent(event)" class="close-button">X</div>
               }
               <div>
@@ -111,58 +185,309 @@
           }
         </div>
       </section>
-  </section>
 
-  <section class="banned-cards-section">
-    @let bannedKingdoms = (bannedKingdoms$ | async) ?? [];
-    <h2 class="section-title">Banned cards ({{ bannedKingdoms.length }})</h2>
+      <!-- ░░░  Landmarks  ░░░ -->
+      <section class="landmarks-section">
+        <h2 class="section-title">Landmarks</h2>
 
-    @if (isGameOwner) {
-      <button (click)="selectingBannedCards = true">Select</button>
-    }
-
-    <div class="banned-card-list">
-      @for (bannedCard of bannedKingdoms; track bannedCard.cardKey) {
-        <span class="banned-card-item">
-          <span>{{ bannedCard.cardName }}</span>
-          @if (isGameOwner) {
-            <span (click)="deleteBannedKingdom(bannedCard)" class="close-button">X</span>
+        <div class="landmarks-list">
+          @for (landmark of preSelectedLandmarks(); track landmark?.cardKey ?? $index) {
+            <div
+              class="landmark-slot"
+              [ngStyle]="{'cursor': isOwner && landmark === null ? 'pointer' : 'default'}"
+              (click)="landmark === null && isOwner ? openSelectionModal('landmarks') : null"
+            >
+              @if (landmark !== null && isOwner) {
+                <div (click)="deleteLandmark(landmark)" class="close-button">X</div>
+              }
+              <div>
+                @if (landmark !== null) {
+                  <img
+                    alt="{{landmark.cardName}} image"
+                    ngSrc="{{landmark.fullImagePath}}"
+                    height="124"
+                    width="280"
+                  />
+                } @else {
+                  <span class="no-landmark">?</span>
+                }
+              </div>
+            </div>
           }
-        </span>
-      }
-    </div>
+        </div>
+      </section>
+
+      <!-- ░░░  Projects  ░░░ -->
+      <section class="projects-section">
+        <h2 class="section-title">Projects</h2>
+
+        <div class="projects-list">
+          @for (project of preSelectedProjects(); track project?.cardKey ?? $index) {
+            <div
+              class="project-slot"
+              [ngStyle]="{'cursor': isOwner && project === null ? 'pointer' : 'default'}"
+              (click)="project === null && isOwner ? openSelectionModal('projects') : null"
+            >
+              @if (project !== null && isOwner) {
+                <div (click)="deleteProject(project)" class="close-button">X</div>
+              }
+              <div>
+                @if (project !== null) {
+                  <img
+                    alt="{{project.cardName}} image"
+                    ngSrc="{{project.fullImagePath}}"
+                    height="124"
+                    width="280"
+                  />
+                } @else {
+                  <span class="no-project">?</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+
+      <!-- ░░░  Ways  ░░░ -->
+      <section class="ways-section">
+        <h2 class="section-title">Ways</h2>
+
+        <div class="ways-list">
+          @for (way of preSelectedWays(); track way?.cardKey ?? $index) {
+            <div
+              class="way-slot"
+              [ngStyle]="{'cursor': isOwner && way === null ? 'pointer' : 'default'}"
+              (click)="way === null && isOwner ? openSelectionModal('ways') : null"
+            >
+              @if (way !== null && isOwner) {
+                <div (click)="deleteWay(way)" class="close-button">X</div>
+              }
+              <div>
+                @if (way !== null) {
+                  <img
+                    alt="{{way.cardName}} image"
+                    ngSrc="{{way.fullImagePath}}"
+                    height="124"
+                    width="280"
+                  />
+                } @else {
+                  <span class="no-way">?</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+
+      <!-- ░░░  Traits  ░░░ -->
+      <section class="traits-section">
+        <h2 class="section-title">Traits</h2>
+
+        <div class="traits-list">
+          @for (trait of preSelectedTraits(); track trait?.cardKey ?? $index) {
+            <div
+              class="trait-slot"
+              [ngStyle]="{'cursor': isOwner && trait === null ? 'pointer' : 'default'}"
+              (click)="trait === null && isOwner ? openSelectionModal('traits') : null"
+            >
+              @if (trait !== null && isOwner) {
+                <div (click)="deleteTrait(trait)" class="close-button">X</div>
+              }
+              <div>
+                @if (trait !== null) {
+                  <img
+                    alt="{{trait.cardName}} image"
+                    ngSrc="{{trait.fullImagePath}}"
+                    height="124"
+                    width="280"
+                  />
+                } @else {
+                  <span class="no-trait">?</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </section>
+
+      <!-- ░░░  Allies  ░░░ -->
+      <section class="allies-section">
+        <h2 class="section-title">Allies</h2>
+        @let canAddAllySelection = canAddAlly();
+
+        <div class="allies-list">
+          @for (ally of preSelectedAllies(); track ally?.cardKey ?? $index) {
+            <div
+              class="ally-slot"
+              [ngClass]="{'disabled-add-slot': ally === null && !canAddAllySelection}"
+              [ngStyle]="{
+                'cursor': isOwner && ally === null ? (canAddAllySelection ? 'pointer' : 'not-allowed') : 'default'
+              }"
+              (click)="ally === null && isOwner && canAddAllySelection ? openSelectionModal('allies') : null"
+            >
+              @if (ally !== null && isOwner) {
+                <div (click)="deleteAlly(ally)" class="close-button">X</div>
+              }
+              <div>
+                @if (ally !== null) {
+                  <img
+                    alt="{{ally.cardName}} image"
+                    ngSrc="{{ally.fullImagePath}}"
+                    height="124"
+                    width="280"
+                  />
+                } @else {
+                  <span class="no-ally">?</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        @if (allySelectionDisabledReason(); as reason) {
+          <p class="selection-helper">{{ reason }}</p>
+        }
+      </section>
+
+      <!-- ░░░  Prophecies  ░░░ -->
+      <section class="prophecies-section">
+        <h2 class="section-title">Prophecies</h2>
+        @let canAddProphecySelection = canAddProphecy();
+
+        <div class="prophecies-list">
+          @for (prophecy of preSelectedProphecies(); track prophecy?.cardKey ?? $index) {
+            <div
+              class="prophecy-slot"
+              [ngClass]="{'disabled-add-slot': prophecy === null && !canAddProphecySelection}"
+              [ngStyle]="{
+                'cursor': isOwner && prophecy === null ? (canAddProphecySelection ? 'pointer' : 'not-allowed') : 'default'
+              }"
+              (click)="prophecy === null && isOwner && canAddProphecySelection ? openSelectionModal('prophecies') : null"
+            >
+              @if (prophecy !== null && isOwner) {
+                <div (click)="deleteProphecy(prophecy)" class="close-button">X</div>
+              }
+              <div>
+                @if (prophecy !== null) {
+                  <img
+                    alt="{{prophecy.cardName}} image"
+                    ngSrc="{{prophecy.fullImagePath}}"
+                    height="124"
+                    width="280"
+                  />
+                } @else {
+                  <span class="no-prophecy">?</span>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        @if (prophecySelectionDisabledReason(); as reason) {
+          <p class="selection-helper">{{ reason }}</p>
+        }
+      </section>
+      </section>
+    </section>
   </section>
-</main>
+</app-scene-content>
 
-<!-- select banned kingdoms -->
-@if (selectingBannedCards) {
-  <app-select-kingdom-modal
-    [excludedKingdoms]="preSelectedKingdoms"
-    [ngStyle]="{'visibility': selectingBannedCards ? 'visible' : 'hidden'}"
-    (close)="selectingBannedCards = false"
-    autofocus
-    (kingdomSelected)="onBannedKingdomSelected($event)">
-  </app-select-kingdom-modal>
+<!-- single shared selection modal for kingdoms and landscapes -->
+@if (activeSelectionModal(); as modal) {
+  <app-ui-dialog
+    [zIndex]="4300"
+    [backdropVariant]="'strong'"
+    (close)="closeSelectionModal()"
+  >
+    <app-select-card-like-modal
+      [excludedItems]="modal.excludedItems"
+      [catalogKind]="modal.catalogKind"
+      [imageSize]="modal.imageSize"
+      [filterBasicCards]="modal.filterBasicCards"
+      (close)="closeSelectionModal()"
+      autofocus
+      (itemSelected)="onSelectionModalItemSelected($event)"
+    >
+    </app-select-card-like-modal>
+  </app-ui-dialog>
 }
 
-<!-- select kingdoms to include in match -->
-@if (selectingKingdom) {
-  <app-select-kingdom-modal
-    [excludedKingdoms]="preSelectedKingdoms.concat(bannedKingdoms)"
-    [ngStyle]="{'visibility': selectingKingdom ? 'visible' : 'hidden'}"
-    (close)="selectingKingdom = false"
-    autofocus
-    (kingdomSelected)="onKingdomSelected($event)">
-  </app-select-kingdom-modal>
+@if (saveDialogVisible()) {
+  <app-ui-dialog
+    [zIndex]="4400"
+    [backdropVariant]="'strong'"
+    (close)="closeSaveDialog()"
+  >
+    <section class="config-dialog">
+      <h3>Save Match Configuration</h3>
+      <input
+        #saveDialogNameInput
+        class="config-dialog-input"
+        type="text"
+        placeholder="Configuration name"
+        [value]="saveDialogName()"
+        (input)="onSaveDialogNameInput($any($event.target).value)"
+      />
+      @if (saveNameCheckPending()) {
+        <div class="config-dialog-meta">Checking name availability…</div>
+      } @else {
+        @let check = saveNameCheck();
+        @if (saveDialogName().trim().length > 0 && check) {
+          @if (!check.isValid) {
+            <div class="config-dialog-error">{{ check.reason ?? 'Invalid save name.' }}</div>
+          } @else if (check.exists) {
+            <div class="config-dialog-warning">A configuration with that name already exists. Saving will overwrite it.</div>
+          } @else {
+            <div class="config-dialog-meta">Name is available.</div>
+          }
+        }
+      }
+      @if (dialogStatusMessage(); as statusMessage) {
+        <div class="config-dialog-error">{{ statusMessage }}</div>
+      } @else if (!hasConfigurationChanges()) {
+        <div class="config-dialog-meta">No configuration changes to save.</div>
+      }
+      <div class="config-dialog-actions">
+        <button (click)="submitSaveDialog()" [disabled]="!canSubmitSaveDialog()">Save</button>
+        <button (click)="closeSaveDialog()">Cancel</button>
+      </div>
+    </section>
+  </app-ui-dialog>
 }
 
-<!-- select events to include in match -->
-@if (selectingEvents) {
-  <app-select-event-modal
-    [excludedEvents]="preSelectedEvents"
-    [ngStyle]="{'visibility': selectingEvents ? 'visible' : 'hidden'}"
-    (close)="selectingEvents = false"
-    autofocus
-    (eventSelected)="onEventSelected($event)">
-  </app-select-event-modal>
+@if (loadDialogVisible()) {
+  <app-ui-dialog
+    [zIndex]="4400"
+    [backdropVariant]="'strong'"
+    (close)="closeLoadDialog()"
+  >
+    <section class="config-dialog">
+      <h3>Load Match Configuration</h3>
+      @if (savedConfigurations().length < 1) {
+        <div class="config-dialog-meta">No saved configurations found.</div>
+      } @else {
+        <div class="saved-config-list">
+          @for (entry of savedConfigurations(); track entry.key) {
+            <div class="saved-config-item">
+              <button
+                class="saved-config-choice"
+                type="button"
+                [class.active]="selectedLoadConfigurationKey() === entry.key"
+                (click)="loadSavedConfiguration(entry.key)"
+              >
+                <span>{{ entry.name }}</span>
+              </button>
+              <button class="saved-config-delete-button" type="button" (click)="deleteSavedConfiguration(entry.key, $event)">x</button>
+            </div>
+          }
+        </div>
+      }
+      @if (dialogStatusMessage(); as statusMessage) {
+        <div class="config-dialog-error">{{ statusMessage }}</div>
+      }
+      <div class="config-dialog-actions">
+        <button (click)="closeLoadDialog()">Cancel</button>
+      </div>
+    </section>
+  </app-ui-dialog>
 }

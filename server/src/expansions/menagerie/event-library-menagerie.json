@@ -1,0 +1,123 @@
+{
+  "alliance": {
+    "cost": {
+      "treasure": 10
+    },
+    "abilityText": "Gain a Province, a Duchy, an Estate, a Gold, a Silver, and a Copper."
+  },
+  "banish": {
+    "cost": {
+      "treasure": 4
+    },
+    "abilityText": "Exile any number of cards with the same name from your hand."
+  },
+  "bargain": {
+    "cost": {
+      "treasure": 4
+    },
+    "abilityText": "Gain a non-Victory card costing up to $5. Each other player gains a Horse."
+  },
+  "commerce": {
+    "cost": {
+      "treasure": 5
+    },
+    "abilityText": "Gain a Gold per differently named card you've gained this turn."
+  },
+  "delay": {
+    "cost": {
+      "treasure": 0
+    },
+    "abilityText": "You may set aside an Action card from your hand. At the start of your next turn, play it."
+  },
+  "demand": {
+    "cost": {
+      "treasure": 5
+    },
+    "abilityText": "Gain a Horse and a card costing up to $4, both onto your deck."
+  },
+  "desperation": {
+    "cost": {
+      "treasure": 0
+    },
+    "abilityText": "Once per turn: You may gain a Curse. If you do, +1 Buy and +$2."
+  },
+  "enclave": {
+    "cost": {
+      "treasure": 8
+    },
+    "abilityText": "Gain a Gold. Exile a Duchy from the Supply."
+  },
+  "enhance": {
+    "cost": {
+      "treasure": 3
+    },
+    "abilityText": "You may trash a non-Victory card from your hand, to gain a card costing up to $2 more than it."
+  },
+  "gamble": {
+    "cost": {
+      "treasure": 2
+    },
+    "abilityText": "+1 Buy\nDiscard the top card of your deck. If it's an Action or Treasure, you may play it."
+  },
+  "invest": {
+    "cost": {
+      "treasure": 4
+    },
+    "abilityText": "Exile an Action card from the Supply. While it's in Exile, when another player gains or Invests in a copy of it, +2 Cards."
+  },
+  "march": {
+    "cost": {
+      "treasure": 3
+    },
+    "abilityText": "Look through your discard pile. You may play an Action card from it."
+  },
+  "populate": {
+    "cost": {
+      "treasure": 10
+    },
+    "abilityText": "Gain one card from each Action Supply pile."
+  },
+  "pursue": {
+    "cost": {
+      "treasure": 2
+    },
+    "abilityText": "+1 Buy\nName a card. Reveal the top 4 cards from your deck. Put the matches back and discard the rest."
+  },
+  "reap": {
+    "cost": {
+      "treasure": 7
+    },
+    "abilityText": "Gain a Gold, setting it aside. At the start of your next turn, play it."
+  },
+  "ride": {
+    "cost": {
+      "treasure": 2
+    },
+    "abilityText": "Gain a Horse."
+  },
+  "seize-the-day": {
+    "cardName": "Seize the Day",
+    "cost": {
+      "treasure": 4
+    },
+    "abilityText": "Once per game: Take an extra turn after this one."
+  },
+  "stampede": {
+    "cost": {
+      "treasure": 5
+    },
+    "abilityText": "If you have 5 or fewer cards in play, gain 5 Horses onto your deck."
+  },
+  "toil": {
+    "cost": {
+      "treasure": 2
+    },
+    "abilityText": "+1 Buy\nYou may play an Action card from your hand."
+  },
+  "transport": {
+    "cost": {
+      "treasure": 3
+    },
+    "abilityText": "Choose one: Exile an Action card from the Supply; or put an Action card you have in Exile onto your deck."
+  }
+}

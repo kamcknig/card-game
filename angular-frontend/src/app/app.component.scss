@@ -2,23 +2,54 @@
   display: block;
   height: 100vh;
   width: 100vw;
+  min-width: 100vw;
   position: relative;
   overflow: hidden;
 }
 
-.pixi-container {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
+app-lobby, app-match-configuration, app-match-hud, app-game-summary {
+  display: block;
   width: 100%;
   height: 100%;
+  min-height: 0;
+  position: relative;
+  max-height: 100%;
 }
 
-app-match-configuration, app-match-hud, app-game-summary {
-  position: relative;
-  z-index: 1;
-  max-height: 100%;
+app-lobby, app-match-hud, app-game-summary {
   overflow: hidden;
+}
+
+app-match-supply {
+  position: absolute;
+  inset: 0;
+}
+
+app-match-landscapes {
+  position: absolute;
+  inset: 0;
+}
+
+app-match-player-area {
+  position: absolute;
+  inset: 0;
+}
+
+app-match-non-supply {
+  position: absolute;
+  inset: 0;
+}
+
+app-pile-selection-action {
+  position: absolute;
+  inset: 0;
+}
+
+app-match-configuration {
+  height: 100%;
+  max-height: 100%;
+  overflow-y: hidden;
+  overflow-x: hidden;
 }
 
 app-match-hud {
@@ -26,5 +57,5 @@ app-match-hud {
 }
 
 app-match-hud.match-started {
-  display: unset;
+  display: block;
 }

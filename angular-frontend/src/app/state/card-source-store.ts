@@ -1,4 +1,4 @@
-import { CardId, CardLocation, PlayerId } from 'shared/shared-types';
+import { CardId, CardLocation, PlayerId } from 'shared/types';
 import { atom, listenKeys, map, ReadableAtom } from 'nanostores';
 import { compare } from 'fast-json-patch/';
 
@@ -26,6 +26,8 @@ export const getCardSourceStore = (sourceKey: CardLocation, playerId: PlayerId =
   }
 
   const cachedAtom = atom<CardId[]>([]);
+  // Seed the cached atom with the current store value so late subscribers hydrate correctly.
+  cachedAtom.set(cardSourceStore.get()[key] ?? []);
   listenKeys(cardSourceStore, [key], (newVal, oldVal, changed) => {
     if (compare(cachedAtom?.get() ?? [], newVal?.[key] ?? []).length === 0) return;
     cachedAtom.set(newVal[key] ?? []);

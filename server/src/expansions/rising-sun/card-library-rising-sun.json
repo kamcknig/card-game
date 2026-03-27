@@ -1,0 +1,184 @@
+{
+  "alley": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "SHADOW"],
+    "abilityText": "+1 Card\n+1 Action\nDiscard a card.\nYou can play this from your deck as if in your hand."
+  },
+  "aristocrat": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION"],
+    "abilityText": "If the number of Aristocrats you have in play is:\n1 or 5: +3 Actions;\n2 or 6: +3 Cards;\n3 or 7: +$3;\n4 or 8: +3 Buys."
+  },
+  "artist": {
+    "cost": {
+      "treasure": 0,
+      "debt": 8
+    },
+    "type": ["ACTION"],
+    "abilityText": "+1 Action\n+1 Card per card you have exactly one copy of in play."
+  },
+  "change": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"],
+    "abilityText": "If you have any D, +$3. Otherwise, trash a card from your hand, and gain a card costing more $ than it. +D equal to the difference in $."
+  },
+  "craftsman": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION"],
+    "abilityText": "+2D\nGain a card costing up to $5."
+  },
+  "daimyo": {
+    "cost": {
+      "treasure": 0,
+      "debt": 6
+    },
+    "type": ["ACTION", "COMMAND"],
+    "abilityText": "+1 Card\n+1 Action\nThe next time you play a non-Command Action card this turn, replay it afterwards."
+  },
+  "fishmonger": {
+    "cost": {
+      "treasure": 2
+    },
+    "type": ["ACTION", "SHADOW"],
+    "abilityText": "+1 Buy\n+$1\nYou can play this from your deck as if in your hand."
+  },
+  "gold-mine": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+1 Action\n+1 Buy\nYou may gain a Gold and get +4D."
+  },
+  "imperial-envoy": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"],
+    "abilityText": "+5 Cards\n+1 Buy\n+2D"
+  },
+  "kitsune": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "ATTACK", "OMEN"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+1Sun\nChoose two different options: +2 Actions; +$2; each other player gains a Curse; gain a Silver."
+  },
+  "ninja": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "ATTACK", "SHADOW"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+1 Card\nEach other player discards down to 3 cards in hand.\nYou can play this from your deck as if in your hand."
+  },
+  "litter": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"],
+    "abilityText": "+2 Cards\n+2 Actions\n+1D"
+  },
+  "mountain-shrine": {
+    "cost": {
+      "treasure": 0,
+      "debt": 5
+    },
+    "type": ["ACTION", "OMEN"],
+    "abilityText": "+1Sun\n+$2\nYou may trash a card from your hand. Then if there are any Action cards in the trash, +2 Cards."
+  },
+  "poet": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "OMEN"],
+    "abilityText": "+1Sun\n+1 Card\n+1 Action\nReveal the top card of your deck. If it costs $3 or less, put it into your hand."
+  },
+  "rice": {
+    "cost": {
+      "treasure": 7
+    },
+    "type": ["TREASURE"],
+    "abilityText": "+1 Buy\n+$1 per different type among cards you have in play."
+  },
+  "rice-broker": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"],
+    "abilityText": "+1 Action\nTrash a card from your hand. If it's a Treasure, +2 Cards. If it's an Action, +5 Cards."
+  },
+  "river-shrine": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "OMEN"],
+    "abilityText": "+1Sun\nTrash up to 2 cards from your hand. At the start of Clean-up, if you didn't gain any cards in your Buy phase this turn, gain a card costing up to $4."
+  },
+  "ronin": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "SHADOW"],
+    "abilityText": "Draw until you have 7 cards in hand.\nYou can play this from your deck as if in your hand."
+  },
+  "riverboat": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION", "DURATION"],
+    "abilityText": "At the start of your next turn, play the set aside card, leaving it there.\nSetup: Set aside an unused non-Duration Action card costing $5."
+  },
+  "root-cellar": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION"],
+    "abilityText": "+3 Cards\n+1 Action\n+3D"
+  },
+  "rustic-village": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "OMEN"],
+    "abilityText": "+1Sun\n+1 Card\n+2 Actions\nYou may discard 2 cards for +1 Card."
+  },
+  "samurai": {
+    "cost": {
+      "treasure": 6
+    },
+    "type": ["ACTION", "DURATION", "ATTACK"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "Each other player discards down to 3 cards in hand (once).\nAt the start of each of your turns this game, +$1.\n(This stays in play)"
+  },
+  "snake-witch": {
+    "cost": {
+      "treasure": 2
+    },
+    "type": ["ACTION", "ATTACK"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+1 Card\n+1 Action\nIf your hand has no duplicate cards, you may reveal it and return this to its pile, to have each other player gain a Curse."
+  },
+  "tanuki": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "SHADOW"],
+    "abilityText": "Trash a card from your hand. Gain a card costing up to $2 more than it.\nYou can play this from your deck as if in your hand."
+  },
+  "tea-house": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION", "OMEN"],
+    "abilityText": "+1Sun\n+1 Card\n+1 Action\n+$2"
+  }
+}

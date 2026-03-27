@@ -1,19 +1,63 @@
 .mat-tab {
-  min-width: 150px;
+  --tab-slide-distance: 10px;
+  --tab-inner-offset: -8px;
+
+  min-width: 210px;
+  max-width: min(360px, calc(100vw - 24px));
   cursor: pointer;
-  font-size: 18px;
-  color: white;
-  padding: 3px 3px 3px 8px;
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid white;
-  border-radius: 5px;
+  font-size: 13px;
+  color: var(--theme-text-primary);
+  padding: 6px 18px 6px 12px;
+  background: var(--theme-action-secondary-bg);
+  border: 1px solid var(--theme-border-strong);
+  border-radius: 9px 0 0 9px;
+  border-right: none;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 30px;
+  gap: 10px;
+  margin-right: calc(-1 * var(--tab-slide-distance));
+  transform: translateX(0);
+  transition:
+    transform 120ms ease-out,
+    background-color 120ms ease-out,
+    border-color 120ms ease-out;
+  box-sizing: border-box;
+
+  &:hover {
+    transform: translateX(calc(-1 * var(--tab-slide-distance)));
+    background: var(--theme-action-nav-selected-bg);
+    border-color: var(--theme-border-action);
+  }
+
+  .mat-label {
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transform: translateX(var(--tab-inner-offset));
+    transition: transform 120ms ease-out;
+  }
+
+  .mat-source {
+    font-weight: 700;
+  }
 
   .badge-count {
-    padding: 5px 10px;
-    background: #c70000;
+    min-width: 28px;
+    text-align: center;
+    padding: 3px 6px;
+    border-radius: 999px;
+    background: var(--theme-surface-count-badge);
+    color: var(--theme-text-primary);
+    font-weight: 700;
+    flex-shrink: 0;
+    transform: translateX(var(--tab-inner-offset));
+    transition: transform 120ms ease-out;
+  }
+
+  &:hover .badge-count {
+    // Counter moves opposite the tab slide so it appears anchored in place.
+    transform: translateX(calc(var(--tab-inner-offset) + var(--tab-slide-distance)));
   }
 }

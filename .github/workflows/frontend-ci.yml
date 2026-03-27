@@ -1,0 +1,42 @@
+name: Frontend CI
+
+on:
+  push:
+    paths:
+      - 'angular-frontend/**'
+      - 'shared/**'
+      - '.github/workflows/frontend-ci.yml'
+  pull_request:
+    paths:
+      - 'angular-frontend/**'
+      - 'shared/**'
+      - '.github/workflows/frontend-ci.yml'
+
+jobs:
+  type-check:
+    name: TypeScript Type Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: angular-frontend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'yarn'
+          cache-dependency-path: angular-frontend/yarn.lock
+
+      - name: Install shared dependencies
+        working-directory: shared
+        run: yarn install
+
+      - name: Install frontend dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Type check
+        run: npx tsc -p tsconfig.app.json --noEmit

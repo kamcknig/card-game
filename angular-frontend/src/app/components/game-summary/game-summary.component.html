@@ -2,13 +2,13 @@
   <!-- left half, victory points and -->
   <div class="pane left">
     <div class="player-score-content">
-      @for (playerSummary of matchSummary.playerSummary; track playerSummary.playerId) {
+      @for (playerSummary of playerSummaries(); track playerSummary.playerId) {
         <div class="player-score-wrapper">
           <span class="place">{{ $index + 1 }}</span>
 
           <div class="hr-rule place-name-separator"><div class="line"></div></div>
 
-          <span>{{ getPlayerName(playerSummary.playerId) }}</span>
+          <span>{{ playerSummary.playerName }}</span>
 
           <div class="hr-rule turn-score-separator"><div class="line"></div></div>
 
@@ -35,12 +35,12 @@
 
   <!-- right half, decks -->
   <div class="pane right">
-    @for (deck of playerDecks; track deck.playerId) {
+    @for (deck of playerDecks(); track deck.playerId) {
       <div class="player-deck-summary">
-        <div>{{ getPlayerName(deck.playerId) }}</div>
+        <div>{{ deck.playerName }}</div>
         <div class="deck-summary">
           @for (entry of deck.cards | deckEntries; track entry.cardId) {
-            @let card = allCards?.[entry.cardId];
+            @let card = allCards()[entry.cardId];
 
             <div class="card-summary">
               <div class="card-image">

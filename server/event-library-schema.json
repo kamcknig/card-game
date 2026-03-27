@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Schema for validating Dominion event library definitions",
+  "type": "object",
+  "additionalProperties": {
+    "$ref": "#/$defs/Event"
+  },
+  "$defs": {
+    "CardCost": {
+      "type": "object",
+      "description": "Event cost in treasure/potion/debt.",
+      "properties": {
+        "treasure": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "potion": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "debt": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": ["treasure"],
+      "additionalProperties": false
+    },
+    "Event": {
+      "type": "object",
+      "description": "Event definition entry for an expansion event library.",
+      "properties": {
+        "cardName": {
+          "type": "string",
+          "description": "The human-readable event name."
+        },
+        "randomizer": {
+          "type": ["string", "null"],
+          "description": "Optional randomizer key for grouping events."
+        },
+        "abilityText": {
+          "type": "string",
+          "description": "Optional text to display for the event."
+        },
+        "cost": {
+          "$ref": "#/$defs/CardCost"
+        }
+      },
+      "required": ["cost"],
+      "additionalProperties": false
+    }
+  }
+}

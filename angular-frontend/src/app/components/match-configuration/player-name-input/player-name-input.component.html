@@ -1,5 +1,5 @@
-<div class="content" *ngIf="$player | async as player">
-  <span [ngStyle]="{'visibility': ($isOwner | async) ? 'visible' : 'hidden'}">👑</span>
+<div class="content" *ngIf="player() as player">
+  <span [ngStyle]="{'visibility': isOwner() ? 'visible' : 'hidden'}">👑</span>
   @if (player.isComputer) {
     <span title="Computer player">🤖</span>
   }
@@ -7,12 +7,12 @@
   <input
     #readyCheckbox
     type="checkbox"
-    [disabled]="playerId !== ($selfId | async) || player.name === ''"
+    [disabled]="playerId() !== selfId() || player.name === ''"
     [checked]="player.ready"
     (input)="onReadyChange($any($event.target).checked)"
   />
 
-  @if (playerId === ($selfId | async)) {
+  @if (playerId() === selfId()) {
     <input
       class="player-name editable"
       type="text"
@@ -28,5 +28,12 @@
 
   @if (!player.connected) {
     <span>⚠️</span>
+  }
+
+  @if (canModeratePlayer()) {
+    <button type="button" class="moderation-button" (click)="onKickPlayer()">Kick</button>
+    @if (!player.isComputer) {
+      <button type="button" class="moderation-button ban" (click)="onBanPlayer()">Ban</button>
+    }
   }
 </div>

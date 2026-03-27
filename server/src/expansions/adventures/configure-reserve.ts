@@ -1,12 +1,20 @@
-import { ExpansionConfiguratorContext } from '../../types.ts';
+import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 import { addMatToMatchConfig } from '../../utils/add-mat-to-match-config.ts';
+import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 
 export const configureReserve = (args: ExpansionConfiguratorContext) => {
-  if (!args.config.kingdomSupply.some(supply => supply.cards[0].type.includes('RESERVE'))) {
+  // Use pile-level type overrides when determining whether Reserve cards are present.
+  if (
+    !args.config.kingdomSupply.some(supply =>
+      getPileDefinitionCard(supply.cards, supply.name)?.type.includes('RESERVE'),
+    )
+  ) {
     return;
   }
-  
-  console.debug(`[adventures configurator - configuring reserve] cards of type RESERVE included in supply, configuring tavern mat`);
-  
+
+  args.loggerService.info(
+    `[adventures configurator - configuring reserve] cards of type RESERVE included in supply, configuring tavern mat`,
+  );
+
   addMatToMatchConfig('tavern', args.config, args);
-}
+};

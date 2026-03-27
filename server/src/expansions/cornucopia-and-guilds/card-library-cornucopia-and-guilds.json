@@ -4,43 +4,44 @@
       "treasure": 0
     },
     "type": ["ACTION", "TREASURE", "REWARD"],
-    "randomizer": null
+    "kingdomSelectable": false
   },
   "courser": {
     "cost": {
       "treasure": 0
     },
     "type": ["ACTION", "REWARD"],
-    "randomizer": null
+    "kingdomSelectable": false
   },
   "demesne": {
     "cost": {
       "treasure": 0
     },
     "type": ["ACTION", "VICTORY", "REWARD"],
-    "randomizer": null
+    "kingdomSelectable": false,
+    "abilityText": "+2 Actions\n+2 Buys\nGain a Gold.\nWorth 1VP per Gold you have.\n(This is not in the Supply.)",
+    "victoryPoints": 0
   },
   "housecarl": {
     "cost": {
       "treasure": 0
     },
     "type": ["ACTION", "REWARD"],
-    "randomizer": null
+    "kingdomSelectable": false
   },
   "huge-turnip": {
-    "cardName": "Huge Turnip",
     "cost": {
       "treasure": 0
     },
     "type": ["TREASURE", "REWARD"],
-    "randomizer": null
+    "kingdomSelectable": false
   },
   "renown": {
     "cost": {
       "treasure": 0
     },
     "type": ["ACTION", "REWARD"],
-    "randomizer": null
+    "kingdomSelectable": false
   },
   "advisor": {
     "cost": {
@@ -61,7 +62,6 @@
     "type": ["ACTION"]
   },
   "candlestick-maker": {
-    "cardName": "Candlestick Maker",
     "cost": {
       "treasure": 2
     },
@@ -77,7 +77,9 @@
     "cost": {
       "treasure": 6
     },
-    "type": ["VICTORY"]
+    "type": ["VICTORY"],
+    "abilityText": "Worth 2VP per 5 differently named cards you have (round down).",
+    "victoryPoints": 0
   },
   "farmhands": {
     "cost": {
@@ -102,7 +104,9 @@
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "ATTACK"]
+    "type": ["ACTION", "ATTACK"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+2 Coffers\nEach other player discards down to 3 cards in hand.\nIn games using this, when you gain a card in an Action phase, +1 Card."
   },
   "hamlet": {
     "cost": {
@@ -141,7 +145,9 @@
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "ATTACK"]
+    "type": ["ACTION", "ATTACK"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+$2\nEach other player discards the top card of their deck. If it's a Victory card they gain a Curse; otherwise they gain a copy of the discarded card or you do, your choice."
   },
   "journeyman": {
     "cost": {
@@ -189,7 +195,9 @@
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "ATTACK"]
+    "type": ["ACTION", "ATTACK"],
+    "abilityText": "Gain a Gold. Each other player gains a Curse, and if they did, draws a card.",
+    "targetScheme": "ALL_OTHER"
   },
   "stonemason": {
     "cost": {
@@ -199,10 +207,11 @@
     "tags": ["overpay"]
   },
   "young-witch": {
-    "cardName": "Young Witch",
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION", "ATTACK"]
+    "type": ["ACTION", "ATTACK"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+2 Cards\nDiscard 2 cards. Each other player gains a Curse unless they reveal a Bane from their hand.\nSetup: Add an extra Kingdom card pile costing $2 or $3 to the Supply. Its cards are Banes."
   }
 }

@@ -1,0 +1,102 @@
+@use '../pile-shared' as pile;
+
+:host {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.non-supply-overlay-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.non-supply-panel {
+  position: fixed;
+  border: 1px solid var(--theme-border-strong);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-medium));
+  padding: 10px;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.kingdom-columns {
+  display: flex;
+  align-items: flex-start;
+  gap: 30px;
+}
+
+.kingdom-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kingdom-section {
+  padding: 0;
+  pointer-events: auto;
+}
+
+.kingdom-piles {
+  display: flex;
+  flex-direction: column;
+}
+
+.kingdom-piles .non-supply-pile + .non-supply-pile {
+  margin-top: -125px;
+}
+
+.kingdom-piles.loot-piles .non-supply-pile + .non-supply-pile {
+  margin-top: 0;
+}
+
+.non-supply-pile {
+  position: relative;
+  width: var(--card-width);
+  min-height: var(--card-small-height);
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  pointer-events: auto;
+  cursor: default;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.non-supply-pile::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border: 3px solid transparent;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.non-supply-pile.selectable-card,
+.non-supply-pile.selectable-pile {
+  cursor: pointer;
+}
+
+.non-supply-pile.selectable-card::before,
+.non-supply-pile.selectable-pile::before {
+  border-color: #ffaaaa;
+}
+
+.non-supply-pile.selected-card::before,
+.non-supply-pile.selected-pile::before {
+  border-color: #6dff8c;
+}
+
+.non-supply-pile.way-selectable {
+  box-shadow: 0 0 0 2px rgba(0, 213, 255, 0.9);
+}
+
+.non-supply-pile.empty-pile-state {
+  filter: saturate(0.4) brightness(0.6);
+}
+
+@include pile.pile-decorations;

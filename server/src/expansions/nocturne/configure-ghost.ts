@@ -1,0 +1,33 @@
+import { ExpansionConfiguratorContext } from '@server-types/index.ts';
+
+// Adds the Ghost non-supply pile when Cemetery (Haunted Mirror heirloom) is present.
+export const configureGhost = (args: ExpansionConfiguratorContext) => {
+  if (args.config.nonSupply?.some(supply => supply.name === 'ghost')) {
+    args.loggerService.info('[nocturne configurator - ghost] pile already configured');
+    return;
+  }
+
+  args.loggerService.info('[nocturne configurator - ghost] configuring Ghost pile');
+
+  args.config.nonSupply ??= [];
+
+  const baseCard = structuredClone(args.expansionCatalog['nocturne']?.cardData.kingdomSupply['ghost']);
+
+  if (!baseCard) {
+    args.loggerService.warn('[nocturne configurator - ghost] card data not found');
+    return;
+  }
+
+  const card = {
+    ...baseCard,
+    partOfSupply: false,
+    tags: ['ghost'],
+  };
+
+  args.config.nonSupply.push({
+    name: 'ghost',
+    cards: new Array(6).fill({ ...card }),
+  });
+
+  args.loggerService.info('[nocturne configurator - ghost] Ghost pile configured');
+};

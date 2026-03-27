@@ -1,0 +1,25 @@
+.number-input-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 220px;
+}
+
+.number-input {
+  width: 220px;
+  height: 48px;
+  border-radius: 6px;
+  border: 1px solid var(--theme-border-strong);
+  background: var(--theme-surface-panel);
+  color: var(--theme-text-primary);
+  font-size: 22px;
+  text-align: center;
+  padding: 6px 10px;
+  box-sizing: border-box;
+}
+
+.range-text {
+  color: var(--theme-text-on-dark);
+  font-size: 14px;
+}

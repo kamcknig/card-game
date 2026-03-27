@@ -1,0 +1,90 @@
+@use '../pile-shared' as pile;
+
+:host {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.supply-overlay-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.supply-panel {
+  position: fixed;
+  border: 1px solid var(--theme-border-strong);
+  border-radius: 6px;
+  background: var(--theme-panel-bg);
+  padding: 10px;
+  pointer-events: none;
+}
+
+.basic-columns {
+  display: flex;
+  gap: 10px;
+}
+
+.pile-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kingdom-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  column-gap: 32px;
+  row-gap: 10px;
+}
+
+.supply-pile {
+  position: relative;
+  width: var(--card-width);
+  min-height: var(--card-small-height);
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  pointer-events: auto;
+  cursor: default;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.supply-pile::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border: 3px solid transparent;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.supply-pile.selectable-card,
+.supply-pile.selectable-pile {
+  cursor: pointer;
+}
+
+.supply-pile.selectable-card::before,
+.supply-pile.selectable-pile::before {
+  border-color: #ffaaaa;
+}
+
+.supply-pile.selected-card,
+.supply-pile.selected-pile {
+  cursor: pointer;
+}
+
+.supply-pile.selected-card::before,
+.supply-pile.selected-pile::before {
+  border-color: #6dff8c;
+}
+
+.supply-pile.way-selectable {
+  box-shadow: 0 0 0 2px rgba(0, 213, 255, 0.9);
+}
+
+@include pile.pile-decorations;

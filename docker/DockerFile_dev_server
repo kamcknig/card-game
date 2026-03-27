@@ -1,0 +1,20 @@
+# Development Dockerfile for Deno game server
+# Uses --watch for hot-reload on file changes
+FROM denoland/deno:2.7.7
+
+WORKDIR /app/server
+
+EXPOSE 3001
+
+# Source code is bind-mounted at runtime via docker-compose volumes
+# Run with --watch for hot-reload; env vars provided by docker-compose
+# Matches the dev:watch task flags minus --inspect and --env-file
+CMD ["deno", "run", \
+  "--check", \
+  "--allow-net", \
+  "--allow-env", \
+  "--allow-read", \
+  "--allow-write", \
+  "--allow-sys", \
+  "--watch", \
+  "src/server.ts"]

@@ -24,6 +24,8 @@ export type TokenLocation =
   | { type: 'playerDiscard'; playerId: PlayerId; }
   | { type: 'playerMat'; playerId: PlayerId; matKey: string; }
   | { type: 'card'; cardId: CardId; }
+  // Allows tokens to attach to card-like entities such as Projects.
+  | { type: 'cardLike'; cardLikeId: CardLikeId; }
   | { type: 'global'; };
 
 // Token definitions are static rules metadata used by both server logic and UI.
@@ -54,30 +56,50 @@ export interface Supply {
 }
 
 /****************
- 
+
  MATCH types
- 
+
  ***************/
 export interface MatchConfiguration {
   players: Player[];
-  
+
   // info about the expansions selected for the match. determines what cards can randomly be selected for the kingdom
   expansions: ExpansionListElement[];
-  
+
   // cards banned from the match
   bannedKingdoms: CardNoId[];
-  
+
   preselectedKingdoms: CardNoId[];
-  
+
   // basic cards selected for the game, these are what are available at the beginning of a match
   basicSupply: Supply[];
-  
+
   // kingdom cards selected for the game, these are what are available at the beginning of a match
   kingdomSupply: Supply[];
-  
+
   playerStartingHand: Record<CardKey, number>;
-  
+  // events are card-likes that can be bought for their effects
   events: EventNoId[];
+  // Landmarks are card-likes that affect scoring or gameplay.
+  landmarks: LandmarkNoId[];
+  // Projects are card-likes that grant permanent abilities.
+  projects: ProjectNoId[];
+  // Ways are landscape card-likes that provide alternate Action play effects.
+  ways: WayNoId[];
+  // Traits are landscape card-likes that attach to one Action/Treasure kingdom pile.
+  traits: TraitNoId[];
+  // Allies are landscape card-likes that define Favor spend behavior.
+  allies: AllyNoId[];
+  // Prophecies are Rising Sun landscapes that activate when Omen cards are present.
+  prophecies: ProphecyNoId[];
+  // Boons available for Fate cards in this match.
+  boons: BoonNoId[];
+  // Hexes available for Doom cards in this match.
+  hexes: HexNoId[];
+  // States available for cards that grant them (e.g., Lost in the Woods).
+  states: StateNoId[];
+  // Artifacts available for cards that grant them (e.g., Treasurer).
+  artifacts: ArtifactNoId[];
 }
 
 export type ComputedMatchConfiguration = MatchConfiguration & {
@@ -89,55 +111,148 @@ export type ComputedMatchConfiguration = MatchConfiguration & {
 export type CardStats = {
   // the turn number on which the card was played.
   turnNumber: number;
-  
+  // Index in match.stats.turns for the turn where this stat was recorded.
+  turnHistoryIndex?: number;
+
   turnPhase: TurnPhase;
-  
+
   // the player that played the card
   playerId: PlayerId;
 };
 
 export type MatchStats = {
+  // Chronological turn history, including extra turns. The last turn in the list is the current turn.
+  turns: MatchTurnStats[];
+
   cardLikesBoughtByTurn: Record<number, CardId[] | undefined>;
   cardLikesBought: Record<CardId, CardStats>;
-  
+
   cardsGainedByTurn: Record<number, CardId[] | undefined>;
   cardsGained: Record<CardId, CardStats>;
-  
+
   /**
    * Keys are the card's ID that was played, and values are CardStats objects.
    */
   playedCards: Record<CardId, CardStats>;
   playedCardsByTurn: Record<number, CardId[] | undefined>;
-  
+
   trashedCards: Record<CardId, CardStats>;
   trashedCardsByTurn: Record<number, CardId[] | undefined>;
-  
+
   cardsBoughtByTurn: Record<number, CardId[] | undefined>;
   cardsBought: Record<CardId, CardStats & {
-    
+
     // the cost when it was bought
     cost: number;
-    
+
     // the amount used to buy it
     paid: number;
   }>;
+};
+
+export type MatchTurnStats = ExtraTurn & {
+  // Engine turn number at turn start (can repeat for same-player extra turns).
+  turnNumber: number;
+};
+
+export type FleetRoundState = {
+  // Indicates that Fleet endgame turns are currently being played.
+  active: boolean;
+  // Indicates Fleet processing already completed and game should finalize immediately.
+  completed: boolean;
+  // Snapshot of players eligible for Fleet turns in deterministic play order.
+  eligiblePlayerIdsInOrder: PlayerId[];
+  // Index of the next Fleet player in eligiblePlayerIdsInOrder.
+  nextFleetPlayerIndex: number;
+  // Player whose turn caused game-end conditions to be met.
+  endingPlayerId?: PlayerId;
+  // Turn number when Fleet processing was activated.
+  startedAtTurnNumber?: number;
+};
+
+export type SetAsideSourceKind =
+  | 'card'
+  | 'event'
+  | 'trait'
+  | 'landmark'
+  | 'project'
+  | 'way'
+  | 'ally'
+  | 'prophecy'
+  | 'boon'
+  | 'hex'
+  | 'state'
+  | 'artifact'
+  | 'system';
+
+// Describes why a card/card-like is currently in set-aside and who owns that staging.
+export type SetAsideSourceDescriptor = {
+  ownerPlayerId?: PlayerId;
+  sourceKind: SetAsideSourceKind;
+  sourceCardId?: CardId;
+  sourceCardLikeId?: CardLikeId;
+  sourceCardKey?: CardKey;
+  sourceLabel?: string;
 };
 
 export interface Match {
   cardOverrides: CardOverrides;
   cardSources: Record<CardLocation, CardId[]>;
   cardSourceTagMap: Record<string, CardLocation[]>;
+  // Source metadata for active set-aside entries, keyed by card/card-like id.
+  setAsideSourceById: Record<CardLikeId, SetAsideSourceDescriptor>;
   coffers: Record<PlayerId, number>;
+  // Tracks per-player Villagers tokens from Renaissance.
+  villagers: Record<PlayerId, number>;
+  // Tracks per-player debt tokens for Empires-style costs.
+  debt: Record<PlayerId, number>;
+  // Tracks pending skipped turns by player (used by effects like Lich).
+  skippedTurns: Record<PlayerId, number>;
   config: ComputedMatchConfiguration,
   currentPlayerTurnIndex: number;
   events: Event[];
+  // Active landmarks in the match (not part of the supply).
+  landmarks: Landmark[];
+  // Active projects in the match (not part of the supply).
+  projects: Project[];
+  // Active ways in the match (not part of the supply).
+  ways: Way[];
+  // Active trait landscapes in the match (each attaches to a kingdom pile).
+  traits: Trait[];
+  // Active ally landscape in the match (at most one in standard games).
+  allies: Ally[];
+  // Active prophecy landscape in the match (at most one in standard games).
+  prophecies: Prophecy[];
+  // Boon deck state for Fate cards in this match.
+  boons: {
+    cards: Boon[];
+    deck: CardLikeId[];
+    discard: CardLikeId[];
+    // Boons set aside for Druid (face up).
+    setAside: CardLikeId[];
+  };
+  // Hex deck state for Doom cards in this match.
+  hexes: {
+    cards: Hex[];
+    deck: CardLikeId[];
+    discard: CardLikeId[];
+  };
+  // State instances in the match and who currently has them.
+  states: {
+    cards: State[];
+    byPlayer: Record<PlayerId, CardLikeId[]>;
+  };
+  // Artifact instances in the match and who currently has them.
+  artifacts: {
+    cards: Artifact[];
+    byPlayer: Record<PlayerId, CardLikeId[]>;
+  };
   mats: PlayerMatMap;
   playerActions: number;
   playerBuys: number;
   playerPotions: number;
   playerTreasure: number;
   players: Player[];
-  playerVictoryTokens: Record<PlayerId, number>;
   roundNumber: number;
   scores: Record<PlayerId, number>,
   selectableCards: Record<PlayerId, CardId[]>;
@@ -148,60 +263,139 @@ export interface Match {
   tokenInstanceCounter: number;
   turnNumber: number;
   turnPhaseIndex: number;
+  // when a player gains an extra turn
+  extraTurnQueue: ExtraTurn[];
+  // Fleet endgame round state.
+  fleetRound: FleetRoundState;
+}
+
+export type ExtraTurn = {
+  // the owner/controller of the turn. typically this is the same as `playerId`. but in some cases might be another
+  // player e.g., with Possession from the Alchemy expansion
+  controllerId?: PlayerId;
+  // the player whose turn it is. This is not necessarily the one actually controlling the turn
+  playerId: PlayerId;
+  // the source of the effect that provided the extra turn
+  sourceId?: CardId | CardLikeId;
 }
 
 export type CardOverrides = Record<PlayerId, Record<CardId, Partial<Card>>>;
 
 /**************
- 
+
  LOG types
- 
+
  ******************/
 
 export type LogEntrySource = CardId;
 
 export type LogEntry =
   | { type: 'draw'; playerId: PlayerId; cardId: CardId; depth?: number; source?: LogEntrySource }
-  | { type: 'discard'; playerId: PlayerId; cardId: CardId; depth?: number; source?: LogEntrySource }
+  // Hand draw log entry (no count; modifiers log separately).
+  | { type: 'drawHand'; playerId: PlayerId; depth?: number; source?: LogEntrySource }
+  // Discard log entry; count > 1 indicates only the final cardId is revealed in log text.
+  | { type: 'discard'; playerId: PlayerId; cardId: CardId; count?: number; depth?: number; source?: LogEntrySource }
   | { type: 'gainAction'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'gainBuy'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'gainTreasure'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
+  | { type: 'payDebt'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'gainVictoryToken'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
+  // Logs a card-like effect (boon/hex/state/artifact/event/landmark).
+  | { type: 'cardLikeEffect'; playerId: PlayerId; cardLikeId: CardLikeId; effectText: string; depth?: number; source?: LogEntrySource }
   | { type: 'tokenEffect'; playerId: PlayerId; cardId: CardId; tokenId: TokenId; effectText: string; depth?: number; source?: LogEntrySource }
   // Token placement and consumption logs.
   | { type: 'tokenPlaced'; playerId: PlayerId; tokenId: TokenId; depth?: number; source?: LogEntrySource }
   | { type: 'tokenConsumed'; playerId: PlayerId; tokenId: TokenId; depth?: number; source?: LogEntrySource }
+  // Logs when a player buys a Project.
+  | { type: 'buyProject'; playerId: PlayerId; cardLikeId: CardLikeId; depth?: number; source?: LogEntrySource }
   | { type: 'gainCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'cardPlayed'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'revealCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'trashCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'shuffleDeck'; playerId: PlayerId; depth?: number; source?: LogEntrySource }
+  // Logs when a player leaves the active match (e.g., resigns).
+  | { type: 'playerLeft'; playerId: PlayerId; reason: 'resigned'; depth?: number; source?: LogEntrySource }
   | { type: 'newTurn'; turn: number; depth?: number; source?: LogEntrySource }
   | { type: 'newPlayerTurn'; turn: number; playerId: PlayerId; depth?: number; source?: LogEntrySource };
 
 
 /***************
- 
+
  GAME ACTION types
- 
+
  *********************/
 
 export interface SelectActionCardArgs {
   count?: CountSpec | number;
   playerId: PlayerId;
+  restrict: CardFilterExpr | CardId[];
+  // Optional canonical filter for play-selection semantics when restrict is an explicit card-id list.
+  cardFilter?: CardFilterExpr;
   optional?: boolean;
   prompt: string;
   validPrompt?: string;
   cancelPrompt?: string;
+  // Explicitly marks "select to play" flows and what card types are legal to play.
+  selectionIntent?: {
+    kind: 'play-card';
+    cardTypes: CardType[];
+  };
 }
+
+// Single-card selection only allows one-card count shapes.
+export type SingleSelectCountSpec =
+  | 1
+  | { kind: 'upTo'; count: 1; }
+  | { kind: 'exact'; count: 1; };
+
+// Arguments accepted by selectSingleCard.
+export interface SelectSingleActionCardArgs extends Omit<SelectActionCardArgs, 'count'> {
+  count?: SingleSelectCountSpec;
+}
+
+// Carries card-selection results for play flows that may include an alternate Way pick.
+export type PlayCardSelectionResult = {
+  selectedCardIds: CardId[];
+  selectedWayId?: CardLikeId | null;
+};
 
 export type UserPromptKinds =
   | { type: 'blind-rearrange'; cardIds: CardId[]; }
   | { type: 'rearrange'; cardIds: CardId[]; }
   | { type: 'name-card'; }
   | { type: 'overpay'; cost: number; }
-  | { type: 'display-cards'; cardIds: CardId[]; }
-  | { type: 'select'; cardIds: CardId[]; selectCount: CountSpec; selectableCardIds?: CardId[]; }
+  // Prompt for a numeric input within a min/max range.
+  | {
+    type: 'number-input';
+    // Optional minimum bound for numeric input.
+    min?: number;
+    // Optional maximum bound for numeric input.
+    max?: number;
+    value?: number;
+    // Optional prompt controls whether a cancel action is available.
+    optional?: boolean;
+    submitText?: string;
+    cancelText?: string;
+    placeholder?: string;
+  }
+  // Display prompt can optionally include card-likes shown below cards.
+  | { type: 'display-cards'; cardIds?: CardId[]; cardLikeIds?: CardLikeId[]; }
+  | {
+    type: 'select';
+    cardIds: CardId[];
+    selectCount: CountSpec;
+    selectableCardIds?: CardId[];
+    // Canonical filter used to derive/select these cards.
+    cardFilter?: CardFilterExpr;
+    // Explicitly marks "select to play" flows and what card types are legal to play.
+    selectionIntent?: {
+      kind: 'play-card';
+      cardTypes: CardType[];
+    };
+    // Optional card-like entries to include in the selection prompt.
+    cardLikeIds?: CardLikeId[];
+    selectableCardLikeIds?: CardLikeId[];
+  }
   | { type: 'select-pile'; pileNames: CardKey[]; selectCount: CountSpec; optional?: boolean; };
 
 export type UserPromptActionArgs = {
@@ -210,15 +404,126 @@ export type UserPromptActionArgs = {
   content?: UserPromptKinds;
   actionButtons?: ActionButtons;
   validationAction?: number;
+  // When false, the prompt is display-only and the server will not wait for user input.
+  waitForInput?: boolean;
 }
 
-export const TurnPhaseOrderValues = ['action', 'buy', 'cleanup'] as const;
+// Prompt arguments for single-card selection helpers with optional selectCount defaulting to 1.
+export type SelectSingleCardPromptArgs = Omit<UserPromptActionArgs, 'content'> & {
+  content: Omit<Extract<UserPromptKinds, { type: 'select'; }>, 'selectCount'> & {
+    selectCount?: SingleSelectCountSpec;
+  };
+};
+
+export const TurnPhaseOrderValues = ['action', 'buy', 'night', 'cleanup'] as const;
 export type TurnPhase = typeof TurnPhaseOrderValues[number];
 
 export type ExpansionListElement = {
   title: string;
   name: string;
   order: number;
+};
+
+// Lobby game status for pre-match discovery and lifecycle updates.
+export type LobbyGameStatus = 'configuring' | 'inMatch' | 'closed';
+
+// Summary payload displayed in the lobby game list.
+export type LobbyGameSummary = {
+  // Stable game identifier for joins, routing, and log partitioning.
+  gameId: string;
+  // Human-readable generated game name.
+  gameName: string;
+  // Owner player ID, when currently assigned.
+  ownerId?: PlayerId;
+  // Current connected+configured players in this game lobby.
+  playerCount: number;
+  // Maximum allowed players for this game.
+  maxPlayers: number;
+  // True when a new player can join from the global lobby list.
+  isJoinable: boolean;
+  // Current lifecycle status used by the lobby UI.
+  status: LobbyGameStatus;
+};
+
+// Canonical reasons a lobby join can be rejected.
+export type LobbyJoinRejectedReason =
+  | 'gameNotFound'
+  | 'gameNotJoinable'
+  | 'gameFull'
+  | 'banned'
+  | 'alreadyInGame'
+  | 'invalidRequest';
+
+// Structured join rejection payload for deterministic client UX.
+export type LobbyJoinRejectedPayload = {
+  // Requested game identifier when known.
+  gameId?: string;
+  // Machine-readable reason code.
+  reason: LobbyJoinRejectedReason;
+  // User-facing message rendered by the lobby UI.
+  message: string;
+};
+
+// Runtime debug identity for one game + active match scope.
+export type DebugRuntimeContext = {
+  // Stable game identifier used across lobby/match lifecycle.
+  gameId: string;
+  // Human-readable lobby game name.
+  gameName: string;
+  // Active match scope sequence identifier for this game.
+  matchScopeId?: number;
+  // Optional server-configured default tooltip close delay used by client UI.
+  tooltipDefaultCloseDelayMs?: number;
+};
+
+// Preloaded selectable card-like catalog used by match-configuration search UI.
+export type SelectableSearchCatalog = {
+  cards: CardNoId[];
+  events: EventNoId[];
+  landmarks: LandmarkNoId[];
+  artifacts: ArtifactNoId[];
+  projects: ProjectNoId[];
+  ways: WayNoId[];
+  traits: TraitNoId[];
+  allies: AllyNoId[];
+  prophecies: ProphecyNoId[];
+};
+
+// Represents one persisted match-configuration save file visible to clients.
+export type SavedMatchConfigurationEntry = {
+  key: string;
+  name: string;
+  savedAtMs: number;
+};
+
+// Name-check result used by the save-configuration dialog.
+export type MatchConfigurationSaveNameCheckResult = {
+  requestedName: string;
+  normalizedName: string;
+  isValid: boolean;
+  exists: boolean;
+  reason?: string;
+};
+
+// Save-operation result payload for match-configuration persistence.
+export type MatchConfigurationSaveResult = {
+  ok: boolean;
+  name: string;
+  message?: string;
+};
+
+// Load-operation result payload for match-configuration persistence.
+export type MatchConfigurationLoadResult = {
+  ok: boolean;
+  key: string;
+  message?: string;
+};
+
+// Delete-operation result payload for match-configuration persistence.
+export type MatchConfigurationDeleteResult = {
+  ok: boolean;
+  key: string;
+  message?: string;
 };
 
 export type ServerEmitEvents = {
@@ -243,9 +548,45 @@ export type ServerEmitEvents = {
   playerDisconnected: (player: Player) => void;
   playerNameUpdated: (playerId: PlayerId, name: string) => void;
   playerReady: (playerId: PlayerId, ready: boolean) => void;
+  // Full game-lobby snapshot sent on connect and on explicit request.
+  lobbySnapshot: (games: LobbyGameSummary[]) => void;
+  // Incremental game-lobby update for one game summary.
+  lobbyGameUpdated: (game: LobbyGameSummary) => void;
+  // Removes one game from the lobby list.
+  lobbyGameRemoved: (gameId: string) => void;
+  // Confirms that this client session is now attached to one specific lobby game.
+  joinedLobbyGame: (gameId: string) => void;
+  // Join request failed; client remains in lobby view.
+  joinLobbyRejected: (payload: LobbyJoinRejectedPayload) => void;
+  // Client was removed from a lobby game by owner kick.
+  kickedFromGame: (payload: { gameId: string; message: string }) => void;
+  // Client was removed and banned from a lobby game by owner action.
+  bannedFromGame: (payload: { gameId: string; message: string }) => void;
+  // Runtime debug identity used by client-side diagnostic overlays.
+  debugRuntimeContext: (payload: DebugRuntimeContext) => void;
+  // Full searchable card-like catalog used for local UI filtering in match configuration.
+  setSelectableSearchCatalog: (catalog: SelectableSearchCatalog) => void;
+  // Name-check response for the save-configuration dialog.
+  matchConfigurationSaveNameChecked: (result: MatchConfigurationSaveNameCheckResult) => void;
+  // List of persisted match-configuration saves available for loading.
+  savedMatchConfigurationList: (entries: SavedMatchConfigurationEntry[]) => void;
+  // Save result for a match-configuration save request.
+  matchConfigurationSaveCompleted: (result: MatchConfigurationSaveResult) => void;
+  // Load result for a match-configuration load request.
+  matchConfigurationLoadCompleted: (result: MatchConfigurationLoadResult) => void;
+  // Delete result for a match-configuration delete request.
+  matchConfigurationDeleteCompleted: (result: MatchConfigurationDeleteResult) => void;
   searchCardResponse: (cardData: CardNoId[]) => void;
   // Sends event search results to the client.
   searchEventResponse: (eventData: EventNoId[]) => void;
+  // Sends landmark search results to the client.
+  searchLandmarkResponse: (landmarkData: LandmarkNoId[]) => void;
+  // Sends artifact search results to the client.
+  searchArtifactResponse: (artifactData: ArtifactNoId[]) => void;
+  // Sends project search results to the client.
+  searchProjectResponse: (projectData: ProjectNoId[]) => void;
+  // Sends way search results to the client.
+  searchWayResponse: (wayData: WayNoId[]) => void;
   selectCard: (signalId: string, selectCardArgs: SelectActionCardArgs & { selectableCardIds: CardId[] }) => void;
   setPlayerList: (players: Player[]) => void;
   setCardLibrary: (library: Record<CardKey, Card>) => void;
@@ -256,29 +597,75 @@ export type ServerEmitEvents = {
 };
 
 export interface ServerListenEvents {
+  // Requests the current global lobby game list.
+  requestLobbySnapshot: () => void;
+  // Creates a new lobby game with a server-generated name.
+  createLobbyGame: () => void;
+  // Requests to join an existing lobby game.
+  joinLobbyGame: (gameId: string) => void;
+  // Leaves a lobby game and returns to the global lobby view.
+  leaveLobbyGame: (gameId: string) => void;
+  // Owner-only request to kick a player from a lobby game.
+  kickLobbyPlayer: (gameId: string, targetPlayerId: PlayerId) => void;
+  // Owner-only request to ban a player's session from a lobby game.
+  banLobbyPlayer: (gameId: string, targetPlayerId: PlayerId) => void;
+  // Owner-only request to unban a previously banned session from a lobby game.
+  unbanLobbyPlayer: (gameId: string, targetSessionId: string) => void;
   cardsSelected: (selected: CardId[]) => void
   cardLikeTapped: (playerId: PlayerId, cardId: CardId) => void;
   cardTapped: (playerId: PlayerId, cardId: CardId) => void;
+  // Plays a hand Action card using an active Way instead of its printed effect.
+  cardTappedAsWay: (playerId: PlayerId, cardId: CardId, wayId: CardLikeId) => void;
   addComputerPlayer: (count?: number) => void;
   clientReady: (playerId: PlayerId, ready: boolean) => void;
   exchangeCoffer: (playerId: PlayerId, count: number) => void;
+  // Spends Villagers to gain actions during the Action phase.
+  spendVillager: (playerId: PlayerId, count: number) => void;
+  // Pays down debt tokens using available treasure.
+  payDebt: (playerId: PlayerId, count: number) => void;
   expansionSelected: (val: string[]) => void;
   matchConfigurationUpdated: (val: MatchConfiguration) => void;
   nextPhase: () => void;
   playerReady: (playerId: PlayerId, ready: boolean) => void;
   playAllTreasure: (playerId: PlayerId) => void;
+  // Voluntarily leaves an active match; remaining players continue.
+  resignMatch: () => void;
+  // Vote to remove a disconnected human player and resume the match.
+  removeDisconnectedPlayer: (playerId: PlayerId) => void;
+  // Requests the preloaded selectable card-like catalog for match-configuration UI.
+  requestSelectableSearchCatalog: () => void;
+  // Checks whether a match-configuration save name is available.
+  checkMatchConfigurationSaveName: (name: string) => void;
+  // Saves current match configuration under a user-provided name.
+  saveMatchConfiguration: (name: string) => void;
+  // Requests the list of saved match configurations.
+  requestSavedMatchConfigurationList: () => void;
+  // Loads a saved match configuration by key.
+  loadSavedMatchConfiguration: (key: string) => void;
+  // Deletes a saved match configuration by key.
+  deleteSavedMatchConfiguration: (key: string) => void;
   searchCards: (playerId: PlayerId, searchStr: string) => void;
   // Requests event search results from the server.
   searchEvents: (playerId: PlayerId, searchStr: string) => void;
+  // Requests landmark search results from the server.
+  searchLandmarks: (playerId: PlayerId, searchStr: string) => void;
+  // Requests artifact search results from the server.
+  searchArtifacts: (playerId: PlayerId, searchStr: string) => void;
+  // Requests project search results from the server.
+  searchProjects: (playerId: PlayerId, searchStr: string) => void;
+  // Requests way search results from the server.
+  searchWays: (playerId: PlayerId, searchStr: string) => void;
   updatePlayerName: (playerId: PlayerId, name: string) => void;
   userInputReceived: (signalId: string, input: unknown) => void;
 }
 
-export type PlayerMatMap = Record<PlayerId, Record<Mats, CardId[]>>;
+// Player mats can include card-like ids (e.g., boons set aside).
+export type PlayerMatMap = Record<PlayerId, Record<Mats, CardLikeId[]>>;
 
 const MatValues = [
   'island',
   'native-village',
+  'exile',
   'set-aside',
   'tavern',
 ] as const;
@@ -307,11 +694,47 @@ export type ComparisonType =
 export type CountSpec =
   | { kind: 'upTo'; count: number; }
   | { kind: 'exact'; count: number; }
+  // Range selection allows a minimum and maximum count.
+  | { kind: 'range'; min: number; max: number; }
   | number;
 
+// Cost specs can optionally include a minimum ("from") threshold per cost axis.
 export type CostSpec =
-  | { kind: 'exact'; amount: CardCost, playerId: PlayerId }
-  | { kind: 'upTo'; amount: CardCost, playerId: PlayerId };
+  | { kind: 'exact'; amount: CardCost, playerId: PlayerId, from?: CardCost }
+  | { kind: 'upTo'; amount: CardCost, playerId: PlayerId, from?: CardCost };
+
+// Filters for card-search requests (used by selectCard restrictions).
+export type CostFindCardsFilter = CostSpec;
+
+export interface CardDataFindCardsFilter {
+  cardIds?: CardId | CardId[];
+  tags?: string | string[];
+  cardKeys?: CardKey | CardKey[];
+  cardType?: CardType | CardType[];
+  excludedCardType?: CardType | CardType[];
+  owner?: PlayerId;
+  kingdom?: string | string[];
+}
+
+export interface SourceFindCardsFilter {
+  location: CardLocation | CardLocation[];
+  playerId?: PlayerId;
+}
+
+export type NonLocationFilters = CostFindCardsFilter | CardDataFindCardsFilter;
+
+export type CardFilterExpr =
+  | SourceFindCardsFilter
+  | NonLocationFilters
+  | {
+    all: CardFilterExpr[];
+  }
+  | {
+    any: CardFilterExpr[];
+  }
+  | {
+    not: CardFilterExpr;
+  };
 
 export type PlayerArgs = {
   id: PlayerId;
@@ -333,7 +756,7 @@ export class Player {
   ready: boolean;
   color: string;
   isComputer: boolean;
-  
+
   constructor({ color, id, name, sessionId, socketId, connected, ready, isComputer }: PlayerArgs) {
     this.id = id;
     this.name = name;
@@ -344,11 +767,11 @@ export class Player {
     this.color = color;
     this.isComputer = isComputer ?? false;
   }
-  
+
   toString() {
     return `[PLAYER ${this.id} - ${this.name}]`;
   }
-  
+
   // @ts-ignore
   [Symbol.for('Deno.customInspect')]() {
     return this.toString();
@@ -364,58 +787,350 @@ export type MatchSummary = {
   }[]
 }
 
-export class CardLike {
+export class CardLike<M = unknown> {
   id: CardId;
   cardKey: CardKey;
   cardName: string;
-  cost: {
-    treasure: number;
-    potion?: number;
-  };
+  cost: CardCost;
+  // Optional rules text for card-like display.
+  abilityText?: string;
   fullImagePath: string;
   detailImagePath: string;
-  /**
-   * If null, this card is not used during kingdom selection as part of the pool. If undefined, the cardKey is used.
-   *
-   * This is used in cases where a kingdom supply might contain different cards in one supply such as Knights from
-   * Dark Ages. We set a randomizer of "knights" on it so that it's only gets one vote but it has 10 different knight
-   * cards in the supply
-   */
-  randomizer: string | null;
-  
+  // Optional randomizer overrides for pile-level cost/type metadata.
+  randomizerData?: RandomizerData;
+  // Indicates whether the card is eligible for kingdom selection.
+  kingdomSelectable?: boolean;
+  metadata: M;
+
   constructor(args: CardLike) {
     this.id = args.id;
     this.cardKey = args.cardKey ?? '';
     this.cardName = args.cardName ?? '';
+    this.abilityText = args.abilityText ?? '';
     this.fullImagePath = args.fullImagePath ?? '';
     this.detailImagePath = args.detailImagePath ?? '';
-    this.randomizer = args.randomizer ?? null;
+    this.randomizerData = args.randomizerData;
+    this.kingdomSelectable = args.kingdomSelectable ?? true;
     this.cost = args.cost ?? { treasure: 0 };
+    const metadata = args.metadata ?? {};
+    this.metadata = metadata as M;
+  }
+
+  toString() {
+    return `[CARD-LIKE ${this.id} - ${this.cardKey}]`;
+  }
+
+  // @ts-ignore
+  [Symbol.for('Deno.customInspect')]() {
+    return this.toString();
   }
 }
 
 export type CardLikeNoId = Omit<CardLike, 'id'>;
 
+// Shared metadata keys available to all expansions for card/card-like runtime behavior.
+export type BaseCardMetadata = {
+  base?: {
+    // When true, the engine blocks all card movement attempts for this card.
+    immovable?: true;
+    // Marks temporary setup-only kingdom proxy cards that should be removed before final config output.
+    isSetupProxyKingdomPile?: true;
+    // Prevents this card from being discarded from play during cleanup for the specified turn-history index.
+    skipDiscardFromPlayAtCleanupTurnHistoryIndex?: number;
+  };
+};
+
 type EventArgs = {
   [p in keyof CardLike]: CardLike[p];
-}
+} & {
+  randomizer?: string | null;
+};
 
 export class Event extends CardLike {
+  // Randomizer key used to group events during selection.
+  randomizer: string | null;
+
   constructor(args: EventArgs) {
     super(args);
-    
+
     this.id = args.id;
     this.cardName = args.cardName;
     this.fullImagePath = args.fullImagePath;
     this.detailImagePath = args.detailImagePath;
+    this.randomizer = args.randomizer ?? null;
   }
-  
+
   override toString() {
     return `[EVENT ${this.id} - ${this.cardKey}]`;
   }
 }
 
 export type EventNoId = Omit<Event, 'id'>;
+
+type AllyArgs = {
+  [p in keyof CardLike]: CardLike[p];
+} & {
+  randomizer?: string | null;
+};
+
+// Allies are landscape card-likes that define Favor behavior in Liaison games.
+export class Ally extends CardLike {
+  // Randomizer key used to group ally during setup selection.
+  randomizer: string | null;
+
+  constructor(args: AllyArgs) {
+    super(args);
+
+    this.id = args.id;
+    this.cardName = args.cardName;
+    this.fullImagePath = args.fullImagePath;
+    this.detailImagePath = args.detailImagePath;
+    this.randomizer = args.randomizer ?? null;
+  }
+
+  override toString() {
+    return `[ALLY ${this.id} - ${this.cardKey}]`;
+  }
+}
+
+export type AllyNoId = Omit<Ally, 'id'>;
+
+type ProphecyArgs = {
+  [p in keyof CardLike]: CardLike[p];
+} & {
+  randomizer?: string | null;
+};
+
+// Prophecies are Rising Sun landscapes selected during setup when Omen cards are present.
+export class Prophecy extends CardLike {
+  // Randomizer key used to group prophecies during setup selection.
+  randomizer: string | null;
+
+  constructor(args: ProphecyArgs) {
+    super(args);
+
+    this.id = args.id;
+    this.cardName = args.cardName;
+    this.fullImagePath = args.fullImagePath;
+    this.detailImagePath = args.detailImagePath;
+    this.randomizer = args.randomizer ?? null;
+  }
+
+  override toString() {
+    return `[PROPHECY ${this.id} - ${this.cardKey}]`;
+  }
+}
+
+export type ProphecyNoId = Omit<Prophecy, 'id'>;
+
+type LandmarkArgs = {
+  [p in keyof CardLike]: CardLike[p];
+} & {
+  randomizer?: string | null;
+};
+
+// Landmarks are landscape card-likes that are always in effect once in play.
+export class Landmark extends CardLike {
+  // Randomizer key used to group landmarks during selection.
+  randomizer: string | null;
+
+  constructor(args: LandmarkArgs) {
+    super(args);
+
+    this.id = args.id;
+    this.cardName = args.cardName;
+    this.fullImagePath = args.fullImagePath;
+    this.detailImagePath = args.detailImagePath;
+    this.randomizer = args.randomizer ?? null;
+  }
+
+  override toString() {
+    return `[LANDMARK ${this.id} - ${this.cardKey}]`;
+  }
+}
+
+export type LandmarkNoId = Omit<Landmark, 'id'>;
+
+type ProjectArgs = {
+  [p in keyof CardLike]: CardLike[p];
+} & {
+  randomizer?: string | null;
+};
+
+// Projects are landscape card-likes that grant permanent abilities.
+export class Project extends CardLike {
+  // Randomizer key used to group projects during selection.
+  randomizer: string | null;
+
+  constructor(args: ProjectArgs) {
+    super(args);
+
+    this.id = args.id;
+    this.cardName = args.cardName;
+    this.fullImagePath = args.fullImagePath;
+    this.detailImagePath = args.detailImagePath;
+    this.randomizer = args.randomizer ?? null;
+  }
+
+  override toString() {
+    return `[PROJECT ${this.id} - ${this.cardKey}]`;
+  }
+}
+
+export type ProjectNoId = Omit<Project, 'id'>;
+
+type WayArgs = {
+  [p in keyof CardLike]: CardLike[p];
+} & {
+  randomizer?: string | null;
+};
+
+// Ways are landscape card-likes that provide alternate Action card play behavior.
+export class Way extends CardLike {
+  // Randomizer key used to group ways during selection.
+  randomizer: string | null;
+
+  constructor(args: WayArgs) {
+    super(args);
+
+    this.id = args.id;
+    this.cardName = args.cardName;
+    this.fullImagePath = args.fullImagePath;
+    this.detailImagePath = args.detailImagePath;
+    this.randomizer = args.randomizer ?? null;
+  }
+
+  override toString() {
+    return `[WAY ${this.id} - ${this.cardKey}]`;
+  }
+}
+
+export type WayNoId = Omit<Way, 'id'>;
+
+type TraitArgs = {
+  [p in keyof CardLike]: CardLike[p];
+} & {
+  randomizer?: string | null;
+  // Pile key this trait is attached to at runtime; null/undefined when unassigned.
+  pileKey?: CardKey | null;
+};
+
+// Traits are landscape card-likes that modify one Action/Treasure kingdom pile.
+export class Trait extends CardLike {
+  // Randomizer key used to group traits during selection.
+  randomizer: string | null;
+  // Runtime pile key this trait is attached to.
+  pileKey: CardKey | null;
+
+  constructor(args: TraitArgs) {
+    super(args);
+
+    this.id = args.id;
+    this.cardName = args.cardName;
+    this.fullImagePath = args.fullImagePath;
+    this.detailImagePath = args.detailImagePath;
+    this.randomizer = args.randomizer ?? null;
+    this.pileKey = args.pileKey ?? null;
+  }
+
+  override toString() {
+    return `[TRAIT ${this.id} - ${this.cardKey}]`;
+  }
+}
+
+export type TraitNoId = Omit<Trait, 'id'>;
+
+// Boon constructor args mirror base CardLike fields.
+type BoonArgs = {
+  [p in keyof CardLike]: CardLike[p];
+};
+
+// Boons are landscape card-likes that provide a one-shot or temporary effect.
+export class Boon extends CardLike {
+  constructor(args: BoonArgs) {
+    super(args);
+
+    this.id = args.id;
+    this.cardName = args.cardName;
+    this.fullImagePath = args.fullImagePath;
+    this.detailImagePath = args.detailImagePath;
+  }
+
+  override toString() {
+    return `[BOON ${this.id} - ${this.cardKey}]`;
+  }
+}
+
+export type BoonNoId = Omit<Boon, 'id'>;
+
+// Hex constructor args mirror base CardLike fields.
+type HexArgs = {
+  [p in keyof CardLike]: CardLike[p];
+};
+
+// Hexes are landscape card-likes that provide harmful effects.
+export class Hex extends CardLike {
+  constructor(args: HexArgs) {
+    super(args);
+
+    this.id = args.id;
+    this.cardName = args.cardName;
+    this.fullImagePath = args.fullImagePath;
+    this.detailImagePath = args.detailImagePath;
+  }
+
+  override toString() {
+    return `[HEX ${this.id} - ${this.cardKey}]`;
+  }
+}
+
+export type HexNoId = Omit<Hex, 'id'>;
+
+// State constructor args mirror base CardLike fields.
+type StateArgs = {
+  [p in keyof CardLike]: CardLike[p];
+};
+
+// States are landscape card-likes that apply persistent player effects.
+export class State extends CardLike {
+  constructor(args: StateArgs) {
+    super(args);
+
+    this.id = args.id;
+    this.cardName = args.cardName;
+    this.fullImagePath = args.fullImagePath;
+    this.detailImagePath = args.detailImagePath;
+  }
+
+  override toString() {
+    return `[STATE ${this.id} - ${this.cardKey}]`;
+  }
+}
+
+export type StateNoId = Omit<State, 'id'>;
+
+// Artifact constructor args mirror base CardLike fields.
+type ArtifactArgs = {
+  [p in keyof CardLike]: CardLike[p];
+};
+
+// Artifacts are landscape card-likes that apply persistent player effects.
+export class Artifact extends CardLike {
+  constructor(args: ArtifactArgs) {
+    super(args);
+
+    this.id = args.id;
+    this.cardName = args.cardName;
+    this.fullImagePath = args.fullImagePath;
+    this.detailImagePath = args.detailImagePath;
+  }
+
+  override toString() {
+    return `[ARTIFACT ${this.id} - ${this.cardKey}]`;
+  }
+}
+
+export type ArtifactNoId = Omit<Artifact, 'id'>;
 
 /**
  * CARD TYPES
@@ -436,6 +1151,7 @@ export type CardType =
   | 'EVENT'
   | 'FATE'
   | 'FORT'
+  | 'GATHERING'
   | 'HEIRLOOM'
   | 'HEX'
   | 'KNIGHT'
@@ -484,12 +1200,21 @@ export type CardArgs = {
   victoryPoints?: number;
 }
 
+// Defines pile-level overrides for cards that share a randomizer.
+export type RandomizerData = {
+  randomizer: string;
+  cost?: CardCost;
+  type?: CardType[];
+};
+
 export type CardCost = {
   treasure: number;
   potion?: number | undefined;
+  // Optional debt cost for Empires-style cards/events.
+  debt?: number | undefined;
 }
 
-export class Card extends CardLike {
+export class Card<M = unknown> extends CardLike<M> {
   /**
    * This indicates if the card is part of the supply or not. shelters, rewards, etc. are not part of the supply.
    *
@@ -503,12 +1228,12 @@ export class Card extends CardLike {
   type: CardType[];
   mat: Mats | undefined;
   victoryPoints: number;
-  abilityText: string;
+  override abilityText: string;
   targetScheme?: EffectTarget;
   expansionName: string;
   halfImagePath: string;
   owner: PlayerId | null;
-  
+
   constructor(args: CardArgs) {
     super(args);
     this.tags = args.tags ?? [];
@@ -530,13 +1255,14 @@ export class Card extends CardLike {
     this.mat = args.mat;
     this.kingdom = args.kingdom;
     this.partOfSupply = args.partOfSupply ?? true;
-    this.randomizer = args.randomizer;
+    this.randomizerData = args.randomizerData;
+    this.kingdomSelectable = args.kingdomSelectable ?? true;
   }
-  
+
   override toString() {
     return `[CARD ${this.id} - ${this.cardKey}]`;
   }
-  
+
   // @ts-ignore
   [Symbol.for('Deno.customInspect')]() {
     return this.toString();

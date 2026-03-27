@@ -1,6 +1,16 @@
-import { ChangeDetectionStrategy, Component, ElementRef, EventEmitter, Input, Output, ViewChild } from '@angular/core';
-import { CardId, Mats } from 'shared/shared-types';
+import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import { CardLikeId, Mats } from 'shared/types';
 import { MatPlayerContent } from '../types';
+
+export type MatTabModel = {
+  id: string;
+  mat: Mats | string;
+  content: MatPlayerContent | CardLikeId[];
+  labelPrefix: string;
+  labelSource?: string;
+  labelSuffix?: string;
+  sourceColor?: string;
+};
 
 @Component({
   selector: 'app-mat-tab',
@@ -10,17 +20,17 @@ import { MatPlayerContent } from '../types';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MatTabComponent {
-  @Input() mat!: { mat: Mats | string; content: MatPlayerContent | CardId[]  };
+  mat = input.required<MatTabModel>();
 
-  getCount() {
-    if (!Array.isArray(this.mat.content)) {
-      const matContent = this.mat.content as MatPlayerContent
-      return Object.keys(this.mat.content).reduce((acc, playerId) => {
+  // Cached badge count for this mat tab.
+  readonly matCount = computed(() => {
+    const mat = this.mat();
+    if (!Array.isArray(mat.content)) {
+      const matContent = mat.content as MatPlayerContent;
+      return Object.keys(mat.content).reduce((acc, playerId) => {
         return acc + matContent[+playerId].cardIds.length;
       }, 0);
     }
-    else {
-      return this.mat.content.length ?? 0;
-    }
-  }
+    return mat.content.length ?? 0;
+  });
 }

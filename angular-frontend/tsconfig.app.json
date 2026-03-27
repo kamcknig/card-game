@@ -4,13 +4,18 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "outDir": "./out-tsc/app",
-    "types": [],
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "types": []
   },
   "files": [
     "src/main.ts"
   ],
   "include": [
-    "src/**/*.d.ts",
-    "../shared/**/*"
+    "src/**/*.d.ts"
+  ],
+  "exclude": [
+    "src/**/*.spec.ts",
+    "src/test.ts"
   ]
 }

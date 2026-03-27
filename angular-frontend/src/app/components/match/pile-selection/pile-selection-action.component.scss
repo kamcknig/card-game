@@ -1,0 +1,47 @@
+:host {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.pile-selection-overlay-root {
+  position: fixed;
+  left: 10px;
+  right: 10px;
+  bottom: 20px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.pile-selection-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--theme-border-strong);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-medium));
+  padding: 10px;
+  pointer-events: auto;
+}
+
+.pile-selection-button {
+  border: 1px solid var(--theme-border-strong);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
+  color: var(--theme-text-on-dark);
+  font-size: 24px;
+  font-weight: 700;
+  padding: 8px 18px;
+  cursor: pointer;
+}
+
+.pile-selection-button:hover {
+  border-color: var(--theme-border-action);
+}
+
+.pile-selection-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+  border-color: var(--theme-border-strong);
+}

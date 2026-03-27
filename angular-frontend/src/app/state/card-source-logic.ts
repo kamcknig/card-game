@@ -1,5 +1,5 @@
 import { computed, ReadableAtom } from 'nanostores';
-import { Card, CardNoId } from 'shared/shared-types';
+import { Card, CardNoId } from 'shared/types';
 import { getCardSourceStore } from './card-source-store';
 import { cardStore } from './card-state';
 import { matchStore } from './match-state';

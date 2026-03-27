@@ -1,0 +1,27 @@
+@let picker = activePicker();
+@if (picker) {
+  <div class="way-picker-overlay-root">
+    <div
+      class="way-picker-panel"
+      [style.left.px]="picker.left"
+      [style.top.px]="picker.top"
+      (mouseenter)="onPanelMouseEnter()"
+      (mouseleave)="onPanelMouseLeave()"
+    >
+      <div class="way-picker-list">
+        @for (wayId of picker.wayCardLikeIds; track wayId) {
+          <button
+            type="button"
+            class="way-entry"
+            (click)="onSelectWay(wayId)"
+          >
+            <app-card-like
+              [cardLikeId]="wayId"
+              [size]="'half'"
+            ></app-card-like>
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+}

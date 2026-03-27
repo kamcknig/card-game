@@ -1,0 +1,44 @@
+name: card-game-dev
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/DockerFile_dev_frontend
+    volumes:
+      # Bind-mount source for hot-reload
+      - ./angular-frontend:/app/angular-frontend
+      - ./shared:/app/shared
+      # Override proxy config to route to server container by service name
+      - ./angular-frontend/src/proxy.conf.docker.json:/app/angular-frontend/src/proxy.conf.json:ro
+    environment:
+      # Write env.js to Angular's public/ dir so ng serve serves it
+      - ENV_JS_DIR=/app/angular-frontend/public
+      # Empty wsHost so socket.io connects to same origin, proxied by ng serve
+      - WS_HOST=
+    ports:
+      - "51455:51455"
+    depends_on:
+      - server
+    restart: unless-stopped
+
+  server:
+    build:
+      context: .
+      dockerfile: docker/DockerFile_dev_server
+    volumes:
+      # Bind-mount source for hot-reload
+      - ./server:/app/server
+      - ./shared:/app/shared
+    environment:
+      - PORT=3001
+      - LOG_TO_FILE=true
+      - LOG_FILE_MAX_BYTES=5242880
+      - GAME_DATA_ROOT=./game-data
+      - MATCH_STATE_EXPORT_ENABLED=true
+      - END_MATCH_ON_NO_HUMANS=true
+      - LOG_COLOR=true
+      - MATCH_STATE_MERGE_ENABLED=true
+    ports:
+      - "3001:3001"
+    restart: unless-stopped

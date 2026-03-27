@@ -1,0 +1,28 @@
+<div class="name-card-content">
+  <input
+    class="name-card-input"
+    type="text"
+    [value]="searchTerm()"
+    placeholder="Search cards"
+    (input)="onSearchTermChanged($any($event.target).value)" />
+
+  <div class="name-card-results">
+    @for (card of searchResults(); track card.cardKey) {
+      <button
+        type="button"
+        class="name-card-result"
+        (click)="selectCard(card)">
+        <img
+          [ngSrc]="card.fullImagePath"
+          width="140"
+          height="20"
+          [alt]="card.cardName"
+          (contextmenu)="onCardContextMenu($event, card)" />
+      </button>
+    }
+
+    @if (showNoResults()) {
+      <div class="name-card-empty">No matching cards.</div>
+    }
+  </div>
+</div>

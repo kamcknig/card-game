@@ -50,7 +50,6 @@
     "type": ["TREASURE"]
   },
   "crystal-ball": {
-    "cardName": "Crystal Ball",
     "cost": {
       "treasure": 5
     },
@@ -69,7 +68,6 @@
     "type": ["ACTION"]
   },
   "grand-market": {
-    "cardName": "Grand Market",
     "cost": {
       "treasure": 6
     },
@@ -150,7 +148,6 @@
     "type": ["ACTION"]
   },
   "war-chest": {
-    "cardName": "War Chest",
     "cost": {
       "treasure": 5
     },

@@ -1,71 +1,242 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+  // Let pointer events pass through by default.
+  pointer-events: none;
+}
+
 app-score {
   position: fixed;
   top: 10px;
   left: 10px;
+  // HUD widgets remain interactive while host is click-through.
+  pointer-events: auto;
+}
+
+.pause-dialog-card {
+  border: 1px solid var(--theme-border-strong);
+  border-radius: 8px;
+  padding: 14px 18px;
+  color: var(--theme-text-on-dark);
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.2;
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
+}
+
+.waiting-dialog-card {
+  border: 1px solid var(--theme-border-strong);
+  border-radius: 8px;
+  padding: 14px 18px;
+  color: var(--theme-text-on-dark);
+  font-size: 28px;
+  line-height: 1.2;
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
 }
 
 .mat-tab-content {
   position: fixed;
-  right: 10px;
+  right: 0;
   top: 60%;
   display: flex;
   flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  overflow: visible;
+  pointer-events: auto;
 }
 
-.mat-modal-backdrop {
-  position: fixed; /* or absolute */
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
 
+.mat-modal-content {
+  color: var(--theme-text-on-dark);
+  position: relative;
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
+  border: 1px solid var(--theme-border-strong);
+  pointer-events: auto;
+  padding: 10px 10px 120px 10px;
+}
+
+.mat-modal-title {
+  color: var(--theme-text-on-dark);
+  margin-bottom: 20px;
+  font-size: 24px;
+}
+
+.player-flex-container {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  pointer-events: none; /* optional: allows click-through outside mat */
+  justify-content: start;
+  min-width: 600px;
+  gap: 20px;
+}
 
-  .mat-modal-content {
-    color: white;
-    position: relative;
-    background: rgba(0, 0, 0, 0.8);
-    pointer-events: auto; /* re-enable interactivity inside */
-    padding: 10px 10px 120px 10px;
-  }
+.player-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 
-  .mat-modal-title {
-    color: white;
-    margin-bottom: 20px;
-    font-size: 24px;
-  }
+.card-flex-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: relative;
+  padding-bottom: 50px;
+}
 
-  .player-flex-container {
-    display: flex;
-    justify-content: start;
-    min-width: 600px;
-    gap: 20px;
+.card-item {
+  margin-bottom: calc(-1 * var(--card-small-height));
+}
 
-    .player-item {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .card-flex-container {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-      position: relative;
-      padding-bottom: 50px;
-
-      .card-item {
-        margin-bottom: -150px;
-      }
-    }
-  }
+.hud-log-stack {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  // Keep stacked HUD items pinned to the right edge as log width changes.
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: auto;
 }
 
 app-game-log {
+  position: relative;
+  pointer-events: auto;
+}
+
+.hud-menu {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  width: 300px;
+  padding: 4px;
+  box-sizing: border-box;
+  border-radius: 5px;
+  background-color: rgba(0, 0, 0, 0.6);
+  pointer-events: auto;
+}
+
+.hud-menu-icon {
+  // Keep icon controls at fixed intrinsic widths; do not stretch to fill the menu row.
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--theme-border-strong);
+  background: var(--theme-surface-panel);
+  color: var(--theme-text-primary);
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.2px;
+  padding: 0;
+  position: relative;
+}
+
+.debug-toggle {
+  width: 44px;
+}
+
+.debug-toggle.active {
+  border-color: var(--theme-border-action);
+  background: var(--theme-action-primary-bg);
+  color: var(--theme-text-primary);
+}
+
+.resign-button {
+  font-size: 16px;
+}
+
+.debug-icon-gear {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.debug-icon-question {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.debug-icon-state {
+  position: absolute;
+  left: 4px;
+  bottom: 2px;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.2px;
+  color: var(--theme-text-secondary);
+}
+
+.debug-toggle.active .debug-icon-state {
+  color: var(--theme-text-primary);
+}
+
+.debug-runtime-overlay {
   position: fixed;
   top: 10px;
-  right: 10px
+  right: 10px;
+  min-width: 210px;
+  max-width: 360px;
+  padding: 8px 10px;
+  border: 1px solid var(--theme-border-strong);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
+  color: var(--theme-text-on-dark);
+  font-size: 12px;
+  line-height: 1.35;
+  // Keep runtime ids copyable when the debug overlay is visible.
+  pointer-events: auto;
+  user-select: text;
+}
+
+.debug-runtime-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.debug-runtime-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.disconnect-card {
+  background: var(--theme-surface-panel);
+  color: var(--theme-text-primary);
+  border: 1px solid var(--theme-border-strong);
+  padding: 18px 22px;
+  border-radius: 10px;
+  min-width: 280px;
+  text-align: center;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+
+.disconnect-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.disconnect-names {
+  margin-bottom: 12px;
+}
+
+.disconnect-name {
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.disconnect-button {
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  background: var(--theme-action-danger-soft-bg);
+  color: var(--theme-text-primary);
+  font-weight: 600;
+  cursor: pointer;
 }

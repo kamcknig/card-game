@@ -1,0 +1,14 @@
+<div class="overpay-content">
+  <input
+    class="overpay-slider"
+    type="range"
+    min="0"
+    [max]="maxValue()"
+    step="1"
+    [value]="selectedOverpayAmount()"
+    (input)="onSliderChanged($any($event.target).value)" />
+
+  <div class="overpay-value">Overpay: {{ selectedOverpayAmount() }}</div>
+  <div class="overpay-breakdown">Treasure: {{ inTreasure() }}</div>
+  <div class="overpay-breakdown">Coffers: {{ inCoffer() }}</div>
+</div>

@@ -1,242 +1,248 @@
-import { CardId, PlayerId } from 'shared/shared-types.ts';
-import { CardExpansionModule, CardLifecycleCallbackContext } from '../../types.ts';
-import { getCardsInPlay } from '../../utils/get-cards-in-play.ts';
+import { CardId, PlayerId } from 'shared/types/index.ts';
+import { CardExpansionModule, CardLifecycleCallbackContext } from '@server-types/index.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
+import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 
 const expansion: CardExpansionModule = {
-  'berserker': {
+  berserker: {
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
-        const actionCardsInPlay = getCardsInPlay(args.findCards)
-          .some(card => card.type.includes('ACTION') && card.owner === eventArgs.playerId)
-        
+        const loggerService = args.loggerService;
+        const actionCardsInPlay = args.findCardService
+          .getCardsInPlay()
+          .some(card => card.type.includes('ACTION') && card.owner === eventArgs.playerId);
+
         if (!actionCardsInPlay) {
-          console.debug(`[berserker onGained effect] no action cards in play`);
+          loggerService.debug(`[berserker onGained effect] no action cards in play`);
           return;
         }
-        
+
         const card = args.cardLibrary.getCard(eventArgs.cardId);
-        
-        console.debug(`[berserker onGained effect] playing ${card}`);
-        
-        await args.runGameActionDelegate('playCard', {
+
+        loggerService.debug(`[berserker onGained effect] playing ${card}`);
+
+        await args.actionService.run('playCard', {
           playerId: eventArgs.playerId,
-          cardId: eventArgs.cardId
-        })
-      }
+          cardId: eventArgs.cardId,
+        });
+      },
     }),
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
       const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const { cost } = cardEffectArgs.cardPriceController.applyRules(
-        card,
-        { playerId: cardEffectArgs.playerId }
-      );
-      
-      const cardIds = cardEffectArgs.findCards([
-        { location: ['basicSupply', 'kingdomSupply'] },
-        {
-          playerId: cardEffectArgs.playerId, kind: 'upTo', amount: { treasure: cost.treasure - 1 }
-        }
-      ]);
-      
+      const { cost } = cardEffectArgs.cardPriceController.applyRules(card, { playerId: cardEffectArgs.playerId });
+
+      const cardIds = cardEffectArgs.findCardService.findCards({
+        all: [
+          { location: ['basicSupply', 'kingdomSupply'] },
+          {
+            playerId: cardEffectArgs.playerId,
+            kind: 'upTo',
+            amount: { treasure: cost.treasure - 1 },
+          },
+        ],
+      });
+
       if (cardIds.length === 0) {
-        console.debug(`[berserker effect] no cards costing less than ${cost.treasure - 1}`);
+        loggerService.debug(`[berserker effect] no cards costing less than ${cost.treasure - 1}`);
         return;
       }
-      
-      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Gain card`,
         restrict: cardIds.map(card => card.id),
         count: 1,
-      }) as CardId[];
-      
-      if (!selectedCardIds.length) {
-        console.warn(`[berserker effect] no card selected`);
+      });
+
+      if (!selectedCardId) {
+        loggerService.warn(`[berserker effect] no card selected`);
         return;
       }
-      
-      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
-      
-      console.debug(`[berserker effect] gaining card ${selectedCard}`);
-      
-      await cardEffectArgs.runGameActionDelegate('gainCard', {
+
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+
+      loggerService.debug(`[berserker effect] gaining card ${selectedCard}`);
+
+      await cardEffectArgs.actionService.run('gainCard', {
         playerId: cardEffectArgs.playerId,
-        cardId: selectedCardIds[0],
-        to: { location: 'playerDiscard' }
+        cardId: selectedCardId,
+        to: { location: 'playerDiscard' },
       });
-      
+
       const targetPlayerIds = findOrderedTargets({
         match: cardEffectArgs.match,
         appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId
-      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
-      
+        startingPlayerId: cardEffectArgs.playerId,
+      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+
       for (const targetPlayerId of targetPlayerIds) {
         const hand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
-        
+
         const numToDiscard = hand.length - 3;
         if (numToDiscard <= 0) {
-          console.debug(`[berserker triggered effect] no cards to discard for player ${targetPlayerId}`);
+          loggerService.debug(`[berserker triggered effect] no cards to discard for player ${targetPlayerId}`);
           continue;
         }
-        
-        console.debug(`[berserker triggered effect] player ${targetPlayerId} discarding ${numToDiscard} cards`);
-        
+
+        loggerService.debug(`[berserker triggered effect] player ${targetPlayerId} discarding ${numToDiscard} cards`);
+
         for (let i = 0; i < numToDiscard; i++) {
-          await cardEffectArgs.runGameActionDelegate('discardCard', {
+          await cardEffectArgs.actionService.run('discardCard', {
             cardId: hand.slice(-1)[0],
-            playerId: targetPlayerId
+            playerId: targetPlayerId,
           });
         }
       }
-    }
+    },
   },
   'border-village': {
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
+        const loggerService = args.loggerService;
         const card = args.cardLibrary.getCard(eventArgs.cardId);
-        const { cost } = args.cardPriceController.applyRules(
-          card,
-          { playerId: eventArgs.playerId }
-        );
-        
-        const cardIds = args.findCards([
-          { location: ['basicSupply', 'kingdomSupply'] },
-          { playerId: eventArgs.playerId, kind: 'upTo', amount: { treasure: cost.treasure - 1 } },
-        ]);
-        
+        const { cost } = args.cardPriceController.applyRules(card, { playerId: eventArgs.playerId });
+
+        const cardIds = args.findCardService.findCards({
+          all: [
+            { location: ['basicSupply', 'kingdomSupply'] },
+            { playerId: eventArgs.playerId, kind: 'upTo', amount: { treasure: cost.treasure - 1 } },
+          ],
+        });
+
         if (!cardIds.length) {
-          console.debug(`[border-village onGained effect] no cards costing less than ${cost.treasure - 1}`);
+          loggerService.debug(`[border-village onGained effect] no cards costing less than ${cost.treasure - 1}`);
           return;
         }
-        
-        const selectedCardIds = await args.runGameActionDelegate('selectCard', {
+
+        const selectedCardId = await args.actionService.run('selectSingleCard', {
           playerId: eventArgs.playerId,
           prompt: `Gain card`,
           restrict: cardIds.map(card => card.id),
           count: 1,
         });
-        
-        if (!selectedCardIds.length) {
-          console.warn(`[border-village onGained effect] no card selected`);
+
+        if (!selectedCardId) {
+          loggerService.warn(`[border-village onGained effect] no card selected`);
           return;
         }
-        
-        const selectedCard = args.cardLibrary.getCard(selectedCardIds[0]);
-        
-        console.debug(`[border-village onGained effect] gaining card ${selectedCard}`);
-        
-        await args.runGameActionDelegate('gainCard', {
-          playerId: eventArgs.playerId,
-          cardId: selectedCard.id,
-          to: { location: 'playerDiscard' }
-        }, { loggingContext: { source: eventArgs.cardId } });
-      }
+
+        const selectedCard = args.cardLibrary.getCard(selectedCardId);
+
+        loggerService.debug(`[border-village onGained effect] gaining card ${selectedCard}`);
+
+        await args.actionService.run(
+          'gainCard',
+          {
+            playerId: eventArgs.playerId,
+            cardId: selectedCard.id,
+            to: { location: 'playerDiscard' },
+          },
+          { loggingContext: { source: eventArgs.cardId } },
+        );
+      },
     }),
-    registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[border-village effect] drawing 1 card and 2 actions`);
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
-    }
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.debug(`[border-village effect] drawing 1 card and 2 actions`);
+      await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.actionService.run('gainAction', { count: 2 });
+    },
   },
-  'cartographer': {
-    registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[cartographer effect] drawing 1 card and 1 action`);
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
-      
+  cartographer: {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.debug(`[cartographer effect] drawing 1 card and 1 action`);
+      await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
+
       const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
       const discard = cardEffectArgs.cardSourceController.getSource('playerDiscard', cardEffectArgs.playerId);
-      
+
       const numToLookAt = Math.min(4, deck.length + discard.length);
-      
-      console.debug(`[cartographer effect] looking at ${numToLookAt} cards`);
-      
+
+      loggerService.debug(`[cartographer effect] looking at ${numToLookAt} cards`);
+
       if (deck.length < numToLookAt) {
-        console.debug(`[cartographer effect] no cards in deck, shuffling`);
-        await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+        loggerService.debug(`[cartographer effect] no cards in deck, shuffling`);
+        await cardEffectArgs.actionService.run('shuffleDeck', { playerId: cardEffectArgs.playerId });
       }
-      
+
       const cardsToLookAt = deck.slice(-numToLookAt);
-      
-      let result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+
+      let result = await cardEffectArgs.promptService.requestActionResult<CardId[]>({
         prompt: `May discard up to ${cardsToLookAt.length}`,
         playerId: cardEffectArgs.playerId,
-        actionButtons: [
-          { label: 'DONE', action: 1 }
-        ],
+        actionButtons: [{ label: 'DONE', action: 1 }],
         content: {
           type: 'select',
           cardIds: cardsToLookAt,
           selectCount: {
             kind: 'upTo',
-            count: cardsToLookAt.length
-          }
-        }
-      }) as { action: number, result: CardId[] };
-      
-      if (!result.result.length) {
-        console.warn(`[cartographer effect] no card selected`);
-      }
-      else {
-        console.debug(`[cartographer effect] discarding ${result.result.length} cards`);
-        
+            count: cardsToLookAt.length,
+          },
+        },
+      });
+
+      if (!result?.result?.length) {
+        loggerService.warn(`[cartographer effect] no card selected`);
+      } else {
+        loggerService.debug(`[cartographer effect] discarding ${result.result.length} cards`);
+
         for (const cardId of result.result) {
-          await cardEffectArgs.runGameActionDelegate('discardCard', {
+          await cardEffectArgs.actionService.run('discardCard', {
             cardId: cardId,
-            playerId: cardEffectArgs.playerId
+            playerId: cardEffectArgs.playerId,
           });
         }
       }
-      
-      const cardsToRearrange = cardsToLookAt.filter(id => !result.result.includes(id));
-      
+
+      const cardsToRearrange = cardsToLookAt.filter(id => !result?.result?.includes(id));
+
       if (!cardsToRearrange.length) {
-        console.debug(`[cartographer effect] no cards to rearrange`);
+        loggerService.debug(`[cartographer effect] no cards to rearrange`);
         return;
       }
-      
-      console.debug(`[cartographer effect] rearranging ${cardsToRearrange.length} cards`);
-      result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+
+      loggerService.debug(`[cartographer effect] rearranging ${cardsToRearrange.length} cards`);
+      result = await cardEffectArgs.promptService.requestActionResult<CardId[]>({
         prompt: 'Put back on top of deck in any order',
         playerId: cardEffectArgs.playerId,
-        actionButtons: [
-          { label: 'DONE', action: 1 }
-        ],
+        actionButtons: [{ label: 'DONE', action: 1 }],
         content: {
           type: 'rearrange',
           cardIds: cardsToRearrange,
-        }
-      }) as { action: number, result: CardId[] };
-      
-      for (const cardId of result.result) {
-        await cardEffectArgs.runGameActionDelegate('moveCard', {
+        },
+      });
+
+      for (const cardId of result?.result ?? []) {
+        await cardEffectArgs.actionService.run('moveCard', {
           cardId: cardId,
           toPlayerId: cardEffectArgs.playerId,
-          to: { location: 'playerDeck' }
+          to: { location: 'playerDeck' },
         });
       }
-    }
+    },
   },
-  'cauldron': {
+  cauldron: {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async (args, eventArgs) => {
         args.reactionManager.unregisterTrigger(`cauldron:${eventArgs.cardId}:cardGained`);
-      }
+      },
     }),
-    registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[cauldron effect] gaining 1 treasure, and 1 buy`);
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
-      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
-      
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.debug(`[cauldron effect] gaining 1 treasure, and 1 buy`);
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
+      await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
+
       let actionGainCount = 0;
-      
+
       cardEffectArgs.reactionManager.registerReactionTemplate({
         id: `cauldron:${cardEffectArgs.cardId}:cardGained`,
         listeningFor: 'cardGained',
@@ -244,251 +250,266 @@ const expansion: CardExpansionModule = {
         once: true,
         compulsory: true,
         allowMultipleInstances: true,
-        condition: (conditionArgs) => {
+        condition: conditionArgs => {
           const card = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
           if (card.type.includes('ACTION')) {
             actionGainCount++;
-            console.debug(`[cauldron triggered condition] incrementing action gains for cauldron card ${cardEffectArgs.cardId} to ${actionGainCount}`);
+            loggerService.debug(
+              `[cauldron triggered condition] incrementing action gains for cauldron card ${cardEffectArgs.cardId} to ${actionGainCount}`,
+            );
           }
           return actionGainCount === 3;
         },
         triggeredEffectFn: async () => {
-          cardEffectArgs.reactionManager.unregisterTrigger(`cauldron:${cardEffectArgs.cardId}:cardGained`)
+          cardEffectArgs.reactionManager.unregisterTrigger(`cauldron:${cardEffectArgs.cardId}:cardGained`);
           const targetPlayerIds = findOrderedTargets({
             match: cardEffectArgs.match,
             appliesTo: 'ALL_OTHER',
-            startingPlayerId: cardEffectArgs.playerId
-          }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
-          
+            startingPlayerId: cardEffectArgs.playerId,
+          }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+
           for (const targetPlayerId of targetPlayerIds) {
-            const curseIds = cardEffectArgs.findCards([
-              { location: 'basicSupply' },
-              { cardKeys: 'curse' }
-            ]);
-            
+            const curseIds = cardEffectArgs.findCardService.findCards({
+              all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+            });
+
             if (!curseIds.length) {
-              console.debug(`[cauldron triggered effect] no curse cards in supply`);
+              loggerService.debug(`[cauldron triggered effect] no curse cards in supply`);
               break;
             }
-            
-            console.debug(`[cauldron triggered effect] player ${targetPlayerId} gaining ${curseIds.slice(-1)[0]}`);
-            await cardEffectArgs.runGameActionDelegate('gainCard', {
+
+            loggerService.debug(
+              `[cauldron triggered effect] player ${targetPlayerId} gaining ${curseIds.slice(-1)[0]}`,
+            );
+            await cardEffectArgs.actionService.run('gainCard', {
               playerId: targetPlayerId,
               cardId: curseIds.slice(-1)[0].id,
-              to: { location: 'playerDiscard' }
+              to: { location: 'playerDiscard' },
             });
           }
-        }
-      })
-    }
+        },
+      });
+    },
   },
-  'crossroads': {
-    registerEffects: () => async (cardEffectArgs) => {
+  crossroads: {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
       const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
-      
-      console.debug(`[crossroads effect] revealing ${hand.length} cards`);
-      
+
+      loggerService.debug(`[crossroads effect] revealing ${hand.length} cards`);
+
       for (const cardId of hand) {
-        await cardEffectArgs.runGameActionDelegate('revealCard', {
+        await cardEffectArgs.actionService.run('revealCard', {
           cardId: cardId,
           playerId: cardEffectArgs.playerId,
         });
       }
-      
-      const victoryCardInHandCount = hand.map(cardEffectArgs.cardLibrary.getCard)
-        .filter(card => card.type.includes('VICTORY'))
-        .length;
-      
-      console.debug(`[crossroads effect] drawing ${victoryCardInHandCount} cards`);
-      
-      for (let i = 0; i < victoryCardInHandCount; i++) {
-        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
-      }
-      
-      const crossroadsPlayedThisTurnCount = cardEffectArgs.match.stats.playedCardsByTurn[cardEffectArgs.match.turnNumber]
+
+      const victoryCardInHandCount = hand
         .map(cardEffectArgs.cardLibrary.getCard)
-        .filter(card => card.owner === cardEffectArgs.playerId && card.cardKey === 'crossroads')
-        .length;
-      
+        .filter(card => card.type.includes('VICTORY')).length;
+
+      loggerService.debug(`[crossroads effect] drawing ${victoryCardInHandCount} cards`);
+
+      for (let i = 0; i < victoryCardInHandCount; i++) {
+        await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
+      }
+
+      const crossroadsPlayedThisTurnCount = (
+        cardEffectArgs.match.stats.playedCardsByTurn[cardEffectArgs.match.stats.turns.length - 1] ?? []
+      )
+        .map(cardEffectArgs.cardLibrary.getCard)
+        .filter(card => card.owner === cardEffectArgs.playerId && card.cardKey === 'crossroads').length;
+
       if (crossroadsPlayedThisTurnCount === 1) {
-        console.debug(`[crossroads effect] crossroads played this turn ${crossroadsPlayedThisTurnCount}, gaining 3 actions`);
-        await cardEffectArgs.runGameActionDelegate('gainAction', { count: 3 });
+        loggerService.debug(
+          `[crossroads effect] crossroads played this turn ${crossroadsPlayedThisTurnCount}, gaining 3 actions`,
+        );
+        await cardEffectArgs.actionService.run('gainAction', { count: 3 });
+      } else {
+        loggerService.debug(
+          `[crossroads effect] crossroads played this turn ${crossroadsPlayedThisTurnCount}, not gaining actions`,
+        );
       }
-      else {
-        console.debug(`[crossroads effect] crossroads played this turn ${crossroadsPlayedThisTurnCount}, not gaining actions`);
-      }
-    }
+    },
   },
-  'develop': {
-    registerEffects: () => async (cardEffectArgs) => {
+  develop: {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
       const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
-      
+
       if (hand.length === 0) {
-        console.debug(`[develop effect] no cards in hand`);
+        loggerService.debug(`[develop effect] no cards in hand`);
         return;
       }
-      
-      let selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+
+      let selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Trash card`,
         restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
         count: 1,
-      }) as CardId[];
-      
-      if (!selectedCardIds.length) {
-        console.warn(`[develop effect] no card selected`);
+      });
+
+      if (!selectedCardId) {
+        loggerService.warn(`[develop effect] no card selected`);
         return;
       }
-      
-      const card = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
-      
-      console.debug(`[develop effect] trashing ${card}`);
-      
-      await cardEffectArgs.runGameActionDelegate('trashCard', {
+
+      const card = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+
+      loggerService.debug(`[develop effect] trashing ${card}`);
+
+      await cardEffectArgs.actionService.run('trashCard', {
         playerId: cardEffectArgs.playerId,
         cardId: card.id,
       });
-      
-      const { cost } = cardEffectArgs.cardPriceController.applyRules(
-        card,
-        { playerId: cardEffectArgs.playerId }
-      );
-      
-      const oneLessCards = cardEffectArgs.findCards([
-        { location: ['basicSupply', 'kingdomSupply'] },
-        { playerId: cardEffectArgs.playerId, kind: 'exact', amount: { treasure: cost.treasure - 1 } }
-      ]);
-      
-      const oneMoreCards = cardEffectArgs.findCards([
-        { location: ['basicSupply', 'kingdomSupply'] },
-        { playerId: cardEffectArgs.playerId, kind: 'exact', amount: { treasure: cost.treasure + 1 } }
-      ]);
-      
+
+      const { cost } = cardEffectArgs.cardPriceController.applyRules(card, { playerId: cardEffectArgs.playerId });
+
+      const oneLessCards = cardEffectArgs.findCardService.findCards({
+        all: [
+          { location: ['basicSupply', 'kingdomSupply'] },
+          { playerId: cardEffectArgs.playerId, kind: 'exact', amount: { treasure: cost.treasure - 1 } },
+        ],
+      });
+
+      const oneMoreCards = cardEffectArgs.findCardService.findCards({
+        all: [
+          { location: ['basicSupply', 'kingdomSupply'] },
+          { playerId: cardEffectArgs.playerId, kind: 'exact', amount: { treasure: cost.treasure + 1 } },
+        ],
+      });
+
       let combined = oneLessCards.concat(oneMoreCards);
-      
-      if (!combined.length) {
-        console.debug(`[develop effect] no cards costing 1 less or 1 more in supply`);
+
+      if (!combined) {
+        loggerService.debug(`[develop effect] no cards costing 1 less or 1 more in supply`);
         return;
       }
-      
-      selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+
+      selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Gain card costing 1 less, or 1 more`,
         restrict: combined.map(card => card.id),
-        count: 1
-      }) as CardId[];
-      
-      if (!selectedCardIds.length) {
-        console.warn(`[develop effect] no card selected`);
+        count: 1,
+      });
+
+      if (!selectedCardId) {
+        loggerService.warn(`[develop effect] no card selected`);
         return;
       }
-      
+
       combined = [];
-      
+
       let nextPrompt = '';
-      if (oneLessCards.findIndex(card => card.id === selectedCardIds[0]) !== -1) {
-        console.debug(`[develop effect] card gained was one less`);
+      if (oneLessCards.findIndex(card => card.id === selectedCardId) !== -1) {
+        loggerService.debug(`[develop effect] card gained was one less`);
         nextPrompt = `Gain card costing 1 more`;
         combined = oneMoreCards;
-      }
-      else if (oneMoreCards.findIndex(card => card.id === selectedCardIds[0]) !== -1) {
-        console.debug(`[develop effect] card gained was one more`);
+      } else if (oneMoreCards.findIndex(card => card.id === selectedCardId) !== -1) {
+        loggerService.debug(`[develop effect] card gained was one more`);
         nextPrompt = `Gain card costing 1 less`;
-        combined = oneLessCards
+        combined = oneLessCards;
       }
-      
-      if (!combined.length) {
-        console.debug(`[develop effect] no remaining cards to gain`);
+
+      if (!combined) {
+        loggerService.debug(`[develop effect] no remaining cards to gain`);
         return;
       }
-      
-      selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+
+      selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: nextPrompt,
         restrict: combined.map(card => card.id),
-        count: 1
-      }) as CardId[];
-      
-      if (!selectedCardIds.length) {
-        console.warn(`[develop effect] no card selected`);
+        count: 1,
+      });
+
+      if (!selectedCardId) {
+        loggerService.warn(`[develop effect] no card selected`);
         return;
       }
-      
-      await cardEffectArgs.runGameActionDelegate('gainCard', {
+
+      await cardEffectArgs.actionService.run('gainCard', {
         playerId: cardEffectArgs.playerId,
-        cardId: selectedCardIds[0],
-        to: { location: 'playerDiscard' }
+        cardId: selectedCardId,
+        to: { location: 'playerDiscard' },
       });
-    }
+    },
   },
-  'farmland': {
+  farmland: {
     registerLifeCycleMethods: () => ({
       onGained: async (args, rest) => {
+        const loggerService = args.loggerService;
         const hand = args.cardSourceController.getSource('playerHand', rest.playerId);
         if (hand.length === 0) {
-          console.debug(`[farmland onGained effect] no cards in hand`);
+          loggerService.debug(`[farmland onGained effect] no cards in hand`);
           return;
         }
-        
-        let selectedCardIds = await args.runGameActionDelegate('selectCard', {
+
+        let selectedCardId = await args.actionService.run('selectSingleCard', {
           playerId: rest.playerId,
           prompt: `Trash a card`,
           restrict: { location: 'playerHand', playerId: rest.playerId },
           count: 1,
-        }) as CardId[];
-        
-        if (!selectedCardIds.length) {
-          console.warn(`[farmland onGained effect] no card selected`);
+        });
+
+        if (!selectedCardId) {
+          loggerService.warn(`[farmland onGained effect] no card selected`);
           return;
         }
-        
-        let selectedCard = args.cardLibrary.getCard(selectedCardIds[0]);
-        
-        console.debug(`[farmland onGained effect] trashing ${selectedCard}`);
-        
-        await args.runGameActionDelegate('trashCard', {
+
+        let selectedCard = args.cardLibrary.getCard(selectedCardId);
+
+        loggerService.debug(`[farmland onGained effect] trashing ${selectedCard}`);
+
+        await args.actionService.run('trashCard', {
           playerId: rest.playerId,
           cardId: selectedCard.id,
         });
-        
+
         const { cost } = args.cardPriceController.applyRules(selectedCard, {
-          playerId: rest.playerId
+          playerId: rest.playerId,
         });
-        
-        const nonFarmlandCards = args.findCards([
-          { location: ['basicSupply', 'kingdomSupply'] },
-          { playerId: rest.playerId, kind: 'exact', amount: { treasure: cost.treasure + 2 } }
-        ])
+
+        const nonFarmlandCards = args.findCardService
+          .findCards({
+            all: [
+              { location: ['basicSupply', 'kingdomSupply'] },
+              { playerId: rest.playerId, kind: 'exact', amount: { treasure: cost.treasure + 2 } },
+            ],
+          })
           .filter(card => card.cardKey !== 'farmland');
-        
-        if (!nonFarmlandCards.length) {
-          console.debug(`[farmland onGained effect] no non-farmland cards costing exactly 2 more than ${selectedCard} in supply`);
+
+        if (!nonFarmlandCards) {
+          loggerService.debug(
+            `[farmland onGained effect] no non-farmland cards costing exactly 2 more than ${selectedCard} in supply`,
+          );
           return;
         }
-        
-        selectedCardIds = await args.runGameActionDelegate('selectCard', {
+
+        selectedCardId = await args.actionService.run('selectSingleCard', {
           playerId: rest.playerId,
           prompt: `Gain card`,
           restrict: nonFarmlandCards.map(card => card.id),
           count: 1,
-        }) as CardId[];
-        
-        if (!selectedCardIds.length) {
-          console.warn(`[farmland onGained effect] no card selected`);
+        });
+
+        if (!selectedCardId) {
+          loggerService.warn(`[farmland onGained effect] no card selected`);
           return;
         }
-        
-        selectedCard = args.cardLibrary.getCard(selectedCardIds[0]);
-        
-        console.debug(`[farmland onGained effect] gaining card ${selectedCard}`);
-        
-        await args.runGameActionDelegate('gainCard', {
+
+        selectedCard = args.cardLibrary.getCard(selectedCardId);
+
+        loggerService.debug(`[farmland onGained effect] gaining card ${selectedCard}`);
+
+        await args.actionService.run('gainCard', {
           playerId: rest.playerId,
           cardId: selectedCard.id,
-          to: { location: 'playerDiscard' }
+          to: { location: 'playerDiscard' },
         });
-      }
-    })
+      },
+    }),
   },
   'fools-gold': {
     registerLifeCycleMethods: () => ({
@@ -496,6 +517,7 @@ const expansion: CardExpansionModule = {
         args.reactionManager.unregisterTrigger(`fools-gold:${eventArgs.cardId}:cardGained`);
       },
       onEnterHand: async (args, eventArgs) => {
+        const loggerService = args.loggerService;
         args.reactionManager.registerReactionTemplate({
           id: `fools-gold:${eventArgs.cardId}:cardGained`,
           playerId: eventArgs.playerId,
@@ -503,59 +525,59 @@ const expansion: CardExpansionModule = {
           once: false,
           compulsory: false,
           allowMultipleInstances: true,
-          condition: (conditionArgs) => {
+          condition: conditionArgs => {
             if (conditionArgs.trigger.args.playerId === eventArgs.playerId) return false;
             const card = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
             if (card.cardKey !== 'province') return false;
             return true;
           },
-          triggeredEffectFn: async (triggeredEffectArgs) => {
-            console.debug(`[fools-gold triggered effect] trashing fools gold`)
-            await triggeredEffectArgs.runGameActionDelegate('trashCard', {
+          triggeredEffectFn: async triggeredEffectArgs => {
+            loggerService.debug(`[fools-gold triggered effect] trashing fools gold`);
+            await triggeredEffectArgs.actionService.run('trashCard', {
               playerId: triggeredEffectArgs.trigger.args.playerId,
               cardId: eventArgs.cardId,
             });
-            
-            const goldCardIds = triggeredEffectArgs.findCards([
-              { location: 'basicSupply' },
-              { cardKeys: 'gold' }
-            ]);
-            
+
+            const goldCardIds = triggeredEffectArgs.findCardService.findCards({
+              all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }],
+            });
+
             if (!goldCardIds.length) {
-              console.debug(`[fools-gold triggered effect] no gold cards in supply`);
+              loggerService.debug(`[fools-gold triggered effect] no gold cards in supply`);
               return;
             }
-            
+
             const card = goldCardIds.slice(-1)[0];
-            
-            console.debug(`[fools-gold triggered effect] gaining ${card}`);
-            
-            await triggeredEffectArgs.runGameActionDelegate('gainCard', {
+
+            loggerService.debug(`[fools-gold triggered effect] gaining ${card}`);
+
+            await triggeredEffectArgs.actionService.run('gainCard', {
               playerId: eventArgs.playerId,
               cardId: card.id,
-              to: { location: 'playerDeck' }
+              to: { location: 'playerDeck' },
             });
-          }
+          },
         });
-      }
+      },
     }),
-    registerEffects: () => async (cardEffectArgs) => {
-      const foolsGoldPlayedThisTurnCount = cardEffectArgs.match.stats.playedCardsByTurn[cardEffectArgs.match.turnNumber]
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      const foolsGoldPlayedThisTurnCount = (
+        cardEffectArgs.match.stats.playedCardsByTurn[cardEffectArgs.match.stats.turns.length - 1] ?? []
+      )
         .map(cardEffectArgs.cardLibrary.getCard)
-        .filter(card => card.owner === cardEffectArgs.playerId && card.cardKey === 'fools-gold')
-        .length;
-      
-      console.debug(`[fools-gold effect] fools-gold played this turn ${foolsGoldPlayedThisTurnCount}`);
-      
+        .filter(card => card.owner === cardEffectArgs.playerId && card.cardKey === 'fools-gold').length;
+
+      loggerService.debug(`[fools-gold effect] fools-gold played this turn ${foolsGoldPlayedThisTurnCount}`);
+
       if (foolsGoldPlayedThisTurnCount === 1) {
-        console.debug(`[fools-gold effect] gaining 1 treasure`);
-        await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
+        loggerService.debug(`[fools-gold effect] gaining 1 treasure`);
+        await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
+      } else {
+        loggerService.debug(`[fools-gold effect] gaining 4 treasure`);
+        await cardEffectArgs.actionService.run('gainTreasure', { count: 4 });
       }
-      else {
-        console.debug(`[fools-gold effect] gaining 4 treasure`);
-        await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 4 });
-      }
-    }
+    },
   },
   'guard-dog': {
     registerLifeCycleMethods: () => ({
@@ -563,6 +585,7 @@ const expansion: CardExpansionModule = {
         args.reactionManager.unregisterTrigger(`guard-dog:${eventArgs.cardId}:cardPlayed`);
       },
       onEnterHand: async (args, eventArgs) => {
+        const loggerService = args.loggerService;
         args.reactionManager.registerReactionTemplate({
           id: `guard-dog:${eventArgs.cardId}:cardPlayed`,
           listeningFor: 'cardPlayed',
@@ -570,48 +593,50 @@ const expansion: CardExpansionModule = {
           playerId: eventArgs.playerId,
           allowMultipleInstances: true,
           compulsory: false,
-          condition: (conditionArgs) => {
+          condition: conditionArgs => {
             if (conditionArgs.trigger.args.playerId === eventArgs.playerId) return false;
             const card = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
             if (!card.type.includes('ATTACK')) return false;
             return true;
           },
           triggeredEffectFn: async () => {
-            console.debug(`[guard-dog triggered effect] playing guard-dog ${eventArgs.cardId}`);
-            
-            await args.runGameActionDelegate('playCard', {
+            loggerService.debug(`[guard-dog triggered effect] playing guard-dog ${eventArgs.cardId}`);
+
+            await args.actionService.run('playCard', {
               playerId: eventArgs.playerId,
               cardId: eventArgs.cardId,
               overrides: {
-                actionCost: 0
-              }
-            })
-          }
-        })
-      }
+                actionCost: 0,
+              },
+            });
+          },
+        });
+      },
     }),
-    registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[guard-dog effect] drawing 2 cards`);
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
-      
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.debug(`[guard-dog effect] drawing 2 cards`);
+      await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
+
       const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
-      
+
       if (hand.length <= 5) {
-        console.debug(`[guard-dog effect] hand size is ${hand.length}, drawing 2 more cards`);
-        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
+        loggerService.debug(`[guard-dog effect] hand size is ${hand.length}, drawing 2 more cards`);
+        await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
       }
-    }
+    },
   },
-  'haggler': {
+  haggler: {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async (args, eventArgs) => {
         args.reactionManager.unregisterTrigger(`haggler:${eventArgs.cardId}:cardGained`);
-      }
+      },
     }),
-    registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[haggler effect] gaining 2 treasure`);
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
-      
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.debug(`[haggler effect] gaining 2 treasure`);
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
+
       cardEffectArgs.reactionManager.registerReactionTemplate({
         id: `haggler:${cardEffectArgs.cardId}:cardGained`,
         listeningFor: 'cardGained',
@@ -624,71 +649,81 @@ const expansion: CardExpansionModule = {
           if (!conditionArgs.trigger.args.bought) return false;
           return true;
         },
-        triggeredEffectFn: async (triggeredEffectArgs) => {
+        triggeredEffectFn: async triggeredEffectArgs => {
           const card = triggeredEffectArgs.cardLibrary.getCard(triggeredEffectArgs.trigger.args.cardId);
-          
+
           const { cost } = cardEffectArgs.cardPriceController.applyRules(card, {
-            playerId: cardEffectArgs.playerId
+            playerId: cardEffectArgs.playerId,
           });
-          
-          const cards = cardEffectArgs.findCards([
-            { location: ['basicSupply', 'kingdomSupply'] },
-            {
-              playerId: cardEffectArgs.playerId,
-              kind: 'upTo',
-              amount: { treasure: cost.treasure - 1, potion: cost.potion }
-            }
-          ])
+
+          const cards = cardEffectArgs.findCardService
+            .findCards({
+              all: [
+                { location: ['basicSupply', 'kingdomSupply'] },
+                {
+                  playerId: cardEffectArgs.playerId,
+                  kind: 'upTo',
+                  amount: { treasure: cost.treasure - 1, potion: cost.potion },
+                },
+              ],
+            })
             .filter(card => !card.type.includes('VICTORY'));
-          
+
           if (cards.length === 0) {
-            console.debug(`[haggler triggered effect] no cards non-victory cards costing 2 less than ${cost.treasure}`);
+            loggerService.debug(
+              `[haggler triggered effect] no cards non-victory cards costing 2 less than ${cost.treasure}`,
+            );
             return;
           }
-          
-          const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+
+          const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
             playerId: cardEffectArgs.playerId,
             prompt: `Gain non-Victory card`,
             restrict: cards.map(card => card.id),
             count: 1,
-          }) as CardId[];
-          
-          if (!selectedCardIds.length) {
-            console.debug(`[haggler triggered effect] no card selected`);
+          });
+
+          if (!selectedCardId) {
+            loggerService.debug(`[haggler triggered effect] no card selected`);
             return;
           }
-          
-          const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
-          
-          console.debug(`[haggler triggered effect] gaining ${selectedCard}`);
-          
-          await cardEffectArgs.runGameActionDelegate('gainCard', {
-            playerId: cardEffectArgs.playerId,
-            cardId: selectedCard.id,
-            to: { location: 'playerDiscard' }
-          }, { loggingContext: { source: cardEffectArgs.cardId } });
-        }
-      })
-    }
+
+          const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+
+          loggerService.debug(`[haggler triggered effect] gaining ${selectedCard}`);
+
+          await cardEffectArgs.actionService.run(
+            'gainCard',
+            {
+              playerId: cardEffectArgs.playerId,
+              cardId: selectedCard.id,
+              to: { location: 'playerDiscard' },
+            },
+            { loggingContext: { source: cardEffectArgs.cardId } },
+          );
+        },
+      });
+    },
   },
-  'highway': {
-    registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[highway effect] drawing 1 card, and gaining 1 action`);
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
-      
+  highway: {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.debug(`[highway effect] drawing 1 card, and gaining 1 action`);
+      await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
+
       const cards = cardEffectArgs.cardLibrary.getAllCardsAsArray();
-      
+
       const unsubs: (() => void)[] = [];
-      
+
       const rule: CardPriceRule = (card, context) => {
         return { restricted: false, cost: { treasure: -1, potion: 0 } };
-      }
-      
+      };
+
       for (const card of cards) {
         unsubs.push(cardEffectArgs.cardPriceController.registerRule(card, rule));
       }
-      
+
       cardEffectArgs.reactionManager.registerReactionTemplate({
         id: `highway:${cardEffectArgs.cardId}:endTurn`,
         listeningFor: 'endTurn',
@@ -699,283 +734,296 @@ const expansion: CardExpansionModule = {
         allowMultipleInstances: true,
         triggeredEffectFn: async () => {
           unsubs.forEach(c => c());
-        }
-      })
-    }
+        },
+      });
+    },
   },
-  'inn': {
+  inn: {
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
-        const actionsInDiscard = args.findCards({ location: 'playerDiscard', playerId: eventArgs.playerId })
+        const loggerService = args.loggerService;
+        const actionsInDiscard = args.findCardService
+          .findCards({
+            location: 'playerDiscard',
+            playerId: eventArgs.playerId,
+          })
           .filter(card => card.type.includes('ACTION'));
-        
+
         if (!actionsInDiscard.length) {
-          console.debug(`[inn onGained effect] no actions in discard`);
+          loggerService.debug(`[inn onGained effect] no actions in discard`);
           return;
         }
-        
-        const result = await args.runGameActionDelegate('userPrompt', {
+
+        const result = await args.promptService.requestActionResult<CardId[]>({
           prompt: 'Reveal actions to shuffle into deck?',
           playerId: eventArgs.playerId,
-          actionButtons: [
-            { label: 'DONE', action: 1 }
-          ],
+          actionButtons: [{ label: 'DONE', action: 1 }],
           content: {
             type: 'select',
             cardIds: actionsInDiscard.map(card => card.id),
             selectCount: {
               kind: 'upTo',
-              count: actionsInDiscard.length
-            }
-          }
-        }) as { action: number, result: CardId[] };
-        
-        if (!result.result.length) {
-          console.debug(`[inn onGained effect] no cards selected`);
+              count: actionsInDiscard.length,
+            },
+          },
+        });
+
+        if (!result?.result?.length) {
+          loggerService.debug(`[inn onGained effect] no cards selected`);
           return;
         }
-        
-        console.debug(`[inn onGained effect] revealing ${result.result.length} cards and moving to deck`);
-        
+
+        loggerService.debug(`[inn onGained effect] revealing ${result.result.length} cards and moving to deck`);
+
         for (const cardId of result.result) {
-          await args.runGameActionDelegate('revealCard', {
+          await args.actionService.run('revealCard', {
             cardId: cardId,
             playerId: eventArgs.playerId,
           });
-          
-          await args.runGameActionDelegate('moveCard', {
+
+          await args.actionService.run('moveCard', {
             cardId: cardId,
             toPlayerId: eventArgs.playerId,
-            to: { location: 'playerDeck' }
+            to: { location: 'playerDeck' },
           });
         }
-        
-        console.debug(`[inn onGained effect] shuffling player deck`);
-        
+
+        loggerService.debug(`[inn onGained effect] shuffling player deck`);
+
         fisherYatesShuffle(args.cardSourceController.getSource('playerDeck', eventArgs.playerId), true);
-      }
+      },
     }),
-    registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[inn effect] drawing 2 cards, and gaining 2 actions`);
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 2 });
-      
-      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.debug(`[inn effect] drawing 2 cards, and gaining 2 actions`);
+      await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
+      await cardEffectArgs.actionService.run('gainAction', { count: 2 });
+
+      const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Discard cards`,
         restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
-        count: Math.min(2, cardEffectArgs.findCards({
-          location: 'playerHand',
-          playerId: cardEffectArgs.playerId
-        }).length),
-      }) as CardId[];
-      
+        count: Math.min(
+          2,
+          cardEffectArgs.findCardService.findCards({
+            location: 'playerHand',
+            playerId: cardEffectArgs.playerId,
+          }).length,
+        ),
+      });
+
       if (!selectedCardIds) {
-        console.warn(`[inn effect] no card selected`);
+        loggerService.warn(`[inn effect] no card selected`);
         return;
       }
-      
-      console.debug(`[inn effect] discarding ${selectedCardIds.length} cards`);
-      
+
+      loggerService.debug(`[inn effect] discarding ${selectedCardIds.length} cards`);
+
       for (const selectedCardId of selectedCardIds) {
-        await cardEffectArgs.runGameActionDelegate('discardCard', {
+        await cardEffectArgs.actionService.run('discardCard', {
           cardId: selectedCardId,
-          playerId: cardEffectArgs.playerId
+          playerId: cardEffectArgs.playerId,
         });
       }
-    }
+    },
   },
   'jack-of-all-trades': {
-    registerEffects: () => async (cardEffectArgs) => {
-      const silverCardIds = cardEffectArgs.findCards([
-        { location: 'basicSupply' },
-        { cardKeys: 'silver' }
-      ]);
-      
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      const silverCardIds = cardEffectArgs.findCardService.findCards({
+        all: [{ location: 'basicSupply' }, { cardKeys: 'silver' }],
+      });
+
       if (!silverCardIds.length) {
-        console.debug(`[jack-of-all-trades effect] no silver cards in supply`);
-      }
-      else {
-        console.debug(`[jack-of-all-trades effect] gaining a silver`);
-        
-        await cardEffectArgs.runGameActionDelegate('gainCard', {
+        loggerService.debug(`[jack-of-all-trades effect] no silver cards in supply`);
+      } else {
+        loggerService.debug(`[jack-of-all-trades effect] gaining a silver`);
+
+        await cardEffectArgs.actionService.run('gainCard', {
           playerId: cardEffectArgs.playerId,
           cardId: silverCardIds.slice(-1)[0].id,
-          to: { location: 'playerDiscard' }
+          to: { location: 'playerDiscard' },
         });
       }
-      
+
       const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
-      
+
       if (deck.length === 0) {
-        console.debug(`[jack-of-all-trades effect] no cards in deck, shuffling`);
-        await cardEffectArgs.runGameActionDelegate('shuffleDeck', { playerId: cardEffectArgs.playerId });
+        loggerService.debug(`[jack-of-all-trades effect] no cards in deck, shuffling`);
+        await cardEffectArgs.actionService.run('shuffleDeck', { playerId: cardEffectArgs.playerId });
       }
-      
+
       if (deck.length === 0) {
-        console.debug(`[jack-of-all-trades effect] no cards in deck after shuffling`);
-      }
-      else {
+        loggerService.debug(`[jack-of-all-trades effect] no cards in deck after shuffling`);
+      } else {
         const cardId = deck.slice(-1)[0];
         const card = cardEffectArgs.cardLibrary.getCard(cardId);
-        
-        const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+
+        const action = await cardEffectArgs.promptService.requestAction({
           prompt: `Discard ${card.cardName}`,
           playerId: cardEffectArgs.playerId,
           actionButtons: [
-            { label: 'CANCEL', action: 1 }, { label: 'DISCARD', action: 2 }
+            { label: 'CANCEL', action: 1 },
+            { label: 'DISCARD', action: 2 },
           ],
-        }) as { action: number, result: number[] };
-        
-        if (result.action === 2) {
-          console.debug(`[jack-of-all-trades effect] discarding ${card}`);
-          await cardEffectArgs.runGameActionDelegate('discardCard', {
+        });
+
+        if (action === 2) {
+          loggerService.debug(`[jack-of-all-trades effect] discarding ${card}`);
+          await cardEffectArgs.actionService.run('discardCard', {
             cardId,
-            playerId: cardEffectArgs.playerId
+            playerId: cardEffectArgs.playerId,
           });
         }
       }
-      
+
       const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
       while (deck.length > 0 && hand.length < 5) {
-        console.debug(`[jack-of-all-trades effect] drawing card`);
-        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
+        loggerService.debug(`[jack-of-all-trades effect] drawing card`);
+        await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
       }
-      
-      const nonTreasureCardsInHand = hand.map(cardEffectArgs.cardLibrary.getCard)
+
+      const nonTreasureCardsInHand = hand
+        .map(cardEffectArgs.cardLibrary.getCard)
         .filter(card => !card.type.includes('TREASURE'));
-      
+
       if (nonTreasureCardsInHand.length === 0) {
-        console.debug(`[jack-of-all-trades effect] no non-treasure cards in hand`);
+        loggerService.debug(`[jack-of-all-trades effect] no non-treasure cards in hand`);
         return;
       }
-      
-      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Trash a card`,
         restrict: nonTreasureCardsInHand.map(card => card.id),
         count: 1,
         optional: true,
-      }) as CardId[];
-      
-      if (selectedCardIds.length === 0) {
-        console.debug(`[jack-of-all-trades effect] no card selected`);
+      });
+
+      if (!selectedCardId) {
+        loggerService.debug(`[jack-of-all-trades effect] no card selected`);
         return;
       }
-      
-      const card = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
-      
-      console.debug(`[jack-of-all-trades effect] trashing ${card}`);
-      
-      await cardEffectArgs.runGameActionDelegate('trashCard', {
+
+      const card = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+
+      loggerService.debug(`[jack-of-all-trades effect] trashing ${card}`);
+
+      await cardEffectArgs.actionService.run('trashCard', {
         playerId: cardEffectArgs.playerId,
-        cardId: selectedCardIds[0],
+        cardId: selectedCardId,
       });
-    }
+    },
   },
-  'margrave': {
-    registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[margrave effect] drawing 3 cards, and gaining 1 buy`);
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 3 });
-      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
-      
+  margrave: {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.debug(`[margrave effect] drawing 3 cards, and gaining 1 buy`);
+      await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId, count: 3 });
+      await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
+
       const targetPlayerIds = findOrderedTargets({
         match: cardEffectArgs.match,
         startingPlayerId: cardEffectArgs.playerId,
-        appliesTo: 'ALL_OTHER'
-      }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
-      
+        appliesTo: 'ALL_OTHER',
+      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+
       for (const targetPlayerId of targetPlayerIds) {
-        await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: targetPlayerId });
-        
+        await cardEffectArgs.actionService.run('drawCard', { playerId: targetPlayerId });
+
         const hand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
         const numToDiscard = hand.length > 3 ? hand.length - 3 : 0;
-        
+
         if (numToDiscard === 0) {
-          console.debug(`[margrave effect] player ${targetPlayerId} already at 3 or less cards`);
+          loggerService.debug(`[margrave effect] player ${targetPlayerId} already at 3 or less cards`);
           continue;
         }
-        
-        console.debug(`[margrave effect] player ${targetPlayerId} discarding ${numToDiscard} cards`);
-        
-        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+
+        loggerService.debug(`[margrave effect] player ${targetPlayerId} discarding ${numToDiscard} cards`);
+
+        const selectedCardId = await cardEffectArgs.actionService.run('selectCard', {
           playerId: targetPlayerId,
           prompt: `Discard card/s`,
           restrict: hand,
           count: numToDiscard,
-        }) as CardId[];
-        
-        if (!selectedCardIds.length) {
-          console.warn(`[margrave effect] no card selected`);
+        });
+
+        if (!selectedCardId.length) {
+          loggerService.warn(`[margrave effect] no card selected`);
           continue;
         }
-        
-        for (let i = 0; i < selectedCardIds.length; i++) {
-          await cardEffectArgs.runGameActionDelegate('discardCard', {
-            cardId: selectedCardIds[i],
-            playerId: targetPlayerId
+
+        for (let i = 0; i < selectedCardId.length; i++) {
+          await cardEffectArgs.actionService.run('discardCard', {
+            cardId: selectedCardId[i],
+            playerId: targetPlayerId,
           });
         }
       }
-    }
+    },
   },
-  'nomads': {
+  nomads: {
     registerLifeCycleMethods: () => ({
       onTrashed: async (args, eventArgs) => {
+        const loggerService = args.loggerService;
         if (eventArgs.playerId !== getCurrentPlayer(args.match).id) {
           return;
         }
-        
-        console.debug(`[nomads onTrashed effect] gaining 2 treasure`);
-        await args.runGameActionDelegate('gainTreasure', { count: 2 });
+
+        loggerService.debug(`[nomads onTrashed effect] gaining 2 treasure`);
+        await args.actionService.run('gainTreasure', { count: 2 });
       },
       onGained: async (args, eventArgs) => {
+        const loggerService = args.loggerService;
         if (eventArgs.playerId !== getCurrentPlayer(args.match).id) {
           return;
         }
-        
-        console.debug(`[nomads onGained effect] gaining 2 treasure`);
-        await args.runGameActionDelegate('gainTreasure', { count: 2 });
-      }
+
+        loggerService.debug(`[nomads onGained effect] gaining 2 treasure`);
+        await args.actionService.run('gainTreasure', { count: 2 });
+      },
     }),
-    registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[nomads effect] gaining 1 buy, and 2 treasure`);
-      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
-    }
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.debug(`[nomads effect] gaining 1 buy, and 2 treasure`);
+      await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
+    },
   },
-  'oasis': {
-    registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[oasis effect] drawing 1 card, gaining 1 action, and gaining 1 treasure`);
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 1 });
-      
-      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+  oasis: {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.debug(`[oasis effect] drawing 1 card, gaining 1 action, and gaining 1 treasure`);
+      await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
+
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Discard card`,
         restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
         count: 1,
-      }) as CardId[];
-      
-      if (!selectedCardIds.length) {
-        console.warn(`[oasis effect] no card selected`);
+      });
+
+      if (!selectedCardId) {
+        loggerService.warn(`[oasis effect] no card selected`);
         return;
       }
-      
-      const card = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
-      
-      console.debug(`[oasis effect] discarding ${card}`);
-      
-      await cardEffectArgs.runGameActionDelegate('discardCard', { cardId: card.id, playerId: cardEffectArgs.playerId });
-    }
+
+      const card = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+
+      loggerService.debug(`[oasis effect] discarding ${card}`);
+
+      await cardEffectArgs.actionService.run('discardCard', { cardId: card.id, playerId: cardEffectArgs.playerId });
+    },
   },
-  'scheme': {
-    registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[scheme effect] drawing 1 card, and gaining 1 action`);
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
-      
+  scheme: {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.debug(`[scheme effect] drawing 1 card, and gaining 1 action`);
+      await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
+
       cardEffectArgs.reactionManager.registerReactionTemplate({
         id: `scheme:${cardEffectArgs.cardId}:discardCard`,
         listeningFor: 'discardCard',
@@ -983,180 +1031,187 @@ const expansion: CardExpansionModule = {
         once: true,
         compulsory: true,
         allowMultipleInstances: true,
-        condition: async (conditionArgs) => {
+        condition: async conditionArgs => {
           if (!conditionArgs.trigger.args.previousLocation) return false;
           if (!isLocationInPlay(conditionArgs.trigger.args.previousLocation.location)) return false;
           const card = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
           if (card.owner !== cardEffectArgs.playerId) return false;
           if (!card.type.includes('ACTION')) return false;
-          
-          const result = await conditionArgs.runGameActionDelegate('userPrompt', {
+
+          const action = await conditionArgs.promptService.requestAction({
             prompt: `Top-deck ${card.cardName}?`,
             playerId: conditionArgs.trigger.args.playerId,
             actionButtons: [
-              { label: 'CANCEL', action: 1},
-              { label: 'CONFIRM', action: 2}
+              { label: 'CANCEL', action: 1 },
+              { label: 'CONFIRM', action: 2 },
             ],
-          }) as { action: number, result: number[] };
-          if (result.action === 1) return false;
-          
+          });
+          if (action === 1 || action === null) return false;
+
           return true;
         },
-        triggeredEffectFn: async (triggeredEffectArgs) => {
+        triggeredEffectFn: async triggeredEffectArgs => {
           const card = triggeredEffectArgs.cardLibrary.getCard(triggeredEffectArgs.trigger.args.cardId);
-          
-          console.debug(`[scheme triggered effect] moving ${card} to deck`);
-          
-          await triggeredEffectArgs.runGameActionDelegate('moveCard', {
+
+          loggerService.debug(`[scheme triggered effect] moving ${card} to deck`);
+
+          await triggeredEffectArgs.actionService.run('moveCard', {
             cardId: triggeredEffectArgs.trigger.args.cardId,
             toPlayerId: cardEffectArgs.playerId,
-            to: { location: 'playerDeck' }
+            to: { location: 'playerDeck' },
           });
-        }
-      })
-    }
+        },
+      });
+    },
   },
-  'souk': {
+  souk: {
     registerLifeCycleMethods: () => ({
       onGained: async (args, eventArgs) => {
+        const loggerService = args.loggerService;
         const numToTrash = Math.min(2, args.cardSourceController.getSource('playerHand', eventArgs.playerId).length);
-        const selectedCardIds = await args.runGameActionDelegate('selectCard', {
+        const selectedCardId = await args.actionService.run('selectCard', {
           playerId: eventArgs.playerId,
           prompt: `Trash card/s`,
           restrict: { location: 'playerHand', playerId: eventArgs.playerId },
           count: {
             kind: 'upTo',
-            count: numToTrash
+            count: numToTrash,
           },
           optional: true,
-        }) as CardId[];
-        
-        if (!selectedCardIds.length) {
-          console.debug(`[souk onGained effect] no card selected`);
+        });
+
+        if (!selectedCardId.length) {
+          loggerService.debug(`[souk onGained effect] no card selected`);
           return;
         }
-        
-        console.debug(`[souk onGained effect] trashing ${selectedCardIds.length} cards`);
-        
-        for (const cardId of selectedCardIds) {
-          await args.runGameActionDelegate('trashCard', {
+
+        loggerService.debug(`[souk onGained effect] trashing ${selectedCardId.length} cards`);
+
+        for (const cardId of selectedCardId) {
+          await args.actionService.run('trashCard', {
             playerId: eventArgs.playerId,
             cardId: cardId,
           });
         }
-      }
+      },
     }),
-    registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[souk effect] gaining 1 buy, and gaining 7 treasure`);
-      await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 7 });
-      
-      
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.debug(`[souk effect] gaining 1 buy, and gaining 7 treasure`);
+      await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 7 });
+
       const handSize = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId).length;
-      const numToLose = Math.min(cardEffectArgs.match.playerTreasure, handSize)
-      console.debug(`[souk effect] losing ${numToLose} treasure`);
-      await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: -handSize });
-    }
+      const numToLose = Math.min(cardEffectArgs.match.playerTreasure, handSize);
+      loggerService.debug(`[souk effect] losing ${numToLose} treasure`);
+      await cardEffectArgs.actionService.run('gainTreasure', { count: -handSize });
+    },
   },
   'spice-merchant': {
-    registerEffects: () => async (cardEffectArgs) => {
-      const treasuresInHand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId)
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      const treasuresInHand = cardEffectArgs.cardSourceController
+        .getSource('playerHand', cardEffectArgs.playerId)
         .map(cardEffectArgs.cardLibrary.getCard)
         .filter(card => card.type.includes('TREASURE'));
-      
+
       if (!treasuresInHand.length) {
-        console.debug(`[spice-merchant effect] no treasure cards in hand`);
+        loggerService.debug(`[spice-merchant effect] no treasure cards in hand`);
         return;
       }
-      
-      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Trash card`,
         restrict: treasuresInHand.map(card => card.id),
         count: 1,
         optional: true,
-      }) as CardId[];
-      
-      if (!selectedCardIds.length) {
-        console.debug(`[spice-merchant effect] no card selected`);
+      });
+
+      if (!selectedCardId) {
+        loggerService.debug(`[spice-merchant effect] no card selected`);
         return;
       }
-      
-      const card = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
-      
-      console.debug(`[spice-merchant effect] trashing ${card}`);
-      
-      await cardEffectArgs.runGameActionDelegate('trashCard', {
+
+      const card = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+
+      loggerService.debug(`[spice-merchant effect] trashing ${card}`);
+
+      await cardEffectArgs.actionService.run('trashCard', {
         playerId: cardEffectArgs.playerId,
         cardId: card.id,
       });
-      
-      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+
+      const action = await cardEffectArgs.promptService.requestAction({
         prompt: 'Choose one',
         playerId: cardEffectArgs.playerId,
         actionButtons: [
-          { label: '+2 Cards, + 1 Action', action: 1 }, { label: '+1 Buy, +2 Treasure', action: 2 }
+          { label: '+2 Cards, + 1 Action', action: 1 },
+          { label: '+1 Buy, +2 Treasure', action: 2 },
         ],
-      }) as { action: number, result: number[] };
-      
-      switch (result.action) {
+      });
+
+      switch (action) {
         case 1:
-          console.debug(`[spice-merchant effect] drawing 2 cards and gaining 1 action`);
-          await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
-          await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
+          loggerService.debug(`[spice-merchant effect] drawing 2 cards and gaining 1 action`);
+          await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
+          await cardEffectArgs.actionService.run('gainAction', { count: 1 });
           break;
         case 2:
-          console.debug(`[spice-merchant effect] gaining 1 buy, and 2 treasure`);
-          await cardEffectArgs.runGameActionDelegate('gainBuy', { count: 1 });
-          await cardEffectArgs.runGameActionDelegate('gainTreasure', { count: 2 });
+          loggerService.debug(`[spice-merchant effect] gaining 1 buy, and 2 treasure`);
+          await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
+          await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
           break;
       }
-    }
+    },
   },
-  'stables': {
-    registerEffects: () => async (cardEffectArgs) => {
-      const treasuresInHand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId)
+  stables: {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      const treasuresInHand = cardEffectArgs.cardSourceController
+        .getSource('playerHand', cardEffectArgs.playerId)
         .map(cardEffectArgs.cardLibrary.getCard)
         .filter(card => card.type.includes('TREASURE'));
-      
+
       if (!treasuresInHand.length) {
-        console.debug(`[stables effect] no treasure cards in hand`);
+        loggerService.debug(`[stables effect] no treasure cards in hand`);
         return;
       }
-      
-      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Discard treasure`,
         restrict: treasuresInHand.map(card => card.id),
         count: 1,
-        optional: true
-      }) as CardId[];
-      
-      if (!selectedCardIds.length) {
-        console.debug(`[stables effect] no card selected`);
+        optional: true,
+      });
+
+      if (!selectedCardId) {
+        loggerService.debug(`[stables effect] no card selected`);
         return;
       }
-      
-      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
-      
-      console.debug(`[stables effect] discarding ${selectedCard}`);
-      
-      await cardEffectArgs.runGameActionDelegate('discardCard', {
+
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+
+      loggerService.debug(`[stables effect] discarding ${selectedCard}`);
+
+      await cardEffectArgs.actionService.run('discardCard', {
         cardId: selectedCard.id,
-        playerId: cardEffectArgs.playerId
+        playerId: cardEffectArgs.playerId,
       });
-      
-      console.debug(`[stables effect] drawing 3 cards, and gaining 1 action `);
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 3 });
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
-    }
+
+      loggerService.debug(`[stables effect] drawing 3 cards, and gaining 1 action `);
+      await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId, count: 3 });
+      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
+    },
   },
-  'trader': {
+  trader: {
     registerLifeCycleMethods: () => ({
       onLeaveHand: async (args, eventArgs) => {
         args.reactionManager.unregisterTrigger(`trader:${eventArgs.cardId}:cardGained`);
       },
       onEnterHand: async (args, eventArgs) => {
+        const loggerService = args.loggerService;
         args.reactionManager.registerReactionTemplate({
           id: `trader:${eventArgs.cardId}:cardGained`,
           listeningFor: 'cardGained',
@@ -1164,143 +1219,141 @@ const expansion: CardExpansionModule = {
           once: false,
           allowMultipleInstances: false,
           compulsory: false,
-          condition: (conditionArgs) => {
+          condition: conditionArgs => {
             if (conditionArgs.trigger.args.playerId !== eventArgs.playerId) return false;
             return true;
           },
-          triggeredEffectFn: async (triggerArgs) => {
+          triggeredEffectFn: async triggerArgs => {
             const traderCard = triggerArgs.cardLibrary.getCard(eventArgs.cardId);
-            
-            console.debug(`[trader onEnterHand event] revealing trader`);
-            
-            await triggerArgs.runGameActionDelegate('revealCard', {
+
+            loggerService.debug(`[trader onEnterHand event] revealing trader`);
+
+            await triggerArgs.actionService.run('revealCard', {
               cardId: traderCard.id,
               playerId: eventArgs.playerId,
             });
-            
+
             const gainedCard = triggerArgs.cardLibrary.getCard(triggerArgs.trigger.args.cardId);
-            
+
             if (triggerArgs.trigger.args.previousLocation) {
-              console.debug(`[trader onEnterHand event] putting ${gainedCard} back in previous location`);
-              await triggerArgs.runGameActionDelegate('moveCard', {
+              loggerService.debug(`[trader onEnterHand event] putting ${gainedCard} back in previous location`);
+              await triggerArgs.actionService.run('moveCard', {
                 cardId: gainedCard.id,
                 toPlayerId: triggerArgs.trigger.args.previousLocation.playerId,
-                to: { location: triggerArgs.trigger.args.previousLocation.location }
+                to: { location: triggerArgs.trigger.args.previousLocation.location },
               });
+            } else {
+              loggerService.warn(`[trader onEnterHand event] gained ${gainedCard} has no previous location`);
             }
-            else {
-              console.warn(`[trader onEnterHand event] gained ${gainedCard} has no previous location`);
-            }
-            
-            const silverCardIds = triggerArgs.findCards([
-              { location: 'basicSupply' },
-              { cardKeys: 'silver' }
-            ]);
-            
+
+            const silverCardIds = triggerArgs.findCardService.findCards({
+              all: [{ location: 'basicSupply' }, { cardKeys: 'silver' }],
+            });
+
             if (!silverCardIds.length) {
-              console.debug(`[trader onEnterHand event] no silvers in supply`);
+              loggerService.debug(`[trader onEnterHand event] no silvers in supply`);
               return;
             }
-            
+
             const silverCard = silverCardIds[0];
-            
-            console.debug(`[trader onEnterHand event] gaining ${silverCard} instead`);
-            await triggerArgs.runGameActionDelegate('moveCard', {
+
+            loggerService.debug(`[trader onEnterHand event] gaining ${silverCard} instead`);
+            await triggerArgs.actionService.run('moveCard', {
               cardId: silverCard.id,
               toPlayerId: eventArgs.playerId,
-              to: { location: 'playerDiscard' }
+              to: { location: 'playerDiscard' },
             });
-          }
-        })
-      }
+          },
+        });
+      },
     }),
-    registerEffects: () => async (cardEffectArgs) => {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
       const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
       if (hand.length === 0) {
-        console.debug(`[trader effect] no cards in hand`);
+        loggerService.debug(`[trader effect] no cards in hand`);
         return;
       }
-      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+      const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Trash card`,
         restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
         count: 1,
-      }) as CardId[];
-      
-      if (!selectedCardIds.length) {
-        console.warn(`[trader effect] no card selected`);
+      });
+
+      if (!selectedCardId) {
+        loggerService.warn(`[trader effect] no card selected`);
         return;
       }
-      
-      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
-      
-      console.debug(`[trader effect] trashing ${selectedCard}`);
-      
-      await cardEffectArgs.runGameActionDelegate('trashCard', {
+
+      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+
+      loggerService.debug(`[trader effect] trashing ${selectedCard}`);
+
+      await cardEffectArgs.actionService.run('trashCard', {
         playerId: cardEffectArgs.playerId,
         cardId: selectedCard.id,
       });
-      
-      const { cost } = cardEffectArgs.cardPriceController.applyRules(
-        selectedCard,
-        { playerId: cardEffectArgs.playerId }
-      );
-      
-      const silverCardIds = cardEffectArgs.findCards([
-        { location: 'basicSupply' },
-        { cardKeys: 'silver' }
-      ]);
-      
+
+      const { cost } = cardEffectArgs.cardPriceController.applyRules(selectedCard, {
+        playerId: cardEffectArgs.playerId,
+      });
+
+      const silverCardIds = cardEffectArgs.findCardService.findCards({
+        all: [{ location: 'basicSupply' }, { cardKeys: 'silver' }],
+      });
+
       if (!silverCardIds.length) {
-        console.debug(`[trader effect] no silver cards in supply`);
+        loggerService.debug(`[trader effect] no silver cards in supply`);
         return;
       }
-      
+
       const numToGain = Math.min(silverCardIds.length, cost.treasure);
-      
-      console.debug(`[trader effect] gaining ${numToGain} silver cards`);
-      
+
+      loggerService.debug(`[trader effect] gaining ${numToGain} silver cards`);
+
       for (let i = 0; i < numToGain; i++) {
-        await cardEffectArgs.runGameActionDelegate('gainCard', {
+        await cardEffectArgs.actionService.run('gainCard', {
           playerId: cardEffectArgs.playerId,
           cardId: silverCardIds.slice(-i - 1)[0].id,
-          to: { location: 'playerDiscard' }
+          to: { location: 'playerDiscard' },
         });
       }
-    }
+    },
   },
-  'trail': {
+  trail: {
     registerLifeCycleMethods: () => {
-      async function doTrail(args: CardLifecycleCallbackContext, eventArgs: { playerId: PlayerId; cardId: CardId; }) {
+      async function doTrail(args: CardLifecycleCallbackContext, eventArgs: { playerId: PlayerId; cardId: CardId }) {
         if (getTurnPhase(args.match.turnPhaseIndex) === 'cleanup') {
-          console.debug(`[trail onGained/Trashed/Discarded event] happening during clean-up, skipping`);
+          args.loggerService.debug(`[trail onGained/Trashed/Discarded event] happening during clean-up, skipping`);
           return;
         }
-        
-        const result = await args.runGameActionDelegate('userPrompt', {
+
+        const action = await args.promptService.requestAction({
           prompt: 'Play Trail?',
           playerId: eventArgs.playerId,
           actionButtons: [
-            { label: 'CANCEL', action: 1 }, { label: 'PLAY', action: 2 }
+            { label: 'CANCEL', action: 1 },
+            { label: 'PLAY', action: 2 },
           ],
-        }) as { action: number, result: number[] };
-        
-        if (result.action === 1) {
-          console.debug(`[trail onGained/Trashed/Discarded event] not playing trail`);
+        });
+
+        if (action === 1 || action === null) {
+          args.loggerService.debug(`[trail onGained/Trashed/Discarded event] not playing trail`);
           return;
         }
-        
-        console.debug(`[trail onGained/Trashed/Discarded event] playing trail`);
-        
-        await args.runGameActionDelegate('playCard', {
+
+        args.loggerService.debug(`[trail onGained/Trashed/Discarded event] playing trail`);
+
+        await args.actionService.run('playCard', {
           playerId: eventArgs.playerId,
           cardId: eventArgs.cardId,
           overrides: {
-            actionCost: 0
-          }
+            actionCost: 0,
+          },
         });
       }
-      
+
       return {
         onGained: async (args, eventArgs) => {
           await doTrail(args, eventArgs);
@@ -1310,285 +1363,293 @@ const expansion: CardExpansionModule = {
         },
         onDiscarded: async (args, eventArgs) => {
           await doTrail(args, eventArgs);
-        }
-      }
+        },
+      };
     },
-    registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[trail effect] drawing 1 card, and gaining 1 action`);
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
-    }
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.debug(`[trail effect] drawing 1 card, and gaining 1 action`);
+      await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
+    },
   },
-  'tunnel': {
+  tunnel: {
     registerLifeCycleMethods: () => ({
       onDiscarded: async (args, eventArgs) => {
+        const loggerService = args.loggerService;
         if (getTurnPhase(args.match.turnPhaseIndex) === 'cleanup') {
-          console.debug(`[tunnel onDiscarded event] happening during clean-up, skipping`);
+          loggerService.debug(`[tunnel onDiscarded event] happening during clean-up, skipping`);
           return;
         }
-        
-        const result = await args.runGameActionDelegate('userPrompt', {
+
+        const action = await args.promptService.requestAction({
           prompt: 'Reveal tunnel?',
           playerId: eventArgs.playerId,
           actionButtons: [
-            { label: 'CANCEL', action: 1 }, { label: 'REVEAL', action: 2 }
+            { label: 'CANCEL', action: 1 },
+            { label: 'REVEAL', action: 2 },
           ],
-        }) as { action: number, result: number[] };
-        
-        if (result.action === 1) {
-          console.debug(`[tunnel onDiscarded event] not revealing tunnel`);
+        });
+
+        if (action === 1 || action === null) {
+          loggerService.debug(`[tunnel onDiscarded event] not revealing tunnel`);
           return;
         }
-        
-        console.debug(`[tunnel onDiscarded event] revealing tunnel`);
-        
-        await args.runGameActionDelegate('revealCard', {
+
+        loggerService.debug(`[tunnel onDiscarded event] revealing tunnel`);
+
+        await args.actionService.run('revealCard', {
           cardId: eventArgs.cardId,
           playerId: eventArgs.playerId,
         });
-        
-        const goldCardIds = args.findCards([
-          { location: 'basicSupply' },
-          { cardKeys: 'gold' }
-        ]);
-        
+
+        const goldCardIds = args.findCardService.findCards({
+          all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }],
+        });
+
         if (!goldCardIds.length) {
-          console.debug(`[tunnel onDiscarded event] no gold cards in supply`);
+          loggerService.debug(`[tunnel onDiscarded event] no gold cards in supply`);
           return;
         }
-        
+
         const goldCard = goldCardIds.slice(-1)[0];
-        
-        console.debug(`[tunnel onDiscarded event] gaining ${goldCard}`);
-        
-        await args.runGameActionDelegate('gainCard', {
+
+        loggerService.debug(`[tunnel onDiscarded event] gaining ${goldCard}`);
+
+        await args.actionService.run('gainCard', {
           playerId: eventArgs.playerId,
           cardId: goldCard.id,
-          to: { location: 'playerDiscard' }
+          to: { location: 'playerDiscard' },
         });
-      }
+      },
     }),
   },
-  'weaver': {
+  weaver: {
     registerLifeCycleMethods: () => ({
       onDiscarded: async (args, eventArgs) => {
+        const loggerService = args.loggerService;
         if (getTurnPhase(args.match.turnPhaseIndex) === 'cleanup') {
-          console.debug(`[weaver onDiscarded event] happening during clean-up, skipping`);
+          loggerService.debug(`[weaver onDiscarded event] happening during clean-up, skipping`);
           return;
         }
-        
-        const result = await args.runGameActionDelegate('userPrompt', {
+
+        const action = await args.promptService.requestAction({
           prompt: 'Play Weaver?',
           playerId: eventArgs.playerId,
           actionButtons: [
-            { label: 'CANCEL', action: 1 }, { label: 'PLAY', action: 2 }
-          ]
+            { label: 'CANCEL', action: 1 },
+            { label: 'PLAY', action: 2 },
+          ],
         });
-        
-        if (result.action === 1) {
-          console.debug(`[weaver onDiscarded event] not playing weaver`);
+
+        if (action === 1 || action === null) {
+          loggerService.debug(`[weaver onDiscarded event] not playing weaver`);
           return;
         }
-        
-        console.debug(`[weaver onDiscarded event] playing weaver`);
-        
-        await args.runGameActionDelegate('playCard', {
+
+        loggerService.debug(`[weaver onDiscarded event] playing weaver`);
+
+        await args.actionService.run('playCard', {
           playerId: eventArgs.playerId,
           cardId: eventArgs.cardId,
         });
-      }
+      },
     }),
-    registerEffects: () => async (cardEffectArgs) => {
-      const result = await cardEffectArgs.runGameActionDelegate('userPrompt', {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      const action = await cardEffectArgs.promptService.requestAction({
         prompt: 'Choose two silvers, or gain a card costing up to $4',
         playerId: cardEffectArgs.playerId,
         actionButtons: [
-          { label: 'SILVERS', action: 1 }, { label: 'GAIN CARD', action: 2 }
+          { label: 'SILVERS', action: 1 },
+          { label: 'GAIN CARD', action: 2 },
         ],
-      }) as { action: number, result: number[] };
-      
-      if (result.action === 1) {
-        console.debug(`[weaver effect] choosing silvers`);
-        
-        const silverCardIds = cardEffectArgs.findCards([
-          { location: 'basicSupply' },
-          { cardKeys: 'silver' }
-        ]);
-        
+      });
+
+      if (action === 1) {
+        loggerService.debug(`[weaver effect] choosing silvers`);
+
+        const silverCardIds = cardEffectArgs.findCardService.findCards({
+          all: [{ location: 'basicSupply' }, { cardKeys: 'silver' }],
+        });
+
         if (!silverCardIds.length) {
-          console.debug(`[weaver effect] no silver cards in supply`);
+          loggerService.debug(`[weaver effect] no silver cards in supply`);
           return;
         }
-        
+
         const numToGain = Math.min(silverCardIds.length, 2);
-        
-        console.debug(`[weaver effect] gaining ${numToGain} silver cards`);
-        
+
+        loggerService.debug(`[weaver effect] gaining ${numToGain} silver cards`);
+
         for (let i = 0; i < numToGain; i++) {
-          await cardEffectArgs.runGameActionDelegate('gainCard', {
+          await cardEffectArgs.actionService.run('gainCard', {
             playerId: cardEffectArgs.playerId,
             cardId: silverCardIds.slice(-i - 1)[0].id,
-            to: { location: 'playerDiscard' }
+            to: { location: 'playerDiscard' },
           });
         }
-      }
-      else {
-        console.debug(`[weaver effect] choosing card costing up to $4`);
-        
-        const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+      } else {
+        loggerService.debug(`[weaver effect] choosing card costing up to $4`);
+
+        const selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
           playerId: cardEffectArgs.playerId,
           prompt: `Gain card`,
-          restrict: [
-            { location: ['basicSupply', 'kingdomSupply'] },
-            { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: 4 } }
-          ],
+          restrict: {
+            all: [
+              { location: ['basicSupply', 'kingdomSupply'] },
+              { kind: 'upTo', playerId: cardEffectArgs.playerId, amount: { treasure: 4 } },
+            ],
+          },
           count: 1,
-        }) as CardId[];
-        
-        if (!selectedCardIds.length) {
-          console.warn(`[weaver effect] no card selected`);
+        });
+
+        if (!selectedCardId) {
+          loggerService.warn(`[weaver effect] no card selected`);
           return;
         }
       }
-    }
+    },
   },
-  'wheelwright': {
-    registerEffects: () => async (cardEffectArgs) => {
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId });
-      await cardEffectArgs.runGameActionDelegate('gainAction', { count: 1 });
-      
+  wheelwright: {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
+      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
+
       const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
-      
+
       if (hand.length === 0) {
-        console.debug(`[wheelwright effect] no cards in hand`);
+        loggerService.debug(`[wheelwright effect] no cards in hand`);
         return;
       }
-      
-      let selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+
+      let selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Discard card`,
         restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
         count: 1,
-        optional: true
-      }) as CardId[];
-      
-      if (!selectedCardIds.length) {
-        console.debug(`[wheelwright effect] no card selected`);
+        optional: true,
+      });
+
+      if (!selectedCardId) {
+        loggerService.debug(`[wheelwright effect] no card selected`);
         return;
       }
-      
-      let selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
-      await cardEffectArgs.runGameActionDelegate('discardCard', {
+
+      let selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+      await cardEffectArgs.actionService.run('discardCard', {
         cardId: selectedCard.id,
-        playerId: cardEffectArgs.playerId
+        playerId: cardEffectArgs.playerId,
       });
-      
+
       const { cost } = cardEffectArgs.cardPriceController.applyRules(selectedCard, {
-        playerId: cardEffectArgs.playerId
+        playerId: cardEffectArgs.playerId,
       });
-      
-      const actionCardIds = cardEffectArgs.findCards([
-        { location: ['kingdomSupply'] },
-        { cardType: 'ACTION' },
-        {
-          kind: 'upTo',
-          playerId: cardEffectArgs.playerId,
-          amount: { treasure: cost.treasure, potion: cost.potion }
-        }
-      ]);
-      
-      if (!actionCardIds.length) {
-        console.debug(`[wheelwright effect] no action cards in kingdom`);
+
+      const actionCardIds = cardEffectArgs.findCardService.findCards({
+        all: [
+          { location: ['kingdomSupply'] },
+          { cardType: 'ACTION' },
+          {
+            kind: 'upTo',
+            playerId: cardEffectArgs.playerId,
+            amount: { treasure: cost.treasure, potion: cost.potion },
+          },
+        ],
+      });
+
+      if (!actionCardIds) {
+        loggerService.debug(`[wheelwright effect] no action cards in kingdom`);
         return;
       }
-      
-      selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+
+      selectedCardId = await cardEffectArgs.actionService.run('selectSingleCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Gain card`,
         restrict: actionCardIds.map(card => card.id),
         count: 1,
-      }) as CardId[];
-      
-      if (!selectedCardIds.length) {
-        console.warn(`[wheelwright effect] no card selected`);
+      });
+
+      if (!selectedCardId) {
+        loggerService.warn(`[wheelwright effect] no card selected`);
         return;
       }
-      
-      selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardIds[0]);
-      
-      console.debug(`[wheelwright effect] gaining ${selectedCard}`);
-      
-      await cardEffectArgs.runGameActionDelegate('gainCard', {
+
+      selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+
+      loggerService.debug(`[wheelwright effect] gaining ${selectedCard}`);
+
+      await cardEffectArgs.actionService.run('gainCard', {
         playerId: cardEffectArgs.playerId,
         cardId: selectedCard.id,
-        to: { location: 'playerDiscard' }
+        to: { location: 'playerDiscard' },
       });
-    }
+    },
   },
   'witchs-hut': {
-    registerEffects: () => async (cardEffectArgs) => {
-      console.debug(`[witchs-hut effect] drawing 4 cards`);
-      await cardEffectArgs.runGameActionDelegate('drawCard', { playerId: cardEffectArgs.playerId, count: 4 });
-      
-      const selectedCardIds = await cardEffectArgs.runGameActionDelegate('selectCard', {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.debug(`[witchs-hut effect] drawing 4 cards`);
+      await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId, count: 4 });
+
+      const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
         playerId: cardEffectArgs.playerId,
         prompt: `Discard cards`,
         restrict: { location: 'playerHand', playerId: cardEffectArgs.playerId },
         count: Math.min(2, cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId).length),
-      }) as CardId[];
-      
-      console.debug(`[witchs-hut effect] revealing and discarding ${selectedCardIds.length} cards`);
-      
+      });
+
+      loggerService.debug(`[witchs-hut effect] revealing and discarding ${selectedCardIds.length} cards`);
+
       for (const selectedCardId of selectedCardIds) {
-        await cardEffectArgs.runGameActionDelegate('revealCard', {
+        await cardEffectArgs.actionService.run('revealCard', {
           cardId: selectedCardId,
           playerId: cardEffectArgs.playerId,
         });
-        
-        await cardEffectArgs.runGameActionDelegate('discardCard', {
+
+        await cardEffectArgs.actionService.run('discardCard', {
           cardId: selectedCardId,
-          playerId: cardEffectArgs.playerId
+          playerId: cardEffectArgs.playerId,
         });
       }
-      
+
       if (selectedCardIds.length === 2) {
         if (selectedCardIds.map(cardEffectArgs.cardLibrary.getCard).every(card => card.type.includes('ACTION'))) {
-          console.debug(`[witchs-hut effect] every card discarded is an action, others gaining a curse`);
-          
+          loggerService.debug(`[witchs-hut effect] every card discarded is an action, others gaining a curse`);
+
           const targetPlayerIds = findOrderedTargets({
             match: cardEffectArgs.match,
             startingPlayerId: cardEffectArgs.playerId,
-            appliesTo: 'ALL_OTHER'
-          }).filter(playerId => cardEffectArgs.reactionContext?.[playerId]?.result !== 'immunity');
-          
+            appliesTo: 'ALL_OTHER',
+          }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+
           for (const targetPlayerId of targetPlayerIds) {
-            const curseCardIds = cardEffectArgs.findCards([
-              { location: 'basicSupply' },
-              { cardKeys: 'curse' }
-            ]);
-            
+            const curseCardIds = cardEffectArgs.findCardService.findCards({
+              all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+            });
+
             if (!curseCardIds.length) {
-              console.debug(`[witchs-hut effect] no curse cards in supply`);
+              loggerService.debug(`[witchs-hut effect] no curse cards in supply`);
               return;
             }
-            
+
             const curseCard = curseCardIds.slice(-1)[0];
-            
-            console.debug(`[witchs-hut effect] gaining ${curseCard} to ${targetPlayerId}`);
-            
-            await cardEffectArgs.runGameActionDelegate('gainCard', {
+
+            loggerService.debug(`[witchs-hut effect] gaining ${curseCard} to ${targetPlayerId}`);
+
+            await cardEffectArgs.actionService.run('gainCard', {
               playerId: targetPlayerId,
               cardId: curseCard.id,
-              to: { location: 'playerDiscard' }
+              to: { location: 'playerDiscard' },
             });
           }
-        }
-        else {
-          console.debug(`[witchs-hut effect] not every card discarded is an action`);
+        } else {
+          loggerService.debug(`[witchs-hut effect] not every card discarded is an action`);
         }
       }
-    }
+    },
   },
-}
+};
 
 export default expansion;

@@ -1,4 +1,4 @@
-import { TokenDefinition, TokenId } from 'shared/shared-types';
+import { Match, TokenDefinition, TokenId, TokenInstance } from 'shared/types';
 
 // Maps token definitions to compact labels for in-game badges.
 export const getTokenShortLabel = (tokenId: TokenId, tokenDefinition?: TokenDefinition): string => {
@@ -18,6 +18,122 @@ export const getTokenShortLabel = (tokenId: TokenId, tokenDefinition?: TokenDefi
     'adventures:minus-card': '-1C',
     // Inheritance estate token
     'adventures:estate': 'E',
+    // Generic coin counter token.
+    'base-v2:coin': '$',
   };
   return labelMap[tokenId] ?? tokenDefinition?.name ?? 'T';
+};
+
+// Maps token ids to image paths for overlay-style badge rendering (count + desaturation filter).
+export const getTokenOverlayImagePath = (tokenId: TokenId): string | undefined => {
+  const imageMap: Record<string, string> = {
+    // Victory token shield used by Aqueduct and other landmarks.
+    'prosperity:victory': '/assets/ui-icons/victory-shield.png',
+  };
+  return imageMap[tokenId];
+};
+
+// Maps token ids to image paths for TokenImageBadgeComponent rendering (player ring, no count).
+export const getTokenBadgeImagePath = (tokenId: TokenId): string | undefined => {
+  const imageMap: Record<string, string> = {
+    // Trashing token used by Plan (Adventures).
+    'adventures:trashing': '/assets/ui-icons/trash.png',
+    // Journey token (Adventures) — flips between face-up/face-down each turn.
+    'adventures:journey': '/assets/ui-icons/journey-token.png',
+    // Ferry token (Adventures) — reduces cost of a pile by $2.
+    'adventures:minus-cost-two': '/assets/ui-icons/minus-two-cost-token.png',
+    // Teacher +1 tokens (Adventures) — placed on action supply piles.
+    'adventures:plus-action': '/assets/ui-icons/plus-one-action-token.png',
+    'adventures:plus-buy': '/assets/ui-icons/plus-one-buy-token.png',
+    'adventures:plus-card': '/assets/ui-icons/plus-one-draw-token.png',
+    'adventures:plus-coin': '/assets/ui-icons/plus-one-treasure-token.png',
+    // Bridge Troll -$1 token (Adventures) — placed on attacked players.
+    'adventures:minus-coin': '/assets/ui-icons/minus-one-treasure-token.png',
+    // Relic -1 card token (Adventures) — placed on a player.
+    'adventures:minus-card': '/assets/ui-icons/minus-one-card-token.png',
+    // Inheritance estate token (Adventures) — marks set-aside card.
+    'adventures:estate': '/assets/ui-icons/estate-token.png',
+  };
+  return imageMap[tokenId];
+};
+
+// Returns the image path for any token that has a dedicated icon, regardless of rendering style.
+// Used by the player area where all image tokens render via TokenImageBadgeComponent.
+export const getTokenImagePath = (tokenId: TokenId): string | undefined => {
+  return getTokenOverlayImagePath(tokenId) ?? getTokenBadgeImagePath(tokenId);
+};
+
+export type PileTokenVisual = {
+  tokenBadges: Array<{ id: string; label: string; color: number; imagePath?: string; badgeImagePath?: string }>;
+  tokenChips: Array<{ id: string; assetKey: string; count: number; textColor?: string }>;
+};
+
+// Builds deterministic token visual state for each pile key from supplyPile-located tokens.
+export const getSupplyPileTokenVisualMap = (
+  match: Match | null,
+  tokenDefinitions: Record<TokenId, TokenDefinition>,
+): Record<string, PileTokenVisual> => {
+  const visualByPile: Record<string, PileTokenVisual> = {};
+  if (!match) {
+    return visualByPile;
+  }
+
+  const playerColorMap = new Map(match.players.map((player) => [player.id, player.color]));
+  const supplyPileTokens = (Object.values(match.tokens ?? {}) as TokenInstance[])
+    .filter((token) => token.location.type === 'supplyPile')
+    .sort((left, right) => left.id.localeCompare(right.id));
+
+  for (const token of supplyPileTokens) {
+    if (token.location.type !== 'supplyPile') {
+      continue;
+    }
+
+    const pileKey = token.location.cardKey;
+    visualByPile[pileKey] ??= { tokenBadges: [], tokenChips: [] };
+    if (token.tokenId === 'base-v2:debt') {
+      const debtChipId = 'base-v2:debt-chip';
+      const existingDebtChip = visualByPile[pileKey].tokenChips.find((chip) => chip.id === debtChipId);
+      const debtCount = Math.max(1, token.counters ?? 1);
+      if (existingDebtChip) {
+        existingDebtChip.count += debtCount;
+      } else {
+        visualByPile[pileKey].tokenChips.push({
+          id: debtChipId,
+          assetKey: 'debt-token-chip',
+          count: debtCount,
+          textColor: '#f4ebde',
+        });
+      }
+      continue;
+    }
+
+    const tokenDefinition = tokenDefinitions[token.tokenId];
+    const label = getTokenShortLabel(token.tokenId, tokenDefinition);
+    // Overlay images render with desaturation filter and a count overlay.
+    const imagePath = getTokenOverlayImagePath(token.tokenId);
+    // Badge images render via TokenImageBadgeComponent with a player-colored ring.
+    const badgeImagePath = getTokenBadgeImagePath(token.tokenId);
+    const color = parseColor(
+      token.ownerId !== undefined && token.ownerId !== null
+        ? playerColorMap.get(token.ownerId) ?? '#ffffff'
+        : '#cccccc',
+    );
+    visualByPile[pileKey].tokenBadges.push({
+      id: token.id,
+      label,
+      color,
+      imagePath,
+      badgeImagePath,
+    });
+  }
+
+  return visualByPile;
+};
+
+// Parses a hex color string into a numeric value used by token visual models.
+const parseColor = (color: string): number => {
+  if (!color) {
+    return 0xffffff;
+  }
+  return Number.parseInt(color.replace('#', ''), 16);
 };

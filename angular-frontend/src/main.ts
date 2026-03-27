@@ -9,5 +9,7 @@ bootstrapApplication(AppComponent, appConfig)
     const injector = appRef.injector;
     const socketService = injector.get(SocketService);
     socketService.setEventMap(socketToGameEventMap());
+    // Warm searchable landscape data on startup so configuration search can filter locally.
+    socketService.emit('requestSelectableSearchCatalog');
   })
   .catch((err) => console.error(err));

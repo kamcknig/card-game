@@ -1,0 +1,40 @@
+.rearrange-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rearrange-labels {
+  display: flex;
+  justify-content: space-between;
+  color: var(--theme-text-on-dark);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.rearrange-list {
+  display: flex;
+  gap: 8px;
+  max-width: min(1180px, calc(100vw - 140px));
+  overflow: auto;
+  padding: 6px 2px;
+  min-height: 220px;
+}
+
+.rearrange-item {
+  cursor: grab;
+}
+
+.rearrange-item:active {
+  cursor: grabbing;
+}
+
+.cdk-drag-preview {
+  box-sizing: border-box;
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+}
+
+.cdk-drag-placeholder {
+  opacity: 0.35;
+}

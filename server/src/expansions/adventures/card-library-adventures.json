@@ -12,14 +12,13 @@
     "type": ["ACTION"]
   },
   "bridge-troll": {
-    "cardName": "Bridge Troll",
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "DURATION", "ATTACK"]
+    "type": ["ACTION", "DURATION", "ATTACK"],
+    "targetScheme": "ALL_OTHER"
   },
   "caravan-guard": {
-    "cardName": "Caravan Guard",
     "cost": {
       "treasure": 3
     },
@@ -30,7 +29,7 @@
       "treasure": 6
     },
     "type": ["ACTION", "DURATION"],
-    "randomizer": null,
+    "kingdomSelectable": false,
     "kingdom": "page"
   },
   "coin-of-the-realm": {
@@ -47,11 +46,12 @@
     "type": ["ACTION", "TRAVELLER"]
   },
   "distant-lands": {
-    "cardName": "Distant Lands",
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "VICTORY", "RESERVE"]
+    "type": ["ACTION", "VICTORY", "RESERVE"],
+    "abilityText": "Put this on your Tavern mat.\nWorth 4VP if on your Tavern mat at the end of the game (otherwise worth 0VP).",
+    "victoryPoints": 0
   },
   "dungeon": {
     "cost": {
@@ -81,7 +81,9 @@
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "ATTACK"]
+    "type": ["ACTION", "ATTACK"],
+    "abilityText": "Turn your Journey token over (it starts face up). Then if it's face down, +$1. If it's face up, +$5, and each other player reveals the top card of their deck, trashes it if it costs from $3 to $6, and otherwise discards it and gains a Curse.",
+    "targetScheme": "ALL_OTHER"
   },
   "guide": {
     "cost": {
@@ -90,18 +92,19 @@
     "type": ["ACTION", "RESERVE"]
   },
   "haunted-woods": {
-    "cardName": "Haunted Woods",
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "DURATION", "ATTACK"]
+    "type": ["ACTION", "DURATION", "ATTACK"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "At the start of your next turn: +3 Cards.\nUntil then, when any other player gains a card they bought, they put their hand onto their deck in any order."
   },
   "hero": {
     "cost": {
       "treasure": 5
     },
     "type": ["ACTION", "TRAVELLER"],
-    "randomizer": null,
+    "kingdomSelectable": false,
     "kingdom": "page"
   },
   "hireling": {
@@ -111,7 +114,6 @@
     "type": ["ACTION", "DURATION"]
   },
   "lost-city": {
-    "cardName": "Lost City",
     "cost": {
       "treasure": 5
     },
@@ -169,10 +171,11 @@
     "cost": {
       "treasure": 5
     },
-    "type": ["TREASURE", "ATTACK"]
+    "type": ["TREASURE", "ATTACK"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "$2\nEach other player puts their –1 Card token on their deck."
   },
   "royal-carriage": {
-    "cardName": "Royal Carriage",
     "cost": {
       "treasure": 5
     },
@@ -182,7 +185,9 @@
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION", "ATTACK", "TRAVELLER"]
+    "type": ["ACTION", "ATTACK", "TRAVELLER"],
+    "abilityText": "+2\n+$1 per other Attack you have in play. Each other player with 4 or more cards in hand discards a card.\nWhen you discard this from play, you may exchange it for a Fugitive.\n(This is not in the Supply.)",
+    "targetScheme": "ALL_OTHER"
   },
   "storyteller": {
     "cost": {
@@ -191,11 +196,12 @@
     "type": ["ACTION"]
   },
   "swamp-hag": {
-    "cardName": "Swamp Hag",
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "DURATION", "ATTACK"]
+    "type": ["ACTION", "DURATION", "ATTACK"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "At the start of your next turn: +$3.\nUntil then, when any other player gains a card they bought, they gain a Curse."
   },
   "teacher": {
     "cost": {
@@ -210,16 +216,14 @@
     "type": ["ACTION", "RESERVE"]
   },
   "treasure-hunter": {
-    "cardName": "Treasure Hunter",
     "cost": {
       "treasure": 3
     },
     "type": ["ACTION", "TRAVELLER"],
-    "randomizer": null,
+    "kingdomSelectable": false,
     "kingdom": "page"
   },
   "treasure-trove": {
-    "cardName": "Treasure Trove",
     "cost": {
       "treasure": 5
     },
@@ -230,11 +234,12 @@
       "treasure": 4
     },
     "type": ["ACTION", "TRAVELLER", "ATTACK"],
-    "randomizer": null,
-    "kingdom": "page"
+    "kingdomSelectable": false,
+    "kingdom": "page",
+    "abilityText": "+2 Cards\nFor each Traveller you have in play (including this), each other player discards the top card of their deck and trashes it if it costs $3 or $4.\nWhen you discard this from play, you may exchange it for a Hero.\n(This is not in the Supply.)",
+    "targetScheme": "ALL_OTHER"
   },
   "wine-merchant": {
-    "cardName": "Wine Merchant",
     "cost": {
       "treasure": 5
     },

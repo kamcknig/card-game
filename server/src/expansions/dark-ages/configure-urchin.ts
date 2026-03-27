@@ -1,29 +1,28 @@
-import { Supply } from 'shared/shared-types.ts';
-import { ExpansionConfiguratorContext } from '../../types.ts';
-import { expansionLibrary } from '../expansion-library.ts';
+import { Supply } from 'shared/types/index.ts';
+import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 
 export const configureUrchin = async (args: ExpansionConfiguratorContext) => {
   if (!args.config.kingdomSupply.some(supply => supply.name === 'urchin')) {
     return;
   }
-  
+
   if (args.config.nonSupply?.some(supply => supply.name === 'mercenary')) {
     return;
   }
-  
-  console.debug(`[dark-ages configurator - configuring urchin] urchin needs to be configured`);
-  
+
+  args.loggerService.info(`[dark-ages configurator - configuring urchin] urchin needs to be configured`);
+
   const cardData = {
-    ...structuredClone(expansionLibrary['dark-ages'].cardData.kingdomSupply['mercenary']) ?? {},
+    ...(structuredClone(args.expansionCatalog['dark-ages']?.cardData.kingdomSupply['mercenary']) ?? {}),
     partOfSupply: false,
   };
-  
+
   args.config.nonSupply ??= [];
-  
+
   args.config.nonSupply.push({
     name: 'mercenary',
-    cards: new Array(10).fill({...cardData})
+    cards: new Array(10).fill({ ...cardData }),
   } as Supply);
-  
-  console.debug(`[dark-ages configurator - configuring urchin] urchin configured`);
+
+  args.loggerService.info(`[dark-ages configurator - configuring urchin] urchin configured`);
 };

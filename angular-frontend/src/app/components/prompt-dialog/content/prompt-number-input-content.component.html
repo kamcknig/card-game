@@ -1,0 +1,13 @@
+<div class="number-input-container">
+  <input
+    class="number-input"
+    type="text"
+    inputmode="numeric"
+    [value]="rawValue()"
+    [placeholder]="placeholder()"
+    (input)="onInputChanged($any($event.target).value)" />
+
+  @if (rangeText().length > 0) {
+    <div class="range-text">{{ rangeText() }}</div>
+  }
+</div>

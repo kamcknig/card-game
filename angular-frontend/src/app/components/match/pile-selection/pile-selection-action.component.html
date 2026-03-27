@@ -1,0 +1,23 @@
+@if (state().visible) {
+  <div class="pile-selection-overlay-root">
+    <section class="pile-selection-controls">
+      @if (state().optional) {
+        <button
+          type="button"
+          class="pile-selection-button"
+          (click)="onCancel()"
+        >
+          Cancel
+        </button>
+      }
+      <button
+        type="button"
+        class="pile-selection-button"
+        [disabled]="!state().submitEnabled"
+        (click)="onSubmit()"
+      >
+        {{ state().prompt }}
+      </button>
+    </section>
+  </div>
+}

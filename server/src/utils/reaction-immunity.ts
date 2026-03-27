@@ -1,0 +1,35 @@
+import { ReactionContext, ReactionTrigger } from '@server-types/index.ts';
+import { PlayerId } from 'shared/types/index.ts';
+import type { LoggerService } from '../core/logger-service.ts';
+
+// Read-only immunity check so attack effects do not need to inspect raw reaction payloads.
+export function isPlayerImmune(reactionContext: ReactionContext | undefined, playerId: PlayerId): boolean {
+  return reactionContext?.immunityByPlayerId?.[playerId] === true;
+}
+
+// Mark a player as immune for the current trigger scope.
+export function markPlayerImmune(playerId: PlayerId, reactionContext?: ReactionContext | undefined): void {
+  if (!reactionContext) return;
+  reactionContext.immunityByPlayerId ??= {};
+  reactionContext.immunityByPlayerId[playerId] = true;
+}
+
+// Ensure immunity state does not leak across trigger scopes.
+export function initImmunityScope(
+  reactionContext: ReactionContext | undefined,
+  trigger: ReactionTrigger,
+  loggerService?: LoggerService,
+): void {
+  if (!reactionContext) return;
+  const scope = trigger.toString();
+  if (!reactionContext.immunityScope) {
+    reactionContext.immunityScope = scope;
+    loggerService?.debug(`[IMMUNITY] initialized scope ${scope}`);
+    return;
+  }
+  if (reactionContext.immunityScope !== scope) {
+    loggerService?.warn(
+      `[IMMUNITY] reactionContext reused across triggers: ${reactionContext.immunityScope} -> ${scope}`,
+    );
+  }
+}

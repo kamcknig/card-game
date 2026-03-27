@@ -1,19 +1,16 @@
-import { ChangeDetectionStrategy, Component, Input, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
-import { currentPlayerTurnIdStore, turnNumberStore } from '../../../../state/turn-state';
-import { map, Observable, tap } from 'rxjs';
-import { AsyncPipe, NgClass, NgOptimizedImage, UpperCasePipe } from '@angular/common';
-import { PlayerId } from 'shared/shared-types';
+import { currentPlayerTurnIdStore } from '../../../../state/turn-state';
+import { NgClass, NgOptimizedImage } from '@angular/common';
+import { PlayerId, TokenInstance } from 'shared/types';
 import { playerIdStore, playerStore } from '../../../../state/player-state';
-import tinycolor from 'tinycolor2'
-import { roundNumberStore } from '../../../../state/turn-logic';
+import tinycolor from 'tinycolor2';
 import { matchStore } from '../../../../state/match-state';
 
 @Component({
   selector: 'app-score',
   imports: [
-    AsyncPipe,
-    UpperCasePipe,
     NgClass,
     NgOptimizedImage,
   ],
@@ -21,43 +18,77 @@ import { matchStore } from '../../../../state/match-state';
   styleUrl: './score.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ScoreComponent implements OnInit {
-  @Input() playerScores!: { id: number; score: number; name: string }[] | null;
+export class ScoreComponent {
+  private readonly _nanoService = inject(NanostoresService);
 
-  turnNumber$: Observable<number> | undefined;
-  roundNumber$: Observable<number> | undefined;
-  currentPlayerTurnId$: Observable<PlayerId> | undefined;
-  victoryTokens$: Observable<Record<PlayerId, number>> | undefined;
+  playerScores = input<{ id: number; score: number; name: string }[] | null>(null);
 
-  constructor(private _nanoService: NanostoresService) {
-    this.victoryTokens$ = this._nanoService.useStore(matchStore).pipe(
-      map(match => match?.playerVictoryTokens ?? {})
-    )
-  }
+  private readonly _playerIds = toSignal(this._nanoService.useStore(playerIdStore), {
+    initialValue: playerIdStore.get()
+  });
+  readonly currentPlayerTurnId = toSignal(this._nanoService.useStore(currentPlayerTurnIdStore));
+  private readonly _match = toSignal(this._nanoService.useStore(matchStore), {
+    initialValue: matchStore.get() ?? null
+  });
 
-  getOrderedPlayerScores() {
-    return this._nanoService.useStore(playerIdStore)
-      .pipe(
-        map(ids => ids.map(id =>
-          this.playerScores?.find(pScore => pScore.id === id)))
-      );
-  }
+  // Victory token counts keyed by player.
+  readonly victoryTokens = computed<Partial<Record<PlayerId, number>>>(() => {
+    const match = this._match();
+    const victoryTokenId = 'prosperity:victory';
+    const counts: Partial<Record<PlayerId, number>> = {};
+    const tokens = Object.values(match?.tokens ?? {}) as TokenInstance[];
+    for (const token of tokens) {
+      if (token.tokenId !== victoryTokenId) continue;
+      if (token.location.type !== 'player') continue;
+      const tokenCount = token.counters ?? 1;
+      counts[token.location.playerId] = (counts[token.location.playerId] ?? 0) + tokenCount;
+    }
+    return counts;
+  });
 
-  getPlayerColor(id: PlayerId) {
-    return this._nanoService.useStore(playerStore(id)).pipe(
-      map(player => tinycolor(player?.color).lighten(15) ?? 'black')
-    );
-  }
-
-  getBackgroundColor(id: PlayerId) {
-    return this._nanoService.useStore(playerStore(id)).pipe(
-      map(player => tinycolor(player?.color).setAlpha(.4).darken(15) ?? 'black')
-    );
-  }
-
-  ngOnInit() {
-    this.turnNumber$ = this._nanoService.useStore(turnNumberStore);
-    this.roundNumber$ = this._nanoService.useStore(roundNumberStore);
-    this.currentPlayerTurnId$ = this._nanoService.useStore(currentPlayerTurnIdStore)
-  }
+  // Precomputed score row styles and ordering aligned to player order.
+  readonly orderedPlayerScores = computed(() => {
+    const scores = this.playerScores() ?? [];
+    const playerIds = this._playerIds();
+    return playerIds
+      .map((id) => {
+        const score = scores.find((entry) => entry.id === id);
+        if (!score) return undefined;
+        const playerColor = tinycolor(playerStore(id).get()?.color ?? '#7f6746');
+        const accentColor = playerColor.toHexString();
+        const accentSoft = playerColor.clone().setAlpha(.18).toRgbString();
+        const accentMuted = playerColor.clone().setAlpha(.10).toRgbString();
+        // Active row uses stronger color stops so turn ownership is visually obvious.
+        const accentActiveStrong = playerColor.clone().setAlpha(.46).toRgbString();
+        const accentActiveSoft = playerColor.clone().setAlpha(.28).toRgbString();
+        const accentGlow = playerColor.clone().setAlpha(.48).toRgbString();
+        // The score-row dot uses brightness to signal active turn ownership.
+        const accentDotInactive = playerColor.clone().darken(24).setAlpha(.55).toRgbString();
+        const accentDotActive = playerColor.clone().brighten(16).setAlpha(.95).toRgbString();
+        return {
+          ...score,
+          accentColor,
+          accentSoft,
+          accentMuted,
+          accentActiveStrong,
+          accentActiveSoft,
+          accentGlow,
+          accentDotInactive,
+          accentDotActive,
+        };
+      })
+      .filter((row): row is {
+        id: number;
+        score: number;
+        name: string;
+        accentColor: string;
+        accentSoft: string;
+        accentMuted: string;
+        accentActiveStrong: string;
+        accentActiveSoft: string;
+        accentGlow: string;
+        accentDotInactive: string;
+        accentDotActive: string;
+      } => row !== undefined);
+  });
 }

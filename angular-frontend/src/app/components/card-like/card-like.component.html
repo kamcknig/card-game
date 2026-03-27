@@ -1,0 +1,10 @@
+<!-- Card-like art display with right-click detail. -->
+<div class="card-container" (contextmenu)="onContextMenu($event)">
+  <img
+    class="card-image"
+    [ngSrc]="path() ?? ''"
+    (error)="onImageError()"
+    [width]="imageWidth()"
+    height="20"
+  />
+</div>

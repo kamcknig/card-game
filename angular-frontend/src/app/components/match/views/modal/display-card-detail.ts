@@ -1,46 +1,41 @@
-import { Application, Assets, Container, Graphics, Sprite, Texture } from 'pixi.js';
 import { cardStore } from '../../../../state/card-state';
-import { CardNoId } from 'shared/shared-types';
-import { applicationStore } from '../../../../state/app-state';
+import { matchStore } from '../../../../state/match-state';
+import { openCardDetailDialog } from '../../../../state/card-detail-dialog-state';
 
-export async function displayCardDetail(arg: number | { detailImagePath: string; }) {
-  const app = applicationStore.get();
+type CardDetailArg =
+  | number
+  | { detailImagePath: string; kingdom?: string; }
+  | { detailImagePaths: string[]; kingdom?: string; };
 
-  if (!app) throw new Error('Application is not initialized');
-
-  let cardImg: Texture;
+export async function displayCardDetail(arg: CardDetailArg) {
+  const detailImagePaths: string[] = [];
+  let pileKey: string | undefined;
   if (typeof arg === 'number') {
-    cardImg = await Assets.load(cardStore.get()[arg].detailImagePath);
+    const card = cardStore.get()[arg];
+    if (card?.detailImagePath) {
+      detailImagePaths.push(card.detailImagePath);
+    }
+    pileKey = card?.kingdom;
   }
-  else {
-    cardImg = await Assets.load(arg.detailImagePath);
-  }
-
-  const s = Sprite.from(cardImg);
-  const container = new Container();
-  container.eventMode = 'static';
-
-  const background = new Graphics()
-    .rect(0, 0, app.renderer.width, app.renderer.height)
-    .fill({
-      color: 'black',
-      alpha: .6,
-    });
-
-  container.addChild(background);
-  s.x = Math.floor(app.renderer.width * .5 - s.width * .5);
-  s.y = Math.floor(app.renderer.height * .5 - s.height * .5);
-  container.addChild(s);
-  app.stage.addChild(container);
-
-  const onPointerDown = () => {
-    app.stage.removeChild(container);
-  };
-  const onRemoved = () => {
-    container.off('pointerdown', onPointerDown);
-    container.off('removed', onRemoved);
+  else if ('detailImagePaths' in arg) {
+    detailImagePaths.push(...arg.detailImagePaths);
+    pileKey = arg.kingdom;
+  } else {
+    detailImagePaths.push(arg.detailImagePath);
+    pileKey = arg.kingdom;
   }
 
-  container.on('pointerdown', onPointerDown);
-  container.on('removed', onRemoved)
+  if (pileKey) {
+    const traitDetailImagePath = matchStore.get()?.traits?.find((trait) => trait.pileKey === pileKey)?.detailImagePath;
+    if (traitDetailImagePath) {
+      detailImagePaths.push(traitDetailImagePath);
+    }
+  }
+
+  const normalizedPaths = [...new Set(detailImagePaths.filter((path) => path?.trim().length > 0))];
+  if (normalizedPaths.length < 1) {
+    return;
+  }
+
+  openCardDetailDialog(normalizedPaths);
 }

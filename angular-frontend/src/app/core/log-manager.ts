@@ -1,8 +1,11 @@
-import { Card, CardId, LogEntry, LogEntrySource, Player, PlayerId } from 'shared/shared-types';
+import { Card, CardId, LogEntry, LogEntrySource, Player, PlayerId } from 'shared/types';
 import { cardStore } from '../state/card-state';
 import { playerStore, selfPlayerIdStore } from '../state/player-state';
 import { logEntryIdsStore, logStore } from '../state/log-state';
 import { tokenDefinitionStore } from '../state/token-definition-state';
+import { matchStore } from '../state/match-state';
+import { findCardLikeEntryInMatch } from 'shared/find-card-like-in-match';
+import { getSourceAccentColorForCard, getSourceAccentColorForCardLikeKind } from './source-accent-colors';
 
 export const logManager = {
   addLogEntry(logEntry: LogEntry) {
@@ -34,8 +37,22 @@ export const logManager = {
           : `%P${player?.id}% drew a card`;
         break;
       }
+      case 'drawHand': {
+        msg = selfId === playerId
+          ? `%Y% drew a new hand`
+          : `%P${player?.id}% drew a new hand`;
+        break;
+      }
       case 'discard': {
         const cardName = cardsById[logEntry.cardId]?.cardName;
+        const discardCount = logEntry.count ?? 1;
+        if (discardCount > 1) {
+          msg = selfId === playerId
+            ? `%Y% discards ${discardCount} cards and <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`
+            : `%P${player?.id}% discards ${discardCount} cards and <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`;
+          break;
+        }
+
         msg = selfId === playerId
           ? `%Y% discarded <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`
           : `%P${player?.id}% discarded a card`;
@@ -51,6 +68,11 @@ export const logManager = {
         msg = selfId === playerId ? `%Y% gained ${amount}` : `%P${player?.id}% gained ${amount}`;
         break;
       }
+      case 'payDebt': {
+        const amount = `${logEntry.count} <span style="color: #9F5F2D">Debt</span>`;
+        msg = selfId === playerId ? `%Y% paid ${amount}` : `%P${player?.id}% paid ${amount}`;
+        break;
+      }
       case 'gainAction': {
         const amount = `${logEntry.count} action${logEntry.count > 1 ? 's' : ''}`;
         msg = selfId === playerId ? `%Y% gained ${amount}` : `%P${player?.id}% gained ${amount}`;
@@ -61,6 +83,13 @@ export const logManager = {
         msg = selfId === playerId
           ? `%Y% triggered ${logEntry.effectText} from <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`
           : `%P${player?.id}% triggered ${logEntry.effectText} from <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`;
+        break;
+      }
+      case 'cardLikeEffect': {
+        const display = getCardLikeDisplay(logEntry.cardLikeId);
+        msg = selfId === playerId
+          ? `${logEntry.effectText} from <span style="color: ${display.color}">${display.name}</span>`
+          : `${logEntry.effectText} from <span style="color: ${display.color}">${display.name}</span>`;
         break;
       }
       // Token placement and consumption logs.
@@ -76,6 +105,13 @@ export const logManager = {
         msg = selfId === playerId
           ? `%Y% used ${tokenName}`
           : `%P${player?.id}% used ${tokenName}`;
+        break;
+      }
+      case 'buyProject': {
+        const display = getCardLikeDisplay(logEntry.cardLikeId);
+        msg = selfId === playerId
+          ? `%Y% bought <span style="color: ${display.color}">${display.name}</span>`
+          : `%P${player?.id}% bought <span style="color: ${display.color}">${display.name}</span>`;
         break;
       }
       case 'gainCard': {
@@ -105,15 +141,17 @@ export const logManager = {
           : `%P${player?.id}% shuffled their discard to their deck`;
         break;
       }
+      case 'playerLeft': {
+        msg = selfId === playerId
+          ? `%Y% resigned and left the game`
+          : `%P${player?.id}% resigned and left the game`;
+        break;
+      }
       case 'trashCard': {
         const cardName = cardsById[logEntry.cardId]?.cardName;
         msg = selfId === playerId
           ? `%Y% trashed <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`
           : `%P${player?.id}% trashed <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`;
-        break;
-      }
-      case 'newTurn': {
-        msg = `<hr class="new-turn"><br>TURN ${logEntry.turn}<br>`;
         break;
       }
       case 'newPlayerTurn': {
@@ -145,31 +183,21 @@ export const logManager = {
   }
 };
 
-const SourceColors = {
-  treasure: '#fdda56',
-  victory: '#8efb49',
-  curse: '#d45ffb',
-  duration: '#ff8d34'
-}
-
 const getSourceColor = (source: LogEntrySource, cardsById: Record<CardId, Card>) => {
   const sourceCard = cardsById[source];
+  return getSourceAccentColorForCard(sourceCard);
+}
 
-  if (sourceCard.cardKey === 'curse') {
-    return SourceColors.curse;
+// Resolves landscape-style names for log entries (events/landmarks/boons/hexes/states/artifacts).
+const getCardLikeDisplay = (cardLikeId: number) => {
+  const match = matchStore.get();
+  if (!match) {
+    return { name: 'Landscape', color: getSourceAccentColorForCardLikeKind(undefined) };
   }
 
-  if (sourceCard.type.includes('TREASURE')) {
-    return SourceColors.treasure;
-  }
-
-  if (sourceCard.type.includes('VICTORY')) {
-    return SourceColors.victory;
-  }
-
-  if (sourceCard.type.includes('DURATION')) {
-    return SourceColors.duration;
-  }
-
-  return 'white';
+  const entry = findCardLikeEntryInMatch(match, cardLikeId);
+  return {
+    name: entry?.cardLike.cardName ?? 'Landscape',
+    color: getSourceAccentColorForCardLikeKind(entry?.kind),
+  };
 }

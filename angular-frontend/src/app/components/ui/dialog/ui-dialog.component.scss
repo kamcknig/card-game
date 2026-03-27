@@ -1,0 +1,31 @@
+:host {
+  display: none;
+}
+
+.ui-dialog-overlay-pane {
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 24px);
+}
+
+.cdk-overlay-backdrop.ui-dialog-backdrop.variant-none {
+  background: transparent;
+}
+
+.cdk-overlay-backdrop.ui-dialog-backdrop.variant-soft {
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-medium));
+}
+
+.cdk-overlay-backdrop.ui-dialog-backdrop.variant-strong {
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
+}
+
+.ui-dialog-shell {
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.ui-dialog-panel {
+  pointer-events: auto;
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 24px);
+}

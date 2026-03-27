@@ -3,319 +3,292 @@
     "cost": {
       "treasure": 0
     },
-    "type": [
-      "ACTION",
-      "RUINS"
-    ],
-    "randomizer": null
+    "type": ["ACTION", "RUINS"],
+    "kingdomSelectable": false
   },
   "altar": {
     "cost": {
       "treasure": 6
     },
-    "type": [
-      "ACTION"
-    ]
+    "type": ["ACTION"]
   },
   "armory": {
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION"
-    ]
+    "type": ["ACTION"]
   },
   "band-of-misfits": {
     "cardName": "Band of Misfits",
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION",
-      "COMMAND"
-    ]
+    "type": ["ACTION", "COMMAND"]
   },
   "bandit-camp": {
-    "cardName": "Bandit Camp",
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ]
+    "type": ["ACTION"]
   },
   "beggar": {
     "cost": {
       "treasure": 2
     },
-    "type": [
-      "ACTION",
-      "REACTION"
-    ]
+    "type": ["ACTION", "REACTION"]
   },
   "catacombs": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ]
+    "type": ["ACTION"]
   },
   "count": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ]
+    "type": ["ACTION"]
   },
   "counterfeit": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "TREASURE"
-    ]
+    "type": ["TREASURE"]
   },
   "cultist": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION",
-      "ATTACK",
-      "LOOTER"
+    "type": ["ACTION", "ATTACK", "LOOTER"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+2 Cards\nEach other player gains a Ruins. You may play a Cultist from your hand.\nWhen you trash this, +3 Cards."
+  },
+  "knights": {
+    "pile": {
+      "randomizer": "knights",
+      "cost": {
+        "treasure": 5
+      },
+      "type": ["ACTION", "ATTACK", "KNIGHT"]
+    },
+    "cards": [
+      {
+        "cardKey": "dame-anna",
+        "cost": {
+          "treasure": 5
+        },
+        "type": ["ACTION", "ATTACK", "KNIGHT"],
+        "targetScheme": "ALL_OTHER"
+      },
+      {
+        "cardKey": "dame-josephine",
+        "cost": {
+          "treasure": 5
+        },
+        "type": ["ACTION", "ATTACK", "VICTORY", "KNIGHT"],
+        "targetScheme": "ALL_OTHER",
+        "victoryPoints": 2
+      },
+      {
+        "cardKey": "dame-molly",
+        "cost": {
+          "treasure": 5
+        },
+        "type": ["ACTION", "ATTACK", "KNIGHT"],
+        "targetScheme": "ALL_OTHER"
+      },
+      {
+        "cardKey": "dame-natalie",
+        "cost": {
+          "treasure": 5
+        },
+        "type": ["ATTACK", "ACTION", "KNIGHT"],
+        "targetScheme": "ALL_OTHER"
+      },
+      {
+        "cardKey": "dame-sylvia",
+        "cost": {
+          "treasure": 5
+        },
+        "type": ["ACTION", "ATTACK", "KNIGHT"],
+        "targetScheme": "ALL_OTHER"
+      },
+      {
+        "cardKey": "sir-bailey",
+        "cost": {
+          "treasure": 5
+        },
+        "type": ["ACTION", "ATTACK", "KNIGHT"],
+        "targetScheme": "ALL_OTHER"
+      },
+      {
+        "cardKey": "sir-destry",
+        "cost": {
+          "treasure": 5
+        },
+        "type": ["ACTION", "ATTACK", "KNIGHT"],
+        "targetScheme": "ALL_OTHER"
+      },
+      {
+        "cardKey": "sir-martin",
+        "cost": {
+          "treasure": 4
+        },
+        "type": ["ACTION", "ATTACK", "KNIGHT"],
+        "targetScheme": "ALL_OTHER"
+      },
+      {
+        "cardKey": "sir-michael",
+        "cost": {
+          "treasure": 5
+        },
+        "type": ["ACTION", "ATTACK", "KNIGHT"],
+        "targetScheme": "ALL_OTHER"
+      },
+      {
+        "cardKey": "sir-vander",
+        "cost": {
+          "treasure": 5
+        },
+        "type": ["ACTION", "ATTACK", "KNIGHT"],
+        "targetScheme": "ALL_OTHER"
+      }
     ]
-  },
-  "catacombs": {
-    "cost": {
-      "treasure": 5
-    },
-    "type": [
-      "ACTION"
-    ]
-  },
-  "dame-anna": {
-    "cardName": "Dame Anna",
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION", "ATTACK", "KNIGHT"],
-    "randomizer": "knights"
-  },
-  "dame-josephine": {
-    "cardName": "Dame Josephine",
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION", "ATTACK", "VICTORY", "KNIGHT"],
-    "victoryPoints": 2,
-    "randomizer": "knights"
-  },
-  "dame-molly": {
-    "cardName": "Dame Molly",
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION", "ATTACK", "KNIGHT"],
-    "randomizer": "knights"
-  },
-  "dame-natalie": {
-    "cardName": "Dame Natalie",
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ATTACK", "ACTION", "KNIGHT"],
-    "randomizer": "knights"
-  },
-  "dame-sylvia": {
-    "cardName": "Dame Sylvia",
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION", "ATTACK", "KNIGHT"],
-    "randomizer": "knights"
   },
   "death-cart": {
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION",
-      "LOOTER"
-    ]
+    "type": ["ACTION", "LOOTER"]
   },
   "feodum": {
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "VICTORY"
-    ]
+    "type": ["VICTORY"],
+    "abilityText": "Worth 1VP per 3 Silvers you have (round down).\nWhen you trash this, gain 3 Silvers.",
+    "victoryPoints": 0
   },
   "forager": {
     "cost": {
       "treasure": 3
     },
-    "type": [
-      "ACTION"
-    ]
+    "type": ["ACTION"]
   },
   "fortress": {
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION"
-    ]
+    "type": ["ACTION"]
   },
   "graverobber": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ]
+    "type": ["ACTION"]
   },
   "hermit": {
     "cost": {
       "treasure": 3
     },
-    "type": [
-      "ACTION"
-    ]
+    "type": ["ACTION"]
   },
   "hovel": {
     "cost": {
       "treasure": 1
     },
-    "type": [
-      "REACTION",
-      "SHELTER"
-    ],
-    "randomizer": null
+    "type": ["REACTION", "SHELTER"],
+    "kingdomSelectable": false
   },
   "hunting-grounds": {
-    "cardName": "Hunting Grounds",
     "cost": {
       "treasure": 6
     },
-    "type": [
-      "ACTION"
-    ]
+    "type": ["ACTION"]
   },
   "ironmonger": {
     "cardName": "Iron Monger",
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION"
-    ]
+    "type": ["ACTION"]
   },
   "junk-dealer": {
-    "cardName": "Junk Dealer",
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ]
+    "type": ["ACTION"]
   },
   "madman": {
     "cost": {
       "treasure": 0
     },
-    "type": [
-      "ACTION"
-    ],
-    "randomizer": null
+    "type": ["ACTION"],
+    "kingdomSelectable": false
   },
   "marauder": {
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION",
-      "LOOTER",
-      "ATTACK"
-    ]
+    "type": ["ACTION", "LOOTER", "ATTACK"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "Gain a Spoils. Each other player gains a Ruins."
   },
   "market-square": {
-    "cardName": "Market Square",
     "cost": {
       "treasure": 3
     },
-    "type": [
-      "ACTION",
-      "REACTION"
-    ]
+    "type": ["ACTION", "REACTION"]
   },
   "mercenary": {
     "cost": {
       "treasure": 0
     },
-    "type": [
-      "ATTACK",
-      "ACTION"
-    ],
-    "randomizer": null
+    "type": ["ATTACK", "ACTION"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "You may trash 2 cards from your hand. If you did, +2 Cards, +$2, and each other player discards down to 3 cards in hand.\n(This is not in the Supply.)",
+    "kingdomSelectable": false
   },
   "mystic": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ]
+    "type": ["ACTION"]
   },
   "necropolis": {
     "cost": {
       "treasure": 1
     },
-    "type": [
-      "ACTION",
-      "SHELTER"
-    ],
-    "randomizer": null
+    "type": ["ACTION", "SHELTER"],
+    "kingdomSelectable": false
   },
   "overgrown-estate": {
-    "cardName": "Overgrown Estate",
     "cost": {
       "treasure": 1
     },
-    "type": [
-      "VICTORY",
-      "SHELTER"
-    ],
+    "type": ["VICTORY", "SHELTER"],
     "victoryPoints": 0,
-    "randomizer": null
+    "kingdomSelectable": false
   },
   "pillage": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ATTACK",
-      "ACTION"
-    ]
+    "type": ["ATTACK", "ACTION"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "Trash this. If you did, gain 2 Spoils, and each other player with 5 or more cards in hand reveals their hand and discards a card that you choose."
   },
   "poor-house": {
-    "cardName": "Poor House",
     "cost": {
       "treasure": 1
     },
-    "type": [
-      "ACTION"
-    ]
+    "type": ["ACTION"]
   },
   "procession": {
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION"
-    ]
+    "type": ["ACTION"]
   },
   "rats": {
     "cost": {
@@ -327,164 +300,93 @@
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION"
-    ]
+    "type": ["ACTION"]
   },
   "rogue": {
     "cost": {
       "treasure": 5
     },
-    "type": [
-      "ACTION",
-      "ATTACK"
-    ]
+    "type": ["ACTION", "ATTACK"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+$2\nIf there are any cards in the trash costing from $3 to $6, gain one of them. Otherwise, each other player reveals the top 2 cards of their deck, trashes one of them costing from $3 to $6, and discards the rest."
   },
   "ruined-library": {
     "cost": {
       "treasure": 0
     },
-    "type": [
-      "ACTION",
-      "RUINS"
-    ],
-    "randomizer": null
+    "type": ["ACTION", "RUINS"],
+    "kingdomSelectable": false
   },
   "ruined-market": {
     "cost": {
       "treasure": 0
     },
-    "type": [
-      "ACTION",
-      "RUINS"
-    ],
-    "randomizer": null
+    "type": ["ACTION", "RUINS"],
+    "kingdomSelectable": false
   },
   "ruined-village": {
     "cost": {
       "treasure": 0
     },
-    "type": [
-      "ACTION",
-      "RUINS"
-    ],
-    "randomizer": null
+    "type": ["ACTION", "RUINS"],
+    "kingdomSelectable": false
   },
   "sage": {
     "cost": {
       "treasure": 3
     },
-    "type": [
-      "ACTION"
-    ]
+    "type": ["ACTION"]
   },
   "scavenger": {
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION"
-    ]
-  },
-  "sir-bailey": {
-    "cardName": "Sir Bailey",
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION", "ATTACK", "KNIGHT"],
-    "randomizer": "knights"
-  },
-  "sir-destry": {
-    "cardName": "Sir Destry",
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION", "ATTACK", "KNIGHT"],
-    "randomizer": "knights"
-  },
-  "sir-martin": {
-    "cardName": "Sir Martin",
-    "cost": {
-      "treasure": 4
-    },
-    "type": ["ACTION", "ATTACK", "KNIGHT"],
-    "randomizer": "knights"
-  },
-  "sir-michael": {
-    "cardName": "Sir Michael",
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION", "ATTACK", "KNIGHT"],
-    "randomizer": "knights"
-  },
-  "sir-vander": {
-    "cardName": "Sir Vander",
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION", "ATTACK", "KNIGHT"],
-    "randomizer": "knights"
+    "type": ["ACTION"]
   },
   "squire": {
     "cost": {
       "treasure": 2
     },
-    "type": [
-      "ACTION"
-    ]
+    "type": ["ACTION"]
   },
   "storeroom": {
     "cost": {
       "treasure": 3
     },
-    "type": [
-      "ACTION"
-    ]
+    "type": ["ACTION"]
   },
   "survivors": {
     "cost": {
       "treasure": 0
     },
-    "type": [
-      "ACTION",
-      "RUINS"
-    ],
-    "randomizer": null
+    "type": ["ACTION", "RUINS"],
+    "kingdomSelectable": false
   },
   "urchin": {
     "cost": {
       "treasure": 3
     },
-    "type": [
-      "ACTION",
-      "ATTACK"
-    ]
+    "type": ["ACTION", "ATTACK"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+1 Card\n+1 Action\nEach other player discards down to 4 cards in hand.\nWhen you play another Attack card with this in play, you may first trash this, to gain a Mercenary."
   },
   "spoils": {
     "cost": {
       "treasure": 0
     },
-    "type": [
-      "TREASURE"
-    ],
-    "randomizer": null
+    "type": ["TREASURE"],
+    "kingdomSelectable": false
   },
   "vagrant": {
     "cost": {
       "treasure": 2
     },
-    "type": [
-      "ACTION"
-    ]
+    "type": ["ACTION"]
   },
   "wandering-minstrel": {
-    "cardName": "Wandering Minstrel",
     "cost": {
       "treasure": 4
     },
-    "type": [
-      "ACTION"
-    ]
+    "type": ["ACTION"]
   }
 }

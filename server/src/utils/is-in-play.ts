@@ -1,5 +1,5 @@
-import { CardLocation } from 'shared/shared-types.ts';
+import { CardLocation } from 'shared/types/index.ts';
 
 export const isLocationInPlay = (location?: CardLocation) => {
-  return !!location && location === 'playArea' || location === 'activeDuration';
-}
+  return (!!location && location === 'playArea') || location === 'activeDuration';
+};

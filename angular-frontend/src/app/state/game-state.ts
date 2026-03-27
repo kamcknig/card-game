@@ -1,9 +1,10 @@
 import { atom } from 'nanostores';
-import { PlayerId } from 'shared/shared-types';
+import { PlayerId } from 'shared/types';
 import { playerIdStore, playerStore } from './player-state';
 
 
 export const playerDisconnectedStore = atom<boolean>(false);
+export const disconnectedHumanIdsStore = atom<PlayerId[]>([]);
 
 // Internal: Track all subscriptions so we can clean them up
 let unsubscribers: (() => void)[] = [];
@@ -27,14 +28,19 @@ playerIdStore.subscribe((ids) => {
 function updatePausedState() {
   const ids = playerIdStore.get();
   const players = ids.map(id => playerStore(id).get());
-  const anyDisconnected = players.some(p => !p?.connected);
+  const disconnectedHumans = players
+    .filter(p => p && !p.connected && !p.isComputer)
+    .map(p => p!.id);
+  const anyDisconnected = disconnectedHumans.length > 0;
   playerDisconnectedStore.set(anyDisconnected);
+  disconnectedHumanIdsStore.set(disconnectedHumans);
 }
 
 export const gameOwnerIdStore = atom<PlayerId | undefined>();
 (globalThis as any).gameOwnerIdStore = gameOwnerIdStore;
 
-export type SceneNames = 'configuration' | 'match' | 'gameSummary';
+export type SceneNames = 'lobby' | 'configuration' | 'match' | 'gameSummary';
 
-export const sceneStore = atom<SceneNames>('configuration');
+// The application starts in the global lobby view until a game is joined.
+export const sceneStore = atom<SceneNames>('lobby');
 (globalThis as any).sceneStore = sceneStore;

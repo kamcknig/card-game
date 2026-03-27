@@ -1,12 +1,39 @@
 /* ——— Layout ——————————————————————————————— */
-.match-config {
-  display: inline-grid;
-  grid-template-columns: auto auto auto;
-  grid-template-rows: auto auto;
+$match-config-single-column-breakpoint: 940px;
+
+.match-config-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
   padding: 24px;
   font-family: system-ui, sans-serif;
-  grid-column-gap: 20px;
-  grid-row-gap: 20px;
+  color: var(--theme-text-primary);
+  background: var(--theme-surface-panel);
+  width: 100%;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+.leave-game-button {
+  border: 1px solid var(--theme-border-danger);
+  background: var(--theme-action-danger-soft-bg);
+  border-radius: 6px;
+  padding: 7px 12px;
+  color: var(--theme-text-primary);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.secondary-action-button {
+  border: 1px solid var(--theme-border-strong);
+  background: var(--theme-surface-card);
+  border-radius: 6px;
+  padding: 7px 12px;
+  color: var(--theme-text-primary);
 }
 
 .section-title {
@@ -14,64 +41,196 @@
   font-size: 1.25rem;
 }
 
+.section-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.section-header-row .section-title {
+  margin: 0;
+}
+
+.section-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.section-inline-action-button {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.config-section {
+  border: 1px solid var(--theme-border-section-light);
+  border-radius: 8px;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.configuration-top-row {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.kingdom-row {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.card-like-row {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 20px;
+  // Cap card-like sections to 3 columns (Events/Landmarks/Artifacts/etc).
+  max-width: calc((var(--card-landscape-width) * 3) + (20px * 2));
+}
+
+.card-likes-section {
+  width: fit-content;
+  max-width: 100%;
+}
+
+.players,
+.expansions,
 .banned-cards-section {
-  grid-row: 2;
-  grid-column: 2;
+  flex: 0 0 auto;
+}
+
+.players {
+  min-width: 280px;
+}
+
+.banned-cards-section {
+  min-width: 180px;
+}
+
+.expansions {
+  min-width: 280px;
+}
+
+.kingdom-section {
+  width: fit-content;
+  max-width: 100%;
+}
+
+.events-section,
+.landmarks-section,
+.artifacts-section,
+.projects-section,
+.ways-section,
+.traits-section,
+.allies-section,
+.prophecies-section {
+  flex: 0 0 var(--card-landscape-width);
+}
+
+.banned-card-item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 122px;
+  height: 122px;
+  border: 2px solid var(--theme-border-strong);
+  background: var(--theme-surface-card);
+  // Stack cards with a positive Y offset for each subsequent card.
+  transform: translateY(calc(var(--banned-stack-index, 0) * 25px));
+
+  img {
+    display: block;
+    width: 122px;
+    height: 122px;
+    object-fit: cover;
+  }
+
+  // Keep hidden until hover so the stack remains clean.
+  .close-button {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease;
+  }
+
+  &:hover .close-button {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .banned-card-list {
   margin-top: 10px;
-  display: flex;
-  justify-content: start;
-  flex-direction: column;
-  gap: 5px;
-  height: 300px;
-  max-height: 500px;
-  overflow: auto;
-}
-
-.banned-card-item {
+  // Cards are absolutely positioned to create a stacked/fanned pile.
   position: relative;
-  align-self: start;
-
-  .close-button {
-    font-size: 6px;
-    right: -20px;
-    top: 5px;
-  }
+  width: 122px;
+  min-height: 122px;
 }
 
-.kingdom-section {
-  .kingdom-list {
-    display: grid;
-    grid-template-columns: repeat(5, auto);
-    grid-template-rows: 1fr 1fr;
-    gap: 10px;
-  }
-
-  .kingdom {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  }
+.kingdom-section .kingdom-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-start;
+  // Cap kingdom list width so at most 5 cards render per row.
+  max-width: calc((122px * 5) + (10px * 4));
 }
 
-/* Events selection layout */
-.events-section {
-  .events-list {
-    display: grid;
-    grid-template-columns: repeat(2, 280px);
-    grid-auto-flow: row;
-    gap: 10px;
-    justify-content: start;
+.kingdom-section .kingdom {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Card-like selection layout mirrors kingdom behavior and stays left-aligned. */
+.events-section .events-list,
+.landmarks-section .landmarks-list,
+.artifacts-section .artifacts-list,
+.projects-section .projects-list,
+.ways-section .ways-list,
+.traits-section .traits-list,
+.allies-section .allies-list,
+.prophecies-section .prophecies-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-start;
+  // Cap card-like list width so at most 3 cards render per row.
+  max-width: calc((var(--card-landscape-width) * 3) + (10px * 2));
+}
+
+.events-section .event-slot,
+.landmarks-section .landmark-slot,
+.artifacts-section .artifact-slot,
+.projects-section .project-slot,
+.ways-section .way-slot,
+.traits-section .trait-slot,
+.allies-section .ally-slot,
+.prophecies-section .prophecy-slot {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+@media (max-width: $match-config-single-column-breakpoint) {
+  .configuration-top-row,
+  .card-like-row {
+    flex-direction: column;
   }
 
-  .event-slot {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  .card-like-row {
+    max-width: 100%;
   }
 }
 
@@ -82,8 +241,12 @@
 }
 
 .expansion-list {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 10px;
+  // Cap expansion icon list so at most 5 icons render per row.
+  max-width: calc((50px * 5) + (10px * 4));
 }
 
 /* ——— Expansion items ———————————————— */
@@ -104,12 +267,12 @@
 }
 
 .expansion-item.selected {
-  outline: 2px solid #000000;     /* highlight border */
+  outline: 2px solid var(--theme-border-strong);     /* highlight border */
   outline-offset: -3px;
 }
 
 .kingdom {
-  border: 2px solid black;
+  border: 2px solid var(--theme-border-strong);
   width: 122px;
   height: 122px;
 
@@ -124,9 +287,9 @@
 
 /* Event slot styling mirrors kingdom slots */
 .event-slot {
-  border: 2px solid black;
-  width: 280px;
-  height: 124px;
+  border: 2px solid var(--theme-border-strong);
+  width: var(--card-landscape-width);
+  height: var(--card-landscape-height);
 
   .no-event {
     font-size: 32px;
@@ -135,4 +298,232 @@
   .close-button {
     font-size: 10px;
   }
+}
+
+/* Landmark slot styling mirrors event slots */
+.landmark-slot {
+  border: 2px solid var(--theme-border-strong);
+  width: var(--card-landscape-width);
+  height: var(--card-landscape-height);
+
+  .no-landmark {
+    font-size: 32px;
+  }
+
+  .close-button {
+    font-size: 10px;
+  }
+}
+
+/* Artifact slot styling mirrors event slots */
+.artifact-slot {
+  border: 2px solid var(--theme-border-strong);
+  width: var(--card-landscape-width);
+  height: var(--card-landscape-height);
+
+  .no-artifact {
+    font-size: 32px;
+  }
+
+  .close-button {
+    font-size: 10px;
+  }
+}
+
+/* Project slot styling mirrors event slots */
+.project-slot {
+  border: 2px solid var(--theme-border-strong);
+  width: var(--card-landscape-width);
+  height: var(--card-landscape-height);
+
+  .no-project {
+    font-size: 32px;
+  }
+
+  .close-button {
+    font-size: 10px;
+  }
+}
+
+/* Way slot styling mirrors event slots */
+.way-slot {
+  border: 2px solid var(--theme-border-strong);
+  width: var(--card-landscape-width);
+  height: var(--card-landscape-height);
+
+  .no-way {
+    font-size: 32px;
+  }
+
+  .close-button {
+    font-size: 10px;
+  }
+}
+
+/* Ally slot styling mirrors event slots */
+.ally-slot {
+  border: 2px solid var(--theme-border-strong);
+  width: var(--card-landscape-width);
+  height: var(--card-landscape-height);
+
+  .no-ally {
+    font-size: 32px;
+  }
+
+  .close-button {
+    font-size: 10px;
+  }
+}
+
+/* Trait slot styling mirrors event slots */
+.trait-slot {
+  border: 2px solid var(--theme-border-strong);
+  width: var(--card-landscape-width);
+  height: var(--card-landscape-height);
+
+  .no-trait {
+    font-size: 32px;
+  }
+
+  .close-button {
+    font-size: 10px;
+  }
+}
+
+/* Prophecy slot styling mirrors event slots */
+.prophecy-slot {
+  border: 2px solid var(--theme-border-strong);
+  width: var(--card-landscape-width);
+  height: var(--card-landscape-height);
+
+  .no-prophecy {
+    font-size: 32px;
+  }
+
+  .close-button {
+    font-size: 10px;
+  }
+}
+
+.disabled-add-slot {
+  border-style: dashed;
+  opacity: 0.6;
+}
+
+.selection-helper {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--theme-text-secondary);
+}
+
+.config-dialog {
+  min-width: min(560px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--theme-border-strong);
+  background: var(--theme-surface-panel);
+  color: var(--theme-text-primary);
+}
+
+.config-dialog h3 {
+  margin: 0 0 12px;
+  font-size: 20px;
+}
+
+.config-dialog-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--theme-border-strong);
+  background: var(--theme-surface-card);
+  color: var(--theme-text-primary);
+}
+
+.config-dialog-meta {
+  margin-top: 8px;
+  color: var(--theme-text-secondary);
+  font-size: 12px;
+}
+
+.config-dialog-warning {
+  margin-top: 8px;
+  color: var(--theme-border-danger);
+  font-size: 12px;
+}
+
+.config-dialog-error {
+  margin-top: 8px;
+  color: #ffb3b3;
+  font-size: 12px;
+}
+
+.saved-config-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 320px;
+  overflow: auto;
+  padding: 2px;
+}
+
+.saved-config-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--theme-border-strong);
+  background: var(--theme-surface-card);
+}
+
+.saved-config-choice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 6px 8px;
+  background: transparent;
+  color: var(--theme-text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+
+.saved-config-choice:hover {
+  border-color: var(--theme-border-action);
+}
+
+.saved-config-choice.active {
+  border-color: var(--theme-border-action);
+  box-shadow: 0 0 0 1px rgba(0, 213, 255, 0.35);
+}
+
+.saved-config-delete-button {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid var(--theme-border-strong);
+  background: transparent;
+  color: var(--theme-text-primary);
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+}
+
+.config-dialog-actions {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }

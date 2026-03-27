@@ -1,5 +1,5 @@
 import { atom, WritableAtom } from 'nanostores';
-import { Player, PlayerId } from 'shared/shared-types';
+import { Player, PlayerId } from 'shared/types';
 
 export const playerIdStore = atom<number[]>([]);
 (globalThis as any).playerIdStore = playerIdStore;

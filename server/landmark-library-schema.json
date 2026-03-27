@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Schema for validating Dominion landmark library definitions",
+  "type": "object",
+  "additionalProperties": {
+    "$ref": "#/$defs/Landmark"
+  },
+  "$defs": {
+    "Landmark": {
+      "type": "object",
+      "description": "Landmark definition entry for an expansion landmark library.",
+      "properties": {
+        "cardName": {
+          "type": "string",
+          "description": "The human-readable landmark name."
+        },
+        "randomizer": {
+          "type": ["string", "null"],
+          "description": "Optional randomizer key for grouping landmarks."
+        },
+        "abilityText": {
+          "type": "string",
+          "description": "Rules text to display for the landmark."
+        }
+      },
+      "required": ["abilityText"],
+      "additionalProperties": false
+    }
+  }
+}

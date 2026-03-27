@@ -1,64 +1,157 @@
-<app-score #scoreView [playerScores]="playerScore$ | async"></app-score>
+<app-score #scoreView [playerScores]="playerScore()"></app-score>
+
+@let waitingPlayerName = waitingOnPlayerName();
+@if (waitingPlayerName) {
+  <app-ui-dialog
+    [zIndex]="4050"
+    [closeOnBackdrop]="false"
+    [hasBackdrop]="false"
+  >
+    <div class="waiting-dialog-card">
+      Waiting for {{ waitingPlayerName }}
+    </div>
+  </app-ui-dialog>
+}
+
+@if (gamePaused()) {
+  <app-ui-dialog
+    [zIndex]="4000"
+    [closeOnBackdrop]="false"
+    [backdropVariant]="'soft'"
+  >
+    <div class="pause-dialog-card">
+      PLAYER DISCONNECTED
+    </div>
+  </app-ui-dialog>
+}
 
 <div class="mat-tab-content">
-  @let trashMat = trashMat$ | async;
-  @if (trashMat) {
+  @let trashMatValue = trashMat();
+  @if (trashMatValue) {
     <app-mat-tab
-      [mat]="trashMat"
-      (click)="visibleMat === trashMat ? stickyMat = !stickyMat : visibleMat = trashMat"
-      (mouseenter)="!stickyMat ? visibleMat = trashMat : null"
-      (mouseleave)="!stickyMat ? visibleMat = null : null">
+      [mat]="trashMatValue"
+      (click)="onMatClick(trashMatValue)"
+      (mouseenter)="onMatMouseEnter(trashMatValue)"
+      (mouseleave)="onMatMouseLeave(trashMatValue)">
     </app-mat-tab>
   }
-  @let setAsideMat = setAsideMat$ | async;
-  @if (setAsideMat) {
+  @for (setAsideMat of setAsideMats(); track setAsideMat.id) {
     <app-mat-tab
       [mat]="setAsideMat"
-      (click)="visibleMat === setAsideMat ? stickyMat = !stickyMat : visibleMat = setAsideMat"
-      (mouseenter)="!stickyMat ? visibleMat = setAsideMat : null"
-      (mouseleave)="!stickyMat ? visibleMat = null : null">
+      (click)="onMatClick(setAsideMat)"
+      (mouseenter)="onMatMouseEnter(setAsideMat)"
+      (mouseleave)="onMatMouseLeave(setAsideMat)">
     </app-mat-tab>
   }
-  @for (mat of selfMats$ | async; track mat.mat) {
+  @for (mat of selfMats(); track mat.id) {
     <app-mat-tab
       [mat]="mat"
-      (click)="visibleMat === mat ? stickyMat = !stickyMat : visibleMat = mat"
-      (mouseenter)="!stickyMat ? visibleMat = mat : null"
-      (mouseleave)="!stickyMat ? visibleMat = null : null">
+      (click)="onMatClick(mat)"
+      (mouseenter)="onMatMouseEnter(mat)"
+      (mouseleave)="onMatMouseLeave(mat)">
     </app-mat-tab>
   }
 </div>
 
-<app-game-log [entries]="logEntries$ | async"></app-game-log>
+<div class="hud-log-stack">
+  <app-game-log [entries]="logEntries()"></app-game-log>
 
-@if (visibleMat) {
-  <div class="mat-modal-backdrop">
+  <div class="hud-menu">
+    <button
+      class="hud-menu-icon resign-button"
+      title="Resign and leave game"
+      aria-label="Resign and leave game"
+      (click)="onResignMatch()"
+    >
+      ⚑
+    </button>
+    <button
+      class="hud-menu-icon debug-toggle"
+      [attr.aria-pressed]="debugOverlayVisible()"
+      [class.active]="debugOverlayVisible()"
+      [title]="debugOverlayVisible() ? 'Debug overlay: ON' : 'Debug overlay: OFF'"
+      aria-label="Toggle debug overlay"
+      (click)="toggleDebugOverlay()"
+    >
+      <span class="debug-icon-gear">⚙</span>
+      <span class="debug-icon-question">?</span>
+      <span class="debug-icon-state">{{ debugOverlayVisible() ? 'ON' : 'OFF' }}</span>
+    </button>
+  </div>
+</div>
+
+@if (debugOverlayVisible()) {
+  @let runtimeContext = debugRuntimeContext();
+  @if (runtimeContext) {
+    <div class="debug-runtime-overlay">
+      <div class="debug-runtime-title">Debug Runtime</div>
+      <div class="debug-runtime-row"><span>Game:</span> <span>{{ runtimeContext.gameName }}</span></div>
+      <div class="debug-runtime-row"><span>Game ID:</span> <span>{{ runtimeContext.gameId }}</span></div>
+      <div class="debug-runtime-row"><span>Match ID:</span> <span>{{ runtimeContext.matchScopeId ?? 'n/a' }}</span></div>
+    </div>
+  }
+}
+
+@let disconnectedPlayers = disconnectedHumans();
+@if (disconnectedPlayers.length) {
+  <app-ui-dialog
+    [zIndex]="4200"
+    [closeOnBackdrop]="false"
+    [backdropVariant]="'soft'"
+  >
+    <div class="disconnect-card">
+      <div class="disconnect-title">Player disconnected</div>
+      <div class="disconnect-names">
+        @for (player of disconnectedPlayers; track player.id) {
+          <div class="disconnect-name">{{ player.name }}</div>
+        }
+      </div>
+      <button class="disconnect-button" (click)="onRemoveDisconnectedPlayer()">
+        Remove player and keep playing
+      </button>
+    </div>
+  </app-ui-dialog>
+}
+
+@let currentVisibleMat = visibleMat();
+@if (currentVisibleMat) {
+  <app-ui-dialog
+    [zIndex]="4100"
+    [hasBackdrop]="false"
+    [backdropVariant]="'soft'"
+    (close)="closeVisibleMat()"
+  >
     <div class="mat-modal-content">
-      <div class="mat-modal-title">{{ visibleMat.mat }}</div>
+      <div class="mat-modal-title">{{ visibleMatTitle() }}</div>
       <div class="player-flex-container">
-        @for (playerMatContent of visibleMatContent; track playerMatContent.id) {
+        @for (playerMatContent of visibleMatContent(); track playerMatContent.id) {
           <div class="player-item">
             @if(playerMatContent.playerName) {
-              <div class="player-name">{{ playerMatContent.playerName }}</div>
+              <div>{{ playerMatContent.playerName }}</div>
             }
             <div class="card-flex-container">
               @for (cardId of playerMatContent.cardIds; track cardId) {
-                <div class="card-item">
-                  <app-card
-                    [size]="'half'"
-                    [cardId]="cardId"
-                  ></app-card>
+              <div class="card-item">
+                  @if (currentVisibleMat.mat === 'set-aside' && !isCardInstance(cardId)) {
+                    <app-card-like
+                      [size]="'half'"
+                      [cardLikeId]="cardId"
+                    ></app-card-like>
+                  }
+                  @else {
+                    <app-card
+                      [size]="'half'"
+                      [cardId]="cardId"
+                      [forceFacing]="currentVisibleMat.mat === 'set-aside' ? undefined : 'front'"
+                    ></app-card>
+                  }
                 </div>
               }
             </div>
           </div>
         }
       </div>
-      <div
-        class="close-button"
-        (mousedown)="visibleMat = null; stickyMat = false"
-      >X
-      </div>
+      <div (mousedown)="closeVisibleMat()">X</div>
     </div>
-  </div>
+  </app-ui-dialog>
 }

@@ -1,0 +1,15 @@
+<div class="prompt-select-pile-content">
+  <div class="pile-hint">Select pile(s) from the list or by clicking highlighted piles on the board.</div>
+
+  <div class="pile-grid">
+    @for (pileName of pileNames(); track pileName) {
+      <button
+        type="button"
+        class="pile-entry"
+        [class.selected]="isSelected(pileName)"
+        (click)="togglePile(pileName)">
+        {{ pileName }}
+      </button>
+    }
+  </div>
+</div>

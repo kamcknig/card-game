@@ -1,4 +1,4 @@
-import { CardKey, LogEntry, Match } from 'shared/shared-types';
+import { CardKey, LogEntry, Match } from 'shared/types';
 import { playerIdStore, playerStore, selfPlayerIdStore } from '../../state/player-state';
 import {
   matchConfigurationStore,
@@ -10,17 +10,29 @@ import { gameOwnerIdStore, sceneStore } from '../../state/game-state';
 import { expansionListStore } from '../../state/expansion-list-state';
 import { cardStore } from '../../state/card-state';
 import { tokenDefinitionStore } from '../../state/token-definition-state';
-import { Assets } from 'pixi.js';
 import { applyPatch, Operation } from 'fast-json-patch';
 import { ClientListenEventNames, ClientListenEvents } from '../../../types';
 import { logManager } from '../log-manager';
 import { cardSourceStore, cardSourceTagMapStore } from '../../state/card-source-store';
 import { basicSupplies, kingdomSupplies } from '../../state/match-logic';
+import {
+  activeLobbyGameIdStore,
+  lobbyGamesStore,
+  lobbyJoinRejectedStore,
+  lobbyStatusMessageStore,
+} from '../../state/lobby-state';
+import { debugRuntimeContextStore } from '../../state/debug-runtime-state';
+import { selectableSearchCatalogStore } from '../../state/selectable-search-state';
+import { waitingOnPlayerIdStore } from '../../state/match-ui-overlay-state';
 
 export type SocketEventMap = Partial<{ [p in ClientListenEventNames]: ClientListenEvents[p] }>;
 
 export const socketToGameEventMap = (): SocketEventMap => {
   const map = {} as SocketEventMap;
+  // Clears transient HUD overlays when leaving match-scoped flows.
+  const clearMatchUiOverlays = () => {
+    waitingOnPlayerIdStore.set(null);
+  };
 
   map['addLogEntry'] = (logEntries: LogEntry[]) => {
     for (const logEntry of logEntries) {
@@ -30,10 +42,26 @@ export const socketToGameEventMap = (): SocketEventMap => {
 
   map['matchConfigurationUpdated'] = config => {
     matchConfigurationStore.set(config);
+    clearMatchUiOverlays();
+    // Enter configuration scene when one lobby game is actively joined.
+    sceneStore.set('configuration');
+  };
+
+  map['joinedLobbyGame'] = gameId => {
+    activeLobbyGameIdStore.set(gameId);
+    lobbyStatusMessageStore.set(undefined);
+  };
+
+  map['debugRuntimeContext'] = payload => {
+    debugRuntimeContextStore.set(payload);
   };
 
   map['expansionList'] = val => {
     expansionListStore.set(val);
+  };
+
+  map['setSelectableSearchCatalog'] = catalog => {
+    selectableSearchCatalogStore.set(catalog);
   };
 
   map['gameOver'] = async summary => {
@@ -43,6 +71,7 @@ export const socketToGameEventMap = (): SocketEventMap => {
       void s.play().catch(() => null);
     }
 
+    clearMatchUiOverlays();
     matchSummaryStore.set(summary);
     sceneStore.set('gameSummary');
   };
@@ -51,15 +80,67 @@ export const socketToGameEventMap = (): SocketEventMap => {
     gameOwnerIdStore.set(playerId);
   };
 
+  map['lobbySnapshot'] = games => {
+    lobbyGamesStore.set(games);
+    // Keep lobby as default scene while no active game is tracked.
+    if (!activeLobbyGameIdStore.get()) {
+      clearMatchUiOverlays();
+      debugRuntimeContextStore.set(undefined);
+      sceneStore.set('lobby');
+    }
+  };
+
+  map['lobbyGameUpdated'] = game => {
+    const currentGames = lobbyGamesStore.get();
+    const updatedGames = currentGames.filter((currentGame) => currentGame.gameId !== game.gameId);
+    updatedGames.push(game);
+    updatedGames.sort((a, b) => a.gameName.localeCompare(b.gameName));
+    lobbyGamesStore.set(updatedGames);
+  };
+
+  map['lobbyGameRemoved'] = gameId => {
+    const currentGames = lobbyGamesStore.get();
+    lobbyGamesStore.set(currentGames.filter((game) => game.gameId !== gameId));
+  };
+
+  map['joinLobbyRejected'] = payload => {
+    const activeGameId = activeLobbyGameIdStore.get();
+    if (payload.gameId && activeGameId === payload.gameId && payload.reason !== 'alreadyInGame') {
+      activeLobbyGameIdStore.set(undefined);
+    }
+    clearMatchUiOverlays();
+    debugRuntimeContextStore.set(undefined);
+    lobbyJoinRejectedStore.set(payload);
+    lobbyStatusMessageStore.set(payload.message);
+    sceneStore.set('lobby');
+  };
+
+  map['kickedFromGame'] = payload => {
+    activeLobbyGameIdStore.set(undefined);
+    clearMatchUiOverlays();
+    debugRuntimeContextStore.set(undefined);
+    lobbyStatusMessageStore.set(payload.message);
+    sceneStore.set('lobby');
+  };
+
+  map['bannedFromGame'] = payload => {
+    activeLobbyGameIdStore.set(undefined);
+    clearMatchUiOverlays();
+    debugRuntimeContextStore.set(undefined);
+    lobbyStatusMessageStore.set(payload.message);
+    sceneStore.set('lobby');
+  };
+
   map['setCardLibrary'] = cards => {
     cardStore.set(cards);
   };
-  
+
   map['setTokenDefinitions'] = definitions => {
     tokenDefinitionStore.set(definitions);
   };
 
   map['matchReady'] = async () => {
+    clearMatchUiOverlays();
     const cardsById = cardStore.get();
     if (!cardsById || Object.keys(cardsById).length === 0) {
       console.warn('missing card library on matchReady, skipping setup');
@@ -102,28 +183,6 @@ export const socketToGameEventMap = (): SocketEventMap => {
     }, [] as CardKey[]);
     kingdomSupplies.set(kingdoms ?? []);
 
-    const baseBundle: Record<string, string> = {
-      'card-back-full': `/assets/card-images/base-v2/full-size/card-back.jpg`,
-      'card-back-detail': `/assets/card-images/base-v2/detail/card-back.jpg`,
-      'card-back-half': `/assets/card-images/base-v2/half-size/card-back.jpg`,
-      'treasure-bg': '/assets/ui-icons/treasure-bg.png',
-      'potion-icon': '/assets/ui-icons/potion.png',
-    };
-
-    const finalBundle = Object.values(cardsById).reduce((prev, c) => {
-      prev[`${c.cardKey}-detail`] ??= c.detailImagePath;
-      prev[`${c.cardKey}-full`] ??= c.fullImagePath;
-      prev[`${c.cardKey}-half`] ??= c.halfImagePath;
-      return prev;
-    }, baseBundle);
-
-    for (const event of matchStore.get()?.events ?? []) {
-      finalBundle[`${event.cardKey}-full`] ??= event.fullImagePath;
-      finalBundle[`${event.cardKey}-detail`] ??= event.detailImagePath;
-    }
-
-    Assets.addBundle('cardLibrary', finalBundle);
-
     sceneStore.set('match');
   };
 
@@ -133,8 +192,14 @@ export const socketToGameEventMap = (): SocketEventMap => {
 
   map['patchCardLibrary'] = patch => {
     const current = structuredClone(cardStore.get()) ?? {};
-    applyPatch(current, patch);
-    cardStore.set(current);
+    try {
+      applyPatch(current, patch);
+      cardStore.set(current);
+    } catch (error) {
+      // Guard against out-of-order/stale patches so one bad patch does not break client event processing.
+      console.warn('[socket event map] failed to apply card library patch');
+      console.debug(error);
+    }
   };
 
   map['patchUpdate'] = (patchMatch, patchCardLibrary) => {
@@ -144,10 +209,16 @@ export const socketToGameEventMap = (): SocketEventMap => {
 
   map['patchMatch'] = (patch: Operation[]) => {
     const current = structuredClone(matchStore.get()) ?? {} as Match;
-    applyPatch(current, patch);
-    cardSourceStore.set(current.cardSources);
-    cardSourceTagMapStore.set(current.cardSourceTagMap);
-    matchStore.set(current);
+    try {
+      applyPatch(current, patch);
+      cardSourceStore.set(current.cardSources);
+      cardSourceTagMapStore.set(current.cardSourceTagMap);
+      matchStore.set(current);
+    } catch (error) {
+      // Guard against out-of-order/stale patches so one bad patch does not break client event processing.
+      console.warn('[socket event map] failed to apply match patch');
+      console.debug(error);
+    }
   };
 
   map['playerConnected'] = (player) => {
@@ -190,6 +261,20 @@ export const socketToGameEventMap = (): SocketEventMap => {
 
   map['setPlayer'] = player => {
     selfPlayerIdStore.set(player.id);
-  }
+  };
+
+  // Drives Angular "waiting" HUD overlay from server wait-state events.
+  map['waitingForPlayer'] = (playerId) => {
+    waitingOnPlayerIdStore.set(playerId);
+  };
+
+  // Clears "waiting" HUD overlay when matching wait-state completes.
+  map['doneWaitingForPlayer'] = (playerId) => {
+    const currentWaitingPlayerId = waitingOnPlayerIdStore.get();
+    if (playerId === undefined || currentWaitingPlayerId === playerId) {
+      waitingOnPlayerIdStore.set(null);
+    }
+  };
+
   return map;
 }

@@ -1,0 +1,7 @@
+<ng-template #dialogContent>
+  <div class="ui-dialog-shell" (mousedown)="$event.stopPropagation()">
+    <div class="ui-dialog-panel" [ngClass]="panelClass()">
+      <ng-content></ng-content>
+    </div>
+  </div>
+</ng-template>

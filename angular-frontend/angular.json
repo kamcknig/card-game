@@ -69,7 +69,11 @@
           "builder": "@angular-devkit/build-angular:dev-server",
           "options": {
             "host": "0.0.0.0",
-            "port": 5143
+            "port": 51455,
+            "allowedHosts": [
+              "kyles-pc.beetal-chinstrap.ts.net"
+            ],
+            "proxyConfig": "src/proxy.conf.json"
           },
           "configurations": {
             "production": {

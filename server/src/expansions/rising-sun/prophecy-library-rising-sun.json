@@ -1,0 +1,47 @@
+{
+  "approaching-army": {
+    "cardName": "Approaching Army"
+  },
+  "biding-time": {
+    "cardName": "Biding Time"
+  },
+  "bureaucracy": {
+    "cardName": "Bureaucracy"
+  },
+  "divine-wind": {
+    "cardName": "Divine Wind"
+  },
+  "enlightenment": {
+    "cardName": "Enlightenment"
+  },
+  "flourishing-trade": {
+    "cardName": "Flourishing Trade"
+  },
+  "good-harvest": {
+    "cardName": "Good Harvest"
+  },
+  "great-leader": {
+    "cardName": "Great Leader"
+  },
+  "growth": {
+    "cardName": "Growth"
+  },
+  "harsh-winter": {
+    "cardName": "Harsh Winter"
+  },
+  "kind-emperor": {
+    "cardName": "Kind Emperor"
+  },
+  "panic": {
+    "cardName": "Panic"
+  },
+  "progress": {
+    "cardName": "Progress"
+  },
+  "rapid-expansion": {
+    "cardName": "Rapid Expansion"
+  },
+  "sickness": {
+    "cardName": "Sickness"
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "aqueduct": {
+    "randomizer": "aqueduct",
+    "abilityText": "When you gain a Treasure, move 1VP from its pile to this. When you gain a Victory card, take the VP from this.\nSetup: Put 8VP on the Silver and Gold piles."
+  },
+  "arena": {
+    "randomizer": "arena",
+    "abilityText": "At the start of your Buy phase, you may discard an Action card. If you do, take 2VP from here.\nSetup: Put 6VP here per player."
+  },
+  "basilica": {
+    "randomizer": "basilica",
+    "abilityText": "When you gain a card in your Buy phase, if you have $2 or more, take 2VP from here.\nSetup: Put 6VP here per player."
+  },
+  "bandit-fort": {
+    "randomizer": "bandit-fort",
+    "abilityText": "When scoring, -2VP for each Silver and each Gold you have."
+  },
+  "battlefield": {
+    "randomizer": "battlefield",
+    "abilityText": "When you gain a Victory card, take 2VP from here.\nSetup: Put 6VP here per player."
+  },
+  "baths": {
+    "randomizer": "baths",
+    "abilityText": "When you end your turn without having gained a card, take 2VP from here.\nSetup: Put 6VP here per player."
+  },
+  "colonnade": {
+    "randomizer": "colonnade",
+    "abilityText": "When you gain an Action card in your Buy phase, if you have a copy of it in play, take 2VP from here.\nSetup: Put 6VP here per player."
+  },
+  "defiled-shrine": {
+    "randomizer": "defiled-shrine",
+    "abilityText": "When you gain an Action, move 1VP from its pile to this. When you gain a Curse in your Buy phase, take the VP from this.\nSetup: Put 2VP on each non-Gathering Action Supply pile."
+  },
+  "fountain": {
+    "randomizer": "fountain",
+    "abilityText": "When scoring, 15VP if you have at least 10 Coppers."
+  },
+  "keep": {
+    "randomizer": "keep",
+    "abilityText": "When scoring, 5VP per differently named Treasure you have, that you have more copies of than each other player, or tied for most."
+  },
+  "labyrinth": {
+    "randomizer": "labyrinth",
+    "abilityText": "When you gain a 2nd card in one of your turns, take 2VP from here.\nSetup: Put 6VP here per player."
+  },
+  "mountain-pass": {
+    "randomizer": "mountain-pass",
+    "abilityText": "When you are the first player to gain a Province, each player bids once, up to 40D, ending with you. High bidder gets +8VP and takes the D they bid."
+  },
+  "museum": {
+    "randomizer": "museum",
+    "abilityText": "When scoring, 2VP per differently named card you have."
+  },
+  "obelisk": {
+    "randomizer": "obelisk",
+    "abilityText": "When scoring, 2VP per card you have from the chosen pile.\nSetup: Choose a random Action Supply pile."
+  },
+  "orchard": {
+    "randomizer": "orchard",
+    "abilityText": "When scoring, 4VP per differently named Action card you have 3 or more copies of."
+  },
+  "palace": {
+    "randomizer": "palace",
+    "abilityText": "When scoring, 3VP per set you have of Copper - Silver - Gold."
+  },
+  "tomb": {
+    "randomizer": "tomb",
+    "abilityText": "When you trash a card, +1VP."
+  },
+  "tower": {
+    "randomizer": "tower",
+    "abilityText": "When scoring, 1VP per non-Victory card you have from an empty Supply pile."
+  },
+  "triumphal-arch": {
+    "randomizer": "triumphal-arch",
+    "abilityText": "When scoring, 3VP per copy you have of the 2nd most common Action card among your cards (if it's a tie, count either)."
+  },
+  "wall": {
+    "randomizer": "wall",
+    "abilityText": "When scoring, -1VP per card you have after the first 15."
+  },
+  "wolf-den": {
+    "randomizer": "wolf-den",
+    "abilityText": "When scoring, -3VP per card you have exactly one copy of."
+  }
+}

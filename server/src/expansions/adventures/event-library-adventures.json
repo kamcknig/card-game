@@ -20,7 +20,6 @@
     }
   },
   "plan": {
-    "cardName": "Plan",
     "cost": {
       "treasure": 3
     }
@@ -31,13 +30,11 @@
     }
   },
   "inheritance": {
-    "cardName": "Inheritance",
     "cost": {
       "treasure": 7
     }
   },
   "pilgrimage": {
-    "cardName": "Pilgrimage",
     "cost": {
       "treasure": 4
     }
@@ -48,8 +45,13 @@
       "treasure": 6
     }
   },
+  "mission": {
+    "cost": {
+      "treasure": 4
+    },
+    "abilityText": "Take an extra turn after this one, in which you can't buy cards."
+  },
   "pathfinding": {
-    "cardName": "Pathfinding",
     "cost": {
       "treasure": 8
     }
@@ -76,7 +78,6 @@
     }
   },
   "seaway": {
-    "cardName": "Seaway",
     "cost": {
       "treasure": 5
     }
@@ -87,7 +88,6 @@
     }
   },
   "training": {
-    "cardName": "Training",
     "cost": {
       "treasure": 6
     }

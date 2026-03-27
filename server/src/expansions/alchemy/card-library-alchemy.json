@@ -45,9 +45,7 @@
       "treasure": 4
     },
     "isBasic": true,
-    "type": [
-      "TREASURE"
-    ]
+    "type": ["TREASURE"]
   },
   "philosophers-stone": {
     "cardName": "Philosopher's Stone",
@@ -58,7 +56,6 @@
     "type": ["TREASURE"]
   },
   "scrying-pool": {
-    "cardName": "Scrying Pool",
     "cost": {
       "treasure": 2,
       "potion": 1

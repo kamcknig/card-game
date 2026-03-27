@@ -1,0 +1,66 @@
+:root {
+  /* Text roles */
+  --theme-text-primary: #2a241a;
+  --theme-text-secondary: #544630;
+  --theme-text-on-dark: #ffffff;
+  --theme-text-banner: #6b5033;
+  --theme-text-banner-subtitle: #7a5d3d;
+  --theme-text-banner-shadow-main: #1a3650;
+  --theme-text-banner-shadow-glow: rgba(12, 34, 52, 0.8);
+  /* Source accent roles used by logs and source-labeled set-aside tabs. */
+  --theme-color-source-default: #ffffff;
+  --theme-color-source-treasure: #fdda56;
+  --theme-color-source-victory: #8efb49;
+  --theme-color-source-curse: #d45ffb;
+  --theme-color-source-duration: #ff8d34;
+  --theme-color-source-event: #ffe0a8;
+  --theme-color-source-landmark: #ffd09d;
+  --theme-color-source-project: #b6f1ad;
+  --theme-color-way: #9fc6ff;
+  --theme-color-source-boon: #a4f0ff;
+  --theme-color-source-hex: #f2a9ff;
+  --theme-color-source-state: #c4d4ff;
+  --theme-color-source-artifact: #ffdca8;
+
+  /* Surface roles */
+  --theme-surface-app-start: #efe7da;
+  --theme-surface-app-end: #e4d7c1;
+  --theme-surface-header: #c1a277;
+  --theme-surface-nav: #e6dac6;
+  --theme-surface-panel: #e8d8c1;
+  --theme-surface-card: #f2e9da;
+  --theme-surface-danger-soft: #f9dfd8;
+  --theme-surface-count-badge: #aaaaaa;
+
+  /* Border roles */
+  --theme-border-subtle: #bca98d;
+  --theme-border-section-light: #c8b798;
+  --theme-border-strong: #7f6746;
+  --theme-border-action: #826a48;
+  --theme-border-danger: #b84d38;
+
+  /* Interactive/action roles */
+  --theme-action-secondary-bg: #f4ecde;
+  --theme-action-nav-selected-bg: #dbc39a;
+  --theme-action-primary-bg: #dcc093;
+  --theme-action-primary-muted-bg: #e1c89e;
+  --theme-action-danger-soft-bg: #f0cbcb;
+  --theme-action-disabled-bg: #d8d0c2;
+  --theme-action-disabled-opacity: 0.65;
+  --theme-border-disabled: #a99981;
+  --theme-text-disabled: #6b6153;
+
+  /* Overlay roles */
+  --theme-overlay-color: #000000;
+  --theme-overlay-alpha-soft: 0.5;
+  --theme-overlay-alpha-medium: 0.6;
+  --theme-overlay-alpha-strong: 0.8;
+  --theme-panel-bg: rgba(0, 0, 0, var(--theme-overlay-alpha-medium));
+
+  /* Card dimensions — single source of truth for card sizing across the UI. */
+  --card-width: 150px;
+  --card-height: 240px;
+  --card-small-height: 150px;
+  --card-landscape-width: 280px;
+  --card-landscape-height: 124px;
+}
