@@ -67,7 +67,7 @@ export class ExpansionLoaderService {
       expansionData.title = expansionConfiguration.title ? expansionConfiguration.title : currentTitle;
       expansionData.mutuallyExclusive = expansionConfiguration.mutuallyExclusive ?? [];
     } catch (error) {
-      if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
+      if ((error as { code?: string }).code !== 'ERR_MODULE_NOT_FOUND') {
         this.loggerService.warn(`[expansion loader] failed to load configuration for expansion ${expansionName}`);
         this.loggerService.error(error);
       }
@@ -109,6 +109,7 @@ export class ExpansionLoaderService {
                 ...cardEntry,
                 kingdomSelectable: cardEntry.kingdomSelectable ?? false,
               });
+              // deno-lint-ignore no-explicit-any -- createCardLike return type is wider than the catalog slot type
               expansionData.boons[cardKey] = boonData as any;
               continue;
             }
@@ -118,6 +119,7 @@ export class ExpansionLoaderService {
                 ...cardEntry,
                 kingdomSelectable: cardEntry.kingdomSelectable ?? false,
               });
+              // deno-lint-ignore no-explicit-any -- createCardLike return type is wider than the catalog slot type
               expansionData.hexes[cardKey] = hexData as any;
               continue;
             }
@@ -127,6 +129,7 @@ export class ExpansionLoaderService {
                 ...cardEntry,
                 kingdomSelectable: cardEntry.kingdomSelectable ?? false,
               });
+              // deno-lint-ignore no-explicit-any -- createCardLike return type is wider than the catalog slot type
               expansionData.states[cardKey] = stateData as any;
               continue;
             }
@@ -138,6 +141,7 @@ export class ExpansionLoaderService {
                 ...cardEntry,
                 kingdomSelectable: cardEntry.kingdomSelectable ?? false,
               });
+              // deno-lint-ignore no-explicit-any -- createCardLike return type is wider than the catalog slot type
               expansionData.artifacts[cardKey] = artifactData as any;
               continue;
             }
@@ -150,7 +154,9 @@ export class ExpansionLoaderService {
             };
             const newCardData = createCardData(cardKey, expansionName, templateData);
             const isBasic = newCardData.isBasic;
+            // deno-lint-ignore no-explicit-any -- createCardData return type is wider than the supply slot type
             cardData[isBasic ? 'basicSupply' : 'kingdomSupply'][cardKey] = newCardData as any;
+            // deno-lint-ignore no-explicit-any
             this.expansionCatalogService.setRawCard(cardKey, newCardData as any);
           }
           continue;
@@ -163,6 +169,7 @@ export class ExpansionLoaderService {
             ...(entry as Partial<CardNoId>),
             kingdomSelectable: (entry as Partial<CardNoId>).kingdomSelectable ?? false,
           });
+          // deno-lint-ignore no-explicit-any -- createCardLike return type is wider than the catalog slot type
           expansionData.boons[key] = boonData as any;
           continue;
         }
@@ -172,6 +179,7 @@ export class ExpansionLoaderService {
             ...(entry as Partial<CardNoId>),
             kingdomSelectable: (entry as Partial<CardNoId>).kingdomSelectable ?? false,
           });
+          // deno-lint-ignore no-explicit-any -- createCardLike return type is wider than the catalog slot type
           expansionData.hexes[key] = hexData as any;
           continue;
         }
@@ -181,6 +189,7 @@ export class ExpansionLoaderService {
             ...(entry as Partial<CardNoId>),
             kingdomSelectable: (entry as Partial<CardNoId>).kingdomSelectable ?? false,
           });
+          // deno-lint-ignore no-explicit-any -- createCardLike return type is wider than the catalog slot type
           expansionData.states[key] = stateData as any;
           continue;
         }
@@ -190,13 +199,16 @@ export class ExpansionLoaderService {
             ...(entry as Partial<CardNoId>),
             kingdomSelectable: (entry as Partial<CardNoId>).kingdomSelectable ?? false,
           });
+          // deno-lint-ignore no-explicit-any -- createCardLike return type is wider than the catalog slot type
           expansionData.artifacts[key] = artifactData as any;
           continue;
         }
 
         const newCardData = createCardData(key as CardKey, expansionName, entry as Partial<CardNoId>);
         const isBasic = newCardData.isBasic;
+        // deno-lint-ignore no-explicit-any -- createCardData return type is wider than the supply slot type
         cardData[isBasic ? 'basicSupply' : 'kingdomSupply'][key] = newCardData as any;
+        // deno-lint-ignore no-explicit-any
         this.expansionCatalogService.setRawCard(key as CardKey, newCardData as any);
       }
 

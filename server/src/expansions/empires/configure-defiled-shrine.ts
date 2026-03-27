@@ -61,8 +61,7 @@ export const configureDefiledShrine = (registrar: GameEventRegistrar, config: Co
         .sort((a, b) => a.id.localeCompare(b.id));
 
       const tokenToMove = tokensOnPile[0];
-      if (!tokenToMove) {
-      } else {
+      if (tokenToMove) {
         await args.actionService.run('moveToken', {
           tokenInstanceId: tokenToMove.id,
           location: { type: 'supplyPile', cardKey: 'defiled-shrine' },

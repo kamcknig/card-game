@@ -30,7 +30,7 @@ export class ProphecyLoaderService {
         };
       }
     } catch (error) {
-      if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
+      if ((error as { code?: string }).code !== 'ERR_MODULE_NOT_FOUND') {
         this.loggerService.warn(
           `[load-prophecies] failed to load expansion prophecy library for expansion ${expansionName}`,
         );

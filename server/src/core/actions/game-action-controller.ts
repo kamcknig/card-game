@@ -907,6 +907,7 @@ export class GameActionController implements GameActionDefinitionMap {
     playerId: PlayerId;
     reactionContext?: CardEffectFunctionContext['reactionContext'];
   }): CardEffectFunctionContext {
+    // deno-lint-ignore prefer-const -- context is referenced inside a closure defined during its own initialization
     let context: CardEffectFunctionContext;
     context = this.cardEffectContextFactory.create({
       cardId: args.cardId,
@@ -1291,7 +1292,7 @@ export class GameActionController implements GameActionDefinitionMap {
     }
   }
 
-  async removeSunToken(_args: {} = {}, context?: GameActionContext): Promise<void> {
+  async removeSunToken(_args: Record<string, never> = {}, context?: GameActionContext): Promise<void> {
     const prophecyIdSet = new Set((this.match.prophecies ?? []).map(prophecy => prophecy.id));
     const sunTokens = Object.values(this.match.tokens ?? {})
       .filter(
@@ -4021,7 +4022,7 @@ export class GameActionController implements GameActionDefinitionMap {
     const playerId = args.playerId;
 
     const resolvedWayId = args.wayId ?? null;
-    let selectedWay = resolvedWayId === null ? undefined : findWayInMatch(this.match, resolvedWayId);
+    const selectedWay = resolvedWayId === null ? undefined : findWayInMatch(this.match, resolvedWayId);
     if (resolvedWayId !== null && !selectedWay) {
       this.loggerService.warn(
         `[activateCardEffects action] requested way ${resolvedWayId} was not found; using normal path`,
@@ -4112,7 +4113,7 @@ export class GameActionController implements GameActionDefinitionMap {
       card,
       requestedWayId: args.wayId,
     });
-    let selectedWay = resolvedWayId === null ? undefined : findWayInMatch(this.match, resolvedWayId);
+    const selectedWay = resolvedWayId === null ? undefined : findWayInMatch(this.match, resolvedWayId);
     if (resolvedWayId !== null && !selectedWay) {
       this.loggerService.warn(`[playCard action] requested way ${resolvedWayId} was not found; using normal path`);
     }

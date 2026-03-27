@@ -32,7 +32,7 @@ export class EventLoaderService {
         };
       }
     } catch (error) {
-      if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
+      if ((error as { code?: string }).code !== 'ERR_MODULE_NOT_FOUND') {
         this.loggerService.warn(`[load-events] failed to load expansion event library for expansion ${expansionName}`);
         this.loggerService.error(error);
       }
@@ -56,7 +56,7 @@ export class EventLoaderService {
         }
       }
     } catch (error) {
-      if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
+      if ((error as { code?: string }).code !== 'ERR_MODULE_NOT_FOUND') {
         this.loggerService.warn(`[load-events] failed to load expansion event effects for expansion ${expansionName}`);
         this.loggerService.error(error);
       }

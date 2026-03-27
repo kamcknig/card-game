@@ -29,7 +29,7 @@ export class AllyLoaderService {
         };
       }
     } catch (error) {
-      if ((error as any).code !== 'ERR_MODULE_NOT_FOUND') {
+      if ((error as { code?: string }).code !== 'ERR_MODULE_NOT_FOUND') {
         this.loggerService.warn(`[load-allies] failed to load expansion ally library for expansion ${expansionName}`);
         this.loggerService.error(error);
       }

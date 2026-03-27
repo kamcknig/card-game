@@ -44,7 +44,7 @@ const getTraitPileKeySet = (traits: Trait[]): Set<CardKey> => {
 const getOrderedCardIds = async (
   args: {
     promptService: {
-      requestActionResult: <T>(args: any) => Promise<{ action: number; result: T | undefined } | null>;
+      requestActionResult: <T>(args: unknown) => Promise<{ action: number; result: T | undefined } | null>;
     };
     playerId: PlayerId;
   },

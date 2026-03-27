@@ -90,8 +90,6 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
     if (fateCards.length < 1) {
       // Clear out boons when the match does not contain any Fate cards.
-      if ((args.config.boons ?? []).length > 0) {
-      }
       // Ensure boons are cleared when Fate cards are absent.
       args.config.boons = [];
     } else {
@@ -132,8 +130,6 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
     if (doomCards.length < 1) {
       // Clear out hexes when the match does not contain any Doom cards.
-      if ((args.config.hexes ?? []).length > 0) {
-      }
       // Ensure hexes are cleared when Doom cards are absent.
       args.config.hexes = [];
     } else {
@@ -175,8 +171,6 @@ const configurator: ExpansionConfiguratorFactory = () => {
     });
 
     if (doomCards.length < 1) {
-      if (existingStates.length !== nonDoomStates.length) {
-      }
       args.config.states = nonDoomStates;
     } else {
       args.config.states = uniqueByProp([...nonDoomStates, ...doomStates], 'cardKey');
@@ -187,8 +181,6 @@ const configurator: ExpansionConfiguratorFactory = () => {
     const filteredStates = updatedStates.filter(state => state.cardKey !== 'lost-in-the-woods');
 
     if (!hasFool) {
-      if (updatedStates.length !== filteredStates.length) {
-      }
       args.config.states = filteredStates;
       return args.config;
     }

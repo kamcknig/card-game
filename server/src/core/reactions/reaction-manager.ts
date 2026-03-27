@@ -217,6 +217,7 @@ export class ReactionManager {
       `[REACTION MANAGER] registering trigger template ID ${template.id}, for player ${template.playerId}`,
     );
 
+    // deno-lint-ignore no-explicit-any -- Reaction<T> is not assignable to Reaction<TriggerEventType> due to invariant generics
     this._reactions.push(new Reaction(template) as any);
     return template.id;
   }
@@ -250,7 +251,7 @@ export class ReactionManager {
       this.reactionContextFactory.createCardLifecycleContext({
         reactionManager: this,
       }),
-      args as any,
+      args,
     );
   }
 
@@ -412,7 +413,7 @@ export class ReactionManager {
   private async runReaction<T extends TriggerEventType>(
     reaction: Reaction,
     context: TriggeredEffectContext<T>,
-    reactionContext?: any,
+    reactionContext?: ReactionContext,
   ) {
     await this.logManager.withIndent(async () => {
       // Ensure reaction-caused logs are scoped and unwind cleanly.

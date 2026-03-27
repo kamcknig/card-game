@@ -40,14 +40,14 @@ import { LoggerService } from './logger-service.ts';
  * @param   keep  'first' | 'last'  – keeps the first or last occurrence (default 'first')
  * @returns Deduplicated array
  */
-export function uniqueByProp<T extends Record<string, any>, K extends keyof T = keyof T>(
+export function uniqueByProp<T extends Record<string, unknown>, K extends keyof T = keyof T>(
   list: T[],
   prop: K,
   keep: 'first' | 'last' = 'first',
 ): T[] {
   if (keep === 'first') {
     // Keep the first occurrence
-    const seen = new Set<any>();
+    const seen = new Set<unknown>();
     return list.filter(item => {
       const key = item[prop];
       if (seen.has(key)) return false;
@@ -57,7 +57,7 @@ export function uniqueByProp<T extends Record<string, any>, K extends keyof T = 
   }
 
   // Keep the **last** occurrence
-  const idxByKey = new Map<any, number>(); // key → index of last sighting
+  const idxByKey = new Map<unknown, number>(); // key → index of last sighting
   list.forEach((item, i) => idxByKey.set(item[prop], i));
   return list.filter((_, i) => idxByKey.get(list[i][prop]) === i);
 }
@@ -225,7 +225,7 @@ export class MatchConfigurator {
   }
 
   private selectKingdomSupply() {
-    let selectedKingdoms: CardNoId[] = this._requestedKingdoms.slice();
+    const selectedKingdoms: CardNoId[] = this._requestedKingdoms.slice();
     const additionalKingdoms: { name: string; cards: CardNoId[] }[] = [];
 
     if (selectedKingdoms.length === MatchBaseConfiguration.numberOfKingdomPiles) {
@@ -650,7 +650,7 @@ export class MatchConfigurator {
         if (!module.registerGameEvents) continue;
         module.registerGameEvents(gameEventRegistrar, this._config);
       } catch (error) {
-        if ((error as any)?.code === 'ERR_MODULE_NOT_FOUND') {
+        if ((error as { code?: string })?.code === 'ERR_MODULE_NOT_FOUND') {
           continue;
         }
         this._loggerService.warn(`[match configurator] failed to register expansion actions for ${expansion}`);
@@ -667,7 +667,7 @@ export class MatchConfigurator {
         if (!module.registerEndGamePolicies) continue;
         module.registerEndGamePolicies(registrar);
       } catch (error) {
-        if ((error as any)?.code === 'ERR_MODULE_NOT_FOUND') {
+        if ((error as { code?: string })?.code === 'ERR_MODULE_NOT_FOUND') {
           continue;
         }
         this._loggerService.warn(
@@ -686,7 +686,7 @@ export class MatchConfigurator {
         if (!module.registerScoringFunctions) continue;
         module.registerScoringFunctions(registrar);
       } catch (error) {
-        if ((error as any)?.code === 'ERR_MODULE_NOT_FOUND') {
+        if ((error as { code?: string })?.code === 'ERR_MODULE_NOT_FOUND') {
           continue;
         }
         this._loggerService.warn(
