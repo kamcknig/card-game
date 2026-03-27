@@ -190,7 +190,7 @@ Provision the Azure resources that CI/CD will deploy to. These are one-time manu
 ```bash
 RESOURCE_GROUP="turkeysunite"
 LOCATION="eastus"
-ACR_NAME="cardgameacr"           # must be globally unique, lowercase, alphanumeric
+ACR_NAME="turkeysunite"          # must be globally unique, lowercase, alphanumeric
 CONTAINER_ENV="card-game-env"
 SERVER_APP="card-game-server"
 FRONTEND_APP="card-game-frontend"
@@ -300,7 +300,7 @@ In the GitHub repository settings under **Settings > Secrets and variables > Act
 | Secret Name | Value |
 |---|---|
 | `AZURE_CREDENTIALS` | JSON output from `az ad sp create-for-rbac --json-auth` |
-| `ACR_LOGIN_SERVER` | `cardgameacr.azurecr.io` |
+| `ACR_LOGIN_SERVER` | `turkeysunite.azurecr.io` |
 | `ACR_USERNAME` | ACR admin username |
 | `ACR_PASSWORD` | ACR admin password |
 | `AZURE_RESOURCE_GROUP` | `turkeysunite` |
@@ -331,7 +331,7 @@ Run lint, type-check, and tests on every push and pull request. Add missing fron
 
 ### Changes Required:
 
-#### 3.1 Add Frontend CI Workflow
+#### 3.1 Add Frontend CI Workflow [x]
 
 **File**: `.github/workflows/frontend-ci.yml` (new)
 
@@ -380,7 +380,7 @@ jobs:
         run: npx tsc -p tsconfig.app.json --noEmit
 ```
 
-#### 3.2 Add Server Lint/Type-Check CI Workflow
+#### 3.2 Add Server Lint/Type-Check CI Workflow [x]
 
 **File**: `.github/workflows/server-ci.yml` (new)
 
@@ -430,7 +430,7 @@ jobs:
         run: deno check --no-lock src/server.ts
 ```
 
-#### 3.3 Update Existing Server Unit Test Workflow
+#### 3.3 Update Existing Server Unit Test Workflow [x]
 
 **File**: `.github/workflows/server-unit-tests.yml`
 **Changes**: Update Deno version from `2.7.1` to `2.7.7` to match production Dockerfiles
@@ -549,8 +549,8 @@ jobs:
 #### Automated Verification:
 - [ ] Merge a change to `master` — `Build and Push Docker Images` workflow triggers
 - [ ] Both `build-server` and `build-frontend` jobs succeed
-- [ ] `az acr repository list --name cardgameacr` shows `card-game-server` and `card-game-frontend`
-- [ ] `az acr repository show-tags --name cardgameacr --repository card-game-server` shows `latest` and a SHA tag
+- [ ] `az acr repository list --name turkeysunite` shows `card-game-server` and `card-game-frontend`
+- [ ] `az acr repository show-tags --name turkeysunite --repository card-game-server` shows `latest` and a SHA tag
 
 ---
 
