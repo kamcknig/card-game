@@ -59,7 +59,7 @@ Build and run from the repository root:
 
 ```bash
 # build
-docker build -f docker/Dockerfile_server -t dominion-server .
+docker build -f docker/DockerFile_server -t dominion-server .
 
 # run (default PORT=3000 inside the container)
 docker run -d -p 3000:3000 dominion-server

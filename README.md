@@ -51,10 +51,10 @@ Docker images are built from the `docker/` directory. Both Dockerfiles expect to
 
 ```bash
 # game server
-docker build -f docker/Dockerfile_server -t dominion-server .
+docker build -f docker/DockerFile_server -t dominion-server .
 
 # web client
-docker build -f docker/Dockerfile_web_app -t dominion-web .
+docker build -f docker/DockerFile_web_app -t dominion-web .
 ```
 
 ### Running Containers
