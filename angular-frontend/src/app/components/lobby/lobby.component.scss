@@ -1,3 +1,14 @@
+.logout-button {
+  border: 1px solid var(--theme-border-action);
+  background: transparent;
+  color: var(--theme-text-primary);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
 .lobby-shell {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);

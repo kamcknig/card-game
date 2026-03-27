@@ -1,0 +1,40 @@
+<app-scene-content>
+  <div class="login-container">
+    <form class="login-form" (ngSubmit)="onSubmit()">
+      <label class="login-field">
+        <span class="login-label">Username</span>
+        <input
+          type="text"
+          class="login-input"
+          [value]="username()"
+          (input)="username.set($any($event.target).value)"
+          autocomplete="username"
+          autofocus
+        />
+      </label>
+
+      <label class="login-field">
+        <span class="login-label">Password</span>
+        <input
+          type="password"
+          class="login-input"
+          [value]="password()"
+          (input)="password.set($any($event.target).value)"
+          autocomplete="current-password"
+        />
+      </label>
+
+      @if (errorMessage(); as error) {
+        <p class="login-error">{{ error }}</p>
+      }
+
+      <button
+        type="submit"
+        class="login-button"
+        [disabled]="isSubmitting()"
+      >
+        Login
+      </button>
+    </form>
+  </div>
+</app-scene-content>

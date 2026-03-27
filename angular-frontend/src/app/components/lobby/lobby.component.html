@@ -1,4 +1,8 @@
 <app-scene-content>
+  <button sceneHeaderActions type="button" class="logout-button" (click)="logout()">
+    Logout
+  </button>
+
   <section class="lobby-shell">
     <aside class="lobby-nav">
       <button class="nav-button selected" type="button" [attr.aria-pressed]="selectedNav === 'games'">

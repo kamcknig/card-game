@@ -101,4 +101,18 @@ export class SocketService {
     // Bypass the incorrect type inference by SocketIO’s type declaration
     (this._socket as unknown as Socket).emit(eventName as string, ...args);
   }
+
+  /**
+   * Returns true if the socket is currently connected to the server.
+   */
+  public isConnected(): boolean {
+    return this._socket.connected;
+  }
+
+  /**
+   * Disconnects the socket from the server.
+   */
+  public disconnect(): void {
+    this._socket.disconnect();
+  }
 }
