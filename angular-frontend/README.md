@@ -47,7 +47,7 @@ Build and run from the repository root:
 
 ```bash
 # build
-docker build -f docker/Dockerfile_web_app -t dominion-web .
+docker build -f docker/DockerFile_web_app -t dominion-web .
 
 # run (nginx on port 80, point WS_HOST to the game server)
 docker run -d -p 8080:80 -e WS_HOST=http://localhost:3000 dominion-web
@@ -64,7 +64,7 @@ Then open `http://localhost:8080` in your browser.
 Example using the development configuration:
 
 ```bash
-docker build -f docker/Dockerfile_web_app --build-arg BUILD_CONFIG=development -t dominion-web:dev .
+docker build -f docker/DockerFile_web_app --build-arg BUILD_CONFIG=development -t dominion-web:dev .
 ```
 
 ### Runtime Environment Variables
