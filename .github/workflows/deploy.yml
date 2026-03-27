@@ -17,6 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     # Only deploy when the upstream build-and-push workflow succeeded.
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Force Node.js 24 for actions that don't yet have a Node 24 native release (azure/container-apps-deploy-action).
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Log in to Azure
