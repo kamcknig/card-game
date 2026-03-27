@@ -40,7 +40,7 @@ jobs:
         run: deno task test:unit:coverage
 
       - name: Upload coverage artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: server-coverage
           path: server/coverage
