@@ -251,7 +251,8 @@ export class ReactionManager {
       this.reactionContextFactory.createCardLifecycleContext({
         reactionManager: this,
       }),
-      args,
+      // deno-lint-ignore no-explicit-any -- fn is a union of callbacks; TypeScript requires intersection of all arg types at call site, any is the correct escape hatch
+      args as any,
     );
   }
 
