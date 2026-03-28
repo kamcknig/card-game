@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { atom } from 'nanostores';
+import { environment } from '../../../environments/environment';
 
 // Stores the authenticated username (undefined when not logged in).
 export const authUsernameStore = atom<string | undefined>(
@@ -34,7 +35,7 @@ export class AuthService {
     provider: string = 'password',
   ): Promise<{ ok: boolean; message?: string }> {
     try {
-      const response = await fetch('/auth/login', {
+      const response = await fetch(`${environment.wsHost}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...credentials, provider }),
@@ -67,7 +68,7 @@ export class AuthService {
     }
 
     try {
-      const response = await fetch('/auth/validate', {
+      const response = await fetch(`${environment.wsHost}/auth/validate`, {
         method: 'GET',
         headers: { 'Authorization': `Bearer ${token}` },
       });
@@ -104,7 +105,7 @@ export class AuthService {
     const token = authTokenStore.get();
     if (token) {
       try {
-        await fetch('/auth/logout', {
+        await fetch(`${environment.wsHost}/auth/logout`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${token}` },
         });

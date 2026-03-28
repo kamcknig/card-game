@@ -26,11 +26,20 @@ export class ServerAuthRouteHandlerService {
    * Routes /auth/* HTTP requests to the appropriate handler.
    *
    * Returns undefined when the path does not start with /auth, allowing
-   * the caller to fall through to the next handler.
+   * the caller to fall through to the next handler. Handles CORS preflight
+   * OPTIONS requests so browsers can call auth endpoints cross-origin
+   * (required when the Angular frontend is served from a different origin
+   * than the game server, e.g., separate Azure Container Apps).
    */
   public handleRequest(req: Request, url: URL): Response | Promise<Response> | undefined {
     if (!url.pathname.startsWith('/auth')) {
       return undefined;
+    }
+
+    // Respond to CORS preflight before routing to specific handlers.
+    if (req.method === 'OPTIONS') {
+      this.loggerService.debug(`[auth route] CORS preflight: ${url.pathname}`);
+      return new Response(null, { status: 204, headers: this.corsHeaders(req) });
     }
 
     const parts = url.pathname.split('/').filter(Boolean);
@@ -51,7 +60,7 @@ export class ServerAuthRouteHandlerService {
     }
 
     this.loggerService.debug(`[auth route] unmatched auth path: ${req.method} ${url.pathname}`);
-    return new Response('auth resource not found', { status: 404 });
+    return new Response('auth resource not found', { status: 404, headers: this.corsHeaders(req) });
   }
 
   /**
@@ -67,12 +76,12 @@ export class ServerAuthRouteHandlerService {
       body = await req.json();
     } catch {
       this.loggerService.debug('[auth route] login request body is not valid JSON');
-      return new Response('invalid json', { status: 400 });
+      return new Response('invalid json', { status: 400, headers: this.corsHeaders(req) });
     }
 
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
       this.loggerService.debug('[auth route] login request body is not a plain object');
-      return this.jsonResponse({ ok: false, message: 'invalid request body' }, 400);
+      return this.jsonResponse({ ok: false, message: 'invalid request body' }, 400, req);
     }
 
     // Default to 'password' provider for backwards compatibility.
@@ -81,14 +90,14 @@ export class ServerAuthRouteHandlerService {
 
     const result = await this.authSessionService.login(providerName, body);
     if (!result.ok) {
-      return this.jsonResponse(result, 401);
+      return this.jsonResponse(result, 401, req);
     }
 
     return this.jsonResponse({
       ok: true,
       token: result.token,
       username: result.username,
-    });
+    }, 200, req);
   }
 
   /**
@@ -100,17 +109,17 @@ export class ServerAuthRouteHandlerService {
     const token = this.extractBearerToken(req);
     if (!token) {
       this.loggerService.debug('[auth route] validate request missing authorization header');
-      return this.jsonResponse({ ok: false, message: 'missing authorization header' }, 401);
+      return this.jsonResponse({ ok: false, message: 'missing authorization header' }, 401, req);
     }
 
     const username = this.authSessionService.validateToken(token);
     if (!username) {
       this.loggerService.debug('[auth route] validate request has invalid or expired token');
-      return this.jsonResponse({ ok: false, message: 'invalid or expired token' }, 401);
+      return this.jsonResponse({ ok: false, message: 'invalid or expired token' }, 401, req);
     }
 
     this.loggerService.debug(`[auth route] token validated for '${username}'`);
-    return this.jsonResponse({ ok: true, username });
+    return this.jsonResponse({ ok: true, username }, 200, req);
   }
 
   /**
@@ -127,7 +136,7 @@ export class ServerAuthRouteHandlerService {
     } else {
       this.loggerService.debug('[auth] logout: no bearer token provided');
     }
-    return this.jsonResponse({ ok: true });
+    return this.jsonResponse({ ok: true }, 200, req);
   }
 
   /**
@@ -144,12 +153,29 @@ export class ServerAuthRouteHandlerService {
   }
 
   /**
-   * Creates a consistent JSON HTTP response with appropriate content-type header.
+   * Creates a consistent JSON HTTP response with appropriate content-type and CORS headers.
    */
-  private jsonResponse(payload: unknown, status: number = 200): Response {
+  private jsonResponse(payload: unknown, status: number = 200, req?: Request): Response {
     return new Response(JSON.stringify(payload), {
       status,
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...this.corsHeaders(req) },
     });
+  }
+
+  /**
+   * Builds CORS headers that allow the requesting origin.
+   *
+   * Echoes the request Origin back as the allowed origin so the response is
+   * accepted by the browser regardless of which host the frontend is served
+   * from (e.g., separate Azure Container Apps in production, or localhost in dev).
+   */
+  private corsHeaders(req?: Request): Record<string, string> {
+    const origin = req?.headers.get('origin') ?? '*';
+    return {
+      'access-control-allow-origin': origin,
+      'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS',
+      'access-control-allow-headers': 'Content-Type, Authorization',
+      'access-control-max-age': '86400',
+    };
   }
 }
