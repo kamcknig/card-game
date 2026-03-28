@@ -1,9 +1,6 @@
 name: Server Unit Tests
 
 on:
-  push:
-    branches-ignore:
-      - master
   pull_request:
 
 jobs:
