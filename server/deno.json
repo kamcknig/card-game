@@ -66,7 +66,8 @@
     "shared/types/": "../shared/src/types/",
     "socket.io": "https://deno.land/x/socket_io@0.2.1/mod.ts",
     "fuse.js": "npm:fuse.js@7.1.0",
-    "awilix": "npm:awilix@10.0.2"
+    "awilix": "npm:awilix@10.0.2",
+    "bcrypt": "https://deno.land/x/bcrypt@v0.4.1/mod.ts"
   },
   "allowScripts": [
     "npm:esbuild@0.25.1",

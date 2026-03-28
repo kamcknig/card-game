@@ -7,7 +7,7 @@
   overflow: hidden;
 }
 
-app-lobby, app-match-configuration, app-match-hud, app-game-summary {
+app-login, app-lobby, app-match-configuration, app-match-hud, app-game-summary {
   display: block;
   width: 100%;
   height: 100%;
@@ -16,7 +16,7 @@ app-lobby, app-match-configuration, app-match-hud, app-game-summary {
   max-height: 100%;
 }
 
-app-lobby, app-match-hud, app-game-summary {
+app-login, app-lobby, app-match-hud, app-game-summary {
   overflow: hidden;
 }
 

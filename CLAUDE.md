@@ -12,7 +12,7 @@ This repository is a small monorepo with three main packages:
 - `angular-frontend/`: Angular 19 client (`src/app`, `src/environments`, `public/assets`). See `angular-frontend/CLAUDE.md` for frontend-specific architecture.
 - `shared/`: shared TypeScript utilities/types used by server and client.
 
-Top-level files like `docker-compose.yaml`, `Dockerfile`, and `GAME_SUMMARY.md` support local orchestration and game/domain context.
+Top-level files like `docker-compose.dev.yml`, `docker-compose.prod.yml`, and `GAME_SUMMARY.md` support local orchestration and game/domain context. Production Dockerfiles live in `docker/`. CI/CD workflows live in `.github/workflows/`.
 
 ## Shared Package
 
@@ -141,6 +141,9 @@ Use consistent levels and meaningful context:
 - Expansion docs: `dominion-docs/expansion-docs`
 - Each expansion has a `README.md` with mechanics and links to card/event/etc
   docs
+- CI/CD and deployment: `README.md` (root) documents pipeline, Azure architecture, and secrets
+- Dockerfiles: `docker/` (production and dev images)
+- GitHub Actions workflows: `.github/workflows/`
 
 # Build, Test, and Development Commands
 
@@ -158,6 +161,30 @@ Key commands:
 - `cd server && deno lint src/`: lint server TypeScript.
 - `cd server && deno task fmt`: format server code with oxfmt.
 - `cd server && deno task test:unit`: run server unit tests.
+
+## CI/CD and Deployment
+
+### GitHub Actions Workflows
+
+| Workflow | File | Trigger |
+|----------|------|---------|
+| Server CI | `.github/workflows/server-ci.yml` | Push/PR touching `server/**`, `shared/**` |
+| Server Unit Tests | `.github/workflows/server-unit-tests.yml` | Push/PR touching `server/**`, `shared/**` |
+| Frontend CI | `.github/workflows/frontend-ci.yml` | Push/PR touching `angular-frontend/**`, `shared/**` |
+| Build and Push | `.github/workflows/build-and-push.yml` | Push to `master` |
+| Deploy | `.github/workflows/deploy.yml` | After successful Build and Push on `master` |
+
+### Production Architecture
+
+Production runs on **Azure Container Apps** in the `turkeysunite` resource group:
+- `dominion-clone-server`: Deno server (port 3000, external ingress)
+- `dominion-clone-frontend`: nginx + Angular SPA (port 80, external ingress, `WS_HOST` env var points to server FQDN)
+
+Docker images are stored in **Azure Container Registry** (`turkeysunite.azurecr.io`).
+
+### Local Production Testing
+
+- `docker compose -f docker-compose.prod.yml up --build`: test production images locally (server on 3000, frontend on 80).
 
 ## Tooling Rules
 

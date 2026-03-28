@@ -35,6 +35,9 @@ import { ExpansionLoaderService } from '../core/expansion-loader-service.ts';
 import { GameScopeFactory } from '../core/game-scope-factory.ts';
 import { LobbyDirectoryService } from '../core/lobby-directory-service.ts';
 import { MatchConfigurationSaveService } from '../core/match-configuration-save-service.ts';
+import { AuthSessionService } from '../core/auth/auth-session-service.ts';
+import { PresetPasswordAuthProvider } from '../core/auth/preset-password-auth-provider.ts';
+import { ServerAuthRouteHandlerService } from '../core/auth/server-auth-route-handler-service.ts';
 
 export interface RegisterRootServicesArgs {
   io: Server<ServerListenEvents, ServerEmitEvents>;
@@ -92,5 +95,8 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
     serverDebugRouteHandlerService: asClass(ServerDebugRouteHandlerService).singleton(),
     serverShutdownHandlerService: asClass(ServerShutdownHandlerService).singleton(),
     serverBootstrapService: asClass(ServerBootstrapService).singleton(),
+    authSessionService: asClass(AuthSessionService).singleton(),
+    presetPasswordAuthProvider: asClass(PresetPasswordAuthProvider).singleton(),
+    serverAuthRouteHandlerService: asClass(ServerAuthRouteHandlerService).singleton(),
   });
 };

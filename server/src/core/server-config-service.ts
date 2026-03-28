@@ -5,12 +5,23 @@ export class ServerConfigService {
   // Validates all startup configuration used by the server process.
   public validate(): void {
     this.getPort();
+    this.getAuthPassword();
     this.isFileLoggingEnabled();
     this.getLogFileMaxBytes();
     this.isMatchStateExportEnabled();
     this.isMatchStateMergeEnabled();
     this.shouldEndMatchOnNoHumans();
     this.getTooltipDefaultCloseDelayMs();
+  }
+
+  /**
+   * Returns the preset authentication password from the AUTH_PASSWORD env var.
+   *
+   * Returns an empty string if the variable is unset or blank, which signals
+   * the auth provider to skip password validation (any username is accepted).
+   */
+  public getAuthPassword(): string {
+    return Deno.env.get('AUTH_PASSWORD') ?? '';
   }
 
   // Returns the configured server port or default port 3001.

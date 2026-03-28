@@ -21,6 +21,7 @@ export class SocketService {
     }
 
     localStorage.setItem("sessionId", sessionId);
+
     this._socket = io(environment.wsHost, {
       path: "/socket.io",
       transports: ["websocket", "polling"],
@@ -29,6 +30,12 @@ export class SocketService {
       timeout: environment.wsTimeout,
       requestTimeout: environment.wsRequestTimeout,
       query: { sessionId },
+      // Use a callback so the token is read from localStorage at connection time,
+      // not at construction time (when the user may not yet be authenticated).
+      auth: (cb: (data: Record<string, string>) => void) => {
+        const token = localStorage.getItem("authToken");
+        cb(token ? { authToken: token } : {});
+      },
     }) as unknown as Socket<ServerListenEvents, ServerEmitEvents>;
 
     this._socket.on("connect_error", this.onConnectError);
@@ -100,5 +107,19 @@ export class SocketService {
   ): void {
     // Bypass the incorrect type inference by SocketIO’s type declaration
     (this._socket as unknown as Socket).emit(eventName as string, ...args);
+  }
+
+  /**
+   * Returns true if the socket is currently connected to the server.
+   */
+  public isConnected(): boolean {
+    return this._socket.connected;
+  }
+
+  /**
+   * Disconnects the socket from the server.
+   */
+  public disconnect(): void {
+    this._socket.disconnect();
   }
 }
