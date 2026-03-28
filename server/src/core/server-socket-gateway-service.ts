@@ -64,7 +64,8 @@ export class ServerSocketGatewayService {
       }
 
       this.loggerService.info(`[SERVER] authenticated user '${username}' for session ${sessionId}`);
-      this.lobbyDirectoryService.registerConnection(sessionId, socket);
+      // Pass the validated username so it is used as the player's display name.
+      this.lobbyDirectoryService.registerConnection(sessionId, socket, username);
     });
   }
 }
