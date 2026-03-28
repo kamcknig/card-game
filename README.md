@@ -124,7 +124,7 @@ CI runs on every push and pull request, scoped by path filters so only relevant 
 CD triggers on merge to `master` and flows through two workflows:
 
 1. **Build and Push** (`.github/workflows/build-and-push.yml`) — builds both Docker images and pushes them to Azure Container Registry (ACR) with `latest` and short-SHA tags.
-2. **Deploy** (`.github/workflows/deploy.yml`) — triggered by a successful Build and Push run, deploys the new images to Azure Container Apps.
+2. **Deploy** (`.github/workflows/deploy.yml`) — triggered by a successful Build and Push run, deploys the SHA-tagged images to Azure Container Apps (creating a new revision each time).
 
 ```
 master merge → Build & Push (ACR) → Deploy (Azure Container Apps)
@@ -175,6 +175,7 @@ Both apps have external ingress and are accessible via their `.azurecontainerapp
 | `GAME_DATA_ROOT` | `./game-data` | Game data directory |
 | `END_MATCH_ON_NO_HUMANS` | `true` | End matches when all humans leave |
 | `MATCH_STATE_MERGE_ENABLED` | `true` | Enable match state merging |
+| `AUTH_PASSWORD` | _(required)_ | Preset password for simple authentication |
 
 ### Frontend Environment Variables (Production)
 
@@ -198,6 +199,10 @@ az containerapp revision activate \
   --revision <previous-revision-name> \
   --resource-group turkeysunite
 ```
+
+### Azure Operations
+
+For day-to-day Azure operations — manually updating containers, setting environment variables and secrets, viewing logs, managing ACR images, and troubleshooting — see [docs/azure-operations.md](docs/azure-operations.md).
 
 ### Scaling Note
 

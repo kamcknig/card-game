@@ -48,6 +48,8 @@ The authentication system is designed with a **provider-based architecture** so 
 10. The preset password is configured via the `AUTH_PASSWORD` environment variable (hashed at server startup).
 11. The auth system uses an `AuthProvider` interface so new authentication methods can be added by implementing a new provider and registering it — no changes to the session layer, route handler, or socket validation.
 12. The server exposes a `DELETE /auth/logout` endpoint that invalidates the auth token. The lobby scene has a "Logout" button in the banner actions area that calls this endpoint, clears `localStorage`, disconnects the socket, and returns to the login scene.
+13. The username entered during login becomes the player's display name in all games. Player name inputs in match configuration are read-only.
+14. On page refresh, the player is restored to the scene they were in (lobby, configuration, or match) — not always the lobby. If the game they were in has ended, they land in the lobby.
 
 ### Verification:
 - Type-check frontend: `cd angular-frontend && npx tsc -p tsconfig.app.json --noEmit`
@@ -67,11 +69,12 @@ The authentication system is designed with a **provider-based architecture** so 
 
 ## Implementation Approach
 
-The work is split into 3 phases:
+The work is split into 4 phases:
 
 1. **Server auth provider system + endpoint**: Create the `AuthProvider` interface, `AuthSessionService`, `PresetPasswordAuthProvider`, auth route handler, and HTTP login endpoint — all grouped under `server/src/core/auth/`.
 2. **Frontend login scene**: Create the login component, add `login` scene to the scene system, gate socket connection behind auth.
 3. **Socket auth integration**: Pass the auth token on socket handshake and validate it server-side.
+4. **Username as player name & scene restoration**: Use the auth username as the player's display name (remove editable name inputs), and restore the correct scene on page refresh instead of always going to lobby.
 
 ---
 
@@ -1217,3 +1220,243 @@ export class ServerSocketGatewayService {
 - [ ] Clearing localStorage and refreshing shows the login screen again.
 
 **Implementation Note**: After completing this phase and all automated verification passes, pause here for manual confirmation from the human that the manual testing was successful before proceeding to the next phase.
+
+---
+
+## Phase 4: Username as Player Name & Scene Restoration
+
+### Overview
+Two related improvements to the auth flow:
+1. The auth username (entered during login) should be the player's display name in all games. The editable name input in match configuration is replaced with a read-only display.
+2. On page refresh with a valid token, the player is restored to the scene they were in (configuration, match) rather than always landing in the lobby. The server's existing reconnection logic already handles this, but two ordering issues prevent it from working: `main.ts` forces the scene to `'lobby'` before server events arrive, and `registerConnection` sends `lobbySnapshot` before checking for an active game.
+
+### Changes Required:
+
+#### 4.1 Pass auth username through socket connection to player creation
+
+**File**: `server/src/core/server-socket-gateway-service.ts`
+**Changes**: Pass the validated `username` to `registerConnection`.
+
+```typescript
+// Change this:
+this.lobbyDirectoryService.registerConnection(sessionId, socket);
+// To this:
+this.lobbyDirectoryService.registerConnection(sessionId, socket, username);
+```
+
+**File**: `server/src/core/lobby-directory-service.ts`
+**Changes**: Accept `username` in `registerConnection`, store it in a `sessionToUsername` map, and pass it through to `joinLobbyGame` and `game.addPlayer`.
+
+```typescript
+// Add a new session-to-username map alongside sessionToGameId.
+private readonly sessionToUsername = new Map<string, string>();
+
+// Update registerConnection signature:
+public registerConnection(sessionId: string, socket: AppSocket, username: string): void {
+  this.loggerService.info(`[lobby directory] registering session ${sessionId} (username: ${username})`);
+  this.sessionToUsername.set(sessionId, username);
+  socket.join(LobbyDirectoryService.LOBBY_ROOM_NAME);
+  this.registerLobbyHandlers(sessionId, socket);
+  // ... (see 4.3 for reordering)
+}
+
+// In joinLobbyGame, pass the username to game.addPlayer:
+const username = this.sessionToUsername.get(sessionId) ?? 'Player';
+const addResult = record.game.addPlayer(sessionId, socket, username);
+```
+
+**File**: `server/src/core/game.ts`
+**Changes**: Accept `username` parameter in `addPlayer` and pass it through.
+
+```typescript
+// Update signature:
+public addPlayer(sessionId: string, socket: AppSocket, username: string): AddPlayerResult {
+  const result = this.gameLobbySessionCoordinatorService.addPlayer(this.runtimeState, {
+    sessionId,
+    socket,
+    username,
+    callbacks: { /* ... unchanged ... */ },
+    registerRemovalVoteHandler: this.registerRemovalVoteHandler,
+  });
+  return result;
+}
+```
+
+**File**: `server/src/core/game-lobby-session-coordinator-service.ts`
+**Changes**: Accept `username` in the `addPlayer` args and pass it to `registerPlayerJoin`.
+
+```typescript
+public addPlayer(
+  state: GameRuntimeState,
+  args: {
+    sessionId: string;
+    socket: AppSocket;
+    username: string;
+    callbacks: GameLobbyCallbacks;
+    registerRemovalVoteHandler: (socket: AppSocket, playerId: PlayerId) => void;
+  },
+): AddPlayerResult {
+  const { sessionId, socket, username, callbacks, registerRemovalVoteHandler } = args;
+
+  const joinResult = this.playerRegistryService.registerPlayerJoin({
+    players: state.players,
+    sessionId,
+    socket,
+    matchStarted: state.matchStarted,
+    username,
+  });
+  // ... rest unchanged ...
+}
+```
+
+**File**: `server/src/core/player-registry-service.ts`
+**Changes**: Accept `username` in `registerPlayerJoin` args and pass it to `createPlayer`.
+
+```typescript
+public registerPlayerJoin(args: {
+  players: Player[];
+  sessionId: string;
+  socket: AppSocket;
+  matchStarted: boolean;
+  username: string;
+}): RegisterPlayerJoinResult {
+  const { players, sessionId, socket, matchStarted, username } = args;
+
+  // ... existing player check unchanged ...
+
+  const newPlayer = this.playerFactoryService.createPlayer(sessionId, socket, username);
+  players.push(newPlayer);
+  return { status: 'accepted', player: newPlayer, created: true };
+}
+```
+
+**File**: `server/src/core/player-factory-service.ts`
+**Changes**: Accept optional `username` parameter and use it as the player name.
+
+```typescript
+// Creates a human player bound to a live socket session.
+public createPlayer(sessionId: string, socket: AppSocket, username?: string): Player {
+  const newId = ++this._playerId;
+  const player = new Player({
+    name: username || `Player ${newId}`,
+    id: newId,
+    sessionId,
+    connected: false,
+    ready: false,
+    socketId: socket.id,
+    isComputer: false,
+  } as Player);
+  this.loggerService.info(`[player factory] new player created ${player}`);
+  return player;
+}
+```
+
+#### 4.2 Make player name input read-only
+
+**File**: `angular-frontend/src/app/components/match-configuration/player-name-input/player-name-input.component.html`
+**Changes**: Replace the editable input for the self player with a read-only span. All players now display identically. Also remove the `player.name === ''` disable condition from the ready checkbox since names are always set from auth.
+
+```html
+<div class="content" *ngIf="player() as player">
+  <span [ngStyle]="{'visibility': isOwner() ? 'visible' : 'hidden'}">👑</span>
+  @if (player.isComputer) {
+    <span title="Computer player">🤖</span>
+  }
+
+  <input
+    #readyCheckbox
+    type="checkbox"
+    [disabled]="playerId() !== selfId()"
+    [checked]="player.ready"
+    (input)="onReadyChange($any($event.target).checked)"
+  />
+
+  <span class="player-name readonly">{{ player.name }}</span>
+
+  @if (!player.connected) {
+    <span>⚠️</span>
+  }
+
+  @if (canModeratePlayer()) {
+    <button type="button" class="moderation-button" (click)="onKickPlayer()">Kick</button>
+    @if (!player.isComputer) {
+      <button type="button" class="moderation-button ban" (click)="onBanPlayer()">Ban</button>
+    }
+  }
+</div>
+```
+
+**File**: `angular-frontend/src/app/components/match-configuration/player-name-input/player-name-input.component.ts`
+**Changes**: Remove the `_nameInput$` Subject, the debounced subscription `_nameInputSubscription`, and the `onNameChange` method — they are no longer used. Also remove the `debounceTime`, `Subject`, `takeUntilDestroyed` imports if no longer needed.
+
+#### 4.3 Fix scene restoration on page refresh
+
+**File**: `server/src/core/lobby-directory-service.ts`
+**Changes**: Reorder `registerConnection` to check for an active game **before** emitting `lobbySnapshot`. If the player has an active game, reconnect them immediately and skip the lobby snapshot. This prevents a flash of the lobby before being sent to configuration/match.
+
+```typescript
+public registerConnection(sessionId: string, socket: AppSocket, username: string): void {
+  this.loggerService.info(`[lobby directory] registering session ${sessionId} (username: ${username})`);
+  this.sessionToUsername.set(sessionId, username);
+  socket.join(LobbyDirectoryService.LOBBY_ROOM_NAME);
+  this.registerLobbyHandlers(sessionId, socket);
+
+  // Check for active game FIRST to avoid a brief flash of the lobby scene
+  // before being redirected to configuration/match.
+  const gameId = this.findGameIdForSession(sessionId);
+  if (gameId) {
+    this.loggerService.info(`[lobby directory] session ${sessionId} reconnecting to game ${gameId}`);
+    this.joinLobbyGame(sessionId, socket, gameId);
+    return;
+  }
+
+  // No active game — show lobby.
+  this.emitLobbySnapshot(socket);
+  this.emitSelectableSearchCatalog(socket);
+}
+```
+
+**File**: `angular-frontend/src/main.ts`
+**Changes**: Remove the forced `sceneStore.set('lobby')` when validating a stored token. The server events will drive the scene transition: `lobbySnapshot` → `'lobby'`, `matchConfigurationUpdated` → `'configuration'`, `matchReady` → `'match'`.
+
+```typescript
+bootstrapApplication(AppComponent, appConfig)
+  .then(async appRef => {
+    const injector = appRef.injector;
+    const authService = injector.get(AuthService);
+    const socketService = injector.get(SocketService);
+
+    // Try to restore a previous auth session from localStorage.
+    const hasValidToken = await authService.validateStoredToken();
+    if (hasValidToken) {
+      // Connect socket and let server events drive the scene.
+      // Server will send lobbySnapshot (→ lobby), matchConfigurationUpdated
+      // (→ configuration), or matchReady (→ match) depending on session state.
+      socketService.setEventMap(socketToGameEventMap());
+      socketService.emit('requestSelectableSearchCatalog');
+    }
+
+    // Subscribe to auth token changes so the socket connects after a successful login.
+    authTokenStore.subscribe(token => {
+      if (token && !socketService.isConnected()) {
+        socketService.setEventMap(socketToGameEventMap());
+        socketService.emit('requestSelectableSearchCatalog');
+      }
+    });
+  })
+  .catch((err) => console.error(err));
+```
+
+### Success Criteria:
+
+#### Automated Verification:
+- [ ] Server type-checks: `cd server && deno check --no-lock src/server.ts`
+- [ ] Server lints: `cd server && deno lint src/`
+- [ ] Frontend type-checks: `cd angular-frontend && npx tsc -p tsconfig.app.json --noEmit`
+
+#### Manual Verification:
+- [ ] Login with username "Alice" → join game → player name shows "Alice" (not "Player 1")
+- [ ] Player name in match configuration is not editable
+- [ ] Login → join game → enter match configuration → refresh → returns to match configuration (not lobby)
+- [ ] Login → join game → start match → refresh → returns to match (not lobby)
+- [ ] Login → stay in lobby → refresh → returns to lobby

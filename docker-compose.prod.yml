@@ -13,6 +13,7 @@ services:
       GAME_DATA_ROOT: ./game-data
       END_MATCH_ON_NO_HUMANS: "true"
       MATCH_STATE_MERGE_ENABLED: "true"
+      AUTH_PASSWORD: "dominion"
     restart: unless-stopped
 
   frontend:

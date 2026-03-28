@@ -27,24 +27,34 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Deploys the latest server image to the dominion-clone-server container app.
+      # Derives the short SHA tag from the commit that triggered the upstream
+      # build-and-push workflow, matching the tag format produced by
+      # docker/metadata-action (type=sha,prefix=,format=short).
+      - name: Resolve image tag
+        id: tag
+        run: |
+          SHA="${{ github.event.workflow_run.head_sha }}"
+          echo "short_sha=${SHA::7}" >> "$GITHUB_OUTPUT"
+
+      # Deploys the SHA-tagged server image to the dominion-clone-server container app.
+      # Using a unique SHA tag (instead of `latest`) ensures Azure creates a new revision.
       - name: Deploy server container app
         uses: azure/container-apps-deploy-action@v2
         with:
           resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
           containerAppName: ${{ secrets.AZURE_SERVER_APP_NAME }}
-          imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/dominion-clone-server:latest
+          imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/dominion-clone-server:${{ steps.tag.outputs.short_sha }}
           registryUrl: ${{ secrets.ACR_LOGIN_SERVER }}
           registryUsername: ${{ secrets.ACR_USERNAME }}
           registryPassword: ${{ secrets.ACR_PASSWORD }}
 
-      # Deploys the latest frontend image to the dominion-clone-frontend container app.
+      # Deploys the SHA-tagged frontend image to the dominion-clone-frontend container app.
       - name: Deploy frontend container app
         uses: azure/container-apps-deploy-action@v2
         with:
           resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
           containerAppName: ${{ secrets.AZURE_FRONTEND_APP_NAME }}
-          imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/dominion-clone-frontend:latest
+          imageToDeploy: ${{ secrets.ACR_LOGIN_SERVER }}/dominion-clone-frontend:${{ steps.tag.outputs.short_sha }}
           registryUrl: ${{ secrets.ACR_LOGIN_SERVER }}
           registryUsername: ${{ secrets.ACR_USERNAME }}
           registryPassword: ${{ secrets.ACR_PASSWORD }}
