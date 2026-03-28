@@ -7,24 +7,13 @@
   <input
     #readyCheckbox
     type="checkbox"
-    [disabled]="playerId() !== selfId() || player.name === ''"
+    [disabled]="playerId() !== selfId()"
     [checked]="player.ready"
     (input)="onReadyChange($any($event.target).checked)"
   />
 
-  @if (playerId() === selfId()) {
-    <input
-      class="player-name editable"
-      type="text"
-      autofocus
-      [disabled]="readyCheckbox.checked"
-      (focus)="$any($event.target)?.select?.()"
-      [value]="player.name"
-      (input)="onNameChange($any($event.target).value)"
-    />
-  } @else {
-    <span class="player-name readonly">{{ player.name }}</span>
-  }
+  <!-- Player name is always read-only; it is set from the authenticated username on login. -->
+  <span class="player-name readonly">{{ player.name }}</span>
 
   @if (!player.connected) {
     <span>⚠️</span>

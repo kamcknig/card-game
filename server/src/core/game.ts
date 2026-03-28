@@ -231,10 +231,12 @@ export class Game {
   }
 
   // Adds or reconnects a player to the active lobby/match runtime.
-  public addPlayer(sessionId: string, socket: AppSocket): AddPlayerResult {
+  // The username is passed through to player creation so the display name matches the auth identity.
+  public addPlayer(sessionId: string, socket: AppSocket, username: string): AddPlayerResult {
     const result = this.gameLobbySessionCoordinatorService.addPlayer(this.runtimeState, {
       sessionId,
       socket,
+      username,
       callbacks: {
         onStartMatch: this.startMatch,
         onClearMatch: this.clearMatch,

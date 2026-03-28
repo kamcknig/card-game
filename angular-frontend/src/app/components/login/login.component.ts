@@ -26,6 +26,13 @@ export class LoginComponent {
   readonly password = signal('');
   readonly errorMessage = signal<string | undefined>(undefined);
   readonly isSubmitting = signal(false);
+  /** Controls whether the password field renders as plain text. */
+  readonly showPassword = signal(false);
+
+  /** Toggles the password visibility state. */
+  toggleShowPassword(): void {
+    this.showPassword.update(v => !v);
+  }
 
   /**
    * Handles login form submission. Validates credentials via the server

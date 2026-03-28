@@ -6,10 +6,10 @@ import { PlayerRegistryService } from '../player-registry-service.ts';
 
 // Builds a minimal player-factory test double for registry service tests.
 const createPlayerFactoryStub = (createdPlayer = createTestPlayer({ id: 99 })) => {
-  const calls: Array<{ sessionId: string; socketId: string }> = [];
+  const calls: Array<{ sessionId: string; socketId: string; username: string | undefined }> = [];
   const playerFactoryService = {
-    createPlayer: (sessionId: string, socket: AppSocket) => {
-      calls.push({ sessionId, socketId: socket.id });
+    createPlayer: (sessionId: string, socket: AppSocket, username?: string) => {
+      calls.push({ sessionId, socketId: socket.id, username });
       return createdPlayer;
     },
   } as unknown as PlayerFactoryService;
@@ -38,6 +38,7 @@ Deno.test('PlayerRegistryService accepts reconnecting existing players even at m
     sessionId: 'session-1',
     socket: { id: 'new-socket' } as AppSocket,
     matchStarted: true,
+    username: 'TestPlayer',
   });
 
   assertEquals(result.status, 'accepted');
@@ -60,6 +61,7 @@ Deno.test('PlayerRegistryService rejects new joins at capacity', () => {
     sessionId: 'new-session',
     socket: { id: 'socket-3' } as AppSocket,
     matchStarted: false,
+    username: 'TestPlayer',
   });
 
   assertEquals(result, { status: 'rejected_capacity' });
@@ -76,6 +78,7 @@ Deno.test('PlayerRegistryService rejects unknown joins when match is already sta
     sessionId: 'new-session',
     socket: { id: 'socket-2' } as AppSocket,
     matchStarted: true,
+    username: 'TestPlayer',
   });
 
   assertEquals(result, { status: 'rejected_started' });
@@ -93,6 +96,7 @@ Deno.test('PlayerRegistryService creates and appends new player for valid join',
     sessionId: 'new-session',
     socket: { id: 'socket-2' } as AppSocket,
     matchStarted: false,
+    username: 'NewPlayer',
   });
 
   assertEquals(result.status, 'accepted');
@@ -101,7 +105,7 @@ Deno.test('PlayerRegistryService creates and appends new player for valid join',
     assertStrictEquals(result.player, createdPlayer);
   }
   assertEquals(players.includes(createdPlayer), true);
-  assertEquals(calls, [{ sessionId: 'new-session', socketId: 'socket-2' }]);
+  assertEquals(calls, [{ sessionId: 'new-session', socketId: 'socket-2', username: 'NewPlayer' }]);
 });
 
 Deno.test('PlayerRegistryService mark/set helpers update players when found', () => {
