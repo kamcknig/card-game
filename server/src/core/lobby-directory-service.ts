@@ -83,6 +83,8 @@ export class LobbyDirectoryService {
 
   // Session -> active game mapping used for reconnect and join validation.
   private readonly sessionToGameId = new Map<string, string>();
+  // Session -> authenticated username mapping used to set the player display name on join.
+  private readonly sessionToUsername = new Map<string, string>();
   private readonly games = new Map<string, LobbyGameRecord>();
   private readonly loadedExpansions: ExpansionListElement[] = [];
 
@@ -203,20 +205,25 @@ export class LobbyDirectoryService {
   ) {}
 
   // Registers a new client session in the lobby directory and wires lobby-level handlers.
-  public registerConnection(sessionId: string, socket: AppSocket): void {
-    this.loggerService.info(`[lobby directory] registering session ${sessionId}`);
+  // The username is stored so it can be passed through to player creation on join.
+  public registerConnection(sessionId: string, socket: AppSocket, username: string): void {
+    this.loggerService.info(`[lobby directory] registering session ${sessionId} (username: ${username})`);
+    this.sessionToUsername.set(sessionId, username);
     socket.join(LobbyDirectoryService.LOBBY_ROOM_NAME);
-
     this.registerLobbyHandlers(sessionId, socket);
-    this.emitLobbySnapshot(socket);
-    this.emitSelectableSearchCatalog(socket);
 
-    // Preserve reconnect behavior: if the session already belongs to a game, resume it automatically.
+    // Check for an active game FIRST to avoid a brief flash of the lobby scene
+    // before server events redirect the client to configuration/match.
     const gameId = this.findGameIdForSession(sessionId);
     if (gameId) {
       this.loggerService.info(`[lobby directory] session ${sessionId} reconnecting to game ${gameId}`);
       this.joinLobbyGame(sessionId, socket, gameId);
+      return;
     }
+
+    // No active game — show lobby.
+    this.emitLobbySnapshot(socket);
+    this.emitSelectableSearchCatalog(socket);
   }
 
   // Applies expansion-load events to existing games and future game templates.
@@ -499,7 +506,9 @@ export class LobbyDirectoryService {
       return;
     }
 
-    const addResult = record.game.addPlayer(sessionId, socket);
+    // Pass the stored username so new player records use the authenticated display name.
+    const username = this.sessionToUsername.get(sessionId) ?? 'Player';
+    const addResult = record.game.addPlayer(sessionId, socket, username);
     if (addResult.status === 'rejected_capacity') {
       this.emitJoinRejected(socket, {
         gameId,
