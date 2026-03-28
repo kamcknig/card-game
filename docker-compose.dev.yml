@@ -39,6 +39,7 @@ services:
       - END_MATCH_ON_NO_HUMANS=true
       - LOG_COLOR=true
       - MATCH_STATE_MERGE_ENABLED=true
+      - AUTH_PASSWORD=
     ports:
       - "3001:3001"
     restart: unless-stopped

@@ -4,6 +4,7 @@ import { LoggerService } from './logger-service.ts';
 import { ServerSocketGatewayService } from './server-socket-gateway-service.ts';
 import { ServerDebugRouteHandlerService } from './server-debug-route-handler-service.ts';
 import { ServerShutdownHandlerService } from './server-shutdown-handler-service.ts';
+import { ServerAuthRouteHandlerService } from './auth/server-auth-route-handler-service.ts';
 
 /**
  * Orchestrates host startup by delegating transport, routes, and shutdown
@@ -20,6 +21,7 @@ export class ServerBootstrapService {
     private readonly serverSocketGatewayService: ServerSocketGatewayService,
     private readonly serverDebugRouteHandlerService: ServerDebugRouteHandlerService,
     private readonly serverShutdownHandlerService: ServerShutdownHandlerService,
+    private readonly serverAuthRouteHandlerService: ServerAuthRouteHandlerService,
   ) {}
 
   // Starts socket handling, shutdown wiring, HTTP serving, and expansion startup loading.
@@ -45,7 +47,15 @@ export class ServerBootstrapService {
     Deno.serve({
       port: this.serverConfigService.getPort(),
       signal: this.shutdownController.signal,
-      handler: (req, info) => this.serverDebugRouteHandlerService.handleRequest(req, info),
+      handler: (req, info) => {
+        const url = new URL(req.url);
+        // Auth routes take priority over debug and socket.io.
+        const authResponse = this.serverAuthRouteHandlerService.handleRequest(req, url);
+        if (authResponse) {
+          return authResponse;
+        }
+        return this.serverDebugRouteHandlerService.handleRequest(req, info);
+      },
     });
 
     void this.serverStartupService.start().catch(error => {

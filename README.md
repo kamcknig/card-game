@@ -104,3 +104,118 @@ docker run -d -p 9090:80 -e WS_HOST=http://192.168.1.100:4000 dominion-web
 ```
 
 See `server/README.md` and `angular-frontend/README.md` for more details on each package.
+
+## CI/CD Pipeline
+
+The project uses **GitHub Actions** for continuous integration and continuous deployment targeting **Microsoft Azure**.
+
+### Continuous Integration
+
+CI runs on every push and pull request, scoped by path filters so only relevant workflows trigger:
+
+| Workflow | File | Trigger Paths | What It Does |
+|----------|------|---------------|--------------|
+| Server CI | `.github/workflows/server-ci.yml` | `server/**`, `shared/**` | Deno lint + type-check |
+| Server Unit Tests | `.github/workflows/server-unit-tests.yml` | `server/**`, `shared/**` | Deno unit tests with coverage |
+| Frontend CI | `.github/workflows/frontend-ci.yml` | `angular-frontend/**`, `shared/**` | TypeScript type-check |
+
+### Continuous Deployment
+
+CD triggers on merge to `master` and flows through two workflows:
+
+1. **Build and Push** (`.github/workflows/build-and-push.yml`) — builds both Docker images and pushes them to Azure Container Registry (ACR) with `latest` and short-SHA tags.
+2. **Deploy** (`.github/workflows/deploy.yml`) — triggered by a successful Build and Push run, deploys the new images to Azure Container Apps.
+
+```
+master merge → Build & Push (ACR) → Deploy (Azure Container Apps)
+```
+
+### Required GitHub Secrets
+
+| Secret | Description |
+|--------|-------------|
+| `AZURE_CREDENTIALS` | Service principal JSON for Azure login |
+| `ACR_LOGIN_SERVER` | ACR login server (e.g. `turkeysunite.azurecr.io`) |
+| `ACR_USERNAME` | ACR admin username |
+| `ACR_PASSWORD` | ACR admin password |
+| `AZURE_RESOURCE_GROUP` | Azure resource group name |
+| `AZURE_SERVER_APP_NAME` | Server Container App name |
+| `AZURE_FRONTEND_APP_NAME` | Frontend Container App name |
+
+## Production Deployment (Azure)
+
+The application runs on **Azure Container Apps** within the `turkeysunite` resource group.
+
+### Architecture
+
+```
+Azure Container Apps Environment (card-game-env)
+├── dominion-clone-server    ← Deno game server, port 3000, external ingress
+└── dominion-clone-frontend  ← nginx + Angular static files, port 80, external ingress
+```
+
+Both apps have external ingress and are accessible via their `.azurecontainerapps.io` FQDNs (HTTPS provided by default). The frontend connects to the server directly via the `WS_HOST` environment variable — nginx does not proxy WebSocket traffic.
+
+### Azure Services
+
+| Service | Purpose |
+|---------|---------|
+| Resource Group: `turkeysunite` | Contains all project resources |
+| Azure Container Registry (ACR) | Stores Docker images (`dominion-clone-server`, `dominion-clone-frontend`) |
+| Azure Container Apps Environment | Shared networking layer for containers |
+| Container App: `dominion-clone-server` | Deno game server with Socket.IO/WebSocket |
+| Container App: `dominion-clone-frontend` | nginx serving the Angular SPA |
+
+### Server Environment Variables (Production)
+
+| Variable | Value | Description |
+|----------|-------|-------------|
+| `PORT` | `3000` | Server listen port |
+| `LOG_TO_FILE` | `false` | Disable file logging in container |
+| `GAME_DATA_ROOT` | `./game-data` | Game data directory |
+| `END_MATCH_ON_NO_HUMANS` | `true` | End matches when all humans leave |
+| `MATCH_STATE_MERGE_ENABLED` | `true` | Enable match state merging |
+
+### Frontend Environment Variables (Production)
+
+| Variable | Description |
+|----------|-------------|
+| `WS_HOST` | Full URL to the server Container App (e.g. `https://dominion-clone-server.<region>.azurecontainerapps.io`) |
+
+### Rollback
+
+Azure Container Apps maintains revision history. Roll back by activating a previous revision:
+
+```bash
+# List revisions
+az containerapp revision list \
+  --name dominion-clone-server \
+  --resource-group turkeysunite \
+  --output table
+
+# Activate a previous revision
+az containerapp revision activate \
+  --revision <previous-revision-name> \
+  --resource-group turkeysunite
+```
+
+### Scaling Note
+
+The server currently runs with 1 replica. If scaling beyond 1 replica, session affinity must be enabled for Socket.IO:
+
+```bash
+az containerapp ingress sticky-sessions set \
+  --name dominion-clone-server \
+  --resource-group turkeysunite \
+  --affinity sticky
+```
+
+## Production Docker Compose (Local Testing)
+
+A `docker-compose.prod.yml` is provided for testing production images locally:
+
+```bash
+docker compose -f docker-compose.prod.yml up --build
+```
+
+This starts the server on port 3000 and the frontend on port 80, with the frontend's `WS_HOST` pointing to `http://localhost:3000`.

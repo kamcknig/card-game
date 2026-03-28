@@ -3,8 +3,10 @@ import { NanostoresService } from '@nanostores/angular';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { LobbyGameSummary } from 'shared/types';
 import { SocketService } from '../../core/socket-service/socket.service';
+import { AuthService } from '../../core/auth/auth.service';
 import { lobbyGamesStore, lobbyStatusMessageStore } from '../../state/lobby-state';
 import { SceneContentComponent } from '../scene-content/scene-content.component';
+import { sceneStore } from '../../state/game-state';
 
 @Component({
   selector: 'app-lobby',
@@ -17,6 +19,7 @@ import { SceneContentComponent } from '../scene-content/scene-content.component'
 export class LobbyComponent implements OnInit {
   private readonly _nanoStores = inject(NanostoresService);
   private readonly _socketService = inject(SocketService);
+  private readonly _authService = inject(AuthService);
 
   // Streams the currently visible joinable games for the lobby list.
   private readonly _games = toSignal(this._nanoStores.useStore(lobbyGamesStore));
@@ -42,5 +45,15 @@ export class LobbyComponent implements OnInit {
   joinGame(gameId: string): void {
     lobbyStatusMessageStore.set(undefined);
     this._socketService.emit('joinLobbyGame', gameId);
+  }
+
+  /**
+   * Logs out the current user: invalidates the server session, disconnects
+   * the socket, clears local auth state, and returns to the login scene.
+   */
+  async logout(): Promise<void> {
+    await this._authService.logout();
+    this._socketService.disconnect();
+    sceneStore.set('login');
   }
 }

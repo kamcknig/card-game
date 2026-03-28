@@ -18,6 +18,7 @@ import { MatchSummary } from 'shared/types';
 import { matchStartedStore, matchSummaryStore } from './state/match-state';
 import { MatchHudComponent } from './components/match/match-hud/match-hud.component';
 import { LobbyComponent } from './components/lobby/lobby.component';
+import { LoginComponent } from './components/login/login.component';
 import { CardDetailDialogComponent } from './components/card-detail-dialog/card-detail-dialog.component';
 import { PromptDialogHostComponent } from './components/prompt-dialog/prompt-dialog-host.component';
 import { PromptDialogCoordinatorService } from './core/prompt-dialog/prompt-dialog-coordinator.service';
@@ -39,6 +40,7 @@ import { PileSelectionActionComponent } from './components/match/pile-selection/
     GameSummaryComponent,
     MatchHudComponent,
     LobbyComponent,
+    LoginComponent,
     CardDetailDialogComponent,
     PromptDialogHostComponent,
     WayPickerOverlayComponent,
