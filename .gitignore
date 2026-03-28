@@ -14,8 +14,8 @@ preselected-landmarks.json
 
 # Ignore Codex runtime/config artifacts, but keep project skills versioned.
 .codex/*
-!.codex/skills/
-!.codex/skills/**
+!.claude/skills/
+!.claude/skills/**
 
 .claude/settings.local.json
 

@@ -9,10 +9,11 @@ export class PlayerFactoryService {
   constructor(private readonly loggerService: LoggerService) {}
 
   // Creates a human player bound to a live socket session.
-  public createPlayer(sessionId: string, socket: AppSocket): Player {
+  // The optional username sets the display name; falls back to 'Player N' when not provided.
+  public createPlayer(sessionId: string, socket: AppSocket, username?: string): Player {
     const newId = ++this._playerId;
     const player = new Player({
-      name: `Player ${newId}`,
+      name: username || `Player ${newId}`,
       id: newId,
       sessionId,
       connected: false,

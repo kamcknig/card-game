@@ -30,7 +30,14 @@
   color: var(--theme-text-secondary);
 }
 
+.login-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 .login-input {
+  width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--theme-border-action);
   border-radius: 6px;
@@ -42,6 +49,38 @@
   &:focus {
     border-color: var(--theme-border-strong);
     box-shadow: 0 0 0 2px rgba(130, 106, 72, 0.2);
+  }
+
+  // Extra right padding when the toggle button is present
+  .login-input-wrapper & {
+    padding-right: 40px;
+  }
+}
+
+.password-toggle {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: var(--theme-text-secondary);
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+
+  &:hover {
+    color: var(--theme-text-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--theme-border-strong);
+    outline-offset: 2px;
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
   }
 }
 

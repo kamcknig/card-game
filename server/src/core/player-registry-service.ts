@@ -16,13 +16,15 @@ export class PlayerRegistryService {
   ) {}
 
   // Registers a player join attempt, creating a new player or reconnecting an existing one.
+  // When creating a new player, the username is passed through to set the display name.
   public registerPlayerJoin(args: {
     players: Player[];
     sessionId: string;
     socket: AppSocket;
     matchStarted: boolean;
+    username: string;
   }): RegisterPlayerJoinResult {
-    const { players, sessionId, socket, matchStarted } = args;
+    const { players, sessionId, socket, matchStarted, username } = args;
 
     const existingPlayer = players.find(player => player.sessionId === sessionId);
 
@@ -44,7 +46,7 @@ export class PlayerRegistryService {
       return { status: 'rejected_started' };
     }
 
-    const newPlayer = this.playerFactoryService.createPlayer(sessionId, socket);
+    const newPlayer = this.playerFactoryService.createPlayer(sessionId, socket, username);
     players.push(newPlayer);
     return { status: 'accepted', player: newPlayer, created: true };
   }

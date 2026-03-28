@@ -1,4 +1,0 @@
-interface:
-  display_name: "Server Application Debugger"
-  short_description: "Debug running game server behavior"
-  default_prompt: "Use $server-application-debugger to debug a live game using debug API requests, OpenAPI, and server log files."

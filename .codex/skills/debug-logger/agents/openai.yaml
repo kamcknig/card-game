@@ -1,4 +1,0 @@
-interface:
-  display_name: "Debug Logger"
-  short_description: "Add or enhance server logging with level/context rules."
-  default_prompt: "Add or improve logging for the requested server flow using LoggerService and project log-level conventions."

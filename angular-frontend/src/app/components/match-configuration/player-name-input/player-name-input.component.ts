@@ -1,13 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { NanostoresService } from '@nanostores/angular';
 import { Player, PlayerId } from 'shared/types';
-import { debounceTime, filter, switchMap, Subject } from 'rxjs';
+import { filter, switchMap } from 'rxjs';
 import { NgIf, NgStyle } from '@angular/common';
 import { playerStore, selfPlayerIdStore } from '../../../state/player-state';
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { gameOwnerIdStore } from '../../../state/game-state';
 import { activeLobbyGameIdStore } from '../../../state/lobby-state';
-import { toObservable, toSignal, takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-player-name-input',
@@ -44,30 +44,6 @@ export class PlayerComponent {
     const rowPlayerId = this.playerId();
     return ownerId === selfId && rowPlayerId !== selfId;
   });
-
-  private readonly _nameInput$ = new Subject<string>();
-
-  // Debounces player-name updates before emitting to the server.
-  private readonly _nameInputSubscription = this._nameInput$
-    .pipe(
-      debounceTime(300),
-      takeUntilDestroyed(),
-    )
-    .subscribe((newName) => {
-      const playerId = this.playerId();
-      const store = playerStore(playerId);
-      const current = store.get();
-      if (!current) {
-        return;
-      }
-
-      this._socketService.emit('updatePlayerName', playerId, newName);
-      store.set({ ...current, name: newName });
-    });
-
-  onNameChange(newName: string) {
-    this._nameInput$.next(newName);
-  }
 
   onReadyChange(ready: boolean) {
     this._socketService.emit('playerReady', this.playerId(), ready);

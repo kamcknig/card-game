@@ -61,22 +61,25 @@ export class GameLobbySessionCoordinatorService {
   ) {}
 
   // Handles a player socket joining/rejoining the lobby or active match.
+  // The username is forwarded to player creation so new players get their auth display name.
   public addPlayer(
     state: GameRuntimeState,
     args: {
       sessionId: string;
       socket: AppSocket;
+      username: string;
       callbacks: GameLobbyCallbacks;
       registerRemovalVoteHandler: (socket: AppSocket, playerId: PlayerId) => void;
     },
   ): AddPlayerResult {
-    const { sessionId, socket, callbacks, registerRemovalVoteHandler } = args;
+    const { sessionId, socket, username, callbacks, registerRemovalVoteHandler } = args;
 
     const joinResult = this.playerRegistryService.registerPlayerJoin({
       players: state.players,
       sessionId,
       socket,
       matchStarted: state.matchStarted,
+      username,
     });
 
     if (joinResult.status === 'rejected_capacity') {

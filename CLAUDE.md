@@ -141,7 +141,8 @@ Use consistent levels and meaningful context:
 - Expansion docs: `dominion-docs/expansion-docs`
 - Each expansion has a `README.md` with mechanics and links to card/event/etc
   docs
-- CI/CD and deployment: `README.md` (root) documents pipeline, Azure architecture, and secrets
+- CI/CD pipeline, production architecture, secrets: [`README.md`](README.md#cicd-pipeline)
+- Azure operations (containers, env vars, rollback, troubleshooting): [`docs/azure-operations.md`](docs/azure-operations.md)
 - Dockerfiles: `docker/` (production and dev images)
 - GitHub Actions workflows: `.github/workflows/`
 
@@ -164,27 +165,7 @@ Key commands:
 
 ## CI/CD and Deployment
 
-### GitHub Actions Workflows
-
-| Workflow | File | Trigger |
-|----------|------|---------|
-| Server CI | `.github/workflows/server-ci.yml` | Push/PR touching `server/**`, `shared/**` |
-| Server Unit Tests | `.github/workflows/server-unit-tests.yml` | Push/PR touching `server/**`, `shared/**` |
-| Frontend CI | `.github/workflows/frontend-ci.yml` | Push/PR touching `angular-frontend/**`, `shared/**` |
-| Build and Push | `.github/workflows/build-and-push.yml` | Push to `master` |
-| Deploy | `.github/workflows/deploy.yml` | After successful Build and Push on `master` |
-
-### Production Architecture
-
-Production runs on **Azure Container Apps** in the `turkeysunite` resource group:
-- `dominion-clone-server`: Deno server (port 3000, external ingress)
-- `dominion-clone-frontend`: nginx + Angular SPA (port 80, external ingress, `WS_HOST` env var points to server FQDN)
-
-Docker images are stored in **Azure Container Registry** (`turkeysunite.azurecr.io`).
-
-### Local Production Testing
-
-- `docker compose -f docker-compose.prod.yml up --build`: test production images locally (server on 3000, frontend on 80).
+See the root [`README.md`](README.md#cicd-pipeline) for CI/CD pipeline details, GitHub Actions workflows, required secrets, and production architecture. See [`docs/azure-operations.md`](docs/azure-operations.md) for day-to-day Azure operations (updating containers, secrets, rollback, troubleshooting).
 
 ## Tooling Rules
 

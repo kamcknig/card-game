@@ -1,4 +1,0 @@
-interface:
-  display_name: "Debug OpenAPI Maintainer"
-  short_description: "Keep debug API and OpenAPI docs in sync"
-  default_prompt: "Use $debug-openapi-maintainer to add or update debug endpoints and keep OpenAPI docs in sync."
