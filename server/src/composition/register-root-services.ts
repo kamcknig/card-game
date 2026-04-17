@@ -38,6 +38,7 @@ import { MatchConfigurationSaveService } from '../core/match-configuration-save-
 import { AuthSessionService } from '../core/auth/auth-session-service.ts';
 import { PresetPasswordAuthProvider } from '../core/auth/preset-password-auth-provider.ts';
 import { ServerAuthRouteHandlerService } from '../core/auth/server-auth-route-handler-service.ts';
+import { AuthRateLimiterService } from '../core/auth/auth-rate-limiter-service.ts';
 
 export interface RegisterRootServicesArgs {
   io: Server<ServerListenEvents, ServerEmitEvents>;
@@ -97,6 +98,7 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
     serverBootstrapService: asClass(ServerBootstrapService).singleton(),
     authSessionService: asClass(AuthSessionService).singleton(),
     presetPasswordAuthProvider: asClass(PresetPasswordAuthProvider).singleton(),
+    authRateLimiterService: asClass(AuthRateLimiterService).singleton(),
     serverAuthRouteHandlerService: asClass(ServerAuthRouteHandlerService).singleton(),
   });
 };

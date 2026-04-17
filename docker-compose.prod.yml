@@ -14,6 +14,9 @@ services:
       END_MATCH_ON_NO_HUMANS: "true"
       MATCH_STATE_MERGE_ENABLED: "true"
       AUTH_PASSWORD: "dominion"
+      AUTH_ALLOWED_ORIGINS: "http://localhost"
+      AUTH_RATE_LIMIT_MAX_ATTEMPTS: "10"
+      AUTH_RATE_LIMIT_WINDOW_MS: "60000"
     restart: unless-stopped
 
   frontend:

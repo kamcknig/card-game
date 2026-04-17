@@ -5,7 +5,11 @@ export class ServerConfigService {
   // Validates all startup configuration used by the server process.
   public validate(): void {
     this.getPort();
-    this.getAuthPassword();
+    this.validateAuthPasswordConfig();
+    this.getAuthAllowedOrigins();
+    this.getAuthRateLimitMaxAttempts();
+    this.getAuthRateLimitWindowMs();
+    this.getAuthMaxBodyBytes();
     this.isFileLoggingEnabled();
     this.getLogFileMaxBytes();
     this.isMatchStateExportEnabled();
@@ -17,11 +21,50 @@ export class ServerConfigService {
   /**
    * Returns the preset authentication password from the AUTH_PASSWORD env var.
    *
-   * Returns an empty string if the variable is unset or blank, which signals
-   * the auth provider to skip password validation (any username is accepted).
+   * Returns an empty string if the variable is unset or blank.
    */
   public getAuthPassword(): string {
     return Deno.env.get('AUTH_PASSWORD') ?? '';
+  }
+
+  /**
+   * Returns true when authentication is explicitly disabled (dev/test only).
+   *
+   * When true, any non-empty username logs in without a password check.
+   * When false/unset, AUTH_PASSWORD must be non-empty or startup will fail.
+   */
+  public isAuthDisabled(): boolean {
+    return this.parseBooleanEnv('AUTH_DISABLED', false);
+  }
+
+  /**
+   * Returns the allowlist of origins that may make authenticated requests.
+   *
+   * Comma-separated list. An entry of `*` allows any origin and should only
+   * be used for local development. When unset, defaults to `*` in
+   * development convenience mode but logs a warning on startup.
+   */
+  public getAuthAllowedOrigins(): string[] {
+    const raw = Deno.env.get('AUTH_ALLOWED_ORIGINS');
+    if (!raw || !raw.trim()) {
+      return ['*'];
+    }
+    return raw.split(',').map(s => s.trim()).filter(Boolean);
+  }
+
+  // Returns the maximum number of failed logins per IP per window before rate-limiting.
+  public getAuthRateLimitMaxAttempts(): number {
+    return this.parseIntEnv('AUTH_RATE_LIMIT_MAX_ATTEMPTS', 10, { min: 1 });
+  }
+
+  // Returns the sliding-window duration (in milliseconds) used by the login rate limiter.
+  public getAuthRateLimitWindowMs(): number {
+    return this.parseIntEnv('AUTH_RATE_LIMIT_WINDOW_MS', 60_000, { min: 1_000 });
+  }
+
+  // Returns the maximum request body size (bytes) accepted on /auth/login.
+  public getAuthMaxBodyBytes(): number {
+    return this.parseIntEnv('AUTH_MAX_BODY_BYTES', 4096, { min: 256, max: 1_048_576 });
   }
 
   // Returns the configured server port or default port 3001.
@@ -97,6 +140,24 @@ export class ServerConfigService {
     return parsedValue;
   }
 
+  /**
+   * Validates the AUTH_PASSWORD / AUTH_DISABLED combination at startup.
+   *
+   * Throws when AUTH_DISABLED is not true and AUTH_PASSWORD is empty. This
+   * eliminates the silent "blank AUTH_PASSWORD means no auth" backdoor —
+   * disabling auth now requires explicit opt-in via AUTH_DISABLED=true.
+   */
+  private validateAuthPasswordConfig(): void {
+    const disabled = this.isAuthDisabled();
+    const password = this.getAuthPassword();
+    if (!disabled && !password) {
+      throw new Error(
+        '[server config] AUTH_PASSWORD must be set when AUTH_DISABLED is not true. ' +
+          'To explicitly disable authentication (dev only), set AUTH_DISABLED=true.',
+      );
+    }
+  }
+
   // Parses strict boolean env values ('true' | 'false') with a default.
   private parseBooleanEnv(name: string, defaultValue: boolean): boolean {
     const rawValue = Deno.env.get(name);
@@ -113,5 +174,34 @@ export class ServerConfigService {
     }
 
     throw new Error(`[server config] ${name} must be 'true' or 'false', received '${rawValue}'`);
+  }
+
+  /**
+   * Parses an integer environment variable with optional min/max bounds.
+   *
+   * Returns the default value when the variable is unset or empty.
+   * Throws a descriptive error when the value is not a valid integer or
+   * falls outside the given bounds.
+   */
+  private parseIntEnv(name: string, defaultValue: number, bounds?: { min?: number; max?: number }): number {
+    const rawValue = Deno.env.get(name);
+    if (!rawValue) {
+      return defaultValue;
+    }
+
+    const parsedValue = toNumber(rawValue);
+    if (!Number.isInteger(parsedValue)) {
+      throw new Error(`[server config] ${name} must be an integer, received '${rawValue}'`);
+    }
+
+    if (bounds?.min !== undefined && parsedValue < bounds.min) {
+      throw new Error(`[server config] ${name} must be >= ${bounds.min}, received '${rawValue}'`);
+    }
+
+    if (bounds?.max !== undefined && parsedValue > bounds.max) {
+      throw new Error(`[server config] ${name} must be <= ${bounds.max}, received '${rawValue}'`);
+    }
+
+    return parsedValue;
   }
 }

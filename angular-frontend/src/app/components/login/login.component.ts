@@ -56,7 +56,9 @@ export class LoginComponent {
       if (result.ok) {
         sceneStore.set('lobby');
       } else {
-        this.errorMessage.set('Username/password does not match');
+        // Surface the server's message directly so rate-limit and other
+        // descriptive errors (e.g., 'Too many attempts') reach the user.
+        this.errorMessage.set(result.message ?? 'Username/password does not match');
       }
     } finally {
       this.isSubmitting.set(false);
