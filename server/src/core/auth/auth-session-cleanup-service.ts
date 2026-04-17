@@ -2,13 +2,18 @@ import { AuthSessionService } from './auth-session-service.ts';
 import { LoggerService } from '../logger-service.ts';
 
 /**
- * Periodically prunes expired auth sessions from the in-memory session store.
+ * Periodically purges expired auth sessions from the session store.
  *
- * `AuthSessionService.listSessions()` already evicts expired entries as a
- * side effect of each call, so this service exists purely to ensure that
- * garbage collection runs on a regular cadence even when no requests are
- * actively validating tokens. This prevents unbounded memory growth in
- * long-running deployments with many short-lived sessions.
+ * Delegates to `AuthSessionService.purgeExpiredSessions()`, which issues a
+ * single efficient sweep (a single DELETE for the SQLite backend, or an O(n)
+ * pass for the in-memory backend). This ensures garbage collection runs on a
+ * regular cadence even when no requests are actively validating tokens,
+ * preventing unbounded growth in long-running deployments.
+ *
+ * Phase 3 note: the cleanup method was updated from `listSessions()` (which
+ * prunes as a side effect of reading) to `purgeExpiredSessions()` (a dedicated
+ * sweep that is more efficient for the SQLite backend, where a single DELETE
+ * replaces per-row deletions).
  *
  * The interval is configurable at start time; the default is 5 minutes,
  * which is sufficient for most deployments. The timer is automatically
@@ -30,10 +35,8 @@ export class AuthSessionCleanupService {
    * Starts the periodic cleanup timer.
    *
    * Calling start() when the timer is already running is a no-op.
-   * `listSessions()` handles the actual expiry sweep and returns only
-   * non-expired records, so comparing the count before and after the second
-   * call (which runs against the already-pruned set) always yields 0.
-   * Instead, we measure the count before the first call to detect removals.
+   * Each tick calls `purgeExpiredSessions()` which efficiently removes all
+   * expired sessions from the backing store in a single operation.
    *
    * @param intervalMs How often to sweep for expired sessions. Default: 5 minutes.
    */
@@ -46,11 +49,10 @@ export class AuthSessionCleanupService {
     this.loggerService.info(`[auth cleanup] starting session cleanup timer (interval: ${intervalMs}ms)`);
 
     this.handle = setInterval(() => {
-      // listSessions() prunes expired entries as a side effect and returns
-      // only the live set. We call it once and rely on its internal count
-      // to observe the prune result via debug logging inside the service.
-      const live = this.authSessionService.listSessions();
-      this.loggerService.debug(`[auth cleanup] sweep complete; ${live.length} active session(s) remain`);
+      // purgeExpiredSessions() performs a single efficient sweep and logs
+      // the count of removed sessions at the info level when > 0.
+      const count = this.authSessionService.purgeExpiredSessions();
+      this.loggerService.debug(`[auth cleanup] sweep complete; ${count} expired session(s) removed`);
     }, intervalMs);
   }
 

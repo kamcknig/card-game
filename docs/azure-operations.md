@@ -151,12 +151,83 @@ az containerapp secret remove \
 | `AUTH_RATE_LIMIT_MAX_ATTEMPTS` | Maximum failed login attempts from a single IP within the rate-limit window before returning 429. Default: `10`. |
 | `AUTH_RATE_LIMIT_WINDOW_MS` | Duration (milliseconds) of the sliding window used by the login rate limiter. Default: `60000` (1 minute). |
 | `AUTH_MAX_BODY_BYTES` | Maximum request body size (bytes) accepted on `/auth/login`. Requests exceeding this are rejected with 413. Default: `4096`. |
+| `AUTH_SESSION_TTL_MS` | Session time-to-live in milliseconds (sliding window). Each validated token has its expiry extended by this amount. Default: `604800000` (7 days). |
+| `AUTH_SESSION_STORE` | Session storage backend. `memory` (default) loses sessions on restart. `sqlite` persists to `AUTH_DB_PATH`. `kv` uses Deno KV with a write-through cache backed by `AUTH_KV_PATH`. Set to `kv` in production for restart persistence. |
+| `AUTH_DB_PATH` | Filesystem path to the SQLite database file used when `AUTH_SESSION_STORE=sqlite`. Default: `./game-data/auth.sqlite`. Mount an Azure Files share at the containing directory for durable persistence across container revisions. |
+| `AUTH_KV_PATH` | Filesystem path to the Deno KV store file used when `AUTH_SESSION_STORE=kv`. Default: `./game-data/auth.kv`. Mount an Azure Files share at the containing directory for durable persistence across container revisions. Use `':memory:'` for dev/test (not persisted). |
 
 ### Current Frontend Environment Variables
 
 | Variable | Description |
 |----------|-------------|
 | `WS_HOST` | Full URL to the server Container App (e.g. `https://dominion-clone-server.<region>.azurecontainerapps.io`) |
+
+## Session Persistence
+
+Two persistent session storage backends are available. Both require a mounted volume
+to survive container revisions on Azure Container Apps.
+
+### Deno KV (`AUTH_SESSION_STORE=kv`) — recommended
+
+When `AUTH_SESSION_STORE=kv`, session data is written to the Deno KV store at
+`AUTH_KV_PATH` (default `./game-data/auth.kv`). Deno KV uses a write-through
+in-memory cache so reads are always synchronous and fast. The backing file must
+survive container restarts for sessions to persist.
+
+### SQLite (`AUTH_SESSION_STORE=sqlite`) — alternative
+
+When `AUTH_SESSION_STORE=sqlite`, session data is written synchronously to the SQLite
+file at `AUTH_DB_PATH` (default `./game-data/auth.sqlite`). This file must survive
+container restarts.
+
+### Using Azure Files for Durable Session Storage
+
+Mount an Azure Files share at the `game-data` directory so the session store file
+persists across revisions and restarts. The same procedure works for both the KV and
+SQLite backends — adjust `AUTH_SESSION_STORE`, `AUTH_KV_PATH`, and `AUTH_DB_PATH`
+accordingly.
+
+```bash
+# Create a storage account and file share (one-time setup)
+az storage account create \
+  --name dominionstorage \
+  --resource-group turkeysunite \
+  --sku Standard_LRS
+
+az storage share create \
+  --account-name dominionstorage \
+  --name dominion-game-data
+
+# Store the storage key as a Container Apps secret
+STORAGE_KEY=$(az storage account keys list \
+  --account-name dominionstorage \
+  --resource-group turkeysunite \
+  --query "[0].value" -o tsv)
+
+az containerapp secret set \
+  --name dominion-clone-server \
+  --resource-group turkeysunite \
+  --secrets storage-key="$STORAGE_KEY"
+
+# Mount the Azure Files share into the container (Deno KV example)
+az containerapp update \
+  --name dominion-clone-server \
+  --resource-group turkeysunite \
+  --storage-name dominion-game-data \
+  --storage-account dominionstorage \
+  --storage-account-key secretref:storage-key \
+  --storage-share dominion-game-data \
+  --storage-mount-path /app/server/game-data \
+  --set-env-vars AUTH_SESSION_STORE=kv AUTH_KV_PATH=/app/server/game-data/auth.kv
+```
+
+### Backup Considerations
+
+- The KV store file (`auth.kv`) and SQLite file (`auth.sqlite`) are each self-contained
+  — copy the relevant file to back up all sessions.
+- To rotate the auth store (force all users to re-login), delete the store file and restart.
+- Sessions only contain auth metadata (token, username, IP, timestamps). No game state
+  is stored here.
 
 ## Rollback
 

@@ -3,7 +3,8 @@
     "lib": [
       "es2023",
       "dom",
-      "deno.ns"
+      "deno.ns",
+      "deno.unstable"
     ],
     "types": [
       "npm:@types/jest@^30.0.0"
@@ -11,12 +12,12 @@
   },
   "nodeModulesDir": "manual",
   "tasks": {
-    "dev:watch": "deno run --inspect --check --env-file --allow-sys --allow-read --allow-write --allow-net --allow-env --watch src/server.ts",
+    "dev:watch": "deno run --inspect --check --env-file --allow-sys --allow-read --allow-write --allow-net --allow-env --allow-ffi --unstable-ffi --unstable-kv --watch src/server.ts",
     "dev:runbrowsers": "deno run scripts/run-browsers.js",
     "fmt": "oxfmt --write src/",
-    "test:unit": "deno test --allow-env --allow-write --allow-read --allow-sys=cpus src/",
-    "test:unit:watch": "deno test --allow-write --allow-env --allow-read --allow-sys=cpus --watch src/",
-    "test:unit:coverage": "deno test --allow-write --allow-env --allow-read --allow-sys=cpus --clean --coverage=coverage src/ && deno coverage coverage --exclude=src/testing/ --lcov --output=coverage/lcov.info && deno coverage coverage --exclude=src/testing/ --html"
+    "test:unit": "deno test --allow-env --allow-write --allow-read --allow-sys=cpus --allow-ffi --unstable-ffi --unstable-kv src/",
+    "test:unit:watch": "deno test --allow-write --allow-env --allow-read --allow-sys=cpus --allow-ffi --unstable-ffi --unstable-kv --watch src/",
+    "test:unit:coverage": "deno test --allow-write --allow-env --allow-read --allow-sys=cpus --allow-ffi --unstable-ffi --unstable-kv --clean --coverage=coverage src/ && deno coverage coverage --exclude=src/testing/ --lcov --output=coverage/lcov.info && deno coverage coverage --exclude=src/testing/ --html"
   },
   "test": {
     "exclude": [
@@ -52,6 +53,7 @@
     "@shared/": "../shared/src/",
     "@server-types/": "./src/type-groups/",
     "@expansions/": "./src/expansions/",
+    "@db/sqlite": "jsr:@db/sqlite@^0.11.1",
     "@denosaurs/event": "jsr:@denosaurs/event@^2.0.2",
     "@timepp/enhanced-deno-log": "jsr:@timepp/enhanced-deno-log@^0.4.1",
     "@std/assert": "jsr:@std/assert@^1.0.13",

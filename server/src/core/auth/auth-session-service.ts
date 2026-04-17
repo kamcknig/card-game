@@ -2,6 +2,7 @@ import { LoggerService } from '../logger-service.ts';
 import { ServerConfigService } from '../server-config-service.ts';
 import { AuthProvider, AuthResult } from './auth-provider.ts';
 import { Clock, systemClock } from './auth-rate-limiter-service.ts';
+import type { SessionStore } from './session-store.ts';
 
 /**
  * Server-side metadata tracked per active session.
@@ -37,18 +38,24 @@ export interface SessionRecord {
  *   that user so the most recent login is always the only valid one.
  * - The clock dependency is injectable so tests remain deterministic.
  *
+ * Phase 3 additions:
+ * - The backing storage is now an injected `SessionStore` rather than a
+ *   hard-coded `Map<string, SessionRecord>`. Callers inject either
+ *   `InMemorySessionStore` (default / tests) or `SqliteSessionStore`
+ *   (production, controlled by AUTH_SESSION_STORE env var).
+ * - All map operations delegate to the store; the public API is unchanged.
+ *
  * Lifetime: Root singleton — shared across all connections.
  * Consumers: ServerAuthRouteHandlerService, ServerSocketGatewayService.
  */
 export class AuthSessionService {
-  // Maps auth tokens to their full session records.
-  private readonly sessions = new Map<string, SessionRecord>();
   // Maps provider names to their implementations.
   private readonly providers = new Map<string, AuthProvider>();
 
   constructor(
     private readonly loggerService: LoggerService,
     private readonly serverConfigService: ServerConfigService,
+    private readonly sessionStore: SessionStore,
     private readonly clock: Clock = systemClock,
   ) {}
 
@@ -123,7 +130,7 @@ export class AuthSessionService {
       this.loggerService.info(`[auth] revoked ${prior} prior session(s) for '${result.username}' on new login`);
     }
 
-    this.sessions.set(token, {
+    this.sessionStore.put({
       token,
       username: result.username,
       providerName,
@@ -146,20 +153,19 @@ export class AuthSessionService {
    * and updates `lastActivityAt`.
    */
   public validateToken(token: string): string | undefined {
-    const rec = this.sessions.get(token);
+    const rec = this.sessionStore.get(token);
     if (!rec) return undefined;
 
     const now = this.clock.now();
     if (rec.expiresAt <= now) {
-      this.sessions.delete(token);
+      this.sessionStore.delete(token);
       this.loggerService.debug(`[auth] session expired: ${this.tokenTail(token)}`);
       return undefined;
     }
 
     // Sliding window: extend the expiry on every successful validation.
     const ttlMs = this.serverConfigService.getAuthSessionTtlMs();
-    rec.lastActivityAt = now;
-    rec.expiresAt = now + ttlMs;
+    this.sessionStore.update(token, { lastActivityAt: now, expiresAt: now + ttlMs });
 
     return rec.username;
   }
@@ -170,25 +176,33 @@ export class AuthSessionService {
    * A no-op when the token does not exist.
    */
   public removeSession(token: string): void {
-    this.sessions.delete(token);
+    this.sessionStore.delete(token);
   }
 
   /**
    * Enumerates all currently-active (non-expired) sessions.
    *
    * Prunes expired entries as a side effect, so callers see only live
-   * records. Returns a snapshot array; the backing map may be mutated
+   * records. Returns a snapshot array; the backing store may be mutated
    * concurrently (not an issue in single-threaded JS).
    */
   public listSessions(): ReadonlyArray<SessionRecord> {
     const now = this.clock.now();
-    for (const [token, rec] of this.sessions) {
+    const all = this.sessionStore.listAll();
+    const expired: string[] = [];
+
+    for (const rec of all) {
       if (rec.expiresAt <= now) {
-        this.sessions.delete(token);
-        this.loggerService.debug(`[auth] pruned expired session: ${this.tokenTail(token)}`);
+        expired.push(rec.token);
       }
     }
-    return [...this.sessions.values()];
+
+    for (const token of expired) {
+      this.sessionStore.delete(token);
+      this.loggerService.debug(`[auth] pruned expired session: ${this.tokenTail(token)}`);
+    }
+
+    return all.filter(rec => rec.expiresAt > now);
   }
 
   /**
@@ -200,13 +214,7 @@ export class AuthSessionService {
    * @param username Username whose sessions should all be invalidated.
    */
   public removeSessionsForUsername(username: string): number {
-    let removed = 0;
-    for (const [token, rec] of this.sessions) {
-      if (rec.username === username) {
-        this.sessions.delete(token);
-        removed++;
-      }
-    }
+    const removed = this.sessionStore.deleteByUsername(username);
     this.loggerService.info(`[auth] removed ${removed} session(s) for '${username}'`);
     return removed;
   }
@@ -221,15 +229,28 @@ export class AuthSessionService {
    * @param keepToken Token to preserve (the caller's current session).
    */
   public removeSessionsForUsernameExcept(username: string, keepToken: string): number {
-    let removed = 0;
-    for (const [token, rec] of this.sessions) {
-      if (rec.username === username && token !== keepToken) {
-        this.sessions.delete(token);
-        removed++;
-      }
-    }
+    const removed = this.sessionStore.deleteByUsername(username, keepToken);
     this.loggerService.info(`[auth] removed ${removed} session(s) for '${username}' (kept current)`);
     return removed;
+  }
+
+  /**
+   * Purges all expired sessions directly via the store.
+   *
+   * More efficient than `listSessions()` for the SQLite backend because it
+   * issues a single DELETE WHERE query rather than loading all rows, comparing
+   * timestamps in JS, and deleting one-by-one. Used by `AuthSessionCleanupService`
+   * during periodic sweeps.
+   *
+   * Returns the number of sessions removed.
+   */
+  public purgeExpiredSessions(): number {
+    const now = this.clock.now();
+    const count = this.sessionStore.purgeExpired(now);
+    if (count > 0) {
+      this.loggerService.info(`[auth] purged ${count} expired session(s) from store`);
+    }
+    return count;
   }
 
   /**

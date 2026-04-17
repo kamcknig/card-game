@@ -4,6 +4,7 @@ import { AuthProvider, AuthResult } from '../auth/auth-provider.ts';
 import { LoggerService } from '../logger-service.ts';
 import { ServerConfigService } from '../server-config-service.ts';
 import { Clock } from '../auth/auth-rate-limiter-service.ts';
+import { InMemorySessionStore } from '../auth/in-memory-session-store.ts';
 
 // Env keys managed by this test suite.
 const AUTH_ENV_KEYS = [
@@ -73,11 +74,26 @@ const makeProvider = (name: string, result: AuthResult, initSpy?: () => void): A
     : undefined,
 });
 
-// ── Original Phase 1 tests (updated constructor signature) ────────────────────
+/**
+ * Creates a fresh AuthSessionService with an InMemorySessionStore.
+ *
+ * Phase 3 update: the service no longer owns a private Map — it delegates to
+ * an injected SessionStore. Tests inject InMemorySessionStore so they remain
+ * unit-scoped with no external I/O.
+ */
+const makeService = (clock?: Clock & { advance(ms: number): void }) => {
+  const logger = makeLoggerStub();
+  const config = new ServerConfigService();
+  const store = new InMemorySessionStore();
+  const effectiveClock = clock ?? makeFakeClock();
+  return { service: new AuthSessionService(logger, config, store, effectiveClock), store };
+};
+
+// ── Original Phase 1 tests (updated to use InMemorySessionStore) ──────────────
 
 Deno.test('AuthSessionService: login returns error for unknown provider', () =>
   withIsolatedEnv({}, async () => {
-    const service = new AuthSessionService(makeLoggerStub(), new ServerConfigService(), makeFakeClock());
+    const { service } = makeService();
 
     const result = await service.login('unknown', { username: 'alice', password: 'pw' });
 
@@ -89,7 +105,7 @@ Deno.test('AuthSessionService: login returns error for unknown provider', () =>
 
 Deno.test('AuthSessionService: login returns error when provider rejects credentials', () =>
   withIsolatedEnv({}, async () => {
-    const service = new AuthSessionService(makeLoggerStub(), new ServerConfigService(), makeFakeClock());
+    const { service } = makeService();
     service.registerProvider(makeProvider('password', { ok: false, message: 'bad creds' }));
     await service.initializeProviders();
 
@@ -103,7 +119,7 @@ Deno.test('AuthSessionService: login returns error when provider rejects credent
 
 Deno.test('AuthSessionService: login returns token and username on success', () =>
   withIsolatedEnv({}, async () => {
-    const service = new AuthSessionService(makeLoggerStub(), new ServerConfigService(), makeFakeClock());
+    const { service } = makeService();
     service.registerProvider(makeProvider('password', { ok: true, username: 'alice' }));
     await service.initializeProviders();
 
@@ -119,7 +135,7 @@ Deno.test('AuthSessionService: login returns token and username on success', () 
 
 Deno.test('AuthSessionService: validateToken returns username for valid token', () =>
   withIsolatedEnv({}, async () => {
-    const service = new AuthSessionService(makeLoggerStub(), new ServerConfigService(), makeFakeClock());
+    const { service } = makeService();
     service.registerProvider(makeProvider('password', { ok: true, username: 'alice' }));
     await service.initializeProviders();
 
@@ -132,7 +148,7 @@ Deno.test('AuthSessionService: validateToken returns username for valid token', 
 
 Deno.test('AuthSessionService: validateToken returns undefined for unknown token', () =>
   withIsolatedEnv({}, () => {
-    const service = new AuthSessionService(makeLoggerStub(), new ServerConfigService(), makeFakeClock());
+    const { service } = makeService();
 
     const username = service.validateToken('not-a-real-token');
     assertEquals(username, undefined);
@@ -141,7 +157,7 @@ Deno.test('AuthSessionService: validateToken returns undefined for unknown token
 
 Deno.test('AuthSessionService: removeSession makes token invalid', () =>
   withIsolatedEnv({}, async () => {
-    const service = new AuthSessionService(makeLoggerStub(), new ServerConfigService(), makeFakeClock());
+    const { service } = makeService();
     service.registerProvider(makeProvider('password', { ok: true, username: 'alice' }));
     await service.initializeProviders();
 
@@ -154,7 +170,7 @@ Deno.test('AuthSessionService: removeSession makes token invalid', () =>
 
 Deno.test('AuthSessionService: removeSession on unknown token is a no-op', () =>
   withIsolatedEnv({}, () => {
-    const service = new AuthSessionService(makeLoggerStub(), new ServerConfigService(), makeFakeClock());
+    const { service } = makeService();
     // Should not throw.
     service.removeSession('ghost-token');
     return Promise.resolve();
@@ -162,7 +178,7 @@ Deno.test('AuthSessionService: removeSession on unknown token is a no-op', () =>
 
 Deno.test('AuthSessionService: duplicate provider registration is ignored', () =>
   withIsolatedEnv({}, () => {
-    const service = new AuthSessionService(makeLoggerStub(), new ServerConfigService(), makeFakeClock());
+    const { service } = makeService();
     const providerA = makeProvider('password', { ok: true, username: 'alice' });
     const providerB = makeProvider('password', { ok: true, username: 'bob' });
 
@@ -173,7 +189,7 @@ Deno.test('AuthSessionService: duplicate provider registration is ignored', () =
 
 Deno.test('AuthSessionService: initializeProviders calls initialize on registered providers', () =>
   withIsolatedEnv({}, async () => {
-    const service = new AuthSessionService(makeLoggerStub(), new ServerConfigService(), makeFakeClock());
+    const { service } = makeService();
     let initialized = false;
     const provider = makeProvider('password', { ok: true, username: 'alice' }, () => {
       initialized = true;
@@ -187,7 +203,7 @@ Deno.test('AuthSessionService: initializeProviders calls initialize on registere
 
 Deno.test('AuthSessionService: initializeProviders skips providers without initialize', () =>
   withIsolatedEnv({}, async () => {
-    const service = new AuthSessionService(makeLoggerStub(), new ServerConfigService(), makeFakeClock());
+    const { service } = makeService();
     // Provider with no initialize method — should not throw.
     const provider: AuthProvider = {
       name: 'guest',
@@ -202,7 +218,7 @@ Deno.test('AuthSessionService: each successful login issues a unique token', () 
   withIsolatedEnv({}, async () => {
     // Use two different usernames so single-session enforcement does not
     // invalidate the first token before we can compare them.
-    const service = new AuthSessionService(makeLoggerStub(), new ServerConfigService(), makeFakeClock());
+    const { service } = makeService();
     service.registerProvider(makeProvider('password', { ok: true, username: 'alice' }));
     service.registerProvider(makeProvider('password2', { ok: true, username: 'bob' }));
     await service.initializeProviders();
@@ -216,7 +232,7 @@ Deno.test('AuthSessionService: each successful login issues a unique token', () 
 
 Deno.test('AuthSessionService: second login for same user revokes prior session (single-session enforcement)', () =>
   withIsolatedEnv({}, async () => {
-    const service = new AuthSessionService(makeLoggerStub(), new ServerConfigService(), makeFakeClock());
+    const { service } = makeService();
     service.registerProvider(makeProvider('password', { ok: true, username: 'alice' }));
     await service.initializeProviders();
 
@@ -236,7 +252,7 @@ Deno.test('AuthSessionService: second login for same user revokes prior session 
 Deno.test('AuthSessionService: validateToken returns undefined for expired session', () =>
   withIsolatedEnv({ AUTH_SESSION_TTL_MS: '5000' }, async () => {
     const clock = makeFakeClock(0);
-    const service = new AuthSessionService(makeLoggerStub(), new ServerConfigService(), clock);
+    const { service } = makeService(clock);
     service.registerProvider(makeProvider('password', { ok: true, username: 'alice' }));
     await service.initializeProviders();
 
@@ -253,7 +269,7 @@ Deno.test('AuthSessionService: validateToken returns undefined for expired sessi
 Deno.test('AuthSessionService: validateToken extends expiry on each call (sliding window)', () =>
   withIsolatedEnv({ AUTH_SESSION_TTL_MS: '5000' }, async () => {
     const clock = makeFakeClock(0);
-    const service = new AuthSessionService(makeLoggerStub(), new ServerConfigService(), clock);
+    const { service } = makeService(clock);
     service.registerProvider(makeProvider('password', { ok: true, username: 'alice' }));
     await service.initializeProviders();
 
@@ -275,7 +291,7 @@ Deno.test('AuthSessionService: validateToken extends expiry on each call (slidin
 Deno.test('AuthSessionService: listSessions prunes expired entries', () =>
   withIsolatedEnv({ AUTH_SESSION_TTL_MS: '5000' }, async () => {
     const clock = makeFakeClock(0);
-    const service = new AuthSessionService(makeLoggerStub(), new ServerConfigService(), clock);
+    const { service } = makeService(clock);
     service.registerProvider(makeProvider('password', { ok: true, username: 'alice' }));
     await service.initializeProviders();
 
@@ -298,19 +314,28 @@ Deno.test('AuthSessionService: removeSessionsForUsername removes all matches and
   withIsolatedEnv({}, async () => {
     const clock = makeFakeClock(0);
     const ttlMs = 7 * 24 * 60 * 60 * 1000;
-    const service = new AuthSessionService(makeLoggerStub(), new ServerConfigService(), clock);
+    const logger = makeLoggerStub();
+    const config = new ServerConfigService();
+    // Use the store directly to inject multiple sessions without triggering
+    // single-session enforcement in login().
+    const store = new InMemorySessionStore();
+    const service = new AuthSessionService(logger, config, store, clock);
     service.registerProvider(makeProvider('alt', { ok: true, username: 'bob' }));
     await service.initializeProviders();
 
-    // Inject two alice sessions directly to bypass single-session enforcement.
-    const map = (service as unknown as { sessions: Map<string, unknown> }).sessions;
+    // Inject two alice sessions directly into the store to bypass single-session enforcement.
     const makeRec = (token: string, username: string) => ({
-      token, username, providerName: 'password',
-      createdAt: 0, lastActivityAt: 0, expiresAt: ttlMs,
-      createdFromIp: undefined, createdFromUserAgent: undefined,
+      token,
+      username,
+      providerName: 'password',
+      createdAt: 0,
+      lastActivityAt: 0,
+      expiresAt: ttlMs,
+      createdFromIp: undefined,
+      createdFromUserAgent: undefined,
     });
-    map.set('alice-1', makeRec('alice-1', 'alice'));
-    map.set('alice-2', makeRec('alice-2', 'alice'));
+    store.put(makeRec('alice-1', 'alice'));
+    store.put(makeRec('alice-2', 'alice'));
 
     const b1 = await service.login('alt', {});
     if (!b1.ok) throw new Error('Expected bob login ok');
@@ -327,7 +352,7 @@ Deno.test('AuthSessionService: removeSessionsForUsername removes all matches and
 Deno.test('AuthSessionService: login stores IP and user-agent in the record', () =>
   withIsolatedEnv({}, async () => {
     const clock = makeFakeClock(0);
-    const service = new AuthSessionService(makeLoggerStub(), new ServerConfigService(), clock);
+    const { service } = makeService(clock);
     service.registerProvider(makeProvider('password', { ok: true, username: 'alice' }));
     await service.initializeProviders();
 
@@ -344,10 +369,13 @@ Deno.test('AuthSessionService: removeSessionsForUsernameExcept preserves the giv
   withIsolatedEnv({}, async () => {
     const clock = makeFakeClock(0);
     const ttlMs = 7 * 24 * 60 * 60 * 1000;
-    const service = new AuthSessionService(makeLoggerStub(), new ServerConfigService(), clock);
+    const logger = makeLoggerStub();
+    const config = new ServerConfigService();
+    const store = new InMemorySessionStore();
+    const service = new AuthSessionService(logger, config, store, clock);
     await service.initializeProviders();
 
-    // Inject three sessions directly to bypass single-session enforcement.
+    // Inject three sessions directly into the store to bypass single-session enforcement.
     const fakeSession = (token: string) => ({
       token,
       username: 'alice',
@@ -359,11 +387,9 @@ Deno.test('AuthSessionService: removeSessionsForUsernameExcept preserves the giv
       createdFromUserAgent: undefined,
     });
     const [t1, t2, t3] = ['tok-1', 'tok-2', 'tok-3'];
-    // Access private map via type cast for test setup only.
-    const map = (service as unknown as { sessions: Map<string, unknown> }).sessions;
-    map.set(t1, fakeSession(t1));
-    map.set(t2, fakeSession(t2));
-    map.set(t3, fakeSession(t3));
+    store.put(fakeSession(t1));
+    store.put(fakeSession(t2));
+    store.put(fakeSession(t3));
 
     // Keep t2; remove t1 and t3.
     const removed = service.removeSessionsForUsernameExcept('alice', t2);
@@ -372,4 +398,44 @@ Deno.test('AuthSessionService: removeSessionsForUsernameExcept preserves the giv
     assertEquals(service.validateToken(t1), undefined);
     assertEquals(service.validateToken(t2), 'alice');
     assertEquals(service.validateToken(t3), undefined);
+  }));
+
+// ── Phase 3 tests ─────────────────────────────────────────────────────────────
+
+Deno.test('AuthSessionService: purgeExpiredSessions removes expired records from the store', () =>
+  withIsolatedEnv({ AUTH_SESSION_TTL_MS: '5000' }, async () => {
+    const clock = makeFakeClock(0);
+    const logger = makeLoggerStub();
+    const config = new ServerConfigService();
+    const store = new InMemorySessionStore();
+    const service = new AuthSessionService(logger, config, store, clock);
+    service.registerProvider(makeProvider('password', { ok: true, username: 'alice' }));
+    await service.initializeProviders();
+
+    const r1 = await service.login('password', {});
+    if (!r1.ok) throw new Error('Expected ok');
+
+    // Advance past the TTL; the session is now expired in the store.
+    clock.advance(6_000);
+
+    // purgeExpiredSessions should remove the expired row.
+    const count = service.purgeExpiredSessions();
+    assertEquals(count, 1);
+
+    // Confirm it's gone from the store.
+    assertEquals(store.listAll().length, 0);
+  }));
+
+Deno.test('AuthSessionService: purgeExpiredSessions returns 0 when nothing is expired', () =>
+  withIsolatedEnv({}, async () => {
+    const clock = makeFakeClock(0);
+    const { service } = makeService(clock);
+    service.registerProvider(makeProvider('password', { ok: true, username: 'alice' }));
+    await service.initializeProviders();
+
+    await service.login('password', {});
+
+    // No time has advanced — nothing is expired.
+    const count = service.purgeExpiredSessions();
+    assertEquals(count, 0);
   }));

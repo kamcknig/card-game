@@ -11,6 +11,10 @@ export class ServerConfigService {
     this.getAuthRateLimitWindowMs();
     this.getAuthMaxBodyBytes();
     this.getAuthSessionTtlMs();
+    const storeKind = this.getSessionStoreKind();
+    // Eagerly validate the path config for whichever backend is configured.
+    if (storeKind === 'sqlite') this.getAuthDbPath();
+    if (storeKind === 'kv') this.getAuthKvPath();
     this.isFileLoggingEnabled();
     this.getLogFileMaxBytes();
     this.isMatchStateExportEnabled();
@@ -77,6 +81,50 @@ export class ServerConfigService {
    */
   public getAuthSessionTtlMs(): number {
     return this.parseIntEnv('AUTH_SESSION_TTL_MS', 7 * 24 * 60 * 60 * 1000, { min: 1_000 });
+  }
+
+  /**
+   * Returns the session store backend to use.
+   *
+   * Reads from AUTH_SESSION_STORE. Valid values are 'memory' (default),
+   * 'sqlite', and 'kv'. An unrecognized value throws at startup.
+   * - 'memory': in-process Map, sessions lost on restart (default, dev/tests).
+   * - 'sqlite': synchronous SQLite file, sessions survive restarts.
+   * - 'kv': Deno KV with write-through cache, sessions survive restarts.
+   */
+  public getSessionStoreKind(): 'memory' | 'sqlite' | 'kv' {
+    const raw = Deno.env.get('AUTH_SESSION_STORE');
+    if (!raw || !raw.trim()) {
+      return 'memory';
+    }
+    const trimmed = raw.trim().toLowerCase();
+    if (trimmed === 'memory' || trimmed === 'sqlite' || trimmed === 'kv') {
+      return trimmed;
+    }
+    throw new Error(`[server config] AUTH_SESSION_STORE must be 'memory', 'sqlite', or 'kv', received '${raw}'`);
+  }
+
+  /**
+   * Returns the filesystem path for the SQLite auth database.
+   *
+   * Reads from AUTH_DB_PATH. Defaults to './game-data/auth.sqlite'. Used
+   * only when AUTH_SESSION_STORE=sqlite. The containing directory must exist
+   * before the server starts (the store does not create intermediate dirs).
+   */
+  public getAuthDbPath(): string {
+    return Deno.env.get('AUTH_DB_PATH') ?? './game-data/auth.sqlite';
+  }
+
+  /**
+   * Returns the filesystem path for the Deno KV auth store.
+   *
+   * Reads from AUTH_KV_PATH. Defaults to './game-data/auth.kv'. Used only
+   * when AUTH_SESSION_STORE=kv. The containing directory must exist before
+   * the server starts. Pass ':memory:' to use an in-process KV store (dev
+   * and tests only — data is not persisted).
+   */
+  public getAuthKvPath(): string {
+    return Deno.env.get('AUTH_KV_PATH') ?? './game-data/auth.kv';
   }
 
   // Returns the configured server port or default port 3001.

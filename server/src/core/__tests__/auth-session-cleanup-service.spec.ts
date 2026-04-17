@@ -4,6 +4,7 @@ import { AuthSessionService } from '../auth/auth-session-service.ts';
 import { ServerConfigService } from '../server-config-service.ts';
 import { LoggerService } from '../logger-service.ts';
 import { Clock } from '../auth/auth-rate-limiter-service.ts';
+import { InMemorySessionStore } from '../auth/in-memory-session-store.ts';
 
 // Env keys managed by this test suite.
 const AUTH_ENV_KEYS = [
@@ -57,14 +58,25 @@ const makeFakeClock = (initialMs = 0): Clock & { advance(ms: number): void } => 
   };
 };
 
+/**
+ * Creates a fresh AuthSessionService backed by an InMemorySessionStore.
+ *
+ * Phase 3 update: explicitly injects InMemorySessionStore rather than relying
+ * on the service's internal Map.
+ */
+const makeSessionService = (clock: Clock, config?: ServerConfigService): AuthSessionService => {
+  const logger = makeLoggerStub();
+  const effectiveConfig = config ?? new ServerConfigService();
+  return new AuthSessionService(logger, effectiveConfig, new InMemorySessionStore(), clock);
+};
+
 Deno.test('AuthSessionCleanupService: start() begins the timer and stop() clears it', () =>
   withIsolatedEnv({}, async () => {
     // We use a real setInterval here; the test verifies that start/stop do not
     // throw and that calling stop() after start() is idempotent.
     const clock = makeFakeClock(0);
     const logger = makeLoggerStub();
-    const config = new ServerConfigService();
-    const sessionService = new AuthSessionService(logger, config, clock);
+    const sessionService = makeSessionService(clock);
 
     const cleanup = new AuthSessionCleanupService(sessionService, logger);
 
@@ -77,8 +89,7 @@ Deno.test('AuthSessionCleanupService: start() begins the timer and stop() clears
 Deno.test('AuthSessionCleanupService: start() is idempotent (second call does nothing)', () =>
   withIsolatedEnv({}, async () => {
     const logger = makeLoggerStub();
-    const config = new ServerConfigService();
-    const sessionService = new AuthSessionService(logger, config, makeFakeClock(0));
+    const sessionService = makeSessionService(makeFakeClock(0));
 
     const cleanup = new AuthSessionCleanupService(sessionService, logger);
 
@@ -87,14 +98,15 @@ Deno.test('AuthSessionCleanupService: start() is idempotent (second call does no
     cleanup.stop();
   }));
 
-Deno.test('AuthSessionCleanupService: expired sessions are removed when listSessions is triggered', () =>
+Deno.test('AuthSessionCleanupService: purgeExpiredSessions removes expired sessions when triggered', () =>
   withIsolatedEnv({ AUTH_SESSION_TTL_MS: '5000' }, async () => {
-    // Verify that after expiry, listSessions (which the cleanup service calls)
-    // no longer returns the expired record.
+    // Verify that after expiry, purgeExpiredSessions (which the cleanup service
+    // delegates to) removes the expired record from the store.
     const clock = makeFakeClock(0);
     const logger = makeLoggerStub();
     const config = new ServerConfigService();
-    const sessionService = new AuthSessionService(logger, config, clock);
+    const store = new InMemorySessionStore();
+    const sessionService = new AuthSessionService(logger, config, store, clock);
 
     const provider = {
       name: 'password',
@@ -107,9 +119,15 @@ Deno.test('AuthSessionCleanupService: expired sessions are removed when listSess
     if (!loginResult.ok) throw new Error('Expected ok');
 
     // Confirm session is alive at t=0.
-    assertEquals(sessionService.listSessions().length, 1);
+    assertEquals(store.listAll().length, 1);
 
-    // Advance past the TTL and trigger a sweep via listSessions.
+    // Advance past the TTL.
     clock.advance(6_000);
-    assertEquals(sessionService.listSessions().length, 0);
+
+    // Trigger the sweep directly (simulates what the cleanup timer does).
+    const count = sessionService.purgeExpiredSessions();
+    assertEquals(count, 1);
+
+    // The store should now be empty.
+    assertEquals(store.listAll().length, 0);
   }));
