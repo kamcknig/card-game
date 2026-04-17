@@ -200,15 +200,35 @@ Deno.test('AuthSessionService: initializeProviders skips providers without initi
 
 Deno.test('AuthSessionService: each successful login issues a unique token', () =>
   withIsolatedEnv({}, async () => {
+    // Use two different usernames so single-session enforcement does not
+    // invalidate the first token before we can compare them.
+    const service = new AuthSessionService(makeLoggerStub(), new ServerConfigService(), makeFakeClock());
+    service.registerProvider(makeProvider('password', { ok: true, username: 'alice' }));
+    service.registerProvider(makeProvider('password2', { ok: true, username: 'bob' }));
+    await service.initializeProviders();
+
+    const r1 = await service.login('password', {});
+    const r2 = await service.login('password2', {});
+
+    if (!r1.ok || !r2.ok) throw new Error('Expected both logins to succeed');
+    assertEquals(r1.token !== r2.token, true);
+  }));
+
+Deno.test('AuthSessionService: second login for same user revokes prior session (single-session enforcement)', () =>
+  withIsolatedEnv({}, async () => {
     const service = new AuthSessionService(makeLoggerStub(), new ServerConfigService(), makeFakeClock());
     service.registerProvider(makeProvider('password', { ok: true, username: 'alice' }));
     await service.initializeProviders();
 
     const r1 = await service.login('password', {});
-    const r2 = await service.login('password', {});
+    if (!r1.ok) throw new Error('Expected first login to succeed');
 
-    if (!r1.ok || !r2.ok) throw new Error('Expected both logins to succeed');
-    assertEquals(r1.token !== r2.token, true);
+    const r2 = await service.login('password', {});
+    if (!r2.ok) throw new Error('Expected second login to succeed');
+
+    // First session must be invalidated; only the second token is valid.
+    assertEquals(service.validateToken(r1.token), undefined);
+    assertEquals(service.validateToken(r2.token), 'alice');
   }));
 
 // ── Phase 2 tests ─────────────────────────────────────────────────────────────
@@ -277,23 +297,30 @@ Deno.test('AuthSessionService: listSessions prunes expired entries', () =>
 Deno.test('AuthSessionService: removeSessionsForUsername removes all matches and returns count', () =>
   withIsolatedEnv({}, async () => {
     const clock = makeFakeClock(0);
+    const ttlMs = 7 * 24 * 60 * 60 * 1000;
     const service = new AuthSessionService(makeLoggerStub(), new ServerConfigService(), clock);
-    service.registerProvider(makeProvider('password', { ok: true, username: 'alice' }));
     service.registerProvider(makeProvider('alt', { ok: true, username: 'bob' }));
     await service.initializeProviders();
 
-    // Create two sessions for alice and one for bob.
-    const a1 = await service.login('password', {});
-    const a2 = await service.login('password', {});
+    // Inject two alice sessions directly to bypass single-session enforcement.
+    const map = (service as unknown as { sessions: Map<string, unknown> }).sessions;
+    const makeRec = (token: string, username: string) => ({
+      token, username, providerName: 'password',
+      createdAt: 0, lastActivityAt: 0, expiresAt: ttlMs,
+      createdFromIp: undefined, createdFromUserAgent: undefined,
+    });
+    map.set('alice-1', makeRec('alice-1', 'alice'));
+    map.set('alice-2', makeRec('alice-2', 'alice'));
+
     const b1 = await service.login('alt', {});
-    if (!a1.ok || !a2.ok || !b1.ok) throw new Error('Expected all logins ok');
+    if (!b1.ok) throw new Error('Expected bob login ok');
 
     const removed = service.removeSessionsForUsername('alice');
     assertEquals(removed, 2);
 
     // Alice's tokens are gone; Bob's remain.
-    assertEquals(service.validateToken(a1.token), undefined);
-    assertEquals(service.validateToken(a2.token), undefined);
+    assertEquals(service.validateToken('alice-1'), undefined);
+    assertEquals(service.validateToken('alice-2'), undefined);
     assertEquals(service.validateToken(b1.token), 'bob');
   }));
 
@@ -316,20 +343,33 @@ Deno.test('AuthSessionService: login stores IP and user-agent in the record', ()
 Deno.test('AuthSessionService: removeSessionsForUsernameExcept preserves the given token', () =>
   withIsolatedEnv({}, async () => {
     const clock = makeFakeClock(0);
+    const ttlMs = 7 * 24 * 60 * 60 * 1000;
     const service = new AuthSessionService(makeLoggerStub(), new ServerConfigService(), clock);
-    service.registerProvider(makeProvider('password', { ok: true, username: 'alice' }));
     await service.initializeProviders();
 
-    const a1 = await service.login('password', {});
-    const a2 = await service.login('password', {});
-    const a3 = await service.login('password', {});
-    if (!a1.ok || !a2.ok || !a3.ok) throw new Error('Expected all ok');
+    // Inject three sessions directly to bypass single-session enforcement.
+    const fakeSession = (token: string) => ({
+      token,
+      username: 'alice',
+      providerName: 'password',
+      createdAt: 0,
+      lastActivityAt: 0,
+      expiresAt: ttlMs,
+      createdFromIp: undefined,
+      createdFromUserAgent: undefined,
+    });
+    const [t1, t2, t3] = ['tok-1', 'tok-2', 'tok-3'];
+    // Access private map via type cast for test setup only.
+    const map = (service as unknown as { sessions: Map<string, unknown> }).sessions;
+    map.set(t1, fakeSession(t1));
+    map.set(t2, fakeSession(t2));
+    map.set(t3, fakeSession(t3));
 
-    // Keep a2 token; remove a1 and a3.
-    const removed = service.removeSessionsForUsernameExcept('alice', a2.token);
+    // Keep t2; remove t1 and t3.
+    const removed = service.removeSessionsForUsernameExcept('alice', t2);
     assertEquals(removed, 2);
 
-    assertEquals(service.validateToken(a1.token), undefined);
-    assertEquals(service.validateToken(a2.token), 'alice');
-    assertEquals(service.validateToken(a3.token), undefined);
+    assertEquals(service.validateToken(t1), undefined);
+    assertEquals(service.validateToken(t2), 'alice');
+    assertEquals(service.validateToken(t3), undefined);
   }));

@@ -33,6 +33,8 @@ export interface SessionRecord {
  * - `listSessions` prunes expired entries and returns a snapshot.
  * - `removeSessionsForUsername` / `removeSessionsForUsernameExcept` allow
  *   bulk revocation (used by the admin endpoints and password-change flow).
+ * - Single-session enforcement: a new login revokes all prior sessions for
+ *   that user so the most recent login is always the only valid one.
  * - The clock dependency is injectable so tests remain deterministic.
  *
  * Lifetime: Root singleton — shared across all connections.
@@ -113,6 +115,13 @@ export class AuthSessionService {
     const token = crypto.randomUUID();
     const now = this.clock.now();
     const ttlMs = this.serverConfigService.getAuthSessionTtlMs();
+
+    // Single-session enforcement: revoke all prior sessions for this user so
+    // the newest login is always the only valid one.
+    const prior = this.removeSessionsForUsername(result.username);
+    if (prior > 0) {
+      this.loggerService.info(`[auth] revoked ${prior} prior session(s) for '${result.username}' on new login`);
+    }
 
     this.sessions.set(token, {
       token,
