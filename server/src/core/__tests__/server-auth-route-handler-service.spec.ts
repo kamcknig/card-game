@@ -1,6 +1,6 @@
 import { assertEquals } from '@std/assert';
 import { ServerAuthRouteHandlerService } from '../auth/server-auth-route-handler-service.ts';
-import { AuthSessionService } from '../auth/auth-session-service.ts';
+import { AuthSessionService, SessionRecord } from '../auth/auth-session-service.ts';
 import { AuthRateLimiterService, Clock } from '../auth/auth-rate-limiter-service.ts';
 import { ServerConfigService } from '../server-config-service.ts';
 import { LoggerService } from '../logger-service.ts';
@@ -13,6 +13,7 @@ const AUTH_ENV_KEYS = [
   'AUTH_RATE_LIMIT_MAX_ATTEMPTS',
   'AUTH_RATE_LIMIT_WINDOW_MS',
   'AUTH_MAX_BODY_BYTES',
+  'AUTH_SESSION_TTL_MS',
 ] as const;
 
 // Saves and restores relevant env vars around a test body.
@@ -64,11 +65,18 @@ const makeFakeClock = (initialMs = 0): Clock & { advance(ms: number): void } => 
   };
 };
 
-// Creates a stub AuthSessionService with controllable login / validateToken results.
+/**
+ * Creates a stub AuthSessionService with controllable login / validateToken results.
+ *
+ * @param loginResult     Fixed result returned by login().
+ * @param validateResult  Username returned by validateToken(); null means invalid (returns undefined).
+ * @param sessions        Optional list of SessionRecord values returned by listSessions().
+ */
 const makeSessionServiceStub = (
   loginResult: { ok: true; token: string; username: string } | { ok: false; message: string },
   // null signals "token is invalid" (returns undefined); undefined means "use default 'testuser'".
   validateResult: string | null = 'testuser',
+  sessions: SessionRecord[] = [],
 ): AuthSessionService => {
   const removed: string[] = [];
   const resolvedValidate = validateResult === null ? undefined : validateResult;
@@ -78,6 +86,9 @@ const makeSessionServiceStub = (
     removeSession: (token: string) => {
       removed.push(token);
     },
+    listSessions: () => sessions,
+    removeSessionsForUsername: (_username: string) => 0,
+    removeSessionsForUsernameExcept: (_username: string, _keepToken: string) => 0,
     _removed: removed,
   } as unknown as AuthSessionService;
 };
@@ -417,5 +428,153 @@ Deno.test('ServerAuthRouteHandlerService: non-/auth path → handler returns und
     const result = service.handleRequest(req, url, '1.2.3.4');
 
     assertEquals(result, undefined);
+  });
+});
+
+// ── GET /auth/sessions ────────────────────────────────────────────────────────
+
+Deno.test('ServerAuthRouteHandlerService: GET /auth/sessions authenticated → 200 with session list', async () => {
+  await withIsolatedEnv({}, async () => {
+    const now = 1_000_000;
+    // Build a fake session record for the authenticated user.
+    const fakeRecord: SessionRecord = {
+      token: 'abc123-full-token',
+      username: 'alice',
+      providerName: 'password',
+      createdAt: now,
+      lastActivityAt: now,
+      expiresAt: now + 600_000,
+      createdFromIp: '1.2.3.4',
+      createdFromUserAgent: 'TestBrowser/1.0',
+    };
+
+    const { service } = makeService({
+      sessionServiceStub: makeSessionServiceStub(
+        { ok: true, token: 'abc123-full-token', username: 'alice' },
+        'alice', // validateToken returns 'alice'
+        [fakeRecord],
+      ),
+    });
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/sessions', {
+        method: 'GET',
+        headers: { Authorization: 'Bearer abc123-full-token' },
+      }),
+    );
+
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.ok, true);
+    assertEquals(Array.isArray(body.sessions), true);
+    assertEquals(body.sessions.length, 1);
+
+    const s = body.sessions[0];
+    // Token tail must be the last 6 characters, never the full token.
+    // 'abc123-full-token' → last 6 chars = '-token'.
+    assertEquals(s.tokenTail, '...-token');
+    assertEquals(s.current, true);
+    assertEquals(s.createdFromIp, '1.2.3.4');
+    assertEquals(s.createdFromUserAgent, 'TestBrowser/1.0');
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: GET /auth/sessions unauthenticated → 401', async () => {
+  await withIsolatedEnv({}, async () => {
+    const { service } = makeService({
+      sessionServiceStub: makeSessionServiceStub({ ok: true, token: 'tok', username: 'alice' }, null),
+    });
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/sessions', { method: 'GET' }),
+    );
+
+    assertEquals(res.status, 401);
+  });
+});
+
+// ── DELETE /auth/sessions ─────────────────────────────────────────────────────
+
+Deno.test('ServerAuthRouteHandlerService: DELETE /auth/sessions revokes sessions', async () => {
+  await withIsolatedEnv({}, async () => {
+    // Track removal calls.
+    let removedForUsername = '';
+    const stub = {
+      login: async () => ({ ok: true as const, token: 'tok', username: 'alice' }),
+      validateToken: (_token: string) => 'alice' as string | undefined,
+      removeSession: () => {},
+      listSessions: () => [] as SessionRecord[],
+      removeSessionsForUsername: (u: string) => {
+        removedForUsername = u;
+        return 2;
+      },
+      removeSessionsForUsernameExcept: (_u: string, _k: string) => 0,
+    } as unknown as AuthSessionService;
+
+    const { service } = makeService({ sessionServiceStub: stub });
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/sessions', {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer tok' },
+      }),
+    );
+
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.ok, true);
+    assertEquals(body.removed, 2);
+    assertEquals(removedForUsername, 'alice');
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: DELETE /auth/sessions?keepCurrent=true keeps current token', async () => {
+  await withIsolatedEnv({}, async () => {
+    let keptToken = '';
+    const stub = {
+      login: async () => ({ ok: true as const, token: 'tok', username: 'alice' }),
+      validateToken: (_token: string) => 'alice' as string | undefined,
+      removeSession: () => {},
+      listSessions: () => [] as SessionRecord[],
+      removeSessionsForUsername: (_u: string) => 0,
+      removeSessionsForUsernameExcept: (_u: string, k: string) => {
+        keptToken = k;
+        return 1;
+      },
+    } as unknown as AuthSessionService;
+
+    const { service } = makeService({ sessionServiceStub: stub });
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/sessions?keepCurrent=true', {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer tok' },
+      }),
+    );
+
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.ok, true);
+    // Verify the kept token was passed through.
+    assertEquals(keptToken, 'tok');
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: DELETE /auth/sessions unauthenticated → 401', async () => {
+  await withIsolatedEnv({}, async () => {
+    const { service } = makeService({
+      sessionServiceStub: makeSessionServiceStub({ ok: true, token: 'tok', username: 'alice' }, null),
+    });
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/sessions', { method: 'DELETE' }),
+    );
+
+    assertEquals(res.status, 401);
   });
 });

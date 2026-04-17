@@ -4,6 +4,7 @@ import { LoggerService } from './logger-service.ts';
 import { ExpansionLoaderService } from './expansion-loader-service.ts';
 import { AuthSessionService } from './auth/auth-session-service.ts';
 import { PresetPasswordAuthProvider } from './auth/preset-password-auth-provider.ts';
+import { AuthSessionCleanupService } from './auth/auth-session-cleanup-service.ts';
 
 // Owns one-time server startup tasks so server.ts can stay focused on composition and host wiring.
 export class ServerStartupService {
@@ -13,6 +14,7 @@ export class ServerStartupService {
     private readonly loggerService: LoggerService,
     private readonly authSessionService: AuthSessionService,
     private readonly presetPasswordAuthProvider: PresetPasswordAuthProvider,
+    private readonly authSessionCleanupService: AuthSessionCleanupService,
   ) {}
 
   // Loads expansion data/effects and notifies the lobby directory for game propagation.
@@ -20,6 +22,9 @@ export class ServerStartupService {
     // Register and initialize auth providers before loading expansions.
     this.authSessionService.registerProvider(this.presetPasswordAuthProvider);
     await this.authSessionService.initializeProviders();
+
+    // Start periodic cleanup of expired sessions after providers are ready.
+    this.authSessionCleanupService.start();
 
     try {
       const expansionList = (

@@ -7,9 +7,12 @@ import { AuthRateLimiterService } from './auth-rate-limiter-service.ts';
  * Handles HTTP authentication endpoints for login, token validation, and logout.
  *
  * Routes:
- *   POST   /auth/login    — validates credentials via the selected provider
- *   GET    /auth/validate — validates an existing session token
- *   DELETE /auth/logout   — invalidates the current session token
+ *   POST   /auth/login     — validates credentials via the selected provider
+ *   GET    /auth/validate  — validates an existing session token
+ *   DELETE /auth/logout    — invalidates the current session token
+ *   GET    /auth/sessions  — lists active sessions for the authenticated user
+ *   DELETE /auth/sessions  — revokes all sessions for the authenticated user
+ *                           (pass `?keepCurrent=true` to preserve the caller's session)
  *
  * Login requests accept an optional `provider` field to select the
  * authentication method. Defaults to 'password' for backwards compatibility.
@@ -20,6 +23,11 @@ import { AuthRateLimiterService } from './auth-rate-limiter-service.ts';
  * - Per-IP sliding-window rate limiting on failed logins (AuthRateLimiterService).
  * - CORS uses an allowlist instead of blindly reflecting the request origin.
  * - Remote IP is passed in from the caller (derived in ServerBootstrapService).
+ *
+ * Phase 2 additions:
+ * - IP and User-Agent are forwarded to AuthSessionService.login for audit metadata.
+ * - GET /auth/sessions lists this user's active sessions with safe token tails.
+ * - DELETE /auth/sessions revokes all sessions (optionally keeping the current one).
  *
  * Lifetime: Root singleton — called from ServerBootstrapService HTTP handler.
  * Consumers: ServerBootstrapService.
@@ -41,8 +49,8 @@ export class ServerAuthRouteHandlerService {
    * (required when the Angular frontend is served from a different origin
    * than the game server, e.g., separate Azure Container Apps).
    *
-   * @param req The incoming HTTP request.
-   * @param url The pre-parsed URL for the request.
+   * @param req      The incoming HTTP request.
+   * @param url      The pre-parsed URL for the request.
    * @param remoteIp The client IP, used for rate limiting. Derived by the
    *   caller from the socket remote address or X-Forwarded-For header.
    */
@@ -74,6 +82,16 @@ export class ServerAuthRouteHandlerService {
       return this.handleLogout(req);
     }
 
+    // GET /auth/sessions — list this user's active sessions.
+    if (parts.length === 2 && parts[1] === 'sessions' && req.method === 'GET') {
+      return this.handleListSessions(req);
+    }
+
+    // DELETE /auth/sessions — revoke all sessions for this user.
+    if (parts.length === 2 && parts[1] === 'sessions' && req.method === 'DELETE') {
+      return this.handleRevokeAllSessions(req, url);
+    }
+
     this.loggerService.debug(`[auth route] unmatched auth path: ${req.method} ${url.pathname}`);
     return new Response('auth resource not found', { status: 404, headers: this.corsHeaders(req) });
   }
@@ -89,6 +107,9 @@ export class ServerAuthRouteHandlerService {
    * Reads the `provider` field from the request body to select the auth
    * method. Defaults to 'password' when provider is not specified.
    * Returns 401 on authentication failure and 400 on malformed request bodies.
+   *
+   * Phase 2: IP and User-Agent are passed to AuthSessionService.login so
+   * they are stored in the resulting SessionRecord for audit visibility.
    */
   private async handleLogin(req: Request, remoteIp: string): Promise<Response> {
     // Check rate limit before doing any work.
@@ -127,7 +148,10 @@ export class ServerAuthRouteHandlerService {
     const providerName = typeof body['provider'] === 'string' ? body['provider'] : 'password';
     this.loggerService.debug(`[auth route] login attempt via provider '${providerName}' from ${remoteIp}`);
 
-    const result = await this.authSessionService.login(providerName, body);
+    // Pass IP and User-Agent as audit context so the SessionRecord carries them.
+    const userAgent = req.headers.get('user-agent') ?? undefined;
+    const result = await this.authSessionService.login(providerName, body, { ip: remoteIp, userAgent });
+
     if (!result.ok) {
       this.authRateLimiterService.recordFailure(remoteIp);
       this.loggerService.warn(
@@ -181,6 +205,76 @@ export class ServerAuthRouteHandlerService {
       this.loggerService.debug('[auth] logout: no bearer token provided');
     }
     return this.jsonResponse({ ok: true }, 200, req);
+  }
+
+  /**
+   * Lists all active sessions belonging to the authenticated user.
+   *
+   * Requires a valid Bearer token. Returns a safe projection of each
+   * SessionRecord: the token is represented only by its last 6 characters
+   * (`tokenTail`) so the full secret is never transmitted back. The `current`
+   * flag identifies the session that made this request.
+   *
+   * Returns 401 when the token is missing or invalid.
+   */
+  private handleListSessions(req: Request): Response {
+    const token = this.extractBearerToken(req);
+    const username = token ? this.authSessionService.validateToken(token) : undefined;
+    if (!username) {
+      this.loggerService.debug('[auth route] GET /auth/sessions: unauthorized');
+      return this.jsonResponse({ ok: false, message: 'unauthorized' }, 401, req);
+    }
+
+    const sessions = this.authSessionService
+      .listSessions()
+      .filter(s => s.username === username)
+      .map(s => ({
+        tokenTail: `...${s.token.slice(-6)}`,
+        createdAt: s.createdAt,
+        lastActivityAt: s.lastActivityAt,
+        expiresAt: s.expiresAt,
+        createdFromIp: s.createdFromIp,
+        createdFromUserAgent: s.createdFromUserAgent,
+        current: s.token === token,
+      }));
+
+    this.loggerService.debug(`[auth route] GET /auth/sessions: returning ${sessions.length} session(s) for '${username}'`);
+    return this.jsonResponse({ ok: true, sessions }, 200, req);
+  }
+
+  /**
+   * Revokes all sessions belonging to the authenticated user.
+   *
+   * Requires a valid Bearer token. When the `keepCurrent` query parameter is
+   * `true`, the caller's own session is preserved so they remain logged in
+   * while all other sessions (e.g., from other browsers) are invalidated.
+   *
+   * Returns 401 when the token is missing or invalid.
+   *
+   * @example DELETE /auth/sessions           → revoke all, including caller
+   * @example DELETE /auth/sessions?keepCurrent=true → revoke all except caller
+   */
+  private handleRevokeAllSessions(req: Request, url: URL): Response {
+    const token = this.extractBearerToken(req);
+    const username = token ? this.authSessionService.validateToken(token) : undefined;
+    if (!username) {
+      this.loggerService.debug('[auth route] DELETE /auth/sessions: unauthorized');
+      return this.jsonResponse({ ok: false, message: 'unauthorized' }, 401, req);
+    }
+
+    const keepCurrent = url.searchParams.get('keepCurrent') === 'true';
+    let removed: number;
+
+    if (keepCurrent && token) {
+      removed = this.authSessionService.removeSessionsForUsernameExcept(username, token);
+    } else {
+      removed = this.authSessionService.removeSessionsForUsername(username);
+    }
+
+    this.loggerService.info(
+      `[auth route] DELETE /auth/sessions: revoked ${removed} session(s) for '${username}' (keepCurrent=${keepCurrent})`,
+    );
+    return this.jsonResponse({ ok: true, removed }, 200, req);
   }
 
   /**

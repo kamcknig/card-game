@@ -10,6 +10,7 @@ export class ServerConfigService {
     this.getAuthRateLimitMaxAttempts();
     this.getAuthRateLimitWindowMs();
     this.getAuthMaxBodyBytes();
+    this.getAuthSessionTtlMs();
     this.isFileLoggingEnabled();
     this.getLogFileMaxBytes();
     this.isMatchStateExportEnabled();
@@ -65,6 +66,17 @@ export class ServerConfigService {
   // Returns the maximum request body size (bytes) accepted on /auth/login.
   public getAuthMaxBodyBytes(): number {
     return this.parseIntEnv('AUTH_MAX_BODY_BYTES', 4096, { min: 256, max: 1_048_576 });
+  }
+
+  /**
+   * Returns the session time-to-live in milliseconds (sliding window).
+   *
+   * Each validated token has its expiry extended by this amount. Sessions
+   * that are never re-validated expire after this duration from their last
+   * activity. Defaults to 7 days. Configurable via AUTH_SESSION_TTL_MS.
+   */
+  public getAuthSessionTtlMs(): number {
+    return this.parseIntEnv('AUTH_SESSION_TTL_MS', 7 * 24 * 60 * 60 * 1000, { min: 1_000 });
   }
 
   // Returns the configured server port or default port 3001.

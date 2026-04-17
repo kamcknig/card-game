@@ -39,6 +39,7 @@ import { AuthSessionService } from '../core/auth/auth-session-service.ts';
 import { PresetPasswordAuthProvider } from '../core/auth/preset-password-auth-provider.ts';
 import { ServerAuthRouteHandlerService } from '../core/auth/server-auth-route-handler-service.ts';
 import { AuthRateLimiterService } from '../core/auth/auth-rate-limiter-service.ts';
+import { AuthSessionCleanupService } from '../core/auth/auth-session-cleanup-service.ts';
 
 export interface RegisterRootServicesArgs {
   io: Server<ServerListenEvents, ServerEmitEvents>;
@@ -99,6 +100,7 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
     authSessionService: asClass(AuthSessionService).singleton(),
     presetPasswordAuthProvider: asClass(PresetPasswordAuthProvider).singleton(),
     authRateLimiterService: asClass(AuthRateLimiterService).singleton(),
+    authSessionCleanupService: asClass(AuthSessionCleanupService).singleton(),
     serverAuthRouteHandlerService: asClass(ServerAuthRouteHandlerService).singleton(),
   });
 };
