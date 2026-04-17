@@ -10,15 +10,14 @@ import type { SessionRecord } from './auth-session-service.ts';
  *
  * The interface is intentionally synchronous so that the hot-path
  * `validateToken` call (invoked on every socket event) does not need to
- * await a Promise. The SQLite binding for Deno is synchronous; the Deno KV
- * implementation achieves synchronous reads via a write-through in-memory
- * cache loaded at startup by `DenoKvSessionStore.open()`.
+ * await a Promise. The Deno KV implementation achieves synchronous reads via
+ * a write-through in-memory cache loaded at startup by
+ * `DenoKvSessionStore.open()`.
  *
  * Defined in: server/src/core/auth/session-store.ts
  * Consumers: AuthSessionService (injected via constructor, resolved by
  *   register-root-services.ts based on AUTH_SESSION_STORE env var).
- *   Implementations: InMemorySessionStore, SqliteSessionStore,
- *   DenoKvSessionStore.
+ *   Implementations: InMemorySessionStore, DenoKvSessionStore.
  */
 export interface SessionStore {
   /**

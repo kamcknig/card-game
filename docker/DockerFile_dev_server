@@ -16,5 +16,6 @@ CMD ["deno", "run", \
   "--allow-read", \
   "--allow-write", \
   "--allow-sys", \
+  "--unstable-kv", \
   "--watch", \
   "src/server.ts"]

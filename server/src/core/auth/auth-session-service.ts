@@ -41,7 +41,7 @@ export interface SessionRecord {
  * Phase 3 additions:
  * - The backing storage is now an injected `SessionStore` rather than a
  *   hard-coded `Map<string, SessionRecord>`. Callers inject either
- *   `InMemorySessionStore` (default / tests) or `SqliteSessionStore`
+ *   `InMemorySessionStore` (default / tests) or `DenoKvSessionStore`
  *   (production, controlled by AUTH_SESSION_STORE env var).
  * - All map operations delegate to the store; the public API is unchanged.
  *
@@ -237,9 +237,9 @@ export class AuthSessionService {
   /**
    * Purges all expired sessions directly via the store.
    *
-   * More efficient than `listSessions()` for the SQLite backend because it
-   * issues a single DELETE WHERE query rather than loading all rows, comparing
-   * timestamps in JS, and deleting one-by-one. Used by `AuthSessionCleanupService`
+   * More efficient than `listSessions()` for persistent backends because it
+   * performs a single sweep rather than loading all rows, comparing timestamps
+   * in JS, and deleting one-by-one. Used by `AuthSessionCleanupService`
    * during periodic sweeps.
    *
    * Returns the number of sessions removed.

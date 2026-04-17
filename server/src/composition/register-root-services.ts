@@ -41,7 +41,6 @@ import { ServerAuthRouteHandlerService } from '../core/auth/server-auth-route-ha
 import { AuthRateLimiterService } from '../core/auth/auth-rate-limiter-service.ts';
 import { AuthSessionCleanupService } from '../core/auth/auth-session-cleanup-service.ts';
 import { InMemorySessionStore } from '../core/auth/in-memory-session-store.ts';
-import { SqliteSessionStore } from '../core/auth/sqlite-session-store.ts';
 import { DenoKvSessionStore } from '../core/auth/deno-kv-session-store.ts';
 import type { SessionStore } from '../core/auth/session-store.ts';
 
@@ -103,27 +102,18 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
     serverBootstrapService: asClass(ServerBootstrapService).singleton(),
     // Selects the session store backend based on AUTH_SESSION_STORE env var.
     // 'memory' (default) uses an in-process Map — sessions are lost on restart.
-    // 'sqlite' persists sessions to disk at AUTH_DB_PATH so they survive restarts.
     // 'kv' uses Deno KV with a write-through cache — call DenoKvSessionStore.open()
     //   in ServerStartupService before the HTTP server accepts connections.
     sessionStore: asFunction(
-      ({
-        serverConfigService,
-        loggerService,
-      }: {
-        serverConfigService: ServerConfigService;
-        loggerService: LoggerService;
-      }): SessionStore => {
+      (serverConfigService: ServerConfigService, loggerService: LoggerService): SessionStore => {
         const kind = serverConfigService.getSessionStoreKind();
-        if (kind === 'sqlite') {
-          const dbPath = serverConfigService.getAuthDbPath();
-          return new SqliteSessionStore(dbPath);
-        }
         if (kind === 'kv') {
+          loggerService.log('[auth] session store: deno kv (persistent across restarts)');
           // open() is called asynchronously during ServerStartupService.start()
           // before the HTTP server begins accepting connections.
           return new DenoKvSessionStore(loggerService);
         }
+        loggerService.log('[auth] session store: in-memory (sessions lost on restart)');
         return new InMemorySessionStore();
       },
     ).singleton(),

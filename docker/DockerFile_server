@@ -19,5 +19,6 @@ CMD ["deno", "run", \
   "--allow-read", \
   "--allow-write", \
   "--allow-sys", \
+  "--unstable-kv", \
   "--node-modules-dir=manual", \
   "src/server.ts"]

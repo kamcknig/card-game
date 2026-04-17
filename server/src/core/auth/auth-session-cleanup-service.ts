@@ -5,15 +5,15 @@ import { LoggerService } from '../logger-service.ts';
  * Periodically purges expired auth sessions from the session store.
  *
  * Delegates to `AuthSessionService.purgeExpiredSessions()`, which issues a
- * single efficient sweep (a single DELETE for the SQLite backend, or an O(n)
- * pass for the in-memory backend). This ensures garbage collection runs on a
- * regular cadence even when no requests are actively validating tokens,
- * preventing unbounded growth in long-running deployments.
+ * single efficient sweep across the backing store (O(n) pass for the
+ * in-memory backend; a single atomic operation for Deno KV). This ensures
+ * garbage collection runs on a regular cadence even when no requests are
+ * actively validating tokens, preventing unbounded growth in long-running
+ * deployments.
  *
  * Phase 3 note: the cleanup method was updated from `listSessions()` (which
  * prunes as a side effect of reading) to `purgeExpiredSessions()` (a dedicated
- * sweep that is more efficient for the SQLite backend, where a single DELETE
- * replaces per-row deletions).
+ * sweep that is more efficient for persistent backends).
  *
  * The interval is configurable at start time; the default is 5 minutes,
  * which is sufficient for most deployments. The timer is automatically

@@ -12,8 +12,7 @@ export class ServerConfigService {
     this.getAuthMaxBodyBytes();
     this.getAuthSessionTtlMs();
     const storeKind = this.getSessionStoreKind();
-    // Eagerly validate the path config for whichever backend is configured.
-    if (storeKind === 'sqlite') this.getAuthDbPath();
+    // Eagerly validate the path config for the kv backend when configured.
     if (storeKind === 'kv') this.getAuthKvPath();
     this.isFileLoggingEnabled();
     this.getLogFileMaxBytes();
@@ -86,33 +85,21 @@ export class ServerConfigService {
   /**
    * Returns the session store backend to use.
    *
-   * Reads from AUTH_SESSION_STORE. Valid values are 'memory' (default),
-   * 'sqlite', and 'kv'. An unrecognized value throws at startup.
+   * Reads from AUTH_SESSION_STORE. Valid values are 'memory' (default) and
+   * 'kv'. An unrecognized value throws at startup.
    * - 'memory': in-process Map, sessions lost on restart (default, dev/tests).
-   * - 'sqlite': synchronous SQLite file, sessions survive restarts.
    * - 'kv': Deno KV with write-through cache, sessions survive restarts.
    */
-  public getSessionStoreKind(): 'memory' | 'sqlite' | 'kv' {
+  public getSessionStoreKind(): 'memory' | 'kv' {
     const raw = Deno.env.get('AUTH_SESSION_STORE');
     if (!raw || !raw.trim()) {
       return 'memory';
     }
     const trimmed = raw.trim().toLowerCase();
-    if (trimmed === 'memory' || trimmed === 'sqlite' || trimmed === 'kv') {
+    if (trimmed === 'memory' || trimmed === 'kv') {
       return trimmed;
     }
-    throw new Error(`[server config] AUTH_SESSION_STORE must be 'memory', 'sqlite', or 'kv', received '${raw}'`);
-  }
-
-  /**
-   * Returns the filesystem path for the SQLite auth database.
-   *
-   * Reads from AUTH_DB_PATH. Defaults to './game-data/auth.sqlite'. Used
-   * only when AUTH_SESSION_STORE=sqlite. The containing directory must exist
-   * before the server starts (the store does not create intermediate dirs).
-   */
-  public getAuthDbPath(): string {
-    return Deno.env.get('AUTH_DB_PATH') ?? './game-data/auth.sqlite';
+    throw new Error(`[server config] AUTH_SESSION_STORE must be 'memory' or 'kv', received '${raw}'`);
   }
 
   /**

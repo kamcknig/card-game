@@ -72,8 +72,7 @@ const testOpts = { sanitizeOps: false, sanitizeResources: false };
  * Runs the full `SessionStore` conformance suite against a `DenoKvSessionStore`.
  *
  * Each test builds a fresh in-memory store via `makeStore()` so tests are
- * isolated. The suite is identical in intent to the one in
- * `sqlite-session-store.spec.ts`; both stores must exhibit the same external
+ * isolated. All session store implementations must exhibit the same external
  * behaviour regardless of backing implementation.
  *
  * The `sanitizeOps`/`sanitizeResources` flags are disabled because KV writes

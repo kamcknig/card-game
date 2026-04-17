@@ -33,7 +33,6 @@ services:
     environment:
       - PORT=3001
       - LOG_TO_FILE=true
-      - LOG_FILE_MAX_BYTES=5242880
       - GAME_DATA_ROOT=./game-data
       - MATCH_STATE_EXPORT_ENABLED=true
       - END_MATCH_ON_NO_HUMANS=true
@@ -41,7 +40,9 @@ services:
       - MATCH_STATE_MERGE_ENABLED=true
       - AUTH_DISABLED=false
       - AUTH_PASSWORD=dominion
-      - AUTH_ALLOWED_ORIGINS="https://example.com"
+      - AUTH_ALLOWED_ORIGINS=*
+      - AUTH_SESSION_STORE=kv
+      - AUTH_KV_PATH=./game-data/auth.kv
     ports:
       - "3001:3001"
     restart: unless-stopped
