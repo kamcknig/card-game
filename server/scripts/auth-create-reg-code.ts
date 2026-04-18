@@ -121,8 +121,20 @@ const main = async (): Promise<void> => {
   const kvPath = argMap['kv'] ?? Deno.env.get('AUTH_KV_PATH') ?? './game-data/auth.kv';
 
   console.log(`[auth:create-reg-code] opening KV at '${kvPath}'`);
+
+  // Create the parent directory if it does not exist so openKv can create the
+  // KV file on first use.
+  const dir = kvPath.includes('/') ? kvPath.slice(0, kvPath.lastIndexOf('/')) : '.';
+  await Deno.mkdir(dir, { recursive: true });
+
   const store = new DenoKvRegistrationCodeStore(consoleLogger);
-  await store.open(kvPath);
+  try {
+    await store.open(kvPath);
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error(`[auth:create-reg-code] could not open auth store at '${kvPath}': ${detail}`);
+    Deno.exit(1);
+  }
 
   const now = Date.now();
   const expiresAt = expiresInMs !== null ? now + expiresInMs : null;
