@@ -218,6 +218,44 @@ export class DenoKvUserStore implements UserStore {
   }
 
   /**
+   * Removes the user record for the given id from both in-memory caches and KV.
+   *
+   * No-ops silently when the id is not found. Intended for CLI/admin use.
+   */
+  public delete(id: number): void {
+    const rec = this.byId.get(id);
+    if (!rec) return;
+
+    const key = rec.username.toLowerCase();
+    this.byId.delete(id);
+    this.cache.delete(key);
+
+    this.kv?.delete([KEY_USERS, key]).catch((err: unknown) => {
+      this.loggerService.warn(`[auth users] delete failed for '${rec.username}': ${err}`);
+    });
+  }
+
+  /**
+   * Removes every user record from both in-memory caches and KV.
+   *
+   * The id sequence counter is preserved so subsequent creates do not reuse
+   * previously issued ids. Intended for CLI/admin use.
+   */
+  public clear(): void {
+    const keys = [...this.cache.keys()];
+    this.cache.clear();
+    this.byId.clear();
+
+    for (const key of keys) {
+      this.kv?.delete([KEY_USERS, key]).catch((err: unknown) => {
+        this.loggerService.warn(`[auth users] clear: delete failed for key '${key}': ${err}`);
+      });
+    }
+
+    this.loggerService.info(`[auth users] cleared ${keys.length} user(s) from store`);
+  }
+
+  /**
    * Returns a snapshot of every user record currently in memory.
    */
   public list(): ReadonlyArray<UserRecord> {

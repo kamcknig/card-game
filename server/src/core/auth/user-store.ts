@@ -103,6 +103,21 @@ export interface UserStore {
   setDisabled(id: number, disabled: boolean): void;
 
   /**
+   * Removes the user record for the given id from the store.
+   *
+   * No-ops silently when the id does not exist. Intended for CLI/admin use.
+   */
+  delete(id: number): void;
+
+  /**
+   * Removes every user record from the store.
+   *
+   * The id sequence is preserved so that subsequent creates do not reuse
+   * previously issued ids. Intended for CLI/admin use.
+   */
+  clear(): void;
+
+  /**
    * Returns a snapshot of every user record in the store.
    *
    * Intended for CLI/admin use; the route handlers never expose the full

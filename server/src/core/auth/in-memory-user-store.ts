@@ -93,6 +93,30 @@ export class InMemoryUserStore implements UserStore {
     rec.disabled = disabled;
   }
 
+  /**
+   * Removes the user record for the given id from both caches.
+   *
+   * No-ops silently when the id is not found.
+   */
+  public delete(id: number): void {
+    const rec = this.byId.get(id);
+    if (!rec) return;
+
+    this.byUsername.delete(rec.username.toLowerCase());
+    this.byId.delete(id);
+  }
+
+  /**
+   * Removes every user record from both caches.
+   *
+   * The id sequence counter is preserved so subsequent creates do not reuse
+   * previously issued ids.
+   */
+  public clear(): void {
+    this.byUsername.clear();
+    this.byId.clear();
+  }
+
   public list(): ReadonlyArray<UserRecord> {
     return [...this.byUsername.values()];
   }

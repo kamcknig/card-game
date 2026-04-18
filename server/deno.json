@@ -14,7 +14,7 @@
   "tasks": {
     "dev:watch": "deno run --inspect --check --env-file --allow-sys --allow-read --allow-write --allow-net --allow-env --allow-ffi --unstable-ffi --unstable-kv --watch src/server.ts",
     "dev:runbrowsers": "deno run scripts/run-browsers.js",
-    "auth:create-user": "deno run --allow-env --allow-read --allow-write --allow-ffi --unstable-kv scripts/auth-create-user.ts",
+    "auth:users": "deno run --allow-env --allow-read --allow-write --allow-ffi --unstable-kv scripts/auth-user-mgmt.ts",
     "auth:create-reg-code": "deno run --allow-env --allow-read --allow-write --unstable-kv scripts/auth-create-reg-code.ts",
     "fmt": "oxfmt --write src/",
     "test:unit": "deno test --allow-env --allow-write --allow-read --allow-sys=cpus --allow-ffi --unstable-ffi --unstable-kv src/",
