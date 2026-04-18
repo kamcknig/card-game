@@ -13,9 +13,9 @@ services:
       - ./angular-frontend/src/proxy.conf.docker.json:/app/angular-frontend/src/proxy.conf.json:ro
     environment:
       # Write env.js to Angular's public/ dir so ng serve serves it
-      - ENV_JS_DIR=/app/angular-frontend/public
+      ENV_JS_DIR: /app/angular-frontend/public
       # Empty wsHost so socket.io connects to same origin, proxied by ng serve
-      - WS_HOST=
+      WS_HOST: ""
     ports:
       - "51455:51455"
     depends_on:
@@ -31,18 +31,20 @@ services:
       - ./server:/app/server
       - ./shared:/app/shared
     environment:
-      - PORT=3001
-      - LOG_TO_FILE=true
-      - GAME_DATA_ROOT=./game-data
-      - MATCH_STATE_EXPORT_ENABLED=true
-      - END_MATCH_ON_NO_HUMANS=true
-      - LOG_COLOR=true
-      - MATCH_STATE_MERGE_ENABLED=true
-      - AUTH_DISABLED=false
-      - AUTH_PASSWORD=dominion
-      - AUTH_ALLOWED_ORIGINS=*
-      - AUTH_SESSION_STORE=kv
-      - AUTH_KV_PATH=./game-data/auth.kv
+      PORT: 3001
+      LOG_TO_FILE: "true"
+      GAME_DATA_ROOT: "./game-data"
+      MATCH_STATE_EXPORT_ENABLED: "true"
+      END_MATCH_ON_NO_HUMANS: "true"
+      LOG_COLOR: "true"
+      MATCH_STATE_MERGE_ENABLED: "true"
+      AUTH_PASSWORD: "dominion"
+      AUTH_DISABLED: "false"
+      AUTH_RATE_LIMIT_MAX_ATTEMPTS: "10"
+      AUTH_RATE_LIMIT_WINDOW_MS: "60000"
+      AUTH_ALLOWED_ORIGINS: "*"
+      AUTH_SESSION_STORE: "kv"
+      AUTH_KV_PATH: "./game-data/auth.kv"
     ports:
       - "3001:3001"
     restart: unless-stopped

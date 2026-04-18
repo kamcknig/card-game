@@ -159,7 +159,7 @@ az containerapp secret remove \
 
 | Variable | Description |
 |----------|-------------|
-| `WS_HOST` | Full URL to the server Container App (e.g. `https://dominion-clone-server.<region>.azurecontainerapps.io`) |
+| `WS_HOST` | Full URL to the server Container App (e.g. `https://dominion-clone-server.<region>.azurecontainerapps.io`). Also drives the CSP `connect-src` directive — see [Content Security Policy](#content-security-policy) below. |
 
 ## Session Persistence
 
@@ -218,6 +218,44 @@ az containerapp update \
 - To rotate the auth store (force all users to re-login), delete the store file and restart.
 - Sessions only contain auth metadata (token, username, IP, timestamps). No game state
   is stored here.
+
+## Content Security Policy
+
+The Nginx frontend container sends a `Content-Security-Policy` header (and companion security headers) on every response. The policy is generated dynamically by `docker/env.sh` at container start so the `connect-src` directive can include the runtime `WS_HOST` value without rebuilding the image.
+
+### How it works
+
+`docker/env.sh` writes `/etc/nginx/conf.d/security-headers.conf` during container initialisation. `docker/nginx.conf` includes that file in the `server` block via:
+
+```nginx
+include /etc/nginx/conf.d/security-headers.conf;
+```
+
+The generated file contains:
+
+```nginx
+add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' <WS_HOST> <WS_CONNECT_SRC>; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" always;
+add_header X-Content-Type-Options "nosniff" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+```
+
+where `<WS_HOST>` is the value of the `WS_HOST` environment variable and `<WS_CONNECT_SRC>` is its WebSocket equivalent (`http://` → `ws://`, `https://` → `wss://`).
+
+### No additional environment variables required
+
+The CSP is derived entirely from `WS_HOST`. No new env vars need to be set. Ensure `WS_HOST` is set correctly in the frontend Container App (it must already be set for Socket.IO to work).
+
+### Known concession: `style-src 'unsafe-inline'`
+
+Angular injects component styles as `<style>` tags at runtime, which requires `'unsafe-inline'` in `style-src`. Eliminating it would require per-request nonces threaded through Nginx, which is considerably more complex. CSS-based XSS is far harder to exploit than script injection, so this risk is accepted for now. If a nonce-based approach is introduced in the future, remove `'unsafe-inline'` from `style-src` and add nonce injection to `env.sh` and the Nginx configuration.
+
+### Verifying headers in production
+
+```bash
+# Inspect security headers from the Nginx container
+curl -si https://<frontend-fqdn>/index.html | grep -i "content-security\|x-content-type\|referrer\|permissions"
+```
 
 ## Rollback
 
