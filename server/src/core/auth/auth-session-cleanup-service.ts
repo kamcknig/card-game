@@ -11,10 +11,6 @@ import { LoggerService } from '../logger-service.ts';
  * actively validating tokens, preventing unbounded growth in long-running
  * deployments.
  *
- * Phase 3 note: the cleanup method was updated from `listSessions()` (which
- * prunes as a side effect of reading) to `purgeExpiredSessions()` (a dedicated
- * sweep that is more efficient for persistent backends).
- *
  * The interval is configurable at start time; the default is 5 minutes,
  * which is sufficient for most deployments. The timer is automatically
  * cancelled when `stop()` is called (e.g., on server shutdown).

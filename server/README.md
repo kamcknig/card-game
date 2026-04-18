@@ -36,7 +36,6 @@ cp .env-example .env
 | `MATCH_STATE_PATH` | _(unset)_ | Optional path to a match state file to load on startup |
 | `END_MATCH_ON_NO_HUMANS` | `true` | End active matches when all human players disconnect |
 | `TOOLTIP_DEFAULT_CLOSE_DELAY_MS` | _(unset)_ | Default delay (ms) before closing tooltips, sent to clients |
-| `AUTH_PASSWORD` | _(required)_ | Preset password for simple authentication |
 
 ## Other Commands
 

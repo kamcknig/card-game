@@ -8,8 +8,6 @@ import { InMemorySessionStore } from '../auth/in-memory-session-store.ts';
 
 // Env keys managed by this test suite.
 const AUTH_ENV_KEYS = [
-  'AUTH_PASSWORD',
-  'AUTH_DISABLED',
   'AUTH_SESSION_TTL_MS',
 ] as const;
 
@@ -22,7 +20,6 @@ const withIsolatedEnv = (
   return Promise.resolve()
     .then(() => {
       for (const key of AUTH_ENV_KEYS) Deno.env.delete(key);
-      Deno.env.set('AUTH_DISABLED', 'true');
       for (const [k, v] of Object.entries(overrides)) {
         if (v !== undefined) Deno.env.set(k, v);
       }
@@ -61,8 +58,8 @@ const makeFakeClock = (initialMs = 0): Clock & { advance(ms: number): void } => 
 /**
  * Creates a fresh AuthSessionService backed by an InMemorySessionStore.
  *
- * Phase 3 update: explicitly injects InMemorySessionStore rather than relying
- * on the service's internal Map.
+ * Explicitly injects InMemorySessionStore so tests remain unit-scoped with no
+ * external I/O.
  */
 const makeSessionService = (clock: Clock, config?: ServerConfigService): AuthSessionService => {
   const logger = makeLoggerStub();

@@ -1,5 +1,29 @@
 <app-scene-content>
   <div class="login-container">
+    <!-- Mode toggle — Phase 5 adds register alongside sign in. -->
+    <div class="login-mode-toggle" role="tablist" aria-label="Auth mode">
+      <button
+        type="button"
+        class="login-mode-button"
+        [class.is-active]="mode() === 'signin'"
+        (click)="setMode('signin')"
+        role="tab"
+        [attr.aria-selected]="mode() === 'signin'"
+      >
+        Sign In
+      </button>
+      <button
+        type="button"
+        class="login-mode-button"
+        [class.is-active]="mode() === 'register'"
+        (click)="setMode('register')"
+        role="tab"
+        [attr.aria-selected]="mode() === 'register'"
+      >
+        Register
+      </button>
+    </div>
+
     <form class="login-form" (ngSubmit)="onSubmit()">
       <label class="login-field">
         <span class="login-label">Username</span>
@@ -21,7 +45,7 @@
             class="login-input"
             [value]="password()"
             (input)="password.set($any($event.target).value)"
-            autocomplete="current-password"
+            [attr.autocomplete]="mode() === 'signin' ? 'current-password' : 'new-password'"
           />
           <button
             type="button"
@@ -44,8 +68,26 @@
         </div>
       </label>
 
+      @if (mode() === 'register') {
+        <label class="login-field">
+          <span class="login-label">Registration code</span>
+          <input
+            type="text"
+            class="login-input"
+            [value]="registrationCode()"
+            (input)="registrationCode.set($any($event.target).value)"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </label>
+      }
+
       @if (errorMessage(); as error) {
         <p class="login-error">{{ error }}</p>
+      }
+
+      @if (successMessage(); as success) {
+        <p class="login-success">{{ success }}</p>
       }
 
       <button
@@ -53,7 +95,11 @@
         class="login-button"
         [disabled]="isSubmitting()"
       >
-        Login
+        @if (mode() === 'signin') {
+          Login
+        } @else {
+          Create account
+        }
       </button>
     </form>
   </div>

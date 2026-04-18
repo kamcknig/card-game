@@ -3,6 +3,7 @@
   "specifiers": {
     "jsr:@denosaurs/event@^2.0.2": "2.0.2",
     "jsr:@es-toolkit/es-toolkit@^1.33.0": "1.33.0",
+    "jsr:@rabbit-company/argon2id@^2.1.0": "2.1.0",
     "jsr:@std/assert@^1.0.13": "1.0.19",
     "jsr:@std/datetime@0.224.3": "0.224.3",
     "jsr:@std/internal@^1.0.12": "1.0.12",
@@ -30,6 +31,9 @@
     },
     "@es-toolkit/es-toolkit@1.33.0": {
       "integrity": "0d2404dad0ee48ba3a2020790f788c5d6e11d73d8e02dbf685841c0d453b2643"
+    },
+    "@rabbit-company/argon2id@2.1.0": {
+      "integrity": "2c940d0b7abb05a705eb66e972946229d168a434113c3fb745093a135f7c811f"
     },
     "@std/assert@1.0.19": {
       "integrity": "eaada96ee120cb980bc47e040f82814d786fe8162ecc53c91d8df60b8755991e",
@@ -2639,6 +2643,7 @@
     "dependencies": [
       "jsr:@denosaurs/event@^2.0.2",
       "jsr:@es-toolkit/es-toolkit@^1.33.0",
+      "jsr:@rabbit-company/argon2id@^2.1.0",
       "jsr:@std/assert@^1.0.13",
       "jsr:@std/path@^1.0.8",
       "jsr:@timepp/enhanced-deno-log@~0.4.1",

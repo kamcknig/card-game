@@ -7,8 +7,6 @@ import { LoggerService } from '../logger-service.ts';
 const AUTH_ENV_KEYS = [
   'AUTH_RATE_LIMIT_MAX_ATTEMPTS',
   'AUTH_RATE_LIMIT_WINDOW_MS',
-  'AUTH_PASSWORD',
-  'AUTH_DISABLED',
 ] as const;
 
 // Saves and restores the relevant env vars around a test body.
@@ -18,8 +16,6 @@ const withIsolatedEnv = (overrides: Partial<Record<(typeof AUTH_ENV_KEYS)[number
     for (const key of AUTH_ENV_KEYS) {
       Deno.env.delete(key);
     }
-    // Always set AUTH_DISABLED so ServerConfigService.validate() does not throw.
-    Deno.env.set('AUTH_DISABLED', 'true');
     for (const [k, v] of Object.entries(overrides)) {
       if (v !== undefined) Deno.env.set(k, v);
     }

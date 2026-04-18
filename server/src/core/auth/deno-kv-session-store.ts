@@ -46,6 +46,11 @@ export class DenoKvSessionStore implements SessionStore {
   // Underlying Deno KV store; undefined until open() completes.
   private kv: Deno.Kv | undefined;
 
+  // True when open() was called with a path (this store owns the KV handle
+  // and must close it). False when an existing handle was injected (the
+  // caller retains ownership and close() must not double-close it).
+  private ownsKv = false;
+
   constructor(private readonly loggerService: LoggerService) {}
 
   /**
@@ -63,8 +68,18 @@ export class DenoKvSessionStore implements SessionStore {
    * @param nowMs Current time in milliseconds, used to filter out sessions
    *   that have already expired in KV at load time.
    */
-  public async open(path: string, nowMs: number): Promise<void> {
-    this.kv = await Deno.openKv(path);
+  public async open(pathOrKv: string | Deno.Kv, nowMs: number): Promise<void> {
+    // Accept either a path (legacy call sites / tests) or an already-opened
+    // Deno.Kv handle. Sharing a handle is required because user and
+    // registration-code stores live in the same KV file and Deno KV
+    // forbids multiple open handles to one file in the same process.
+    if (typeof pathOrKv === 'string') {
+      this.kv = await Deno.openKv(pathOrKv);
+      this.ownsKv = true;
+    } else {
+      this.kv = pathOrKv;
+      this.ownsKv = false;
+    }
 
     let loaded = 0;
     let skipped = 0;
@@ -220,7 +235,10 @@ export class DenoKvSessionStore implements SessionStore {
    * will only update the cache (no KV persistence).
    */
   public close(): void {
-    this.kv?.close();
+    if (this.ownsKv) {
+      this.kv?.close();
+    }
     this.kv = undefined;
+    this.ownsKv = false;
   }
 }

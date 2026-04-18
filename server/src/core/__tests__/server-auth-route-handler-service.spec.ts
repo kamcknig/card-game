@@ -4,16 +4,21 @@ import { AuthSessionService, SessionRecord } from '../auth/auth-session-service.
 import { AuthRateLimiterService, Clock } from '../auth/auth-rate-limiter-service.ts';
 import { ServerConfigService } from '../server-config-service.ts';
 import { LoggerService } from '../logger-service.ts';
+import { InMemoryUserStore } from '../auth/in-memory-user-store.ts';
+import { InMemoryRegistrationCodeStore } from '../auth/in-memory-registration-code-store.ts';
+import { Argon2idHasher, BcryptHasher } from '../auth/password-hasher.ts';
+import { UserAccountAuthProvider } from '../auth/user-account-auth-provider.ts';
 
 // Env keys managed by this test suite.
 const AUTH_ENV_KEYS = [
-  'AUTH_PASSWORD',
-  'AUTH_DISABLED',
   'AUTH_ALLOWED_ORIGINS',
   'AUTH_RATE_LIMIT_MAX_ATTEMPTS',
   'AUTH_RATE_LIMIT_WINDOW_MS',
   'AUTH_MAX_BODY_BYTES',
   'AUTH_SESSION_TTL_MS',
+  'AUTH_MIN_PASSWORD_LENGTH',
+  'AUTH_LOCKOUT_THRESHOLD',
+  'AUTH_LOCKOUT_DURATION_MS',
 ] as const;
 
 // Saves and restores relevant env vars around a test body.
@@ -26,7 +31,6 @@ const withIsolatedEnv = (
     .then(() => {
       for (const key of AUTH_ENV_KEYS) Deno.env.delete(key);
       // Defaults that prevent validate() from throwing.
-      Deno.env.set('AUTH_DISABLED', 'true');
       Deno.env.set('AUTH_RATE_LIMIT_MAX_ATTEMPTS', '10');
       Deno.env.set('AUTH_RATE_LIMIT_WINDOW_MS', '60000');
       Deno.env.set('AUTH_MAX_BODY_BYTES', '4096');
@@ -94,6 +98,8 @@ const makeSessionServiceStub = (
 };
 
 // Builds the service under test with all dependencies wired.
+// Uses concrete in-memory implementations so integration-style tests can opt
+// into register / password-change flows without further stubbing.
 const makeService = (opts: {
   sessionServiceStub?: AuthSessionService;
   clock?: Clock;
@@ -101,6 +107,8 @@ const makeService = (opts: {
   maxAttempts?: string;
   windowMs?: string;
   maxBodyBytes?: string;
+  userStore?: InMemoryUserStore;
+  regCodeStore?: InMemoryRegistrationCodeStore;
 }) => {
   const config = new ServerConfigService();
   const logger = makeLoggerStub();
@@ -110,7 +118,29 @@ const makeService = (opts: {
     opts.sessionServiceStub ??
     makeSessionServiceStub({ ok: true, token: 'tok-abc', username: 'testuser' });
 
-  return { service: new ServerAuthRouteHandlerService(sessionService, logger, config, rateLimiter), rateLimiter };
+  const userStore = opts.userStore ?? new InMemoryUserStore();
+  const regCodeStore = opts.regCodeStore ?? new InMemoryRegistrationCodeStore();
+  const argon2id = new Argon2idHasher();
+  const bcrypt = new BcryptHasher();
+  const userProvider = new UserAccountAuthProvider(logger, userStore, argon2id, bcrypt, config, clock);
+
+  return {
+    service: new ServerAuthRouteHandlerService(
+      sessionService,
+      logger,
+      config,
+      rateLimiter,
+      userStore,
+      regCodeStore,
+      argon2id,
+      userProvider,
+    ),
+    rateLimiter,
+    userStore,
+    regCodeStore,
+    argon2id,
+    userProvider,
+  };
 };
 
 // Sends a request through the handler and resolves the response.
@@ -421,7 +451,21 @@ Deno.test('ServerAuthRouteHandlerService: non-/auth path → handler returns und
     const clock = makeFakeClock(1_000);
     const rateLimiter = new AuthRateLimiterService(logger, config, clock);
     const sessionService = makeSessionServiceStub({ ok: true, token: 'tok', username: 'alice' });
-    const service = new ServerAuthRouteHandlerService(sessionService, logger, config, rateLimiter);
+    const userStore = new InMemoryUserStore();
+    const regCodeStore = new InMemoryRegistrationCodeStore();
+    const argon2id = new Argon2idHasher();
+    const bcrypt = new BcryptHasher();
+    const userProvider = new UserAccountAuthProvider(logger, userStore, argon2id, bcrypt, config, clock);
+    const service = new ServerAuthRouteHandlerService(
+      sessionService,
+      logger,
+      config,
+      rateLimiter,
+      userStore,
+      regCodeStore,
+      argon2id,
+      userProvider,
+    );
 
     const req = new Request('http://localhost/debug/state', { method: 'GET' });
     const url = new URL(req.url);
@@ -576,5 +620,282 @@ Deno.test('ServerAuthRouteHandlerService: DELETE /auth/sessions unauthenticated 
     );
 
     assertEquals(res.status, 401);
+  });
+});
+
+// ── POST /auth/register ──────────────────────────────────────────────────────
+
+Deno.test('ServerAuthRouteHandlerService: POST /auth/register with valid code → 201', async () => {
+  await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '8' }, async () => {
+    const { service, userStore, regCodeStore } = makeService({});
+    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 1, now: Date.now() });
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'alice123',
+          password: 'correcthorsebattery',
+          registrationCode: rec.code,
+        }),
+      }),
+    );
+
+    assertEquals(res.status, 201);
+    const body = await res.json();
+    assertEquals(body.ok, true);
+    assertEquals(userStore.getByUsername('alice123')?.username, 'alice123');
+    // Code should be consumed and auto-disabled (maxUses=1).
+    const after = regCodeStore.get(rec.code);
+    assertEquals(after?.usedCount, 1);
+    assertEquals(after?.disabled, true);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: POST /auth/register invalid code → 400 and records failure', async () => {
+  await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '8' }, async () => {
+    const { service, rateLimiter } = makeService({});
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'alice123',
+          password: 'correcthorsebattery',
+          registrationCode: 'nonexistent',
+        }),
+      }),
+    );
+
+    assertEquals(res.status, 400);
+    const body = await res.json();
+    assertEquals(body.ok, false);
+    // Verify the failure was recorded in the rate limiter.
+    for (let i = 0; i < 9; i++) rateLimiter.recordFailure('1.2.3.4');
+    assertEquals(rateLimiter.isLimited('1.2.3.4'), true);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: POST /auth/register duplicate username → 409', async () => {
+  await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '8' }, async () => {
+    const { service, userStore, regCodeStore } = makeService({});
+    userStore.create({
+      username: 'alice123',
+      passwordHash: 'existing-hash',
+      passwordAlgo: 'argon2id',
+      now: Date.now(),
+    });
+    // A code is still consumed before the dup check — allow two uses so this
+    // test does not depend on the order of validations.
+    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 5, now: Date.now() });
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'alice123',
+          password: 'correcthorsebattery',
+          registrationCode: rec.code,
+        }),
+      }),
+    );
+
+    assertEquals(res.status, 409);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: POST /auth/register expired code → 400', async () => {
+  await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '8' }, async () => {
+    const { service, regCodeStore } = makeService({});
+    const past = Date.now() - 1_000;
+    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: past, maxUses: 1, now: past - 1_000 });
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'alice123',
+          password: 'correcthorsebattery',
+          registrationCode: rec.code,
+        }),
+      }),
+    );
+
+    assertEquals(res.status, 400);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: POST /auth/register exhausted code → 400', async () => {
+  await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '8' }, async () => {
+    const { service, regCodeStore } = makeService({});
+    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 1, now: Date.now() });
+    regCodeStore.recordUse(rec.code, Date.now());
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'alice123',
+          password: 'correcthorsebattery',
+          registrationCode: rec.code,
+        }),
+      }),
+    );
+
+    assertEquals(res.status, 400);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: POST /auth/register rejects short password', async () => {
+  await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '10' }, async () => {
+    const { service, regCodeStore } = makeService({});
+    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 1, now: Date.now() });
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'alice123',
+          password: 'short',
+          registrationCode: rec.code,
+        }),
+      }),
+    );
+
+    assertEquals(res.status, 400);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: POST /auth/register rejects invalid username', async () => {
+  await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '8' }, async () => {
+    const { service, regCodeStore } = makeService({});
+    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 1, now: Date.now() });
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'has-dash',
+          password: 'correcthorsebattery',
+          registrationCode: rec.code,
+        }),
+      }),
+    );
+
+    assertEquals(res.status, 400);
+  });
+});
+
+// ── registration-codes endpoints ─────────────────────────────────────────────
+
+Deno.test('ServerAuthRouteHandlerService: POST /auth/registration-codes authenticated → 201', async () => {
+  await withIsolatedEnv({}, async () => {
+    const { service, regCodeStore } = makeService({
+      sessionServiceStub: makeSessionServiceStub({ ok: true, token: 'tok', username: 'alice' }, 'alice'),
+    });
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/registration-codes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer tok' },
+        body: JSON.stringify({ maxUses: 3 }),
+      }),
+    );
+
+    assertEquals(res.status, 201);
+    const body = await res.json();
+    assertEquals(body.ok, true);
+    assertEquals(typeof body.code, 'string');
+    assertEquals(body.maxUses, 3);
+    // And it should be persisted.
+    assertEquals(regCodeStore.get(body.code)?.createdBy, 'alice');
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: POST /auth/registration-codes unauthenticated → 401', async () => {
+  await withIsolatedEnv({}, async () => {
+    const { service } = makeService({
+      sessionServiceStub: makeSessionServiceStub({ ok: true, token: 'tok', username: 'alice' }, null),
+    });
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/registration-codes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      }),
+    );
+
+    assertEquals(res.status, 401);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: DELETE /auth/registration-codes/:code → 200 disables code', async () => {
+  await withIsolatedEnv({}, async () => {
+    const { service, regCodeStore } = makeService({
+      sessionServiceStub: makeSessionServiceStub({ ok: true, token: 'tok', username: 'alice' }, 'alice'),
+    });
+    const rec = regCodeStore.create({ createdBy: 'alice', expiresAt: null, maxUses: 5, now: Date.now() });
+
+    const res = await dispatch(
+      service,
+      new Request(`http://localhost/auth/registration-codes/${rec.code}`, {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer tok' },
+      }),
+    );
+
+    assertEquals(res.status, 200);
+    assertEquals(regCodeStore.get(rec.code)?.disabled, true);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: GET /auth/registration-codes returns active codes only', async () => {
+  await withIsolatedEnv({}, async () => {
+    const { service, regCodeStore } = makeService({
+      sessionServiceStub: makeSessionServiceStub({ ok: true, token: 'tok', username: 'alice' }, 'alice'),
+    });
+    regCodeStore.create({ createdBy: 'alice', expiresAt: null, maxUses: 1, now: Date.now() });
+    const expired = regCodeStore.create({
+      createdBy: 'alice',
+      expiresAt: Date.now() - 1_000,
+      maxUses: 1,
+      now: Date.now() - 2_000,
+    });
+    regCodeStore.disable(
+      regCodeStore.create({ createdBy: 'alice', expiresAt: null, maxUses: 1, now: Date.now() }).code,
+    );
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/registration-codes', {
+        method: 'GET',
+        headers: { Authorization: 'Bearer tok' },
+      }),
+    );
+
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(Array.isArray(body.codes), true);
+    // Exactly one active (non-expired, non-disabled) code should remain.
+    assertEquals(body.codes.length, 1);
+    // The active code must not be the expired one.
+    assertEquals(body.codes[0].code !== expired.code, true);
   });
 });

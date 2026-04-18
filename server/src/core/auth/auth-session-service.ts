@@ -28,23 +28,6 @@ export interface SessionRecord {
  * across all auth methods. The provider registry allows new auth methods
  * to be added by registering an AuthProvider implementation.
  *
- * Phase 2 additions:
- * - Sessions are now stored as `SessionRecord` values with expiry metadata.
- * - `validateToken` extends the expiry on each call (sliding window).
- * - `listSessions` prunes expired entries and returns a snapshot.
- * - `removeSessionsForUsername` / `removeSessionsForUsernameExcept` allow
- *   bulk revocation (used by the admin endpoints and password-change flow).
- * - Single-session enforcement: a new login revokes all prior sessions for
- *   that user so the most recent login is always the only valid one.
- * - The clock dependency is injectable so tests remain deterministic.
- *
- * Phase 3 additions:
- * - The backing storage is now an injected `SessionStore` rather than a
- *   hard-coded `Map<string, SessionRecord>`. Callers inject either
- *   `InMemorySessionStore` (default / tests) or `DenoKvSessionStore`
- *   (production, controlled by AUTH_SESSION_STORE env var).
- * - All map operations delegate to the store; the public API is unchanged.
- *
  * Lifetime: Root singleton — shared across all connections.
  * Consumers: ServerAuthRouteHandlerService, ServerSocketGatewayService.
  */

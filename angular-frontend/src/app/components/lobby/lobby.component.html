@@ -1,7 +1,60 @@
 <app-scene-content>
-  <button sceneHeaderActions type="button" class="logout-button" (click)="logout()">
-    Logout
-  </button>
+  <div sceneHeaderActions class="lobby-header-actions">
+    <button type="button" class="header-button" (click)="toggleChangePassword()">
+      @if (changePasswordOpen()) {
+        Close
+      } @else {
+        Change password
+      }
+    </button>
+    <button type="button" class="logout-button" (click)="logout()">
+      Logout
+    </button>
+  </div>
+
+  <!-- Phase 5 — inline change-password panel; rendered below the header so it
+       does not hide the lobby content. A future ChangePasswordDialogComponent
+       can replace this without touching AuthService. -->
+  @if (changePasswordOpen()) {
+    <section class="change-password-panel" aria-label="Change password">
+      <h3 class="panel-title">Change password</h3>
+      <form class="change-password-form" (ngSubmit)="submitChangePassword()">
+        <label class="panel-field">
+          <span class="panel-label">Current password</span>
+          <input
+            type="password"
+            class="panel-input"
+            [value]="currentPassword()"
+            (input)="currentPassword.set($any($event.target).value)"
+            autocomplete="current-password"
+          />
+        </label>
+        <label class="panel-field">
+          <span class="panel-label">New password</span>
+          <input
+            type="password"
+            class="panel-input"
+            [value]="newPassword()"
+            (input)="newPassword.set($any($event.target).value)"
+            autocomplete="new-password"
+          />
+        </label>
+        @if (changePasswordError(); as err) {
+          <p class="panel-error">{{ err }}</p>
+        }
+        @if (changePasswordSuccess(); as msg) {
+          <p class="panel-success">{{ msg }}</p>
+        }
+        <button
+          type="submit"
+          class="panel-button"
+          [disabled]="changePasswordSubmitting()"
+        >
+          Update password
+        </button>
+      </form>
+    </section>
+  }
 
   <section class="lobby-shell">
     <aside class="lobby-nav">

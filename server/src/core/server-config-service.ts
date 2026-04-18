@@ -5,7 +5,6 @@ export class ServerConfigService {
   // Validates all startup configuration used by the server process.
   public validate(): void {
     this.getPort();
-    this.validateAuthPasswordConfig();
     this.getAuthAllowedOrigins();
     this.getAuthRateLimitMaxAttempts();
     this.getAuthRateLimitWindowMs();
@@ -14,31 +13,15 @@ export class ServerConfigService {
     const storeKind = this.getSessionStoreKind();
     // Eagerly validate the path config for the kv backend when configured.
     if (storeKind === 'kv') this.getAuthKvPath();
+    this.getAuthLockoutThreshold();
+    this.getAuthLockoutDurationMs();
+    this.getAuthMinPasswordLength();
     this.isFileLoggingEnabled();
     this.getLogFileMaxBytes();
     this.isMatchStateExportEnabled();
     this.isMatchStateMergeEnabled();
     this.shouldEndMatchOnNoHumans();
     this.getTooltipDefaultCloseDelayMs();
-  }
-
-  /**
-   * Returns the preset authentication password from the AUTH_PASSWORD env var.
-   *
-   * Returns an empty string if the variable is unset or blank.
-   */
-  public getAuthPassword(): string {
-    return Deno.env.get('AUTH_PASSWORD') ?? '';
-  }
-
-  /**
-   * Returns true when authentication is explicitly disabled (dev/test only).
-   *
-   * When true, any non-empty username logs in without a password check.
-   * When false/unset, AUTH_PASSWORD must be non-empty or startup will fail.
-   */
-  public isAuthDisabled(): boolean {
-    return this.parseBooleanEnv('AUTH_DISABLED', false);
   }
 
   /**
@@ -114,6 +97,39 @@ export class ServerConfigService {
     return Deno.env.get('AUTH_KV_PATH') ?? './game-data/auth.kv';
   }
 
+  /**
+   * Returns the number of consecutive failed login attempts before a user
+   * account is locked.
+   *
+   * Configurable via AUTH_LOCKOUT_THRESHOLD. Defaults to 5.
+   */
+  public getAuthLockoutThreshold(): number {
+    return this.parseIntEnv('AUTH_LOCKOUT_THRESHOLD', 5, { min: 1 });
+  }
+
+  /**
+   * Returns the lockout duration (milliseconds) applied after a user account
+   * exceeds the lockout threshold.
+   *
+   * Configurable via AUTH_LOCKOUT_DURATION_MS. Defaults to 10 minutes. The lock is cleared automatically on the next successful login
+   * after the window elapses.
+   */
+  public getAuthLockoutDurationMs(): number {
+    return this.parseIntEnv('AUTH_LOCKOUT_DURATION_MS', 10 * 60_000, { min: 1_000 });
+  }
+
+  /**
+   * Returns the minimum password length accepted during user registration or
+   * password change.
+   *
+   * Configurable via AUTH_MIN_PASSWORD_LENGTH. Defaults to 10.
+   * Passwords matching the username (case-insensitive) are always rejected
+   * regardless of length.
+   */
+  public getAuthMinPasswordLength(): number {
+    return this.parseIntEnv('AUTH_MIN_PASSWORD_LENGTH', 10, { min: 1, max: 256 });
+  }
+
   // Returns the configured server port or default port 3001.
   public getPort(): number {
     const rawPort = Deno.env.get('PORT');
@@ -185,24 +201,6 @@ export class ServerConfigService {
     }
 
     return parsedValue;
-  }
-
-  /**
-   * Validates the AUTH_PASSWORD / AUTH_DISABLED combination at startup.
-   *
-   * Throws when AUTH_DISABLED is not true and AUTH_PASSWORD is empty. This
-   * eliminates the silent "blank AUTH_PASSWORD means no auth" backdoor —
-   * disabling auth now requires explicit opt-in via AUTH_DISABLED=true.
-   */
-  private validateAuthPasswordConfig(): void {
-    const disabled = this.isAuthDisabled();
-    const password = this.getAuthPassword();
-    if (!disabled && !password) {
-      throw new Error(
-        '[server config] AUTH_PASSWORD must be set when AUTH_DISABLED is not true. ' +
-          'To explicitly disable authentication (dev only), set AUTH_DISABLED=true.',
-      );
-    }
   }
 
   // Parses strict boolean env values ('true' | 'false') with a default.

@@ -8,8 +8,6 @@ import { InMemorySessionStore } from '../auth/in-memory-session-store.ts';
 
 // Env keys managed by this test suite.
 const AUTH_ENV_KEYS = [
-  'AUTH_PASSWORD',
-  'AUTH_DISABLED',
   'AUTH_SESSION_TTL_MS',
 ] as const;
 
@@ -22,8 +20,6 @@ const withIsolatedEnv = (
   return Promise.resolve()
     .then(() => {
       for (const key of AUTH_ENV_KEYS) Deno.env.delete(key);
-      // AUTH_DISABLED=true so ServerConfigService won't demand AUTH_PASSWORD.
-      Deno.env.set('AUTH_DISABLED', 'true');
       for (const [k, v] of Object.entries(overrides)) {
         if (v !== undefined) Deno.env.set(k, v);
       }
@@ -77,9 +73,8 @@ const makeProvider = (name: string, result: AuthResult, initSpy?: () => void): A
 /**
  * Creates a fresh AuthSessionService with an InMemorySessionStore.
  *
- * Phase 3 update: the service no longer owns a private Map — it delegates to
- * an injected SessionStore. Tests inject InMemorySessionStore so they remain
- * unit-scoped with no external I/O.
+ * Tests inject InMemorySessionStore so they remain unit-scoped with no
+ * external I/O.
  */
 const makeService = (clock?: Clock & { advance(ms: number): void }) => {
   const logger = makeLoggerStub();
@@ -89,7 +84,7 @@ const makeService = (clock?: Clock & { advance(ms: number): void }) => {
   return { service: new AuthSessionService(logger, config, store, effectiveClock), store };
 };
 
-// ── Original Phase 1 tests (updated to use InMemorySessionStore) ──────────────
+// ── Core session service tests ────────────────────────────────────────────────
 
 Deno.test('AuthSessionService: login returns error for unknown provider', () =>
   withIsolatedEnv({}, async () => {
@@ -247,7 +242,7 @@ Deno.test('AuthSessionService: second login for same user revokes prior session 
     assertEquals(service.validateToken(r2.token), 'alice');
   }));
 
-// ── Phase 2 tests ─────────────────────────────────────────────────────────────
+// ── Session lifecycle tests ───────────────────────────────────────────────────
 
 Deno.test('AuthSessionService: validateToken returns undefined for expired session', () =>
   withIsolatedEnv({ AUTH_SESSION_TTL_MS: '5000' }, async () => {
@@ -400,7 +395,7 @@ Deno.test('AuthSessionService: removeSessionsForUsernameExcept preserves the giv
     assertEquals(service.validateToken(t3), undefined);
   }));
 
-// ── Phase 3 tests ─────────────────────────────────────────────────────────────
+// ── Session store tests ───────────────────────────────────────────────────────
 
 Deno.test('AuthSessionService: purgeExpiredSessions removes expired records from the store', () =>
   withIsolatedEnv({ AUTH_SESSION_TTL_MS: '5000' }, async () => {

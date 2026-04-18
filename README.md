@@ -175,7 +175,6 @@ Both apps have external ingress and are accessible via their `.azurecontainerapp
 | `GAME_DATA_ROOT` | `./game-data` | Game data directory |
 | `END_MATCH_ON_NO_HUMANS` | `true` | End matches when all humans leave |
 | `MATCH_STATE_MERGE_ENABLED` | `true` | Enable match state merging |
-| `AUTH_PASSWORD` | _(required)_ | Preset password for simple authentication |
 
 ### Frontend Environment Variables (Production)
 

@@ -1,12 +1,14 @@
 import { LobbyDirectoryService } from './lobby-directory-service.ts';
 import { LoggerService } from './logger-service.ts';
 import { AuthSessionCleanupService } from './auth/auth-session-cleanup-service.ts';
+import { AuthKvProvider } from './auth/auth-kv-provider.ts';
 
 /**
  * Owns process shutdown signal handling for graceful server teardown.
  *
- * Phase 2: stops the auth session cleanup timer on shutdown so no stray
- * interval callbacks fire after the process begins winding down.
+ * Stops the auth session cleanup timer and closes the shared auth KV handle
+ * on shutdown so no stray callbacks fire and the KV file is released cleanly.
+ * All auth stores share the KV handle (see AuthKvProvider).
  */
 export class ServerShutdownHandlerService {
   // Tracks registration state to prevent duplicate listeners.
@@ -16,6 +18,7 @@ export class ServerShutdownHandlerService {
     private readonly lobbyDirectoryService: LobbyDirectoryService,
     private readonly loggerService: LoggerService,
     private readonly authSessionCleanupService: AuthSessionCleanupService,
+    private readonly authKvProvider: AuthKvProvider,
   ) {}
 
   // Registers SIGINT behavior to dispose runtime resources and stop serving.
@@ -29,6 +32,10 @@ export class ServerShutdownHandlerService {
     addEventListener('SIGINT', () => {
       this.loggerService.log('Shutting down cleanly...');
       this.authSessionCleanupService.stop();
+      // Close the shared auth KV handle so the database file is released.
+      // Stores with their own `kv` reference will see undefined on any
+      // pending fire-and-forget writes; errors are logged.
+      this.authKvProvider.close();
       this.lobbyDirectoryService.dispose();
       shutdownController.abort();
       Deno.exit();

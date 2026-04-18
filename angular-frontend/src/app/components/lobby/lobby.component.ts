@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { NanostoresService } from '@nanostores/angular';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { LobbyGameSummary } from 'shared/types';
 import { SocketService } from '../../core/socket-service/socket.service';
 import { AuthService } from '../../core/auth/auth.service';
@@ -11,7 +12,7 @@ import { sceneStore } from '../../state/game-state';
 @Component({
   selector: 'app-lobby',
   standalone: true,
-  imports: [SceneContentComponent],
+  imports: [SceneContentComponent, FormsModule],
   templateUrl: './lobby.component.html',
   styleUrl: './lobby.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -29,6 +30,16 @@ export class LobbyComponent implements OnInit {
 
   // Current left-nav selection (single-tab for now).
   readonly selectedNav: 'games' = 'games';
+
+  // Controls visibility of the compact change-password form embedded in the
+  // lobby header. A full dialog component can replace this later without
+  // changing AuthService.changePassword().
+  readonly changePasswordOpen = signal(false);
+  readonly currentPassword = signal('');
+  readonly newPassword = signal('');
+  readonly changePasswordError = signal<string | undefined>(undefined);
+  readonly changePasswordSuccess = signal<string | undefined>(undefined);
+  readonly changePasswordSubmitting = signal(false);
 
   ngOnInit(): void {
     // Always request a fresh snapshot when entering lobby scene.
@@ -55,5 +66,55 @@ export class LobbyComponent implements OnInit {
     await this._authService.logout();
     this._socketService.disconnect();
     sceneStore.set('login');
+  }
+
+  /**
+   * Toggles the change-password panel and clears transient state when closed.
+   */
+  toggleChangePassword(): void {
+    this.changePasswordOpen.update(v => !v);
+    if (!this.changePasswordOpen()) {
+      this.currentPassword.set('');
+      this.newPassword.set('');
+      this.changePasswordError.set(undefined);
+      this.changePasswordSuccess.set(undefined);
+    }
+  }
+
+  /**
+   * Submits the password change request.
+   *
+   * On success the server revokes every sibling session for this user while
+   * leaving the caller's own session alive. We simply show a success message
+   * and clear the form — AuthService.changePassword handles the HTTP details.
+   */
+  async submitChangePassword(): Promise<void> {
+    this.changePasswordError.set(undefined);
+    this.changePasswordSuccess.set(undefined);
+
+    const cur = this.currentPassword();
+    const next = this.newPassword();
+    if (!cur || !next) {
+      this.changePasswordError.set('Both fields are required');
+      return;
+    }
+
+    this.changePasswordSubmitting.set(true);
+    try {
+      const result = await this._authService.changePassword(cur, next);
+      if (result.ok) {
+        this.changePasswordSuccess.set(
+          result.revokedSessions && result.revokedSessions > 0
+            ? `Password updated — signed out ${result.revokedSessions} other session(s).`
+            : 'Password updated.',
+        );
+        this.currentPassword.set('');
+        this.newPassword.set('');
+      } else {
+        this.changePasswordError.set(result.message ?? 'Password change failed');
+      }
+    } finally {
+      this.changePasswordSubmitting.set(false);
+    }
   }
 }

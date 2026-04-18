@@ -145,8 +145,6 @@ az containerapp secret remove \
 | `GAME_DATA_ROOT` | Game data directory (`./game-data`) |
 | `END_MATCH_ON_NO_HUMANS` | End matches when all humans leave (`true`) |
 | `MATCH_STATE_MERGE_ENABLED` | Enable match state merging (`true`) |
-| `AUTH_PASSWORD` | Preset password for simple authentication (use secrets for this) |
-| `AUTH_DISABLED` | Set to `true` to skip password checks entirely — **development only**, never set in production. Defaults to `false`. |
 | `AUTH_ALLOWED_ORIGINS` | Comma-separated list of origins allowed by CORS on `/auth/*` endpoints. Use `*` for any origin (dev only). Example: `https://dominion-clone-frontend.azurecontainerapps.io` |
 | `AUTH_RATE_LIMIT_MAX_ATTEMPTS` | Maximum failed login attempts from a single IP within the rate-limit window before returning 429. Default: `10`. |
 | `AUTH_RATE_LIMIT_WINDOW_MS` | Duration (milliseconds) of the sliding window used by the login rate limiter. Default: `60000` (1 minute). |

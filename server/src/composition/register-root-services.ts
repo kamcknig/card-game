@@ -36,13 +36,21 @@ import { GameScopeFactory } from '../core/game-scope-factory.ts';
 import { LobbyDirectoryService } from '../core/lobby-directory-service.ts';
 import { MatchConfigurationSaveService } from '../core/match-configuration-save-service.ts';
 import { AuthSessionService } from '../core/auth/auth-session-service.ts';
-import { PresetPasswordAuthProvider } from '../core/auth/preset-password-auth-provider.ts';
 import { ServerAuthRouteHandlerService } from '../core/auth/server-auth-route-handler-service.ts';
 import { AuthRateLimiterService } from '../core/auth/auth-rate-limiter-service.ts';
 import { AuthSessionCleanupService } from '../core/auth/auth-session-cleanup-service.ts';
 import { InMemorySessionStore } from '../core/auth/in-memory-session-store.ts';
 import { DenoKvSessionStore } from '../core/auth/deno-kv-session-store.ts';
 import type { SessionStore } from '../core/auth/session-store.ts';
+import { AuthKvProvider } from '../core/auth/auth-kv-provider.ts';
+import { Argon2idHasher, BcryptHasher } from '../core/auth/password-hasher.ts';
+import { InMemoryUserStore } from '../core/auth/in-memory-user-store.ts';
+import { DenoKvUserStore } from '../core/auth/deno-kv-user-store.ts';
+import type { UserStore } from '../core/auth/user-store.ts';
+import { InMemoryRegistrationCodeStore } from '../core/auth/in-memory-registration-code-store.ts';
+import { DenoKvRegistrationCodeStore } from '../core/auth/deno-kv-registration-code-store.ts';
+import type { RegistrationCodeStore } from '../core/auth/registration-code-store.ts';
+import { UserAccountAuthProvider } from '../core/auth/user-account-auth-provider.ts';
 
 export interface RegisterRootServicesArgs {
   io: Server<ServerListenEvents, ServerEmitEvents>;
@@ -118,9 +126,45 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
       },
     ).singleton(),
     authSessionService: asClass(AuthSessionService).singleton(),
-    presetPasswordAuthProvider: asClass(PresetPasswordAuthProvider).singleton(),
     authRateLimiterService: asClass(AuthRateLimiterService).singleton(),
     authSessionCleanupService: asClass(AuthSessionCleanupService).singleton(),
+    // Shared KV handle provider; opened once from ServerStartupService so
+    // DenoKvSessionStore, DenoKvUserStore, and DenoKvRegistrationCodeStore
+    // all share a single Deno KV database file.
+    authKvProvider: asClass(AuthKvProvider).singleton(),
+    // Password hashing primitives. Argon2id for all new hashes,
+    // Bcrypt retained for verification of legacy rows.
+    argon2idHasher: asClass(Argon2idHasher).singleton(),
+    bcryptHasher: asClass(BcryptHasher).singleton(),
+    // User account store. Picks the KV-backed implementation when
+    // AUTH_SESSION_STORE=kv so both session and user data share a file.
+    userStore: asFunction(
+      (serverConfigService: ServerConfigService, loggerService: LoggerService): UserStore => {
+        const kind = serverConfigService.getSessionStoreKind();
+        if (kind === 'kv') {
+          loggerService.log('[auth] user store: deno kv (persistent)');
+          return new DenoKvUserStore(loggerService);
+        }
+        loggerService.log('[auth] user store: in-memory');
+        return new InMemoryUserStore();
+      },
+    ).singleton(),
+    // Registration code store. Mirrors the selection logic for session/user
+    // stores so the same backend is used throughout auth.
+    registrationCodeStore: asFunction(
+      (serverConfigService: ServerConfigService, loggerService: LoggerService): RegistrationCodeStore => {
+        const kind = serverConfigService.getSessionStoreKind();
+        if (kind === 'kv') {
+          loggerService.log('[auth] registration code store: deno kv (persistent)');
+          return new DenoKvRegistrationCodeStore(loggerService);
+        }
+        loggerService.log('[auth] registration code store: in-memory');
+        return new InMemoryRegistrationCodeStore();
+      },
+    ).singleton(),
+    // Multi-user account provider. Registered alongside the preset password
+    // provider (AuthSessionService handles both by name).
+    userAccountAuthProvider: asClass(UserAccountAuthProvider).singleton(),
     serverAuthRouteHandlerService: asClass(ServerAuthRouteHandlerService).singleton(),
   });
 };
