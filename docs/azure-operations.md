@@ -152,12 +152,42 @@ az containerapp secret remove \
 | `AUTH_SESSION_TTL_MS` | Session time-to-live in milliseconds (sliding window). Each validated token has its expiry extended by this amount. Default: `604800000` (7 days). |
 | `AUTH_SESSION_STORE` | Session storage backend. `memory` (default) loses sessions on restart. `kv` uses Deno KV with a write-through cache backed by `AUTH_KV_PATH`. Set to `kv` in production for restart persistence. |
 | `AUTH_KV_PATH` | Filesystem path to the Deno KV store file used when `AUTH_SESSION_STORE=kv`. Default: `./game-data/auth.kv`. Mount an Azure Files share at the containing directory for durable persistence across container revisions. Use `':memory:'` for dev/test (not persisted). |
+| `AUTH_LOCKOUT_THRESHOLD` | Consecutive failed logins before a user account is locked (per-account, independent of the IP rate limiter). Default: `5`. |
+| `AUTH_LOCKOUT_DURATION_MS` | Lockout duration (milliseconds) once the per-account threshold is exceeded. Default: `600000` (10 minutes). |
+| `AUTH_MIN_PASSWORD_LENGTH` | Minimum password length enforced at registration and password-change. Default: `10`. |
 
 ### Current Frontend Environment Variables
 
 | Variable | Description |
 |----------|-------------|
 | `WS_HOST` | Full URL to the server Container App (e.g. `https://dominion-clone-server.<region>.azurecontainerapps.io`). Also drives the CSP `connect-src` directive — see [Content Security Policy](#content-security-policy) below. |
+
+## Initial Account Bootstrap
+
+The server requires at least one user account to exist before players can log in. The `auth:create-user` and `auth:create-reg-code` scripts write directly to the Deno KV store and can be run in a local environment targeting the production KV file.
+
+### Creating the first user
+
+Run against the KV store file that will be mounted into the container (or after copying the file locally):
+
+```bash
+cd server
+deno task auth:create-user --username <name> --password <pw> --kv /path/to/auth.kv
+```
+
+Usernames must be 3–32 characters, alphanumeric or underscore. The script refuses to overwrite an existing username.
+
+### Creating registration codes for additional users
+
+Once a user exists and can log in, they can create registration codes via the API (`POST /auth/registration-codes`). For offline/operator use:
+
+```bash
+cd server
+deno task auth:create-reg-code --expires-in 24h --max-uses 1 --created-by <your-username> --kv /path/to/auth.kv
+# Duration strings: 30s, 10m, 24h, 7d
+```
+
+The script prints the generated code to stdout. Share it securely; anyone with the code can register an account at `POST /auth/register`.
 
 ## Session Persistence
 

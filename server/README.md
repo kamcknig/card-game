@@ -37,6 +37,42 @@ cp .env-example .env
 | `END_MATCH_ON_NO_HUMANS` | `true` | End active matches when all human players disconnect |
 | `TOOLTIP_DEFAULT_CLOSE_DELAY_MS` | _(unset)_ | Default delay (ms) before closing tooltips, sent to clients |
 
+### Authentication Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `AUTH_ALLOWED_ORIGINS` | `*` | Comma-separated origin allowlist for `/auth/*` CORS. Use `*` for any origin (dev only). Example: `http://localhost:51455,http://localhost:4200` |
+| `AUTH_RATE_LIMIT_MAX_ATTEMPTS` | `10` | Max failed login attempts per IP per window before returning 429 |
+| `AUTH_RATE_LIMIT_WINDOW_MS` | `60000` | Sliding-window duration (ms) for the IP rate limiter |
+| `AUTH_MAX_BODY_BYTES` | `4096` | Max request body size (bytes) on `/auth/login` and `/auth/register`. Requests exceeding this are rejected with 413 |
+| `AUTH_SESSION_TTL_MS` | `604800000` | Session TTL (ms, sliding window). Each validated token has its expiry extended by this amount. Default: 7 days |
+| `AUTH_SESSION_STORE` | `memory` | Session storage backend. `memory` loses sessions on restart. `kv` uses Deno KV with a write-through cache (see `AUTH_KV_PATH`) |
+| `AUTH_KV_PATH` | `./game-data/auth.kv` | Filesystem path to the Deno KV store (used when `AUTH_SESSION_STORE=kv`). Use `':memory:'` for dev/tests |
+| `AUTH_LOCKOUT_THRESHOLD` | `5` | Consecutive failed logins before a user account is locked (per-account, independent of the IP rate limiter) |
+| `AUTH_LOCKOUT_DURATION_MS` | `600000` | Lockout duration (ms) once the per-account threshold is exceeded. Default: 10 minutes |
+| `AUTH_MIN_PASSWORD_LENGTH` | `10` | Minimum password length enforced at registration and password-change |
+
+## Auth Scripts
+
+Two maintenance CLI scripts are available for bootstrapping accounts without going through the HTTP flow.
+
+### Create first user
+
+Creates a user account directly in the Deno KV store. Use this to seed the initial account before any registration codes exist.
+
+```bash
+deno task auth:create-user --username <name> --password <pw> [--kv <path>]
+```
+
+### Create registration code
+
+Creates a registration code that can be supplied to `POST /auth/register` by a new user. Any authenticated user can also create codes via the API.
+
+```bash
+deno task auth:create-reg-code [--expires-in <duration>] [--max-uses N] [--created-by <user>] [--kv <path>]
+# Duration strings: 30s, 10m, 24h, 7d
+```
+
 ## Other Commands
 
 ```bash
