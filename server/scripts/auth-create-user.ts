@@ -23,6 +23,23 @@ import { DenoKvUserStore } from '../src/core/auth/deno-kv-user-store.ts';
 import { Argon2idHasher } from '../src/core/auth/password-hasher.ts';
 import type { LoggerService } from '../src/core/logger-service.ts';
 
+// Prints usage information to stdout and exits with code 0.
+const printHelp = (): void => {
+  console.log(
+    `Usage: deno task auth:create-user --username <name> --password <pw> [--kv <path>]
+
+Creates a single user account directly in the Deno KV auth store without going
+through the HTTP registration flow. Useful for seeding the first account before
+any registration codes exist.
+
+Options:
+  --username <name>   Username (3–32 chars, alphanumeric or underscore)
+  --password <pw>     Plaintext password (hashed with argon2id before storage)
+  --kv <path>         Path to KV file (default: AUTH_KV_PATH env or ./game-data/auth.kv)
+  --help, -h          Show this help message`,
+  );
+};
+
 // Parses a list of `--flag value` pairs into a keyed map. Only supports the
 // shape this CLI needs (no boolean flags, no `--flag=value`).
 const parseArgs = (args: string[]): Record<string, string> => {
@@ -52,6 +69,11 @@ const consoleLogger: LoggerService = {
 } as unknown as LoggerService;
 
 const main = async (): Promise<void> => {
+  if (Deno.args.includes('--help') || Deno.args.includes('-h')) {
+    printHelp();
+    Deno.exit(0);
+  }
+
   let argMap: Record<string, string>;
   try {
     argMap = parseArgs(Deno.args);

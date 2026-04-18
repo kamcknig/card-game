@@ -19,6 +19,24 @@
 import { DenoKvRegistrationCodeStore } from '../src/core/auth/deno-kv-registration-code-store.ts';
 import type { LoggerService } from '../src/core/logger-service.ts';
 
+// Prints usage information to stdout and exits with code 0.
+const printHelp = (): void => {
+  console.log(
+    `Usage: deno task auth:create-reg-code [--expires-in <duration>] [--max-uses N]
+                                   [--created-by <user>] [--kv <path>]
+
+Creates a registration code in the Deno KV auth store. Anyone presenting the
+generated code to POST /auth/register can create a new account.
+
+Options:
+  --expires-in <duration>   Validity window (e.g. 30m, 24h, 7d). Omit for no expiry.
+  --max-uses <n>            Maximum redemptions before the code is exhausted (default: 1)
+  --created-by <user>       Label stored with the code for auditing (default: system)
+  --kv <path>               Path to KV file (default: AUTH_KV_PATH env or ./game-data/auth.kv)
+  --help, -h                Show this help message`,
+  );
+};
+
 // Parses `--flag value` pairs. Same minimal flavor as auth-create-user.ts.
 const parseArgs = (args: string[]): Record<string, string> => {
   const out: Record<string, string> = {};
@@ -71,6 +89,11 @@ const consoleLogger: LoggerService = {
 } as unknown as LoggerService;
 
 const main = async (): Promise<void> => {
+  if (Deno.args.includes('--help') || Deno.args.includes('-h')) {
+    printHelp();
+    Deno.exit(0);
+  }
+
   let argMap: Record<string, string>;
   try {
     argMap = parseArgs(Deno.args);
