@@ -49,10 +49,19 @@ const parseArgs = (args: string[]): Record<string, string> => {
 };
 
 // Opens the KV store at the given path, logging the path on entry.
+// Exits with a clear error message when the store cannot be opened (e.g. the
+// directory does not exist or the file is not a valid KV database).
 const openStore = async (kvPath: string): Promise<DenoKvUserStore> => {
   console.log(`[auth:users] opening KV at '${kvPath}'`);
   const store = new DenoKvUserStore(consoleLogger);
-  await store.open(kvPath);
+  try {
+    await store.open(kvPath);
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error(`[auth:users] could not open auth store at '${kvPath}': ${detail}`);
+    console.error(`[auth:users] ensure the directory exists and the path points to a valid KV database.`);
+    Deno.exit(1);
+  }
   return store;
 };
 
