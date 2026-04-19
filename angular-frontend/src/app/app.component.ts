@@ -19,6 +19,7 @@ import { matchStartedStore, matchSummaryStore } from './state/match-state';
 import { MatchHudComponent } from './components/match/match-hud/match-hud.component';
 import { LobbyComponent } from './components/lobby/lobby.component';
 import { LoginComponent } from './components/login/login.component';
+import { ProfileComponent } from './components/profile/profile.component';
 import { CardDetailDialogComponent } from './components/card-detail-dialog/card-detail-dialog.component';
 import { PromptDialogHostComponent } from './components/prompt-dialog/prompt-dialog-host.component';
 import { PromptDialogCoordinatorService } from './core/prompt-dialog/prompt-dialog-coordinator.service';
@@ -41,6 +42,7 @@ import { PileSelectionActionComponent } from './components/match/pile-selection/
     MatchHudComponent,
     LobbyComponent,
     LoginComponent,
+    ProfileComponent,
     CardDetailDialogComponent,
     PromptDialogHostComponent,
     WayPickerOverlayComponent,
