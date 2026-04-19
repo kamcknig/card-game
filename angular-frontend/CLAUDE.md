@@ -28,7 +28,9 @@ Angular 19 with `provideExperimentalZonelessChangeDetection()`. All components u
 
 ### Scene System (No Router)
 
-`AppComponent` switches between 4 scenes (`lobby`, `configuration`, `match`, `gameSummary`) driven by `sceneStore` in `src/app/state/game-state.ts`. There is no Angular Router for main views.
+`AppComponent` switches between 5 scenes (`login`, `lobby`, `profile`, `configuration`, `match`, `gameSummary`) driven by `sceneStore` in `src/app/state/game-state.ts`. There is no Angular Router for main views.
+
+The `profile` scene is a settings hub with a left nav (Security, Settings). The active tab on entry is controlled by `profileTabStore` in `src/app/state/profile-state.ts` — set this atom before switching to `'profile'` to deep-link to a specific tab.
 
 When scene is `match`, `AppComponent` creates a `MatchScene` instance (plain TypeScript class at `src/app/components/match/views/scenes/match-scene.ts`) that manages game interaction logic, prompt coordination, and way picker overlay. It is destroyed when leaving the match scene.
 
@@ -50,6 +52,7 @@ Components consume stores via `@nanostores/angular`'s `NanostoresService` and `t
 | `interactive-logic.ts` | Computed selectables merging server + client state |
 | `turn-state.ts` | Turn phase, current player |
 | `player-state.ts` | Per-player atoms |
+| `profile-state.ts` | `profileTabStore` — desired tab (`'security'` \| `'settings'`) on profile scene entry |
 
 ### Socket Communication
 
@@ -72,7 +75,9 @@ All components are standalone under `src/app/components/`, organized by domain:
 - `match/` — supply, player-area, hud, landscapes, non-supply piles
 - `prompt-dialog/` — prompt host + per-type content components
 - `card/`, `card-like/` — card rendering
-- `lobby/`, `match-configuration/`, `game-summary/` — scene components
+- `lobby/`, `match-configuration/`, `game-summary/`, `profile/` — scene components
+- `profile-menu/` — user icon button + dropdown (Profile, Settings, Logout); rendered inside `SceneBannerComponent` when authenticated
+- `scene-banner/` — shared header banner; injects auth state to show `ProfileMenuComponent` when logged in
 
 ### Shared Package
 
