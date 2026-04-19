@@ -1,0 +1,84 @@
+<app-scene-content>
+  <!-- Back button projected into the banner header actions area. -->
+  <button sceneHeaderActions type="button" class="back-button" (click)="backToLobby()">
+    Back to Lobby
+  </button>
+
+  <section class="profile-shell">
+    <aside class="profile-nav">
+      <button
+        type="button"
+        class="nav-button"
+        [class.active]="selectedNav() === 'security'"
+        [attr.aria-pressed]="selectedNav() === 'security'"
+        (click)="selectNav('security')"
+      >
+        Security
+      </button>
+      <button
+        type="button"
+        class="nav-button"
+        [class.active]="selectedNav() === 'settings'"
+        [attr.aria-pressed]="selectedNav() === 'settings'"
+        (click)="selectNav('settings')"
+      >
+        Settings
+      </button>
+    </aside>
+
+    <main class="profile-content">
+      @if (selectedNav() === 'security') {
+        <!-- Security settings pane -->
+        <section class="security-section" aria-label="Security settings">
+          <h2 class="section-title">Security settings</h2>
+
+          <section class="change-password-section">
+            <h3>Change password</h3>
+            <form class="change-password-form" (ngSubmit)="submitChangePassword()">
+              <label class="form-field">
+                <span class="form-label">Current password</span>
+                <input
+                  type="password"
+                  class="form-input"
+                  [value]="currentPassword()"
+                  (input)="currentPassword.set($any($event.target).value)"
+                  autocomplete="current-password"
+                />
+              </label>
+              <app-new-password-fields
+                [(primary)]="newPassword"
+                [(confirm)]="confirmNewPassword"
+                primaryLabel="New password"
+                confirmLabel="Confirm new password"
+                primaryAutocomplete="new-password"
+                confirmAutocomplete="new-password"
+              />
+              @if (changePasswordError(); as err) {
+                <p class="form-field-error">{{ err }}</p>
+              }
+              @if (changePasswordSuccess(); as msg) {
+                <p class="form-success">{{ msg }}</p>
+              }
+              <div class="form-actions">
+                <button
+                  type="submit"
+                  class="panel-button"
+                  [disabled]="changePasswordSubmitting() || !!newPasswordFields()?.mismatch() || confirmNewPassword().length === 0"
+                >
+                  Update password
+                </button>
+              </div>
+            </form>
+          </section>
+        </section>
+      }
+
+      @if (selectedNav() === 'settings') {
+        <!-- Settings pane -->
+        <section class="settings-section" aria-label="Settings">
+          <h2 class="section-title">Settings page</h2>
+        </section>
+      }
+    </main>
+  </section>
+</app-scene-content>

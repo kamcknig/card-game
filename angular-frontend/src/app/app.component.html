@@ -1,6 +1,7 @@
 <ng-container [ngSwitch]="scene()">
   <app-login *ngSwitchCase="'login'"></app-login>
   <app-lobby *ngSwitchCase="'lobby'"></app-lobby>
+  <app-profile *ngSwitchCase="'profile'"></app-profile>
   <app-match-configuration *ngSwitchCase="'configuration'"></app-match-configuration>
   <app-game-summary [matchSummary]="matchSummary()!" *ngSwitchCase="'gameSummary'"></app-game-summary>
 </ng-container>

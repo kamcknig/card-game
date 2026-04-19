@@ -1,0 +1,76 @@
+// Host is the positioning context for the dropdown panel.
+:host {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+// The icon button that triggers the menu.
+.profile-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--theme-text-primary);
+  padding: 4px;
+  border-radius: 6px;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--theme-text-secondary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--theme-border-strong);
+    outline-offset: 2px;
+  }
+}
+
+// Dropdown panel — anchored to the top-right of the trigger.
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 140px;
+  background: var(--theme-surface-card);
+  border: 1px solid var(--theme-border-subtle);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  padding: 4px 0;
+  z-index: 9000;
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: var(--theme-text-primary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: left;
+  padding: 8px 14px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--theme-action-secondary-bg);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--theme-border-strong);
+    outline-offset: -2px;
+  }
+}
+
+.dropdown-item-danger {
+  color: var(--theme-border-danger);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--theme-border-subtle);
+  margin: 4px 0;
+}
