@@ -804,9 +804,11 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register rejects invalid us
 
 Deno.test('ServerAuthRouteHandlerService: POST /auth/registration-codes authenticated → 201', async () => {
   await withIsolatedEnv({}, async () => {
-    const { service, regCodeStore } = makeService({
+    const { service, regCodeStore, userStore } = makeService({
       sessionServiceStub: makeSessionServiceStub({ ok: true, token: 'tok', username: 'alice' }, 'alice'),
     });
+    const alice = userStore.create({ username: 'alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: Date.now() });
+    userStore.setAdmin(alice.id, true);
 
     const res = await dispatch(
       service,
@@ -848,9 +850,11 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/registration-codes unauthen
 
 Deno.test('ServerAuthRouteHandlerService: DELETE /auth/registration-codes/:code → 200 disables code', async () => {
   await withIsolatedEnv({}, async () => {
-    const { service, regCodeStore } = makeService({
+    const { service, regCodeStore, userStore } = makeService({
       sessionServiceStub: makeSessionServiceStub({ ok: true, token: 'tok', username: 'alice' }, 'alice'),
     });
+    const alice = userStore.create({ username: 'alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: Date.now() });
+    userStore.setAdmin(alice.id, true);
     const rec = regCodeStore.create({ createdBy: 'alice', expiresAt: null, maxUses: 5, now: Date.now() });
 
     const res = await dispatch(
@@ -868,9 +872,11 @@ Deno.test('ServerAuthRouteHandlerService: DELETE /auth/registration-codes/:code 
 
 Deno.test('ServerAuthRouteHandlerService: GET /auth/registration-codes returns active codes only', async () => {
   await withIsolatedEnv({}, async () => {
-    const { service, regCodeStore } = makeService({
+    const { service, regCodeStore, userStore } = makeService({
       sessionServiceStub: makeSessionServiceStub({ ok: true, token: 'tok', username: 'alice' }, 'alice'),
     });
+    const alice = userStore.create({ username: 'alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: Date.now() });
+    userStore.setAdmin(alice.id, true);
     regCodeStore.create({ createdBy: 'alice', expiresAt: null, maxUses: 1, now: Date.now() });
     const expired = regCodeStore.create({
       createdBy: 'alice',
