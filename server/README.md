@@ -52,23 +52,73 @@ cp .env-example .env
 | `AUTH_LOCKOUT_DURATION_MS` | `600000` | Lockout duration (ms) once the per-account threshold is exceeded. Default: 10 minutes |
 | `AUTH_MIN_PASSWORD_LENGTH` | `10` | Minimum password length enforced at registration and password-change |
 
-## Auth Scripts
+## Authentication Usage
 
-Two maintenance CLI scripts are available for bootstrapping accounts without going through the HTTP flow.
+Accounts are created via HTTP registration (`POST /auth/register`) using a
+registration code. Registration codes are issued by any authenticated user via
+HTTP (`POST /auth/registration-codes`) or by CLI scripts for bootstrapping.
 
-### Create first user
+### HTTP endpoints
 
-Creates a user account directly in the Deno KV store. Use this to seed the initial account before any registration codes exist.
+| Method | Path | Auth | Purpose |
+|--------|------|------|---------|
+| `POST` | `/auth/login` | public | Exchange username + password for a session token |
+| `POST` | `/auth/register` | public (rate-limited) | Create an account using a valid registration code |
+| `POST` | `/auth/change-password` | bearer | Rotate the caller's password |
+| `GET` | `/auth/validate` | bearer | Validate an existing token |
+| `DELETE` | `/auth/logout` | bearer | Invalidate the caller's token |
+| `GET` | `/auth/sessions` | bearer | List the caller's active sessions |
+| `DELETE` | `/auth/sessions[?keepCurrent=true]` | bearer | Revoke the caller's sessions |
+| `POST` | `/auth/registration-codes` | bearer | Create a new registration code |
+| `GET` | `/auth/registration-codes` | bearer | List active registration codes |
+| `DELETE` | `/auth/registration-codes/:code` | bearer | Disable a registration code |
+| `GET` | `/auth/check-username?username=<value>` | public | Report whether a username is already taken |
+
+### Bootstrap workflow
+
+Before any users exist, both `/auth/login` and `/auth/registration-codes`
+reject every request, so the very first account must be provisioned directly
+against the Deno KV file. Because the running server keeps an in-memory cache
+of the KV state primed at startup, **CLI writes while the server is running
+are invisible to the running process and risk SQLite lock contention on the
+shared `auth.kv` file**. Stop the server before running the CLI scripts below,
+then restart.
 
 ```bash
-deno task auth:create-user --username <name> --password <pw> [--kv <path>]
+# 1. Stop the server (so the CLI and server do not both hold auth.kv).
+# 2. Create the first user directly in the KV store.
+deno task auth:users create --username <name> --password <pw> [--kv <path>]
+
+# 3. Restart the server.
+
+# 4. Log in to mint a session token.
+curl -sSX POST http://localhost:3001/auth/login \
+  -H 'content-type: application/json' \
+  -d '{"username":"<name>","password":"<pw>"}'
+
+# 5. Use the returned token to issue registration codes for everyone else.
+curl -sSX POST http://localhost:3001/auth/registration-codes \
+  -H "authorization: Bearer <token>" \
+  -H 'content-type: application/json' \
+  -d '{"maxUses":1,"expiresIn":3600000}'
 ```
 
-### Create registration code
+Once at least one account exists, prefer the HTTP endpoints for day-to-day
+user and code management — they go through the same in-memory store the
+registration handler reads from, so new codes are visible immediately.
 
-Creates a registration code that can be supplied to `POST /auth/register` by a new user. Any authenticated user can also create codes via the API.
+### CLI scripts
+
+Both scripts write to the Deno KV store directly and **must be run with the
+server stopped** to avoid stale caches and SQLite lock contention. Intended
+for bootstrapping and operator maintenance only.
 
 ```bash
+# User management: create | delete | set-password | clear
+# Run a subcommand with --help for its options.
+deno task auth:users <command> [options]
+
+# Create a registration code (accepts --expires-in, --max-uses, --created-by, --kv).
 deno task auth:create-reg-code [--expires-in <duration>] [--max-uses N] [--created-by <user>] [--kv <path>]
 # Duration strings: 30s, 10m, 24h, 7d
 ```

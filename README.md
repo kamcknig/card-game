@@ -43,6 +43,14 @@ cd angular-frontend && npm run start    # web client on http://localhost:51455
 
 The Angular dev server proxies `/socket.io` and `/debug` requests to the game server at `127.0.0.1:3001`.
 
+## Authentication
+
+The server ships with no default accounts and no open self-registration —
+every account is created via `POST /auth/register` using a registration code
+issued by an authenticated user. Bootstrap the first user via the CLI scripts
+with the server stopped; see [server/README.md](server/README.md#authentication-usage)
+for the full workflow and HTTP endpoint reference.
+
 ## Docker
 
 Docker images are built from the `docker/` directory. Both Dockerfiles expect to be built from the repository root so they can copy the `shared/`, `server/`, and `angular-frontend/` directories.
