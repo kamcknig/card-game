@@ -43,8 +43,8 @@ export class UserAccountAuthProvider implements AuthProvider {
   constructor(
     private readonly loggerService: LoggerService,
     private readonly userStore: UserStore,
-    private readonly argon2id: Argon2idHasher,
-    private readonly bcrypt: BcryptHasher,
+    private readonly argon2idHasher: Argon2idHasher,
+    private readonly bcryptHasher: BcryptHasher,
     private readonly serverConfigService: ServerConfigService,
     private readonly clock: Clock = systemClock,
   ) {}
@@ -58,7 +58,7 @@ export class UserAccountAuthProvider implements AuthProvider {
    */
   public async initialize(): Promise<void> {
     if (!DUMMY_HASH) {
-      DUMMY_HASH = await this.argon2id.hash(DUMMY_HASH_PLAINTEXT);
+      DUMMY_HASH = await this.argon2idHasher.hash(DUMMY_HASH_PLAINTEXT);
     }
     this.loggerService.info('[auth:user] user-account provider initialized');
   }
@@ -86,7 +86,7 @@ export class UserAccountAuthProvider implements AuthProvider {
     // existence via timing. Also matches the disabled-account case.
     if (!user || user.disabled) {
       if (DUMMY_HASH) {
-        await this.argon2id.verify(password, DUMMY_HASH);
+        await this.argon2idHasher.verify(password, DUMMY_HASH);
       }
       this.loggerService.debug('[auth:user] rejected: unknown or disabled user');
       return { ok: false, message: 'Username/password does not match' };
@@ -102,7 +102,7 @@ export class UserAccountAuthProvider implements AuthProvider {
     }
 
     // Select the verifier based on the algorithm recorded at hash time.
-    const verifier = user.passwordAlgo === 'argon2id' ? this.argon2id : this.bcrypt;
+    const verifier = user.passwordAlgo === 'argon2id' ? this.argon2idHasher : this.bcryptHasher;
     const valid = await verifier.verify(password, user.passwordHash);
 
     if (!valid) {
@@ -128,7 +128,7 @@ export class UserAccountAuthProvider implements AuthProvider {
     // hashes migrate forward without operator intervention.
     if (user.passwordAlgo === 'bcrypt') {
       try {
-        const newHash = await this.argon2id.hash(password);
+        const newHash = await this.argon2idHasher.hash(password);
         this.userStore.updatePassword(user.id, newHash, 'argon2id', now);
         this.loggerService.info(`[auth:user] upgraded '${user.username}' password hash bcrypt → argon2id`);
       } catch (err) {
