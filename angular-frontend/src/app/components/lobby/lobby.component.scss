@@ -56,16 +56,19 @@
   }
 }
 
-// Top-right × button. Visual only — the Cancel button in the actions row and
-// backdrop clicks also dispatch close, so this is a convenience affordance.
+// Top-right close button. Visual only — the Cancel button in the actions row
+// and backdrop clicks also dispatch close, so this is a convenience
+// affordance. Lucide <lucide-icon size="18" /> owns the icon size; this rule
+// only handles the surrounding button chrome and `currentColor` theming.
 .change-password-dialog-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   background: transparent;
   color: var(--theme-text-secondary);
-  font-size: 1.5rem;
-  line-height: 1;
   cursor: pointer;
-  padding: 0 4px;
+  padding: 4px;
   border-radius: 4px;
 
   &:hover {

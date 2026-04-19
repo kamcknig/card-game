@@ -6,6 +6,7 @@ import { LobbyGameSummary } from 'shared/types';
 import { SocketService } from '../../core/socket-service/socket.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { lobbyGamesStore, lobbyStatusMessageStore } from '../../state/lobby-state';
+import { LucideAngularModule, X } from 'lucide-angular';
 import { SceneContentComponent } from '../scene-content/scene-content.component';
 import { UiDialogComponent } from '../ui/dialog/ui-dialog.component';
 import { NewPasswordFieldsComponent } from '../ui/new-password-fields/new-password-fields.component';
@@ -14,7 +15,7 @@ import { sceneStore } from '../../state/game-state';
 @Component({
   selector: 'app-lobby',
   standalone: true,
-  imports: [SceneContentComponent, FormsModule, UiDialogComponent, NewPasswordFieldsComponent],
+  imports: [SceneContentComponent, FormsModule, UiDialogComponent, NewPasswordFieldsComponent, LucideAngularModule],
   templateUrl: './lobby.component.html',
   styleUrl: './lobby.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -23,6 +24,10 @@ export class LobbyComponent implements OnInit {
   private readonly _nanoStores = inject(NanostoresService);
   private readonly _socketService = inject(SocketService);
   private readonly _authService = inject(AuthService);
+
+  // Lucide icon reference exposed to the template for the change-password
+  // dialog's close (×) button.
+  readonly XIcon = X;
 
   // Streams the currently visible joinable games for the lobby list.
   private readonly _games = toSignal(this._nanoStores.useStore(lobbyGamesStore));
