@@ -30,19 +30,27 @@ const consoleLogger: LoggerService = {
   error: (...a: unknown[]) => console.error('[auth:users]', ...a),
 } as unknown as LoggerService;
 
-// Parses `--flag value` pairs into a keyed map. Only supports the shape this
-// CLI needs (no boolean flags, no `--flag=value`).
+// Short-form aliases for flag names (e.g. `-u` → `username`).
+const ALIASES: Record<string, string> = {
+  u: 'username',
+  pw: 'password',
+};
+
+// Parses `--flag value` and `-flag value` pairs into a keyed map. Short-form
+// aliases defined in ALIASES are normalized to their canonical key names.
+// Does not support boolean flags or `--flag=value` syntax.
 const parseArgs = (args: string[]): Record<string, string> => {
   const out: Record<string, string> = {};
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    if (!arg.startsWith('--')) continue;
-    const name = arg.slice(2);
+    if (!arg.startsWith('-')) continue;
+    const raw = arg.startsWith('--') ? arg.slice(2) : arg.slice(1);
+    const key = ALIASES[raw] ?? raw;
     const value = args[i + 1];
-    if (value === undefined || value.startsWith('--')) {
-      throw new Error(`Missing value for --${name}`);
+    if (value === undefined || value.startsWith('-')) {
+      throw new Error(`Missing value for ${arg}`);
     }
-    out[name] = value;
+    out[key] = value;
     i++;
   }
   return out;
@@ -102,10 +110,10 @@ through the HTTP registration flow. Useful for seeding the first account before
 any registration codes exist.
 
 Options:
-  --username <name>   Username (3–32 chars, alphanumeric or underscore)
-  --password <pw>     Plaintext password (hashed with argon2id before storage)
-  --kv <path>         Path to KV file (default: AUTH_KV_PATH env or ./game-data/auth.kv)
-  --help, -h          Show this help message`,
+  --username, -u <name>   Username (3–32 chars, alphanumeric or underscore)
+  --password, -pw <pw>    Plaintext password (hashed with argon2id before storage)
+  --kv <path>             Path to KV file (default: AUTH_KV_PATH env or ./game-data/auth.kv)
+  --help, -h              Show this help message`,
   );
 };
 
@@ -161,9 +169,9 @@ const printDeleteHelp = (): void => {
 Permanently removes the user account with the given username.
 
 Options:
-  --username <name>   Username of the account to delete
-  --kv <path>         Path to KV file (default: AUTH_KV_PATH env or ./game-data/auth.kv)
-  --help, -h          Show this help message`,
+  --username, -u <name>   Username of the account to delete
+  --kv <path>             Path to KV file (default: AUTH_KV_PATH env or ./game-data/auth.kv)
+  --help, -h              Show this help message`,
   );
 };
 
@@ -209,10 +217,10 @@ Replaces the password for an existing user account. Resets any active lockout
 and failure counter.
 
 Options:
-  --username <name>   Username of the target account
-  --password <pw>     New plaintext password (hashed with argon2id before storage)
-  --kv <path>         Path to KV file (default: AUTH_KV_PATH env or ./game-data/auth.kv)
-  --help, -h          Show this help message`,
+  --username, -u <name>   Username of the target account
+  --password, -pw <pw>    New plaintext password (hashed with argon2id before storage)
+  --kv <path>             Path to KV file (default: AUTH_KV_PATH env or ./game-data/auth.kv)
+  --help, -h              Show this help message`,
   );
 };
 
