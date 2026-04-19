@@ -43,6 +43,14 @@ cd angular-frontend && npm run start    # web client on http://localhost:51455
 
 The Angular dev server proxies `/socket.io` and `/debug` requests to the game server at `127.0.0.1:3001`.
 
+## Authentication
+
+The server ships with no default accounts and no open self-registration —
+every account is created via `POST /auth/register` using a registration code
+issued by an authenticated user. Bootstrap the first user via the CLI scripts
+with the server stopped; see [server/README.md](server/README.md#authentication-usage)
+for the full workflow and HTTP endpoint reference.
+
 ## Docker
 
 Docker images are built from the `docker/` directory. Both Dockerfiles expect to be built from the repository root so they can copy the `shared/`, `server/`, and `angular-frontend/` directories.
@@ -175,7 +183,12 @@ Both apps have external ingress and are accessible via their `.azurecontainerapp
 | `GAME_DATA_ROOT` | `./game-data` | Game data directory |
 | `END_MATCH_ON_NO_HUMANS` | `true` | End matches when all humans leave |
 | `MATCH_STATE_MERGE_ENABLED` | `true` | Enable match state merging |
-| `AUTH_PASSWORD` | _(required)_ | Preset password for simple authentication |
+| `AUTH_ALLOWED_ORIGINS` | _(required)_ | Comma-separated CORS origin allowlist for `/auth/*` (e.g. the frontend FQDN) |
+| `AUTH_SESSION_STORE` | `kv` | Set to `kv` for persistent sessions across restarts |
+| `AUTH_KV_PATH` | `./game-data/auth.kv` | Path to the Deno KV store (mount Azure Files at the containing directory for durability) |
+| `AUTH_LOCKOUT_THRESHOLD` | `5` | Failed logins before per-account lockout |
+| `AUTH_LOCKOUT_DURATION_MS` | `600000` | Account lockout duration (ms) |
+| `AUTH_MIN_PASSWORD_LENGTH` | `10` | Minimum password length for registration and password change |
 
 ### Frontend Environment Variables (Production)
 

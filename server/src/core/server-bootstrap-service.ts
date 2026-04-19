@@ -49,8 +49,10 @@ export class ServerBootstrapService {
       signal: this.shutdownController.signal,
       handler: (req, info) => {
         const url = new URL(req.url);
+        // Derive the client IP for rate limiting before routing.
+        const remoteIp = this.extractRemoteIp(req, info);
         // Auth routes take priority over debug and socket.io.
-        const authResponse = this.serverAuthRouteHandlerService.handleRequest(req, url);
+        const authResponse = this.serverAuthRouteHandlerService.handleRequest(req, url, remoteIp);
         if (authResponse) {
           return authResponse;
         }
@@ -64,5 +66,28 @@ export class ServerBootstrapService {
       this.loggerService.error(error);
       Deno.exit(1);
     });
+  }
+
+  /**
+   * Extracts the client IP address for rate limiting.
+   *
+   * Prefers the leftmost entry in the X-Forwarded-For header when present,
+   * since Azure Container Apps (our ingress) sets it for us. Falls back to
+   * the TCP socket's remote hostname. Only the first hop is trusted — we do
+   * not attempt to parse multiple hops from the forwarded chain.
+   *
+   * Returns 'unknown' when the remote address is a Unix socket or the
+   * X-Forwarded-For header is absent and the addr has no hostname.
+   */
+  private extractRemoteIp(req: Request, info: Deno.ServeHandlerInfo): string {
+    const fwd = req.headers.get('x-forwarded-for');
+    const socketHostname = info.remoteAddr.transport === 'tcp' || info.remoteAddr.transport === 'udp'
+      ? info.remoteAddr.hostname
+      : 'unknown';
+
+    if (fwd) {
+      return fwd.split(',')[0]?.trim() || socketHostname;
+    }
+    return socketHostname;
   }
 }

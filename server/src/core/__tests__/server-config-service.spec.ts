@@ -10,6 +10,10 @@ const TEST_ENV_KEYS = [
   'END_MATCH_ON_NO_HUMANS',
   'MATCH_STATE_PATH',
   'TOOLTIP_DEFAULT_CLOSE_DELAY_MS',
+  'AUTH_ALLOWED_ORIGINS',
+  'AUTH_RATE_LIMIT_MAX_ATTEMPTS',
+  'AUTH_RATE_LIMIT_WINDOW_MS',
+  'AUTH_MAX_BODY_BYTES',
 ] as const;
 
 // Runs a test block with automatic save/restore of env vars used by ServerConfigService.
@@ -116,3 +120,5 @@ Deno.test('ServerConfigService.validate checks all required config fields', () =
     );
   });
 });
+
+

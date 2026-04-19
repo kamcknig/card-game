@@ -5,7 +5,17 @@ export class ServerConfigService {
   // Validates all startup configuration used by the server process.
   public validate(): void {
     this.getPort();
-    this.getAuthPassword();
+    this.getAuthAllowedOrigins();
+    this.getAuthRateLimitMaxAttempts();
+    this.getAuthRateLimitWindowMs();
+    this.getAuthMaxBodyBytes();
+    this.getAuthSessionTtlMs();
+    const storeKind = this.getSessionStoreKind();
+    // Eagerly validate the path config for the kv backend when configured.
+    if (storeKind === 'kv') this.getAuthKvPath();
+    this.getAuthLockoutThreshold();
+    this.getAuthLockoutDurationMs();
+    this.getAuthMinPasswordLength();
     this.isFileLoggingEnabled();
     this.getLogFileMaxBytes();
     this.isMatchStateExportEnabled();
@@ -15,13 +25,109 @@ export class ServerConfigService {
   }
 
   /**
-   * Returns the preset authentication password from the AUTH_PASSWORD env var.
+   * Returns the allowlist of origins that may make authenticated requests.
    *
-   * Returns an empty string if the variable is unset or blank, which signals
-   * the auth provider to skip password validation (any username is accepted).
+   * Comma-separated list. An entry of `*` allows any origin and should only
+   * be used for local development. When unset, defaults to `*` in
+   * development convenience mode but logs a warning on startup.
    */
-  public getAuthPassword(): string {
-    return Deno.env.get('AUTH_PASSWORD') ?? '';
+  public getAuthAllowedOrigins(): string[] {
+    const raw = Deno.env.get('AUTH_ALLOWED_ORIGINS');
+    if (!raw || !raw.trim()) {
+      return ['*'];
+    }
+    return raw.split(',').map(s => s.trim()).filter(Boolean);
+  }
+
+  // Returns the maximum number of failed logins per IP per window before rate-limiting.
+  public getAuthRateLimitMaxAttempts(): number {
+    return this.parseIntEnv('AUTH_RATE_LIMIT_MAX_ATTEMPTS', 10, { min: 1 });
+  }
+
+  // Returns the sliding-window duration (in milliseconds) used by the login rate limiter.
+  public getAuthRateLimitWindowMs(): number {
+    return this.parseIntEnv('AUTH_RATE_LIMIT_WINDOW_MS', 60_000, { min: 1_000 });
+  }
+
+  // Returns the maximum request body size (bytes) accepted on /auth/login.
+  public getAuthMaxBodyBytes(): number {
+    return this.parseIntEnv('AUTH_MAX_BODY_BYTES', 4096, { min: 256, max: 1_048_576 });
+  }
+
+  /**
+   * Returns the session time-to-live in milliseconds (sliding window).
+   *
+   * Each validated token has its expiry extended by this amount. Sessions
+   * that are never re-validated expire after this duration from their last
+   * activity. Defaults to 7 days. Configurable via AUTH_SESSION_TTL_MS.
+   */
+  public getAuthSessionTtlMs(): number {
+    return this.parseIntEnv('AUTH_SESSION_TTL_MS', 7 * 24 * 60 * 60 * 1000, { min: 1_000 });
+  }
+
+  /**
+   * Returns the session store backend to use.
+   *
+   * Reads from AUTH_SESSION_STORE. Valid values are 'memory' (default) and
+   * 'kv'. An unrecognized value throws at startup.
+   * - 'memory': in-process Map, sessions lost on restart (default, dev/tests).
+   * - 'kv': Deno KV with write-through cache, sessions survive restarts.
+   */
+  public getSessionStoreKind(): 'memory' | 'kv' {
+    const raw = Deno.env.get('AUTH_SESSION_STORE');
+    if (!raw || !raw.trim()) {
+      return 'memory';
+    }
+    const trimmed = raw.trim().toLowerCase();
+    if (trimmed === 'memory' || trimmed === 'kv') {
+      return trimmed;
+    }
+    throw new Error(`[server config] AUTH_SESSION_STORE must be 'memory' or 'kv', received '${raw}'`);
+  }
+
+  /**
+   * Returns the filesystem path for the Deno KV auth store.
+   *
+   * Reads from AUTH_KV_PATH. Defaults to './game-data/auth.kv'. Used only
+   * when AUTH_SESSION_STORE=kv. The containing directory must exist before
+   * the server starts. Pass ':memory:' to use an in-process KV store (dev
+   * and tests only — data is not persisted).
+   */
+  public getAuthKvPath(): string {
+    return Deno.env.get('AUTH_KV_PATH') ?? './game-data/auth.kv';
+  }
+
+  /**
+   * Returns the number of consecutive failed login attempts before a user
+   * account is locked.
+   *
+   * Configurable via AUTH_LOCKOUT_THRESHOLD. Defaults to 5.
+   */
+  public getAuthLockoutThreshold(): number {
+    return this.parseIntEnv('AUTH_LOCKOUT_THRESHOLD', 5, { min: 1 });
+  }
+
+  /**
+   * Returns the lockout duration (milliseconds) applied after a user account
+   * exceeds the lockout threshold.
+   *
+   * Configurable via AUTH_LOCKOUT_DURATION_MS. Defaults to 10 minutes. The lock is cleared automatically on the next successful login
+   * after the window elapses.
+   */
+  public getAuthLockoutDurationMs(): number {
+    return this.parseIntEnv('AUTH_LOCKOUT_DURATION_MS', 10 * 60_000, { min: 1_000 });
+  }
+
+  /**
+   * Returns the minimum password length accepted during user registration or
+   * password change.
+   *
+   * Configurable via AUTH_MIN_PASSWORD_LENGTH. Defaults to 10.
+   * Passwords matching the username (case-insensitive) are always rejected
+   * regardless of length.
+   */
+  public getAuthMinPasswordLength(): number {
+    return this.parseIntEnv('AUTH_MIN_PASSWORD_LENGTH', 10, { min: 1, max: 256 });
   }
 
   // Returns the configured server port or default port 3001.
@@ -113,5 +219,34 @@ export class ServerConfigService {
     }
 
     throw new Error(`[server config] ${name} must be 'true' or 'false', received '${rawValue}'`);
+  }
+
+  /**
+   * Parses an integer environment variable with optional min/max bounds.
+   *
+   * Returns the default value when the variable is unset or empty.
+   * Throws a descriptive error when the value is not a valid integer or
+   * falls outside the given bounds.
+   */
+  private parseIntEnv(name: string, defaultValue: number, bounds?: { min?: number; max?: number }): number {
+    const rawValue = Deno.env.get(name);
+    if (!rawValue) {
+      return defaultValue;
+    }
+
+    const parsedValue = toNumber(rawValue);
+    if (!Number.isInteger(parsedValue)) {
+      throw new Error(`[server config] ${name} must be an integer, received '${rawValue}'`);
+    }
+
+    if (bounds?.min !== undefined && parsedValue < bounds.min) {
+      throw new Error(`[server config] ${name} must be >= ${bounds.min}, received '${rawValue}'`);
+    }
+
+    if (bounds?.max !== undefined && parsedValue > bounds.max) {
+      throw new Error(`[server config] ${name} must be <= ${bounds.max}, received '${rawValue}'`);
+    }
+
+    return parsedValue;
   }
 }

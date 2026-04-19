@@ -115,4 +115,90 @@ export class AuthService {
     }
     this.clearAuth();
   }
+
+  /**
+   * Creates a new account via POST /auth/register.
+   *
+   * Requires a registration code issued out-of-band by an existing user or
+   * the CLI (see server/scripts/auth-create-reg-code.ts). On success the
+   * user must still log in separately — registration does not automatically
+   * establish a session.
+   */
+  async register(
+    username: string,
+    password: string,
+    registrationCode: string,
+  ): Promise<{ ok: boolean; message?: string }> {
+    try {
+      const response = await fetch(`${environment.wsHost}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, registrationCode }),
+      });
+
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.ok) {
+        return { ok: false, message: body.message ?? 'Registration failed' };
+      }
+      return { ok: true };
+    } catch {
+      return { ok: false, message: 'Unable to reach server' };
+    }
+  }
+
+  /**
+   * Checks whether a username is already registered.
+   *
+   * Returns true when the username is available, false when it is taken.
+   * Network errors resolve to true (available) so a transient failure does
+   * not block the registration form — the server will give the definitive
+   * answer on submit.
+   */
+  async checkUsernameAvailability(username: string): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${environment.wsHost}/auth/check-username?username=${encodeURIComponent(username)}`,
+      );
+      const body = await response.json().catch(() => ({ available: true }));
+      return body.available ?? true;
+    } catch {
+      return true;
+    }
+  }
+
+  /**
+   * Changes the authenticated user's password via POST /auth/change-password.
+   *
+   * On success the server revokes every other session for this user; the
+   * current session survives. Clients should consider re-validating after a
+   * successful call.
+   */
+  async changePassword(
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<{ ok: boolean; message?: string; revokedSessions?: number }> {
+    const token = authTokenStore.get();
+    if (!token) {
+      return { ok: false, message: 'Not signed in' };
+    }
+
+    try {
+      const response = await fetch(`${environment.wsHost}/auth/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.ok) {
+        return { ok: false, message: body.message ?? 'Password change failed' };
+      }
+      return { ok: true, revokedSessions: body.revokedSessions };
+    } catch {
+      return { ok: false, message: 'Unable to reach server' };
+    }
+  }
 }

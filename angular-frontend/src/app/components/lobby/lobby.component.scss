@@ -9,6 +9,119 @@
   cursor: pointer;
 }
 
+// Phase 5 — groups the lobby header action buttons (change password, logout).
+.lobby-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.header-button {
+  border: 1px solid var(--theme-border-action);
+  background: transparent;
+  color: var(--theme-text-primary);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+// Change-password dialog — rendered inside UiDialogComponent's overlay panel.
+// Uses --theme-surface-card (lighter tan) so the --theme-surface-panel inputs
+// inside it visually recede, matching the sign-in / register form contrast.
+.change-password-dialog {
+  min-width: min(420px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  padding: 16px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--theme-border-subtle);
+  background: var(--theme-surface-card);
+  color: var(--theme-text-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.change-password-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  h3 {
+    margin: 0;
+    font-size: 1.1rem;
+  }
+}
+
+// Top-right × button. Visual only — the Cancel button in the actions row and
+// backdrop clicks also dispatch close, so this is a convenience affordance.
+.change-password-dialog-close {
+  border: none;
+  background: transparent;
+  color: var(--theme-text-secondary);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+  border-radius: 4px;
+
+  &:hover {
+    color: var(--theme-text-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--theme-border-strong);
+    outline-offset: 2px;
+  }
+}
+
+.change-password-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.change-password-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+// Field layout, label, input, and error styles are defined globally in
+// src/styles.scss as .form-field / .form-label / .form-input /
+// .form-field-error — the dialog's markup uses those directly.
+
+.panel-success {
+  margin: 0;
+  color: var(--theme-text-primary);
+  font-size: 0.875rem;
+}
+
+.panel-button {
+  border: 1px solid var(--theme-border-action);
+  background: var(--theme-action-primary-bg);
+  color: var(--theme-text-primary);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+// Secondary variant used for the Cancel button in the dialog actions row.
+.panel-button-secondary {
+  background: transparent;
+  color: var(--theme-text-primary);
+}
+
 .lobby-shell {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
