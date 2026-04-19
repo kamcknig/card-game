@@ -51,11 +51,11 @@ az containerapp logs show \
 
 ### Automatic (CI/CD)
 
-Merging to `master` triggers the full pipeline automatically:
-1. **Build and Push** builds Docker images and pushes them to ACR with a short-SHA tag and `latest`
-2. **Deploy** pulls the SHA-tagged image and updates each Container App, creating a new revision
+Publishing a GitHub release triggers the full pipeline automatically:
+1. **Build and Push** builds Docker images and pushes them to ACR with the release tag (e.g., `v1.0.0`) and `latest`
+2. **Deploy** pulls the release-tagged image and updates each Container App, creating a new revision
 
-Each deploy uses a unique commit SHA tag (not `latest`) so Azure always creates a new revision. See `.github/workflows/deploy.yml` for details.
+Each deploy uses a unique release tag (not `latest`) so Azure always creates a new revision. See `.github/workflows/deploy.yml` for details.
 
 ### Manual Update
 
@@ -66,22 +66,22 @@ To deploy a specific image version outside of the CI/CD pipeline:
 az acr repository show-tags --name turkeysunite --repository dominion-clone-server --orderby time_desc -o table
 az acr repository show-tags --name turkeysunite --repository dominion-clone-frontend --orderby time_desc -o table
 
-# Update server to a specific SHA tag
+# Update server to a specific release tag (e.g., v1.0.0)
 az containerapp update \
   --name dominion-clone-server \
   --resource-group turkeysunite \
-  --image turkeysunite.azurecr.io/dominion-clone-server:<sha-tag>
+  --image turkeysunite.azurecr.io/dominion-clone-server:<release-tag>
 
-# Update frontend to a specific SHA tag
+# Update frontend to a specific release tag (e.g., v1.0.0)
 az containerapp update \
   --name dominion-clone-frontend \
   --resource-group turkeysunite \
-  --image turkeysunite.azurecr.io/dominion-clone-frontend:<sha-tag>
+  --image turkeysunite.azurecr.io/dominion-clone-frontend:<release-tag>
 ```
 
 New revisions typically take 30-60 seconds to start serving traffic.
 
-**Important:** Do not deploy with the `:latest` tag. Azure Container Apps only creates a new revision when the image reference string changes. Since `:latest` is always the same string, Azure skips the update. Always use a SHA tag or other unique identifier.
+**Important:** Do not deploy with the `:latest` tag. Azure Container Apps only creates a new revision when the image reference string changes. Since `:latest` is always the same string, Azure skips the update. Always use the release tag (e.g., `v1.0.0`) or another unique identifier.
 
 ## Environment Variables
 
@@ -386,7 +386,7 @@ az containerapp logs show \
 
 ### Deploy workflow succeeded but old version still running
 
-This happens when deploying with the `:latest` tag (same image reference string = no new revision). The deploy workflow uses SHA tags to avoid this. For manual updates, always use a specific SHA tag.
+This happens when deploying with the `:latest` tag (same image reference string = no new revision). The deploy workflow uses release tags to avoid this. For manual updates, always use a specific release tag (e.g., `v1.0.0`).
 
 ### WebSocket connection fails
 
