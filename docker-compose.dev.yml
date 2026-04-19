@@ -26,10 +26,15 @@ services:
     build:
       context: .
       dockerfile: docker/DockerFile_dev_server
+    user: "1000:1000"
     volumes:
       # Bind-mount source for hot-reload
       - ./server:/app/server
       - ./shared:/app/shared
+      # Named volume for Deno's module cache; avoids UID/permission clashes with
+      # the image's default /deno-dir (owned by the deno user, UID 1993) when
+      # the container runs as the host UID (1000).
+      - deno-cache:/deno-dir
     environment:
       PORT: 3001
       LOG_TO_FILE: "true"
@@ -49,3 +54,6 @@ services:
     ports:
       - "3001:3001"
     restart: unless-stopped
+
+volumes:
+  deno-cache:

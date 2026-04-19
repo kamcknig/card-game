@@ -2,7 +2,16 @@
 # Uses --watch for hot-reload on file changes
 FROM denoland/deno:2.7.7
 
+# Re-own Deno's cache dir so the container (which runs as host UID 1000 via
+# docker-compose `user:`) can populate the module cache. The upstream image
+# creates /deno-dir owned by the `deno` user (UID 1993), which conflicts with
+# bind-mounted source that is owned by the host user (UID 1000).
+USER root
+RUN chown -R 1000:1000 /deno-dir
+
 WORKDIR /app/server
+
+USER 1000
 
 EXPOSE 3001
 
