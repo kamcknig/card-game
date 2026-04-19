@@ -162,8 +162,9 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
         return new InMemoryRegistrationCodeStore();
       },
     ).singleton(),
-    // Multi-user account provider. Registered alongside the preset password
-    // provider (AuthSessionService handles both by name).
+    // Multi-user account provider. Sole auth provider registered with
+    // AuthSessionService; the earlier preset-password provider was removed
+    // in the auth-hardening work.
     userAccountAuthProvider: asClass(UserAccountAuthProvider).singleton(),
     serverAuthRouteHandlerService: asClass(ServerAuthRouteHandlerService).singleton(),
   });

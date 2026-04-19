@@ -11,7 +11,7 @@ export type AuthResult =
 /**
  * Contract for pluggable authentication providers.
  *
- * Each provider handles one authentication method (e.g. preset password,
+ * Each provider handles one authentication method (e.g. user account,
  * OAuth, guest access). Providers are registered with AuthSessionService
  * by name and invoked when a login request specifies that provider.
  *
@@ -32,7 +32,7 @@ export interface AuthProvider {
 
   /**
    * Optional one-time initialization called during server startup.
-   * Use for tasks like hashing a preset password or loading keys.
+   * Use for tasks like priming a dummy hash or loading keys.
    */
   initialize?(): Promise<void>;
 }

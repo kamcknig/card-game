@@ -164,7 +164,9 @@ az containerapp secret remove \
 
 ## Initial Account Bootstrap
 
-The server requires at least one user account to exist before players can log in. The `auth:create-user` and `auth:create-reg-code` scripts write directly to the Deno KV store and can be run in a local environment targeting the production KV file.
+The server requires at least one user account to exist before players can log in. The `auth:users` and `auth:create-reg-code` scripts write directly to the Deno KV store and can be run in a local environment targeting the production KV file.
+
+**Important:** stop the running server before invoking either script. The server primes an in-memory cache of the KV state at startup, so writes made while the server is running will not be visible to the running process and can also cause SQLite lock contention on the shared `auth.kv` file. See [server/README.md](../server/README.md#authentication-usage) for the full HTTP endpoint reference and bootstrap workflow.
 
 ### Creating the first user
 
@@ -172,14 +174,14 @@ Run against the KV store file that will be mounted into the container (or after 
 
 ```bash
 cd server
-deno task auth:create-user --username <name> --password <pw> --kv /path/to/auth.kv
+deno task auth:users create --username <name> --password <pw> --kv /path/to/auth.kv
 ```
 
-Usernames must be 3–32 characters, alphanumeric or underscore. The script refuses to overwrite an existing username.
+Usernames must be 3–32 characters, alphanumeric or underscore. The `create` subcommand refuses to overwrite an existing username. Other `auth:users` subcommands: `delete`, `set-password`, `clear` (run any subcommand with `--help` for its options).
 
 ### Creating registration codes for additional users
 
-Once a user exists and can log in, they can create registration codes via the API (`POST /auth/registration-codes`). For offline/operator use:
+Once a user exists and can log in, they can create registration codes via the API (`POST /auth/registration-codes`) — this is the preferred path because the running server's in-memory cache picks them up immediately. For offline/operator use with the server stopped:
 
 ```bash
 cd server

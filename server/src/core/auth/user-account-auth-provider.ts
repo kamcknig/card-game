@@ -34,8 +34,8 @@ let DUMMY_HASH: string | undefined;
  *   clear both counters.
  * - Disabled accounts are always refused.
  *
- * Lifetime: Root singleton; registered with AuthSessionService alongside
- * PresetPasswordAuthProvider.
+ * Lifetime: Root singleton; registered with AuthSessionService as the sole
+ * auth provider.
  */
 export class UserAccountAuthProvider implements AuthProvider {
   readonly name = 'user';
