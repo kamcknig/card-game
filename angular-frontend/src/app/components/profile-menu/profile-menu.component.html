@@ -1,0 +1,27 @@
+<!-- Profile icon trigger button. -->
+<button
+  type="button"
+  class="profile-trigger"
+  (click)="toggleDropdown($event)"
+  [attr.aria-expanded]="dropdownOpen()"
+  aria-haspopup="menu"
+  aria-label="Open profile menu"
+>
+  <lucide-icon [img]="UserCircleIcon" [size]="26" />
+</button>
+
+<!-- Dropdown panel — anchored below-right to the trigger button. -->
+@if (dropdownOpen()) {
+  <div class="profile-dropdown" role="menu">
+    <button type="button" class="dropdown-item" role="menuitem" (click)="openProfile()">
+      Profile
+    </button>
+    <button type="button" class="dropdown-item" role="menuitem" (click)="openSettings()">
+      Settings
+    </button>
+    <div class="dropdown-divider" role="separator"></div>
+    <button type="button" class="dropdown-item dropdown-item-danger" role="menuitem" (click)="logout()">
+      Logout
+    </button>
+  </div>
+}

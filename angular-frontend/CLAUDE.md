@@ -28,7 +28,9 @@ Angular 19 with `provideExperimentalZonelessChangeDetection()`. All components u
 
 ### Scene System (No Router)
 
-`AppComponent` switches between 4 scenes (`lobby`, `configuration`, `match`, `gameSummary`) driven by `sceneStore` in `src/app/state/game-state.ts`. There is no Angular Router for main views.
+`AppComponent` switches between 5 scenes (`login`, `lobby`, `profile`, `configuration`, `match`, `gameSummary`) driven by `sceneStore` in `src/app/state/game-state.ts`. There is no Angular Router for main views.
+
+The `profile` scene is a settings hub with a left nav (Security, Settings). The active tab on entry is controlled by `profileTabStore` in `src/app/state/profile-state.ts` — set this atom before switching to `'profile'` to deep-link to a specific tab.
 
 When scene is `match`, `AppComponent` creates a `MatchScene` instance (plain TypeScript class at `src/app/components/match/views/scenes/match-scene.ts`) that manages game interaction logic, prompt coordination, and way picker overlay. It is destroyed when leaving the match scene.
 
@@ -50,6 +52,8 @@ Components consume stores via `@nanostores/angular`'s `NanostoresService` and `t
 | `interactive-logic.ts` | Computed selectables merging server + client state |
 | `turn-state.ts` | Turn phase, current player |
 | `player-state.ts` | Per-player atoms |
+| `profile-state.ts` | `profileTabStore` — desired tab (`'security'` \| `'settings'`) on profile scene entry |
+| `core/auth/auth.service.ts` | `authTokenStore`, `authUsernameStore`, `authIsAdminStore` — session persistence atoms (localStorage-backed); `AuthService` for login/logout/registration-code HTTP calls |
 
 ### Socket Communication
 
@@ -72,7 +76,18 @@ All components are standalone under `src/app/components/`, organized by domain:
 - `match/` — supply, player-area, hud, landscapes, non-supply piles
 - `prompt-dialog/` — prompt host + per-type content components
 - `card/`, `card-like/` — card rendering
-- `lobby/`, `match-configuration/`, `game-summary/` — scene components
+- `lobby/`, `match-configuration/`, `game-summary/`, `profile/` — scene components
+- `profile-menu/` — user icon button + dropdown (Profile, Settings, Logout); rendered inside `SceneBannerComponent` when authenticated
+- `scene-banner/` — shared header banner; injects auth state to show `ProfileMenuComponent` when logged in
+
+### Admin Gating
+
+`authIsAdminStore` (in `core/auth/auth.service.ts`) is a localStorage-backed nanostore atom that tracks whether the logged-in user has admin privileges. It is populated from the `isAdmin` field returned by `/auth/login` and `/auth/validate`.
+
+Admin-only UI is guarded with `@if (isAdmin())` — no route guard exists; the server enforces 403 on admin-only endpoints. Two areas currently gated:
+
+- **Match HUD** (`match-hud.component`) — debug-toggle gear button is hidden for non-admins.
+- **Profile Security pane** (`profile.component`) — "Registration codes" section (create form + active codes table with disable action) is visible only to admins. `ProfileComponent` calls `AuthService.createRegistrationCode()`, `listRegistrationCodes()`, and `disableRegistrationCode()` for this section.
 
 ### Shared Package
 
@@ -87,3 +102,35 @@ Imported via tsconfig path `shared/*` → `../shared/src/*`. No build step — T
 - Card source keys use format `sourceKey` or `sourceKey:playerId` (e.g., `playerHand:1`, `setAside:TrashToken`)
 - Card images at `public/assets/card-images/base-v2/{full-size,half-size}/`
 - Dev server port: 51455
+
+## Icons
+
+All icons use [`lucide-angular`](https://lucide.dev/guide/packages/lucide-angular). Do not add inline SVGs or Unicode glyphs for iconography.
+
+### Usage pattern
+
+1. Import the named icon and `LucideAngularModule` from `lucide-angular`.
+2. Add `LucideAngularModule` to the component's `imports` array.
+3. Expose the icon as a `readonly` class field so the template can reference it.
+4. Use `<lucide-icon [img]="IconRef" [size]="N" />` in the template.
+
+```typescript
+import { Eye, EyeOff, LucideAngularModule } from 'lucide-angular';
+
+@Component({
+  imports: [LucideAngularModule],
+  // ...
+})
+export class MyComponent {
+  // Lucide icon references — class fields required; Angular templates cannot
+  // access module-level bindings directly.
+  readonly EyeIcon = Eye;
+  readonly EyeOffIcon = EyeOff;
+}
+```
+
+```html
+<lucide-icon [img]="showPassword() ? EyeOffIcon : EyeIcon" [size]="18" />
+```
+
+Button containers that wrap a lucide icon should use `display: inline-flex; align-items: center; justify-content: center` so the icon is flush-centered without needing extra padding.

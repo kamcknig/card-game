@@ -9,5 +9,8 @@
   <!-- Project scene-specific actions (e.g. Leave Game) into the banner header. -->
   <div class="scene-banner-actions">
     <ng-content></ng-content>
+    @if (username()) {
+      <app-profile-menu />
+    }
   </div>
 </header>

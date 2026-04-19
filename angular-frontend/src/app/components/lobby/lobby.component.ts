@@ -3,11 +3,14 @@ import { NanostoresService } from '@nanostores/angular';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { LobbyGameSummary } from 'shared/types';
 import { SocketService } from '../../core/socket-service/socket.service';
-import { AuthService } from '../../core/auth/auth.service';
 import { lobbyGamesStore, lobbyStatusMessageStore } from '../../state/lobby-state';
 import { SceneContentComponent } from '../scene-content/scene-content.component';
-import { sceneStore } from '../../state/game-state';
 
+/**
+ * Lobby scene — displays joinable games and allows creating/joining them.
+ * Auth actions (logout, profile, settings) are handled by ProfileMenuComponent
+ * in the banner header.
+ */
 @Component({
   selector: 'app-lobby',
   standalone: true,
@@ -19,7 +22,6 @@ import { sceneStore } from '../../state/game-state';
 export class LobbyComponent implements OnInit {
   private readonly _nanoStores = inject(NanostoresService);
   private readonly _socketService = inject(SocketService);
-  private readonly _authService = inject(AuthService);
 
   // Streams the currently visible joinable games for the lobby list.
   private readonly _games = toSignal(this._nanoStores.useStore(lobbyGamesStore));
@@ -35,25 +37,15 @@ export class LobbyComponent implements OnInit {
     this._socketService.emit('requestLobbySnapshot');
   }
 
-  // Requests server-side creation of a new lobby game.
+  /** Requests server-side creation of a new lobby game. */
   createGame(): void {
     lobbyStatusMessageStore.set(undefined);
     this._socketService.emit('createLobbyGame');
   }
 
-  // Attempts to join one selected lobby game.
+  /** Attempts to join one selected lobby game. */
   joinGame(gameId: string): void {
     lobbyStatusMessageStore.set(undefined);
     this._socketService.emit('joinLobbyGame', gameId);
-  }
-
-  /**
-   * Logs out the current user: invalidates the server session, disconnects
-   * the socket, clears local auth state, and returns to the login scene.
-   */
-  async logout(): Promise<void> {
-    await this._authService.logout();
-    this._socketService.disconnect();
-    sceneStore.set('login');
   }
 }

@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { PlayerNameInputComponent } from './player-name-input.component';
+import { PlayerComponent } from './player-name-input.component';
 
-describe('PlayerNameInputComponent', () => {
-  let component: PlayerNameInputComponent;
-  let fixture: ComponentFixture<PlayerNameInputComponent>;
+describe('PlayerComponent', () => {
+  let component: PlayerComponent;
+  let fixture: ComponentFixture<PlayerComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [PlayerNameInputComponent]
+      imports: [PlayerComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(PlayerNameInputComponent);
+    fixture = TestBed.createComponent(PlayerComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

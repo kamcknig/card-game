@@ -7,9 +7,13 @@ COPY server/ ./server/
 
 WORKDIR /app/server
 
-RUN deno install --entrypoint src/server.ts
+RUN deno install --entrypoint src/server.ts && \
+    mkdir -p /app/server/game-data && \
+    chown -R deno:deno /app/server/game-data
 
 ENV PORT=3000
+
+USER deno
 
 EXPOSE $PORT
 
@@ -19,5 +23,6 @@ CMD ["deno", "run", \
   "--allow-read", \
   "--allow-write", \
   "--allow-sys", \
+  "--unstable-kv", \
   "--node-modules-dir=manual", \
   "src/server.ts"]
