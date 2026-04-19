@@ -29,6 +29,7 @@ import { cardSourceStore, cardSourceTagMapStore, getCardSourceStore } from '../.
 import { disconnectedHumanIdsStore } from '../../../state/game-state';
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { debugOverlayVisibleStore, debugRuntimeContextStore } from '../../../state/debug-runtime-state';
+import { authIsAdminStore } from '../../../core/auth/auth.service';
 import { UiDialogComponent } from '../../ui/dialog/ui-dialog.component';
 import { cardStore } from '../../../state/card-state';
 import { matchStore } from '../../../state/match-state';
@@ -236,6 +237,11 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
   // Controls whether the debug identity overlay is visible.
   readonly debugOverlayVisible = toSignal(this._nanoService.useStore(debugOverlayVisibleStore), {
     initialValue: debugOverlayVisibleStore.get()
+  });
+
+  // Whether the current user has admin privileges — gates the debug toggle button.
+  readonly isAdmin = toSignal(this._nanoService.useStore(authIsAdminStore), {
+    initialValue: authIsAdminStore.get(),
   });
 
   ngOnDestroy() {

@@ -124,6 +124,7 @@ export class DenoKvUserStore implements UserStore {
       failedAttempts: 0,
       lockedUntil: null,
       disabled: false,
+      isAdmin: false,
       createdAt: args.now,
     };
 
@@ -214,6 +215,17 @@ export class DenoKvUserStore implements UserStore {
     if (!rec) return;
 
     rec.disabled = disabled;
+    this.persist(rec);
+  }
+
+  /**
+   * Sets or clears the admin flag for the given user.
+   */
+  public setAdmin(id: number, isAdmin: boolean): void {
+    const rec = this.byId.get(id);
+    if (!rec) return;
+
+    rec.isAdmin = isAdmin;
     this.persist(rec);
   }
 

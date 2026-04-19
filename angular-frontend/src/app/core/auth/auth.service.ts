@@ -12,8 +12,14 @@ export const authTokenStore = atom<string | undefined>(
   localStorage.getItem('authToken') ?? undefined,
 );
 
+// Stores the admin flag (false when not logged in or user is not admin).
+export const authIsAdminStore = atom<boolean>(
+  localStorage.getItem('authIsAdmin') === 'true',
+);
+
 (globalThis as any).authUsernameStore = authUsernameStore;
 (globalThis as any).authTokenStore = authTokenStore;
+(globalThis as any).authIsAdminStore = authIsAdminStore;
 
 /**
  * Manages client-side authentication state and server login requests.
@@ -48,8 +54,10 @@ export class AuthService {
 
       localStorage.setItem('authToken', body.token);
       localStorage.setItem('authUsername', body.username);
+      localStorage.setItem('authIsAdmin', body.isAdmin ? 'true' : 'false');
       authTokenStore.set(body.token);
       authUsernameStore.set(body.username);
+      authIsAdminStore.set(body.isAdmin ?? false);
       return { ok: true };
     } catch {
       return { ok: false, message: 'Unable to reach server' };
@@ -76,6 +84,8 @@ export class AuthService {
       const body = await response.json();
       if (body.ok) {
         authUsernameStore.set(body.username);
+        localStorage.setItem('authIsAdmin', body.isAdmin ? 'true' : 'false');
+        authIsAdminStore.set(body.isAdmin ?? false);
         return true;
       }
 
@@ -93,8 +103,10 @@ export class AuthService {
   clearAuth(): void {
     localStorage.removeItem('authToken');
     localStorage.removeItem('authUsername');
+    localStorage.removeItem('authIsAdmin');
     authTokenStore.set(undefined);
     authUsernameStore.set(undefined);
+    authIsAdminStore.set(false);
   }
 
   /**
@@ -139,6 +151,104 @@ export class AuthService {
       const body = await response.json().catch(() => ({}));
       if (!response.ok || !body.ok) {
         return { ok: false, message: body.message ?? 'Registration failed' };
+      }
+      return { ok: true };
+    } catch {
+      return { ok: false, message: 'Unable to reach server' };
+    }
+  }
+
+  /**
+   * Creates a new registration code via POST /auth/registration-codes.
+   *
+   * Only succeeds when the authenticated user is an admin. Returns the
+   * generated code string on success. `expiresIn` is relative milliseconds
+   * from now; omit for no time limit. `maxUses` defaults to 1 on the server.
+   */
+  async createRegistrationCode(options?: {
+    expiresIn?: number;
+    maxUses?: number;
+  }): Promise<{ ok: boolean; code?: string; expiresAt?: number | null; maxUses?: number; message?: string }> {
+    const token = authTokenStore.get();
+    if (!token) return { ok: false, message: 'Not signed in' };
+
+    try {
+      const response = await fetch(`${environment.wsHost}/auth/registration-codes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(options ?? {}),
+      });
+
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.ok) {
+        return { ok: false, message: body.message ?? 'Failed to create code' };
+      }
+      return { ok: true, code: body.code, expiresAt: body.expiresAt, maxUses: body.maxUses };
+    } catch {
+      return { ok: false, message: 'Unable to reach server' };
+    }
+  }
+
+  /**
+   * Lists active registration codes via GET /auth/registration-codes.
+   *
+   * Only succeeds when the authenticated user is an admin. Returns non-disabled,
+   * non-expired codes in server-defined order.
+   */
+  async listRegistrationCodes(): Promise<{
+    ok: boolean;
+    codes?: Array<{
+      code: string;
+      createdAt: number;
+      createdBy: string;
+      expiresAt: number | null;
+      maxUses: number;
+      usedCount: number;
+    }>;
+    message?: string;
+  }> {
+    const token = authTokenStore.get();
+    if (!token) return { ok: false, message: 'Not signed in' };
+
+    try {
+      const response = await fetch(`${environment.wsHost}/auth/registration-codes`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.ok) {
+        return { ok: false, message: body.message ?? 'Failed to list codes' };
+      }
+      return { ok: true, codes: body.codes };
+    } catch {
+      return { ok: false, message: 'Unable to reach server' };
+    }
+  }
+
+  /**
+   * Disables a registration code via DELETE /auth/registration-codes/:code.
+   *
+   * Idempotent — returns ok even when the code was already disabled or unknown.
+   */
+  async disableRegistrationCode(code: string): Promise<{ ok: boolean; message?: string }> {
+    const token = authTokenStore.get();
+    if (!token) return { ok: false, message: 'Not signed in' };
+
+    try {
+      const response = await fetch(
+        `${environment.wsHost}/auth/registration-codes/${encodeURIComponent(code)}`,
+        {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` },
+        },
+      );
+
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.ok) {
+        return { ok: false, message: body.message ?? 'Failed to disable code' };
       }
       return { ok: true };
     } catch {
