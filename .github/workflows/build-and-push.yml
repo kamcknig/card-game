@@ -1,10 +1,9 @@
-# Builds and pushes Docker images to Azure Container Registry on merge to master.
+# Builds and pushes Docker images to Azure Container Registry when a GitHub release is published.
 name: Build and Push Docker Images
 
 on:
-  push:
-    branches:
-      - master
+  release:
+    types: [published]
 
 jobs:
   build-server:
@@ -30,15 +29,15 @@ jobs:
         with:
           driver: docker
 
-      # Generates two tags: a short SHA tag for traceability and `latest` for
-      # deployment convenience.
+      # Generates two tags: the release tag (e.g., v1.0.0) for traceability and
+      # `latest` for deployment convenience.
       - name: Extract image metadata
         id: meta
         uses: docker/metadata-action@v6
         with:
           images: ${{ secrets.ACR_LOGIN_SERVER }}/dominion-clone-server
           tags: |
-            type=sha,prefix=,format=short
+            type=ref,event=tag
             type=raw,value=latest
 
       - name: Build server image
@@ -73,15 +72,15 @@ jobs:
         with:
           driver: docker
 
-      # Generates two tags: a short SHA tag for traceability and `latest` for
-      # deployment convenience.
+      # Generates two tags: the release tag (e.g., v1.0.0) for traceability and
+      # `latest` for deployment convenience.
       - name: Extract image metadata
         id: meta
         uses: docker/metadata-action@v6
         with:
           images: ${{ secrets.ACR_LOGIN_SERVER }}/dominion-clone-frontend
           tags: |
-            type=sha,prefix=,format=short
+            type=ref,event=tag
             type=raw,value=latest
 
       - name: Build frontend image

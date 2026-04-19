@@ -129,13 +129,15 @@ CI runs on every push and pull request, scoped by path filters so only relevant 
 
 ### Continuous Deployment
 
-CD triggers on merge to `master` and flows through two workflows:
+CD triggers when a GitHub release is published and flows through two workflows:
 
-1. **Build and Push** (`.github/workflows/build-and-push.yml`) — builds both Docker images and pushes them to Azure Container Registry (ACR) with `latest` and short-SHA tags.
-2. **Deploy** (`.github/workflows/deploy.yml`) — triggered by a successful Build and Push run, deploys the SHA-tagged images to Azure Container Apps (creating a new revision each time).
+| Workflow | File | Trigger | What It Does |
+|----------|------|---------|--------------|
+| Build and Push | `.github/workflows/build-and-push.yml` | GitHub release published | Builds Docker images and pushes to ACR with the release tag and `latest` |
+| Deploy | `.github/workflows/deploy.yml` | Successful Build and Push run | Deploys the release-tagged images to Azure Container Apps |
 
 ```
-master merge → Build & Push (ACR) → Deploy (Azure Container Apps)
+GitHub release published → Build & Push (ACR) → Deploy (Azure Container Apps)
 ```
 
 ### Required GitHub Secrets
