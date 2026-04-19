@@ -1,59 +1,78 @@
 <app-scene-content>
   <div sceneHeaderActions class="lobby-header-actions">
-    <button type="button" class="header-button" (click)="toggleChangePassword()">
-      @if (changePasswordOpen()) {
-        Close
-      } @else {
-        Change password
-      }
+    <button type="button" class="header-button" (click)="openChangePassword()">
+      Change password
     </button>
     <button type="button" class="logout-button" (click)="logout()">
       Logout
     </button>
   </div>
 
-  <!-- Phase 5 — inline change-password panel; rendered below the header so it
-       does not hide the lobby content. A future ChangePasswordDialogComponent
-       can replace this without touching AuthService. -->
+  <!-- Change-password dialog. Rendered via UiDialogComponent so it overlays
+       the lobby with a backdrop instead of being embedded in the header. -->
   @if (changePasswordOpen()) {
-    <section class="change-password-panel" aria-label="Change password">
-      <h3 class="panel-title">Change password</h3>
-      <form class="change-password-form" (ngSubmit)="submitChangePassword()">
-        <label class="panel-field">
-          <span class="panel-label">Current password</span>
-          <input
-            type="password"
-            class="panel-input"
-            [value]="currentPassword()"
-            (input)="currentPassword.set($any($event.target).value)"
-            autocomplete="current-password"
+    <app-ui-dialog
+      [zIndex]="4400"
+      [backdropVariant]="'soft'"
+      (close)="closeChangePassword()"
+    >
+      <section class="change-password-dialog" aria-label="Change password">
+        <header class="change-password-dialog-header">
+          <h3>Change password</h3>
+          <button
+            type="button"
+            class="change-password-dialog-close"
+            (click)="closeChangePassword()"
+            aria-label="Close change password dialog"
+          >
+            &times;
+          </button>
+        </header>
+        <form class="change-password-form" (ngSubmit)="submitChangePassword()">
+          <label class="form-field">
+            <span class="form-label">Current password</span>
+            <input
+              type="password"
+              class="form-input"
+              [value]="currentPassword()"
+              (input)="currentPassword.set($any($event.target).value)"
+              autocomplete="current-password"
+              autofocus
+            />
+          </label>
+          <app-new-password-fields
+            [(primary)]="newPassword"
+            [(confirm)]="confirmNewPassword"
+            primaryLabel="New password"
+            confirmLabel="Confirm new password"
+            primaryAutocomplete="new-password"
+            confirmAutocomplete="new-password"
           />
-        </label>
-        <label class="panel-field">
-          <span class="panel-label">New password</span>
-          <input
-            type="password"
-            class="panel-input"
-            [value]="newPassword()"
-            (input)="newPassword.set($any($event.target).value)"
-            autocomplete="new-password"
-          />
-        </label>
-        @if (changePasswordError(); as err) {
-          <p class="panel-error">{{ err }}</p>
-        }
-        @if (changePasswordSuccess(); as msg) {
-          <p class="panel-success">{{ msg }}</p>
-        }
-        <button
-          type="submit"
-          class="panel-button"
-          [disabled]="changePasswordSubmitting()"
-        >
-          Update password
-        </button>
-      </form>
-    </section>
+          @if (changePasswordError(); as err) {
+            <p class="form-field-error">{{ err }}</p>
+          }
+          @if (changePasswordSuccess(); as msg) {
+            <p class="panel-success">{{ msg }}</p>
+          }
+          <div class="change-password-dialog-actions">
+            <button
+              type="button"
+              class="panel-button panel-button-secondary"
+              (click)="closeChangePassword()"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="panel-button"
+              [disabled]="changePasswordSubmitting() || !!newPasswordFields()?.mismatch() || confirmNewPassword().length === 0"
+            >
+              Update password
+            </button>
+          </div>
+        </form>
+      </section>
+    </app-ui-dialog>
   }
 
   <section class="lobby-shell">

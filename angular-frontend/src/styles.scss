@@ -58,3 +58,100 @@ html, body, input {
   cursor: pointer;
   pointer-events: auto;
 }
+
+// Shared form-field primitives. Used across the login, register, and
+// change-password flows (and anywhere else a themed form field is needed)
+// so a single rule change keeps every form visually consistent.
+//
+// Layout:
+//   .form-field               — vertical stack: label + input (+ optional error)
+//   .form-label               — label text above the input
+//   .form-input               — the themed `<input>` itself
+//   .form-input-wrapper       — relative wrapper for input + trailing toggle
+//   .form-input-toggle        — icon button positioned inside .form-input-wrapper
+//   .form-field-error         — inline red validation message
+//
+// Adopting these classes removes ~60 lines of duplicated CSS previously
+// copied across login.component.scss, lobby.component.scss, and
+// new-password-fields.component.scss.
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-label {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--theme-text-secondary);
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--theme-border-action);
+  border-radius: 6px;
+  background: var(--theme-surface-panel);
+  color: var(--theme-text-primary);
+  font-size: 1rem;
+  outline: none;
+  box-sizing: border-box;
+
+  &:focus {
+    border-color: var(--theme-border-strong);
+    box-shadow: 0 0 0 2px rgba(130, 106, 72, 0.2);
+  }
+
+  // Visual affordance so disabled inputs (e.g. confirm-password before the
+  // primary password has any value) are obviously inert on the dark theme.
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.form-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  // Extra right padding so text does not run under the trailing toggle.
+  .form-input {
+    padding-right: 40px;
+  }
+}
+
+.form-input-toggle {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: var(--theme-text-secondary);
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+
+  &:hover {
+    color: var(--theme-text-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--theme-border-strong);
+    outline-offset: 2px;
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.form-field-error {
+  margin: 0;
+  color: var(--theme-border-danger);
+  font-size: 0.875rem;
+  font-weight: 500;
+}

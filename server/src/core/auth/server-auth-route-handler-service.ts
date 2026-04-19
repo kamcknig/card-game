@@ -144,6 +144,11 @@ export class ServerAuthRouteHandlerService {
       return this.handleDisableRegistrationCode(req, parts[2]!);
     }
 
+    // GET /auth/check-username?username=<value> (public, informational).
+    if (parts.length === 2 && parts[1] === 'check-username' && req.method === 'GET') {
+      return this.handleCheckUsername(req, url);
+    }
+
     this.loggerService.debug(`[auth route] unmatched auth path: ${req.method} ${url.pathname}`);
     return new Response('auth resource not found', { status: 404, headers: this.corsHeaders(req) });
   }
@@ -603,6 +608,33 @@ export class ServerAuthRouteHandlerService {
     this.registrationCodeStore.disable(code);
     this.loggerService.info(`[auth route] registration code ...${code.slice(-6)} disabled by '${username}'`);
     return this.jsonResponse({ ok: true }, 200, req);
+  }
+
+  /**
+   * Handles GET /auth/check-username?username=<value>.
+   *
+   * Public, unauthenticated endpoint that reports whether a given username is
+   * already registered. Used by the registration form to give real-time
+   * feedback before the user submits. The lookup is case-insensitive, matching
+   * the same normalisation applied during registration.
+   *
+   * Returns `{ available: true }` when no account exists for that name, or
+   * `{ available: false }` when one does. Usernames that fail format validation
+   * are reported as available because the server will reject them on
+   * registration with a format error; this endpoint's only concern is
+   * uniqueness.
+   */
+  private handleCheckUsername(req: Request, url: URL): Response {
+    const username = (url.searchParams.get('username') ?? '').trim();
+    if (!username) {
+      this.loggerService.debug('[auth route] check-username: empty username query param');
+      return this.jsonResponse({ available: true }, 200, req);
+    }
+
+    const existing = this.userStore.getByUsername(username);
+    const available = !existing;
+    this.loggerService.debug(`[auth route] check-username: '${username}' available=${available}`);
+    return this.jsonResponse({ available }, 200, req);
   }
 
   /**

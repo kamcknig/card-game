@@ -899,3 +899,201 @@ Deno.test('ServerAuthRouteHandlerService: GET /auth/registration-codes returns a
     assertEquals(body.codes[0].code !== expired.code, true);
   });
 });
+
+// ── GET /auth/check-username ─────────────────────────────────────────────────
+
+Deno.test('ServerAuthRouteHandlerService: GET /auth/check-username without query → 200 available:true', async () => {
+  // Empty/missing query is treated as "available" so the form's real-time
+  // feedback does not flag an empty input as taken while the user types.
+  await withIsolatedEnv({}, async () => {
+    const { service } = makeService({});
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/check-username', { method: 'GET' }),
+    );
+
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.available, true);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: GET /auth/check-username for unknown user → available:true', async () => {
+  await withIsolatedEnv({}, async () => {
+    const { service } = makeService({});
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/check-username?username=nobody', { method: 'GET' }),
+    );
+
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.available, true);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: GET /auth/check-username for existing user → available:false', async () => {
+  await withIsolatedEnv({}, async () => {
+    const { service, userStore } = makeService({});
+    userStore.create({
+      username: 'alice',
+      passwordHash: 'hash',
+      passwordAlgo: 'argon2id',
+      now: Date.now(),
+    });
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/check-username?username=alice', { method: 'GET' }),
+    );
+
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.available, false);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: GET /auth/check-username is case-insensitive', async () => {
+  // The UserStore normalises usernames to lowercase, and so does this
+  // endpoint — registering 'Alice' should mark 'alice' / 'ALICE' as taken.
+  await withIsolatedEnv({}, async () => {
+    const { service, userStore } = makeService({});
+    userStore.create({
+      username: 'Alice',
+      passwordHash: 'hash',
+      passwordAlgo: 'argon2id',
+      now: Date.now(),
+    });
+
+    const lowerRes = await dispatch(
+      service,
+      new Request('http://localhost/auth/check-username?username=alice', { method: 'GET' }),
+    );
+    assertEquals(lowerRes.status, 200);
+    assertEquals((await lowerRes.json()).available, false);
+
+    const upperRes = await dispatch(
+      service,
+      new Request('http://localhost/auth/check-username?username=ALICE', { method: 'GET' }),
+    );
+    assertEquals(upperRes.status, 200);
+    assertEquals((await upperRes.json()).available, false);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: GET /auth/check-username trims whitespace', async () => {
+  // The form passes the username verbatim; the endpoint should treat
+  // surrounding whitespace as part of the empty-input convenience path so
+  // a single space doesn't masquerade as an unknown user.
+  await withIsolatedEnv({}, async () => {
+    const { service, userStore } = makeService({});
+    userStore.create({
+      username: 'alice',
+      passwordHash: 'hash',
+      passwordAlgo: 'argon2id',
+      now: Date.now(),
+    });
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/check-username?username=%20%20', { method: 'GET' }),
+    );
+    assertEquals(res.status, 200);
+    // Two spaces trim to "" which is the empty-query "available:true" path.
+    assertEquals((await res.json()).available, true);
+  });
+});
+
+// ── Username length edge cases on POST /auth/register ─────────────────────────
+
+Deno.test('ServerAuthRouteHandlerService: POST /auth/register accepts minimum-length username', async () => {
+  // Min length is 3 characters (USERNAME_REGEX = /^[A-Za-z0-9_]{3,32}$/).
+  await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '8' }, async () => {
+    const { service, regCodeStore } = makeService({});
+    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 1, now: Date.now() });
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'abc',
+          password: 'correcthorsebattery',
+          registrationCode: rec.code,
+        }),
+      }),
+    );
+
+    assertEquals(res.status, 201);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: POST /auth/register rejects 2-character username', async () => {
+  await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '8' }, async () => {
+    const { service, regCodeStore } = makeService({});
+    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 1, now: Date.now() });
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'ab',
+          password: 'correcthorsebattery',
+          registrationCode: rec.code,
+        }),
+      }),
+    );
+
+    assertEquals(res.status, 400);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: POST /auth/register accepts 32-character username', async () => {
+  // Max length is 32. Character 32 should pass; 33 should not.
+  await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '8' }, async () => {
+    const { service, regCodeStore } = makeService({});
+    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 1, now: Date.now() });
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'a'.repeat(32),
+          password: 'correcthorsebattery',
+          registrationCode: rec.code,
+        }),
+      }),
+    );
+
+    assertEquals(res.status, 201);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: POST /auth/register rejects 33-character username', async () => {
+  await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '8' }, async () => {
+    const { service, regCodeStore } = makeService({});
+    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 1, now: Date.now() });
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: 'a'.repeat(33),
+          password: 'correcthorsebattery',
+          registrationCode: rec.code,
+        }),
+      }),
+    );
+
+    assertEquals(res.status, 400);
+  });
+});

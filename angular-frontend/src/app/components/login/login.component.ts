@@ -1,6 +1,9 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, viewChild } from '@angular/core';
+import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { debounceTime, distinctUntilChanged, switchMap, tap } from 'rxjs/operators';
 import { FormsModule } from '@angular/forms';
 import { SceneContentComponent } from '../scene-content/scene-content.component';
+import { NewPasswordFieldsComponent } from '../ui/new-password-fields/new-password-fields.component';
 import { AuthService } from '../../core/auth/auth.service';
 import { sceneStore } from '../../state/game-state';
 
@@ -20,7 +23,7 @@ import { sceneStore } from '../../state/game-state';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [SceneContentComponent, FormsModule],
+  imports: [SceneContentComponent, FormsModule, NewPasswordFieldsComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -33,13 +36,44 @@ export class LoginComponent {
 
   readonly username = signal('');
   readonly password = signal('');
+  /** Confirmation of {@link password} — only used when mode() === 'register'. */
+  readonly confirmPassword = signal('');
   /** Registration code — only used when mode() === 'register'. */
   readonly registrationCode = signal('');
   readonly errorMessage = signal<string | undefined>(undefined);
   readonly successMessage = signal<string | undefined>(undefined);
   readonly isSubmitting = signal(false);
-  /** Controls whether the password field renders as plain text. */
+  /** Controls whether the sign-in password field renders as plain text. */
   readonly showPassword = signal(false);
+  /** Username availability error shown inline below the username field in register mode. */
+  readonly usernameError = signal<string | undefined>(undefined);
+
+  /**
+   * Reference to the shared primary/confirm password component rendered in
+   * register mode. Used to read its `mismatch` signal when gating the submit
+   * button — undefined in signin mode (component is not rendered).
+   */
+  readonly newPasswordFields = viewChild(NewPasswordFieldsComponent);
+
+  constructor() {
+    // Debounced username availability check — fires only in register mode.
+    toObservable(this.username)
+      .pipe(
+        // Clear any previous error immediately so stale text doesn't linger while typing.
+        tap(() => this.usernameError.set(undefined)),
+        debounceTime(400),
+        distinctUntilChanged(),
+        switchMap(async (username) => {
+          if (this.mode() !== 'register' || !username.trim()) {
+            return undefined;
+          }
+          const available = await this._authService.checkUsernameAvailability(username.trim());
+          return available ? undefined : 'Username is already taken';
+        }),
+        takeUntilDestroyed(),
+      )
+      .subscribe((error) => this.usernameError.set(error));
+  }
 
   /** Toggles the password visibility state. */
   toggleShowPassword(): void {
@@ -47,14 +81,21 @@ export class LoginComponent {
   }
 
   /**
-   * Switches between sign-in and register modes, clearing transient state so
-   * messages from one mode do not bleed into the other.
+   * Switches between sign-in and register modes, clearing every field and
+   * transient message so one form's state does not bleed into the other.
+   *
+   * Callers that want to preserve a field across the mode switch (e.g. the
+   * post-registration flow that prefills the just-registered username into
+   * sign-in) should write to that field AFTER calling setMode.
    */
   setMode(next: 'signin' | 'register'): void {
     this.mode.set(next);
     this.errorMessage.set(undefined);
     this.successMessage.set(undefined);
+    this.usernameError.set(undefined);
+    this.username.set('');
     this.password.set('');
+    this.confirmPassword.set('');
     this.registrationCode.set('');
   }
 
@@ -96,6 +137,14 @@ export class LoginComponent {
           this.errorMessage.set(result.message ?? 'Username/password does not match');
         }
       } else {
+        // Belt-and-braces: the submit button is disabled when passwords
+        // differ, but re-check here in case the form was submitted via Enter
+        // before the confirm field lost focus.
+        if (this.password() !== this.confirmPassword()) {
+          this.errorMessage.set('Passwords do not match');
+          return;
+        }
+
         const code = this.registrationCode().trim();
         if (!code) {
           this.errorMessage.set('Registration code is required');

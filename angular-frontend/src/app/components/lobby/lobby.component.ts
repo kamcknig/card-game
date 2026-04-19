@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { NanostoresService } from '@nanostores/angular';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
@@ -7,12 +7,14 @@ import { SocketService } from '../../core/socket-service/socket.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { lobbyGamesStore, lobbyStatusMessageStore } from '../../state/lobby-state';
 import { SceneContentComponent } from '../scene-content/scene-content.component';
+import { UiDialogComponent } from '../ui/dialog/ui-dialog.component';
+import { NewPasswordFieldsComponent } from '../ui/new-password-fields/new-password-fields.component';
 import { sceneStore } from '../../state/game-state';
 
 @Component({
   selector: 'app-lobby',
   standalone: true,
-  imports: [SceneContentComponent, FormsModule],
+  imports: [SceneContentComponent, FormsModule, UiDialogComponent, NewPasswordFieldsComponent],
   templateUrl: './lobby.component.html',
   styleUrl: './lobby.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -31,15 +33,24 @@ export class LobbyComponent implements OnInit {
   // Current left-nav selection (single-tab for now).
   readonly selectedNav: 'games' = 'games';
 
-  // Controls visibility of the compact change-password form embedded in the
-  // lobby header. A full dialog component can replace this later without
-  // changing AuthService.changePassword().
+  // Controls visibility of the change-password dialog launched from the lobby
+  // header. Rendering goes through UiDialogComponent so the form overlays the
+  // lobby with a backdrop rather than pushing layout.
   readonly changePasswordOpen = signal(false);
   readonly currentPassword = signal('');
   readonly newPassword = signal('');
+  /** Confirmation of {@link newPassword}; must match before submit is allowed. */
+  readonly confirmNewPassword = signal('');
   readonly changePasswordError = signal<string | undefined>(undefined);
   readonly changePasswordSuccess = signal<string | undefined>(undefined);
   readonly changePasswordSubmitting = signal(false);
+
+  /**
+   * Reference to the shared primary/confirm password component rendered
+   * inside the change-password dialog. Used to read its `mismatch` signal
+   * when gating the submit button — undefined while the dialog is closed.
+   */
+  readonly newPasswordFields = viewChild(NewPasswordFieldsComponent);
 
   ngOnInit(): void {
     // Always request a fresh snapshot when entering lobby scene.
@@ -69,16 +80,31 @@ export class LobbyComponent implements OnInit {
   }
 
   /**
-   * Toggles the change-password panel and clears transient state when closed.
+   * Opens the change-password dialog with a fresh, empty form. Any residual
+   * values from a prior open are cleared so the dialog never appears with
+   * stale state (e.g. a lingering success toast).
    */
-  toggleChangePassword(): void {
-    this.changePasswordOpen.update(v => !v);
-    if (!this.changePasswordOpen()) {
-      this.currentPassword.set('');
-      this.newPassword.set('');
-      this.changePasswordError.set(undefined);
-      this.changePasswordSuccess.set(undefined);
-    }
+  openChangePassword(): void {
+    this.currentPassword.set('');
+    this.newPassword.set('');
+    this.confirmNewPassword.set('');
+    this.changePasswordError.set(undefined);
+    this.changePasswordSuccess.set(undefined);
+    this.changePasswordOpen.set(true);
+  }
+
+  /**
+   * Closes the change-password dialog and clears transient state so the next
+   * open starts clean. Invoked from the dialog's backdrop click, cancel
+   * button, and explicit close control.
+   */
+  closeChangePassword(): void {
+    this.changePasswordOpen.set(false);
+    this.currentPassword.set('');
+    this.newPassword.set('');
+    this.confirmNewPassword.set('');
+    this.changePasswordError.set(undefined);
+    this.changePasswordSuccess.set(undefined);
   }
 
   /**
@@ -99,6 +125,14 @@ export class LobbyComponent implements OnInit {
       return;
     }
 
+    // Belt-and-braces: the submit button is disabled when the confirm field
+    // is empty or does not match, but re-check here in case the form is
+    // submitted via Enter before the confirm input loses focus.
+    if (next !== this.confirmNewPassword()) {
+      this.changePasswordError.set('Passwords do not match');
+      return;
+    }
+
     this.changePasswordSubmitting.set(true);
     try {
       const result = await this._authService.changePassword(cur, next);
@@ -110,6 +144,7 @@ export class LobbyComponent implements OnInit {
         );
         this.currentPassword.set('');
         this.newPassword.set('');
+        this.confirmNewPassword.set('');
       } else {
         this.changePasswordError.set(result.message ?? 'Password change failed');
       }

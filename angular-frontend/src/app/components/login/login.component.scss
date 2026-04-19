@@ -52,78 +52,9 @@
   background: var(--theme-surface-card);
 }
 
-.login-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.login-label {
-  font-weight: 600;
-  font-size: 0.875rem;
-  color: var(--theme-text-secondary);
-}
-
-.login-input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.login-input {
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--theme-border-action);
-  border-radius: 6px;
-  background: var(--theme-surface-panel);
-  color: var(--theme-text-primary);
-  font-size: 1rem;
-  outline: none;
-
-  &:focus {
-    border-color: var(--theme-border-strong);
-    box-shadow: 0 0 0 2px rgba(130, 106, 72, 0.2);
-  }
-
-  // Extra right padding when the toggle button is present
-  .login-input-wrapper & {
-    padding-right: 40px;
-  }
-}
-
-.password-toggle {
-  position: absolute;
-  right: 8px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-  color: var(--theme-text-secondary);
-  display: flex;
-  align-items: center;
-  border-radius: 4px;
-
-  &:hover {
-    color: var(--theme-text-primary);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--theme-border-strong);
-    outline-offset: 2px;
-  }
-
-  svg {
-    width: 18px;
-    height: 18px;
-  }
-}
-
-.login-error {
-  margin: 0;
-  color: var(--theme-border-danger);
-  font-size: 0.875rem;
-  font-weight: 500;
-}
+// Field layout (.form-field), label (.form-label), input (.form-input),
+// input wrapper (.form-input-wrapper), toggle button (.form-input-toggle),
+// and error (.form-field-error) are defined globally in src/styles.scss.
 
 // Phase 5 — success message shown after a successful registration.
 .login-success {

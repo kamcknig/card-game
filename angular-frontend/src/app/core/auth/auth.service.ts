@@ -147,6 +147,26 @@ export class AuthService {
   }
 
   /**
+   * Checks whether a username is already registered.
+   *
+   * Returns true when the username is available, false when it is taken.
+   * Network errors resolve to true (available) so a transient failure does
+   * not block the registration form — the server will give the definitive
+   * answer on submit.
+   */
+  async checkUsernameAvailability(username: string): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${environment.wsHost}/auth/check-username?username=${encodeURIComponent(username)}`,
+      );
+      const body = await response.json().catch(() => ({ available: true }));
+      return body.available ?? true;
+    } catch {
+      return true;
+    }
+  }
+
+  /**
    * Changes the authenticated user's password via POST /auth/change-password.
    *
    * On success the server revokes every other session for this user; the
