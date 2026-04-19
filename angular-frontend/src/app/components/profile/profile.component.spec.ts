@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NanostoresService } from '@nanostores/angular';
 import { of } from 'rxjs';
 
-import { AuthService } from '../../core/auth/auth.service';
+import { AuthService, authIsAdminStore } from '../../core/auth/auth.service';
 import { sceneStore } from '../../state/game-state';
 import { profileTabStore } from '../../state/profile-state';
 import { ProfileComponent } from './profile.component';
@@ -18,13 +18,28 @@ class NanostoresServiceStub {
 
 /**
  * Stub AuthService exposing only the methods ProfileComponent calls.
- * `changePasswordResult` is tunable per test.
+ * Result fields are tunable per test.
  */
 class AuthServiceStub {
   changePasswordResult: { ok: boolean; message?: string; revokedSessions?: number } = { ok: true };
   changePassword = jasmine
     .createSpy('changePassword')
     .and.callFake(async () => this.changePasswordResult);
+
+  listCodesResult: { ok: boolean; codes?: any[]; message?: string } = { ok: true, codes: [] };
+  listRegistrationCodes = jasmine
+    .createSpy('listRegistrationCodes')
+    .and.callFake(async () => this.listCodesResult);
+
+  createCodeResult: { ok: boolean; code?: string; message?: string } = { ok: true, code: 'TEST-CODE' };
+  createRegistrationCode = jasmine
+    .createSpy('createRegistrationCode')
+    .and.callFake(async () => this.createCodeResult);
+
+  disableCodeResult: { ok: boolean; message?: string } = { ok: true };
+  disableRegistrationCode = jasmine
+    .createSpy('disableRegistrationCode')
+    .and.callFake(async () => this.disableCodeResult);
 }
 
 describe('ProfileComponent', () => {
@@ -46,6 +61,7 @@ describe('ProfileComponent', () => {
     // Reset shared atoms so state from one test does not leak into the next.
     profileTabStore.set('security');
     sceneStore.set('profile');
+    authIsAdminStore.set(false);
 
     fixture = TestBed.createComponent(ProfileComponent);
     component = fixture.componentInstance;
@@ -169,5 +185,99 @@ describe('ProfileComponent', () => {
     await component.submitChangePassword();
 
     expect(component.changePasswordSubmitting()).toBe(false);
+  });
+
+  // --- Admin / registration code tests ---
+
+  it('isAdmin() reflects authIsAdminStore at construction time (non-admin)', () => {
+    // authIsAdminStore was reset to false in beforeEach.
+    expect(component.isAdmin()).toBe(false);
+  });
+
+  it('isAdmin() reflects authIsAdminStore at construction time (admin)', async () => {
+    authIsAdminStore.set(true);
+
+    await TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [ProfileComponent],
+      providers: [
+        { provide: NanostoresService, useClass: NanostoresServiceStub },
+        { provide: AuthService, useValue: authStub },
+      ],
+    }).compileComponents();
+
+    const f = TestBed.createComponent(ProfileComponent);
+    f.detectChanges();
+
+    expect(f.componentInstance.isAdmin()).toBe(true);
+  });
+
+  it('ngOnInit: does not load registration codes when non-admin', () => {
+    // authIsAdminStore is false; the stub should not have been called.
+    expect(authStub.listRegistrationCodes).not.toHaveBeenCalled();
+  });
+
+  it('ngOnInit: loads registration codes when admin', async () => {
+    authIsAdminStore.set(true);
+    authStub.listCodesResult = { ok: true, codes: [{ code: 'ABC', createdAt: 0, createdBy: 'alice', expiresAt: null, maxUses: 1, usedCount: 0 }] };
+
+    await TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [ProfileComponent],
+      providers: [
+        { provide: NanostoresService, useClass: NanostoresServiceStub },
+        { provide: AuthService, useValue: authStub },
+      ],
+    }).compileComponents();
+
+    const f = TestBed.createComponent(ProfileComponent);
+    f.detectChanges();
+    // Allow the async _loadRegistrationCodes to complete.
+    await Promise.resolve();
+
+    expect(authStub.listRegistrationCodes).toHaveBeenCalled();
+    expect(f.componentInstance.regCodes().length).toBe(1);
+  });
+
+  it('submitCreateRegistrationCode: success sets regCodeResult and refreshes list', async () => {
+    authStub.createCodeResult = { ok: true, code: 'NEW-CODE' };
+    authStub.listCodesResult = { ok: true, codes: [] };
+
+    await component.submitCreateRegistrationCode();
+
+    expect(authStub.createRegistrationCode).toHaveBeenCalled();
+    expect(component.regCodeResult()).toBe('NEW-CODE');
+    expect(component.regCodeError()).toBeUndefined();
+    expect(authStub.listRegistrationCodes).toHaveBeenCalled();
+  });
+
+  it('submitCreateRegistrationCode: server failure sets regCodeError', async () => {
+    authStub.createCodeResult = { ok: false, message: 'forbidden' };
+
+    await component.submitCreateRegistrationCode();
+
+    expect(component.regCodeError()).toBe('forbidden');
+    expect(component.regCodeResult()).toBeUndefined();
+  });
+
+  it('submitCreateRegistrationCode: submitting flag is cleared after success and failure', async () => {
+    authStub.createCodeResult = { ok: true, code: 'X' };
+    authStub.listCodesResult = { ok: true, codes: [] };
+
+    await component.submitCreateRegistrationCode();
+    expect(component.regCodeSubmitting()).toBe(false);
+
+    authStub.createCodeResult = { ok: false, message: 'err' };
+    await component.submitCreateRegistrationCode();
+    expect(component.regCodeSubmitting()).toBe(false);
+  });
+
+  it('disableRegistrationCode: calls service then refreshes list', async () => {
+    authStub.listCodesResult = { ok: true, codes: [] };
+
+    await component.disableRegistrationCode('SOME-CODE');
+
+    expect(authStub.disableRegistrationCode).toHaveBeenCalledWith('SOME-CODE');
+    expect(authStub.listRegistrationCodes).toHaveBeenCalled();
   });
 });

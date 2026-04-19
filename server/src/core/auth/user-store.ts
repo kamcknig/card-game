@@ -18,6 +18,7 @@ export interface UserRecord {
   failedAttempts: number;
   lockedUntil: number | null;
   disabled: boolean;
+  isAdmin: boolean;
   readonly createdAt: number;
 }
 
@@ -101,6 +102,15 @@ export interface UserStore {
    * available for CLI/operator use.
    */
   setDisabled(id: number, disabled: boolean): void;
+
+  /**
+   * Sets or clears the admin flag for the given user.
+   *
+   * Admin users may create, list, and disable registration codes and have
+   * access to the debug overlay. Not exposed on the HTTP API — promotion is
+   * operator-only via the CLI.
+   */
+  setAdmin(id: number, isAdmin: boolean): void;
 
   /**
    * Removes the user record for the given id from the store.

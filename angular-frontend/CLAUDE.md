@@ -53,6 +53,7 @@ Components consume stores via `@nanostores/angular`'s `NanostoresService` and `t
 | `turn-state.ts` | Turn phase, current player |
 | `player-state.ts` | Per-player atoms |
 | `profile-state.ts` | `profileTabStore` — desired tab (`'security'` \| `'settings'`) on profile scene entry |
+| `core/auth/auth.service.ts` | `authTokenStore`, `authUsernameStore`, `authIsAdminStore` — session persistence atoms (localStorage-backed); `AuthService` for login/logout/registration-code HTTP calls |
 
 ### Socket Communication
 
@@ -78,6 +79,15 @@ All components are standalone under `src/app/components/`, organized by domain:
 - `lobby/`, `match-configuration/`, `game-summary/`, `profile/` — scene components
 - `profile-menu/` — user icon button + dropdown (Profile, Settings, Logout); rendered inside `SceneBannerComponent` when authenticated
 - `scene-banner/` — shared header banner; injects auth state to show `ProfileMenuComponent` when logged in
+
+### Admin Gating
+
+`authIsAdminStore` (in `core/auth/auth.service.ts`) is a localStorage-backed nanostore atom that tracks whether the logged-in user has admin privileges. It is populated from the `isAdmin` field returned by `/auth/login` and `/auth/validate`.
+
+Admin-only UI is guarded with `@if (isAdmin())` — no route guard exists; the server enforces 403 on admin-only endpoints. Two areas currently gated:
+
+- **Match HUD** (`match-hud.component`) — debug-toggle gear button is hidden for non-admins.
+- **Profile Security pane** (`profile.component`) — "Registration codes" section (create form + active codes table with disable action) is visible only to admins. `ProfileComponent` calls `AuthService.createRegistrationCode()`, `listRegistrationCodes()`, and `disableRegistrationCode()` for this section.
 
 ### Shared Package
 

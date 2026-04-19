@@ -219,10 +219,14 @@ export class ServerAuthRouteHandlerService {
 
     // Reset the rate-limiter counter on successful login.
     this.authRateLimiterService.reset(remoteIp);
+    // Look up the user record to include the admin flag in the response so the
+    // client can gate admin-only UI without a separate request.
+    const loggedInUser = this.userStore.getByUsername(result.username);
+    const isAdmin = loggedInUser?.isAdmin ?? false;
     this.loggerService.info(
       `[auth route] login succeeded from ${remoteIp} for '${result.username}' via '${providerName}'`,
     );
-    return this.jsonResponse({ ok: true, token: result.token, username: result.username }, 200, req);
+    return this.jsonResponse({ ok: true, token: result.token, username: result.username, isAdmin }, 200, req);
   }
 
   /**
@@ -243,8 +247,12 @@ export class ServerAuthRouteHandlerService {
       return this.jsonResponse({ ok: false, message: 'invalid or expired token' }, 401, req);
     }
 
-    this.loggerService.debug(`[auth route] token validated for '${username}'`);
-    return this.jsonResponse({ ok: true, username }, 200, req);
+    // Look up the user record to include the admin flag in the response so the
+    // client can gate admin-only UI without a separate validate call.
+    const validatedUser = this.userStore.getByUsername(username);
+    const isAdmin = validatedUser?.isAdmin ?? false;
+    this.loggerService.debug(`[auth route] token validated for '${username}' (isAdmin=${isAdmin})`);
+    return this.jsonResponse({ ok: true, username, isAdmin }, 200, req);
   }
 
   /**
@@ -512,15 +520,21 @@ export class ServerAuthRouteHandlerService {
   /**
    * Handles POST /auth/registration-codes — create a new invite code.
    *
-   * Any authenticated user may issue codes (no role scoping yet).
-   * Body: `{ expiresIn?: number (ms), maxUses?: number }`. expiresIn is relative
-   * to `now()`; omit it for no time limit. maxUses defaults to 1.
+   * Only admin users may issue codes. Body: `{ expiresIn?: number (ms), maxUses?: number }`.
+   * expiresIn is relative to `now()`; omit it for no time limit. maxUses defaults to 1.
    */
   private async handleCreateRegistrationCode(req: Request): Promise<Response> {
     const token = this.extractBearerToken(req);
     const username = token ? this.authSessionService.validateToken(token) : undefined;
     if (!username) {
       return this.jsonResponse({ ok: false, message: 'unauthorized' }, 401, req);
+    }
+
+    // Restrict code creation to admin users only.
+    const requestingUser = this.userStore.getByUsername(username);
+    if (!requestingUser?.isAdmin) {
+      this.loggerService.warn(`[auth route] registration-codes: non-admin access denied for '${username}'`);
+      return this.jsonResponse({ ok: false, message: 'forbidden' }, 403, req);
     }
 
     const contentLength = Number(req.headers.get('content-length') ?? '0');
@@ -565,15 +579,21 @@ export class ServerAuthRouteHandlerService {
   /**
    * Handles GET /auth/registration-codes — list active codes for operator use.
    *
-   * Returns every non-disabled, non-expired code. The full `code` value is
-   * included because the requester created it (or will use it) — a separate
-   * admin-scope phase can restrict this later.
+   * Returns every non-disabled, non-expired code. Only admin users may access
+   * this endpoint.
    */
   private handleListRegistrationCodes(req: Request): Response {
     const token = this.extractBearerToken(req);
     const username = token ? this.authSessionService.validateToken(token) : undefined;
     if (!username) {
       return this.jsonResponse({ ok: false, message: 'unauthorized' }, 401, req);
+    }
+
+    // Restrict code listing to admin users only.
+    const requestingUser = this.userStore.getByUsername(username);
+    if (!requestingUser?.isAdmin) {
+      this.loggerService.warn(`[auth route] registration-codes: non-admin access denied for '${username}'`);
+      return this.jsonResponse({ ok: false, message: 'forbidden' }, 403, req);
     }
 
     const now = Date.now();
@@ -597,12 +617,20 @@ export class ServerAuthRouteHandlerService {
    *
    * Returns 200 whether the code existed, was already disabled, or is
    * unknown; the endpoint's contract is "ensure this code cannot be used".
+   * Only admin users may disable codes.
    */
   private handleDisableRegistrationCode(req: Request, code: string): Response {
     const token = this.extractBearerToken(req);
     const username = token ? this.authSessionService.validateToken(token) : undefined;
     if (!username) {
       return this.jsonResponse({ ok: false, message: 'unauthorized' }, 401, req);
+    }
+
+    // Restrict code disabling to admin users only.
+    const requestingUser = this.userStore.getByUsername(username);
+    if (!requestingUser?.isAdmin) {
+      this.loggerService.warn(`[auth route] registration-codes: non-admin access denied for '${username}'`);
+      return this.jsonResponse({ ok: false, message: 'forbidden' }, 403, req);
     }
 
     this.registrationCodeStore.disable(code);

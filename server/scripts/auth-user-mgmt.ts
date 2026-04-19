@@ -8,6 +8,7 @@
  *   create        Create a new user account
  *   delete        Delete a user account by username
  *   set-password  Update a user's password
+ *   set-admin     Grant or revoke admin privileges for a user
  *   clear         Delete all user accounts
  *
  * Run `deno task auth:users <command> --help` for command-specific options.
@@ -89,6 +90,7 @@ Commands:
   create        Create a new user account
   delete        Delete a user account by username
   set-password  Update a user's password
+  set-admin     Grant or revoke admin privileges for a user
   clear         Delete all user accounts
 
 Global options:
@@ -103,17 +105,18 @@ Run \`deno task auth:users <command> --help\` for command-specific options.`,
 
 const printCreateHelp = (): void => {
   console.log(
-    `Usage: deno task auth:users create --username <name> --password <pw> [--kv <path>]
+    `Usage: deno task auth:users create --username <name> --password <pw> [--admin true|false] [--kv <path>]
 
 Creates a single user account directly in the Deno KV auth store without going
 through the HTTP registration flow. Useful for seeding the first account before
 any registration codes exist.
 
 Options:
-  --username, -u <name>   Username (3–32 chars, alphanumeric or underscore)
-  --password, -pw <pw>    Plaintext password (hashed with argon2id before storage)
-  --kv <path>             Path to KV file (default: AUTH_KV_PATH env or ./game-data/auth.kv)
-  --help, -h              Show this help message`,
+  --username, -u <name>     Username (3–32 chars, alphanumeric or underscore)
+  --password, -pw <pw>      Plaintext password (hashed with argon2id before storage)
+  --admin <true|false>      Grant admin privileges immediately (default: false)
+  --kv <path>               Path to KV file (default: AUTH_KV_PATH env or ./game-data/auth.kv)
+  --help, -h                Show this help message`,
   );
 };
 
@@ -156,8 +159,12 @@ const runCreate = async (args: string[], kvPath: string): Promise<void> => {
   const hash = await hasher.hash(password);
 
   const rec = store.create({ username, passwordHash: hash, passwordAlgo: 'argon2id', now: Date.now() });
+  const makeAdmin = argMap['admin'] === 'true';
+  if (makeAdmin) {
+    store.setAdmin(rec.id, true);
+  }
   await flushWrites();
-  console.log(`[auth:users] created user id=${rec.id} username='${rec.username}'`);
+  console.log(`[auth:users] created user id=${rec.id} username='${rec.username}' isAdmin=${makeAdmin}`);
 };
 
 // --- delete ---
@@ -261,6 +268,64 @@ const runSetPassword = async (args: string[], kvPath: string): Promise<void> => 
   console.log(`[auth:users] updated password for username='${rec.username}'`);
 };
 
+// --- set-admin ---
+
+const printSetAdminHelp = (): void => {
+  console.log(
+    `Usage: deno task auth:users set-admin --username <name> --admin <true|false> [--kv <path>]
+
+Grants or revokes admin privileges for an existing user account. Admin users may
+create, list, and disable registration codes, and have access to the debug overlay.
+Promotion is operator-only; there is no HTTP API for this operation.
+
+Options:
+  --username, -u <name>     Username of the target account
+  --admin <true|false>      true to grant admin, false to revoke
+  --kv <path>               Path to KV file (default: AUTH_KV_PATH env or ./game-data/auth.kv)
+  --help, -h                Show this help message`,
+  );
+};
+
+const runSetAdmin = async (args: string[], kvPath: string): Promise<void> => {
+  if (args.includes('--help') || args.includes('-h')) {
+    printSetAdminHelp();
+    return;
+  }
+
+  let argMap: Record<string, string>;
+  try {
+    argMap = parseArgs(args);
+  } catch (err) {
+    console.error(`[auth:users] ${err instanceof Error ? err.message : err}`);
+    Deno.exit(1);
+  }
+
+  const username = argMap['username']?.trim();
+  const adminValue = argMap['admin'];
+
+  if (!username || adminValue === undefined) {
+    console.error('[auth:users] set-admin requires --username and --admin <true|false>');
+    Deno.exit(1);
+  }
+
+  if (adminValue !== 'true' && adminValue !== 'false') {
+    console.error(`[auth:users] --admin must be 'true' or 'false', got '${adminValue}'`);
+    Deno.exit(1);
+  }
+
+  const flag = adminValue === 'true';
+  const store = await openStore(kvPath);
+  const rec = store.getByUsername(username);
+  if (!rec) {
+    console.error(`[auth:users] username '${username}' not found`);
+    Deno.exit(1);
+  }
+
+  store.setAdmin(rec.id, flag);
+  await flushWrites();
+  console.log(`[auth:users] user '${rec.username}' isAdmin=${flag}`);
+};
+
 // --- clear ---
 
 const printClearHelp = (): void => {
@@ -313,6 +378,9 @@ const main = async (): Promise<void> => {
       break;
     case 'set-password':
       await runSetPassword(rest, kvPath);
+      break;
+    case 'set-admin':
+      await runSetAdmin(rest, kvPath);
       break;
     case 'clear':
       await runClear(rest, kvPath);

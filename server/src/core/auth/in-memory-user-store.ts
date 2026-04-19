@@ -48,6 +48,7 @@ export class InMemoryUserStore implements UserStore {
       failedAttempts: 0,
       lockedUntil: null,
       disabled: false,
+      isAdmin: false,
       createdAt: args.now,
     };
 
@@ -91,6 +92,15 @@ export class InMemoryUserStore implements UserStore {
     const rec = this.byId.get(id);
     if (!rec) return;
     rec.disabled = disabled;
+  }
+
+  /**
+   * Sets or clears the admin flag for the given user.
+   */
+  public setAdmin(id: number, isAdmin: boolean): void {
+    const rec = this.byId.get(id);
+    if (!rec) return;
+    rec.isAdmin = isAdmin;
   }
 
   /**
