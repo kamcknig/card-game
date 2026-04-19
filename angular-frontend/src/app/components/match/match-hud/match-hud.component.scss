@@ -121,6 +121,12 @@ app-game-log {
   // Keep icon controls at fixed intrinsic widths; do not stretch to fill the menu row.
   width: 34px;
   height: 34px;
+  // Flex-center the Lucide icon; absolutely positioned children inside
+  // (.debug-icon-question, .debug-icon-state) bypass flex and stay pinned to
+  // the button corners regardless.
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--theme-border-strong);
   background: var(--theme-surface-panel);
   color: var(--theme-text-primary);
@@ -147,8 +153,12 @@ app-game-log {
   font-size: 16px;
 }
 
+// Gear / question now wrap Lucide <lucide-icon [size]="..." /> — sizing is
+// owned by the icon component, not font-size. These wrappers only carry the
+// layout positioning for the badge-style question overlay.
 .debug-icon-gear {
-  font-size: 15px;
+  display: inline-flex;
+  align-items: center;
   line-height: 1;
 }
 
@@ -156,9 +166,9 @@ app-game-log {
   position: absolute;
   top: 4px;
   right: 5px;
-  font-size: 10px;
   line-height: 1;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
 }
 
 .debug-icon-state {

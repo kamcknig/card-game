@@ -11,6 +11,7 @@ import {
   signal
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { CircleQuestionMark, Flag, LucideAngularModule, Settings } from 'lucide-angular';
 import { ScoreComponent } from './score/score.component';
 import { GameLogComponent } from './game-log/game-log.component';
 import { NanostoresService } from '@nanostores/angular';
@@ -54,6 +55,7 @@ type RectLike = { x: number; y: number; width: number; height: number };
     CardComponent,
     CardLikeComponent,
     UiDialogComponent,
+    LucideAngularModule,
   ],
   templateUrl: './match-hud.component.html',
   styleUrl: './match-hud.component.scss',
@@ -62,6 +64,11 @@ type RectLike = { x: number; y: number; width: number; height: number };
 export class MatchHudComponent implements AfterViewInit, OnDestroy {
   private readonly _nanoService = inject(NanostoresService);
   private readonly _socketService = inject(SocketService);
+
+  // Lucide icon references exposed to the template for the HUD menu buttons.
+  readonly FlagIcon = Flag;
+  readonly SettingsIcon = Settings;
+  readonly CircleQuestionMarkIcon = CircleQuestionMark;
 
   @ViewChild('scoreView', { read: ElementRef }) scoreView!: ElementRef;
 

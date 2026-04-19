@@ -63,7 +63,7 @@
       aria-label="Resign and leave game"
       (click)="onResignMatch()"
     >
-      ⚑
+      <lucide-icon [img]="FlagIcon" [size]="20" />
     </button>
     <button
       class="hud-menu-icon debug-toggle"
@@ -73,8 +73,8 @@
       aria-label="Toggle debug overlay"
       (click)="toggleDebugOverlay()"
     >
-      <span class="debug-icon-gear">⚙</span>
-      <span class="debug-icon-question">?</span>
+      <span class="debug-icon-gear"><lucide-icon [img]="SettingsIcon" [size]="18" /></span>
+      <span class="debug-icon-question"><lucide-icon [img]="CircleQuestionMarkIcon" [size]="10" /></span>
       <span class="debug-icon-state">{{ debugOverlayVisible() ? 'ON' : 'OFF' }}</span>
     </button>
   </div>

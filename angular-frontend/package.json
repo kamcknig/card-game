@@ -21,6 +21,7 @@
     "@nanostores/angular": "^0.0.4",
     "es-toolkit": "^1.33.0",
     "fast-json-patch": "^3.1.1",
+    "lucide-angular": "^1.0.0",
     "modern-normalize": "^3.0.1",
     "nanostores": "^1.0.1",
     "rxjs": "~7.8.0",

@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, model, signal } from '@angular/core';
+import { Eye, EyeOff, LucideAngularModule } from 'lucide-angular';
 
 /**
  * Reusable pair of password inputs used whenever the user enters a new
@@ -29,11 +30,17 @@ import { ChangeDetectionStrategy, Component, computed, input, model, signal } fr
 @Component({
   selector: 'app-new-password-fields',
   standalone: true,
+  imports: [LucideAngularModule],
   templateUrl: './new-password-fields.component.html',
   styleUrl: './new-password-fields.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NewPasswordFieldsComponent {
+  // Lucide icon references exposed to the template. Must be class fields
+  // because Angular templates cannot reference module-level bindings.
+  readonly EyeIcon = Eye;
+  readonly EyeOffIcon = EyeOff;
+
   /** Visible label above the primary password input. */
   readonly primaryLabel = input<string>('Password');
 

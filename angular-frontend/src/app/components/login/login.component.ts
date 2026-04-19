@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal, viewChild } from '@
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged, switchMap, tap } from 'rxjs/operators';
 import { FormsModule } from '@angular/forms';
+import { Eye, EyeOff, LucideAngularModule } from 'lucide-angular';
 import { SceneContentComponent } from '../scene-content/scene-content.component';
 import { NewPasswordFieldsComponent } from '../ui/new-password-fields/new-password-fields.component';
 import { AuthService } from '../../core/auth/auth.service';
@@ -23,13 +24,18 @@ import { sceneStore } from '../../state/game-state';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [SceneContentComponent, FormsModule, NewPasswordFieldsComponent],
+  imports: [SceneContentComponent, FormsModule, NewPasswordFieldsComponent, LucideAngularModule],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LoginComponent {
   private readonly _authService = inject(AuthService);
+
+  // Lucide icon references exposed to the template for the sign-in password
+  // visibility toggle.
+  readonly EyeIcon = Eye;
+  readonly EyeOffIcon = EyeOff;
 
   /** Current form mode — 'signin' or 'register'. */
   readonly mode = signal<'signin' | 'register'>('signin');
