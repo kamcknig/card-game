@@ -1,0 +1,28 @@
+@if (matchStarted()) {
+  <app-match-supply
+    [visible]="true"
+    [scoreRect]="scoreViewRect()"
+  ></app-match-supply>
+  <app-match-landscapes
+    [visible]="true"
+    [scoreRect]="scoreViewRect()"
+  ></app-match-landscapes>
+  <app-match-player-area
+    [visible]="true"
+    [scoreRect]="scoreViewRect()"
+    (nextPhaseRequested)="onNextPhaseRequested()"
+    (playAllTreasuresRequested)="onPlayAllTreasuresRequested()"
+  ></app-match-player-area>
+  <app-match-non-supply
+    [visible]="true"
+    [scoreRect]="scoreViewRect()"
+  ></app-match-non-supply>
+  <app-pile-selection-action></app-pile-selection-action>
+}
+
+<app-match-hud
+  [ngClass]="{'match-started': matchStarted()}"
+  (scoreViewResize)="onScoreViewResize($event)"
+  (nextPhaseRequested)="onNextPhaseRequested()"
+  (playAllTreasuresRequested)="onPlayAllTreasuresRequested()"
+></app-match-hud>
