@@ -5,13 +5,18 @@
   "compilerOptions": {
     "outDir": "./out-tsc/spec",
     "types": [
-      "jasmine"
+      "jest"
     ],
+    // moduleResolution: "bundler" (inherited from tsconfig.json) is incompatible
+    // with Jest; override to "node" (classic Node.js resolution). "bundler" and
+    // "node16"/"nodenext" are not compatible with Jest's CommonJS transform
+    // pipeline. "node" resolution works with Jest's module mapper and does not
+    // impose ESM/CJS strictness that would break Angular's ESM packages.
+    "moduleResolution": "node",
     // The shared/ package (consumed by both server and client) uses explicit
-    // `.ts` extensions in its re-exports for Deno compatibility. The bundler
-    // moduleResolution used for spec builds accepts them at runtime, but the
-    // typechecker rejects them unless allowImportingTsExtensions is on.
-    // noEmit is required alongside (the option is incompatible with output).
+    // `.ts` extensions in its re-exports for Deno compatibility.
+    // noEmit is required alongside allowImportingTsExtensions (the options are
+    // incompatible with output).
     "allowImportingTsExtensions": true,
     "noEmit": true
   },

@@ -13,7 +13,7 @@ import { ProfileMenuComponent } from './profile-menu.component';
  * via useStore. Returning a static observable keeps the test deterministic.
  */
 class NanostoresServiceStub {
-  useStore = jasmine.createSpy('useStore').and.callFake(() => of(undefined));
+  useStore = jest.fn().mockImplementation(() => of(undefined));
   ngOnDestroy = () => {};
 }
 
@@ -21,14 +21,14 @@ class NanostoresServiceStub {
  * Stub AuthService — only `logout` is called by ProfileMenuComponent.
  */
 class AuthServiceStub {
-  logout = jasmine.createSpy('logout').and.resolveTo(undefined);
+  logout = jest.fn().mockResolvedValue(undefined);
 }
 
 /**
  * Stub SocketService — ProfileMenuComponent calls `disconnect` on logout.
  */
 class SocketServiceStub {
-  disconnect = jasmine.createSpy('disconnect');
+  disconnect = jest.fn();
 }
 
 describe('ProfileMenuComponent', () => {
