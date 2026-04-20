@@ -36,6 +36,24 @@ $match-config-single-column-breakpoint: 940px;
   color: var(--theme-text-primary);
 }
 
+// Icon-only variant for the header save/load/clear config buttons.
+.config-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--theme-border-strong);
+  background: var(--theme-surface-card);
+  border-radius: 6px;
+  padding: 7px;
+  color: var(--theme-text-primary);
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
 .section-title {
   margin: 0 0 16px;
   font-size: 1.25rem;

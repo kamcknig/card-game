@@ -49,6 +49,7 @@ import { SceneContentComponent } from '../scene-content/scene-content.component'
 import { UiDialogComponent } from '../ui/dialog/ui-dialog.component';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { compare } from 'fast-json-patch';
+import { FolderOpen, LucideAngularModule, Save, Trash2 } from 'lucide-angular';
 
 type SelectionModalKind =
   | 'bannedKingdom'
@@ -78,12 +79,18 @@ type SelectionModalState = {
     SceneContentComponent,
     NgStyle,
     UiDialogComponent,
+    LucideAngularModule,
   ],
   templateUrl: './match-configuration.component.html',
   styleUrl: './match-configuration.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MatchConfigurationComponent implements OnDestroy {
+  // Lucide icon references for header action buttons.
+  readonly SaveIcon = Save;
+  readonly LoadIcon = FolderOpen;
+  readonly ClearIcon = Trash2;
+
   private readonly _nanoStoreService = inject(NanostoresService);
   private readonly _socketService = inject(SocketService);
   private readonly _saveNameInput$ = new Subject<string>();
