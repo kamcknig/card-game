@@ -26,13 +26,17 @@ npm test
 
 Angular 19 with `provideExperimentalZonelessChangeDetection()`. All components use `ChangeDetectionStrategy.OnPush` with signals. No Zone.js — change detection is driven entirely by signal updates.
 
-### Scene System (No Router)
+### Scene System
 
-`AppComponent` switches between 5 scenes (`login`, `lobby`, `profile`, `configuration`, `match`, `gameSummary`) driven by `sceneStore` in `src/app/state/game-state.ts`. There is no Angular Router for main views.
+Each screen has a dedicated Angular Router route (`/login`, `/lobby`, `/profile`, `/configuration`, `/match`, `/game-summary`). `AppComponent` renders `<router-outlet />` plus three global overlays.
+
+Navigation is driven by `sceneStore` (nanostores atom in `src/app/state/game-state.ts`) — callers set the atom and `SceneNavigationService` (`src/app/core/navigation/scene-navigation.service.ts`) syncs the change to the Angular Router. The router's `NavigationEnd` events also write back to `sceneStore` so browser back/forward stays in sync.
+
+Guards: `authGuard` (redirects unauthenticated users to `/login`), `guestGuard` (redirects authenticated users away from `/login` to `/lobby`). Both live in `src/app/core/guards/`.
 
 The `profile` scene is a settings hub with a left nav (Security, Settings). The active tab on entry is controlled by `profileTabStore` in `src/app/state/profile-state.ts` — set this atom before switching to `'profile'` to deep-link to a specific tab.
 
-When scene is `match`, `AppComponent` creates a `MatchScene` instance (plain TypeScript class at `src/app/components/match/views/scenes/match-scene.ts`) that manages game interaction logic, prompt coordination, and way picker overlay. It is destroyed when leaving the match scene.
+When the `/match` route activates, `MatchComponent` (`src/app/components/match/match.component.ts`) creates a `MatchScene` instance (plain TypeScript class at `src/app/components/match/views/scenes/match-scene.ts`) that manages game interaction logic, prompt coordination, and way picker overlay. It is destroyed when leaving the match route via `ngOnDestroy`.
 
 ### State Management (Nanostores)
 
