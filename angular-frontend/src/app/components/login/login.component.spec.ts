@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { AuthService } from '../../core/auth/auth.service';
+import { AuthService, pendingRegistrationCodeStore } from '../../core/auth/auth.service';
 import { sceneStore } from '../../state/game-state';
 import { LoginComponent } from './login.component';
 
@@ -13,12 +13,16 @@ class AuthServiceStub {
   loginResult: { ok: boolean; message?: string } = { ok: true };
   registerResult: { ok: boolean; message?: string } = { ok: true };
   usernameAvailable = true;
+  validateCodeResult: { ok: boolean; valid: boolean } = { ok: true, valid: true };
 
   login = jasmine.createSpy('login').and.callFake(async () => this.loginResult);
   register = jasmine.createSpy('register').and.callFake(async () => this.registerResult);
   checkUsernameAvailability = jasmine
     .createSpy('checkUsernameAvailability')
     .and.callFake(async () => this.usernameAvailable);
+  validateRegistrationCode = jasmine
+    .createSpy('validateRegistrationCode')
+    .and.callFake(async () => this.validateCodeResult);
 }
 
 describe('LoginComponent', () => {
@@ -28,6 +32,9 @@ describe('LoginComponent', () => {
 
   beforeEach(async () => {
     authStub = new AuthServiceStub();
+
+    // Ensure no deep-link code is staged before the component is constructed.
+    pendingRegistrationCodeStore.set(undefined);
 
     await TestBed.configureTestingModule({
       imports: [LoginComponent],
@@ -41,6 +48,11 @@ describe('LoginComponent', () => {
     // Reset the shared scene atom between tests so sceneStore.set('lobby')
     // from one test does not bleed into the next.
     sceneStore.set('login');
+  });
+
+  afterEach(() => {
+    // Guarantee the store is empty after each test regardless of what the test did.
+    pendingRegistrationCodeStore.set(undefined);
   });
 
   it('should create', () => {
@@ -168,5 +180,96 @@ describe('LoginComponent', () => {
 
     expect(authStub.login).not.toHaveBeenCalled();
     expect(component.errorMessage()).toBe('Username and password are required');
+  });
+
+  // --- Deep-link pre-fill and code validation ---
+
+  it('constructor: switches to register mode and pre-fills code from pendingRegistrationCodeStore', async () => {
+    pendingRegistrationCodeStore.set('DEEP-CODE-123');
+
+    await TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [LoginComponent],
+      providers: [{ provide: AuthService, useValue: authStub }],
+    }).compileComponents();
+
+    const f = TestBed.createComponent(LoginComponent);
+    f.detectChanges();
+
+    expect(f.componentInstance.mode()).toBe('register');
+    expect(f.componentInstance.registrationCode()).toBe('DEEP-CODE-123');
+  });
+
+  it('constructor: clears pendingRegistrationCodeStore after reading it', async () => {
+    pendingRegistrationCodeStore.set('DEEP-CODE-123');
+
+    await TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [LoginComponent],
+      providers: [{ provide: AuthService, useValue: authStub }],
+    }).compileComponents();
+
+    TestBed.createComponent(LoginComponent);
+
+    expect(pendingRegistrationCodeStore.get()).toBeUndefined();
+  });
+
+  it('constructor: stays in signin mode when pendingRegistrationCodeStore is empty', () => {
+    // The beforeEach already creates the component with an empty store.
+    expect(component.mode()).toBe('signin');
+    expect(component.registrationCode()).toBe('');
+  });
+
+  it('ngOnInit: does not call validateRegistrationCode when no deep-link code was staged', () => {
+    // The component was created in beforeEach with an empty store, so no validation should occur.
+    expect(authStub.validateRegistrationCode).not.toHaveBeenCalled();
+  });
+
+  it('ngOnInit: does not show modal when the deep-link code is valid', async () => {
+    authStub.validateCodeResult = { ok: true, valid: true };
+    pendingRegistrationCodeStore.set('VALID-CODE');
+
+    await TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [LoginComponent],
+      providers: [{ provide: AuthService, useValue: authStub }],
+    }).compileComponents();
+
+    const f = TestBed.createComponent(LoginComponent);
+    f.detectChanges();
+    // Flush the microtask queue so the validateRegistrationCode .then() callback runs.
+    await Promise.resolve();
+
+    expect(authStub.validateRegistrationCode).toHaveBeenCalledWith('VALID-CODE');
+    expect(f.componentInstance.showInvalidCodeModal()).toBe(false);
+    // Code should remain pre-filled.
+    expect(f.componentInstance.registrationCode()).toBe('VALID-CODE');
+  });
+
+  it('ngOnInit: shows invalid-code modal and clears code when deep-link code is invalid', async () => {
+    authStub.validateCodeResult = { ok: true, valid: false };
+    pendingRegistrationCodeStore.set('BAD-CODE');
+
+    await TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [LoginComponent],
+      providers: [{ provide: AuthService, useValue: authStub }],
+    }).compileComponents();
+
+    const f = TestBed.createComponent(LoginComponent);
+    f.detectChanges();
+    // Flush the microtask queue so the .then() callback sets the modal signal.
+    await Promise.resolve();
+
+    expect(authStub.validateRegistrationCode).toHaveBeenCalledWith('BAD-CODE');
+    expect(f.componentInstance.showInvalidCodeModal()).toBe(true);
+    // Invalid code should be cleared so the field is ready for manual entry.
+    expect(f.componentInstance.registrationCode()).toBe('');
+  });
+
+  it('dismissInvalidCodeModal: sets showInvalidCodeModal to false', async () => {
+    component.showInvalidCodeModal.set(true);
+    component.dismissInvalidCodeModal();
+    expect(component.showInvalidCodeModal()).toBe(false);
   });
 });
