@@ -30,11 +30,18 @@ Angular 19 with `provideExperimentalZonelessChangeDetection()`. All components u
 
 Each screen has a dedicated Angular Router route (`/login`, `/lobby`, `/profile`, `/configuration`, `/match`, `/game-summary`). `AppComponent` renders `<router-outlet />` plus three global overlays.
 
-Navigation is driven by `sceneStore` (nanostores atom in `src/app/state/game-state.ts`) — callers set the atom and `SceneNavigationService` (`src/app/core/navigation/scene-navigation.service.ts`) syncs the change to the Angular Router. The router's `NavigationEnd` events also write back to `sceneStore` so browser back/forward stays in sync.
+Navigation is driven directly by the Angular `Router`. Components call `router.navigate(['/path'])`
+directly. Socket-driven transitions go through `SocketEventMapService`
+(`src/app/core/socket-service/socket-event-map.service.ts`), which injects `Router` and owns
+the full socket connection lifecycle. Auth guards enforce session state at the router level.
 
 Guards: `authGuard` (redirects unauthenticated users to `/login`), `guestGuard` (redirects authenticated users away from `/login` to `/lobby`). Both live in `src/app/core/guards/`.
 
-The `profile` scene is a settings hub at `/profile` with two child routes: `/profile/security` (`ProfileSecurityComponent`) and `/profile/settings` (`ProfileSettingsComponent`). `ProfileComponent` is the shell — it reads `profileTabStore` on init and redirects to the appropriate child route. Set `profileTabStore` before navigating to `'profile'` to deep-link to a specific tab. Child components live under `src/app/components/profile/security/` and `src/app/components/profile/settings/`.
+The `profile` scene is a settings hub at `/profile` with two child routes: `/profile/security`
+(`ProfileSecurityComponent`) and `/profile/settings` (`ProfileSettingsComponent`). `ProfileComponent`
+is the shell. Navigate directly to `/profile/security` or `/profile/settings` to deep-link to a
+specific tab; bare `/profile` redirects to `/profile/security` by default. Child components live
+under `src/app/components/profile/security/` and `src/app/components/profile/settings/`.
 
 When the `/match` route activates, `MatchComponent` (`src/app/components/match/match.component.ts`) creates a `MatchScene` instance (plain TypeScript class at `src/app/components/match/views/scenes/match-scene.ts`) that manages game interaction logic, prompt coordination, and way picker overlay. It is destroyed when leaving the match route via `ngOnDestroy`.
 
@@ -56,12 +63,14 @@ Components consume stores via `@nanostores/angular`'s `NanostoresService` and `t
 | `interactive-logic.ts` | Computed selectables merging server + client state |
 | `turn-state.ts` | Turn phase, current player |
 | `player-state.ts` | Per-player atoms |
-| `profile-state.ts` | `profileTabStore` — desired tab (`'security'` \| `'settings'`) on profile scene entry |
 | `core/auth/auth.service.ts` | `authTokenStore`, `authUsernameStore`, `authIsAdminStore` — session persistence atoms (localStorage-backed); `AuthService` for login/logout/registration-code HTTP calls |
 
 ### Socket Communication
 
-`SocketService` (`src/app/core/socket-service/socket.service.ts`) manages the Socket.IO connection. All server-to-store event bindings are in `socket-event-map.ts`. Server JSON patches are applied via `fast-json-patch` to update nanostores, which trigger signal updates and re-renders.
+`SocketService` (`src/app/core/socket-service/socket.service.ts`) manages the Socket.IO
+connection. All server-to-store event bindings live in `SocketEventMapService`
+(`src/app/core/socket-service/socket-event-map.service.ts`), which also owns the connection
+lifecycle (`connect()` is called from `main.ts` after auth is confirmed). Server JSON patches are applied via `fast-json-patch` to update nanostores, which trigger signal updates and re-renders.
 
 ### Prompt System
 
