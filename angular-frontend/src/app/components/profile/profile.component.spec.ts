@@ -2,7 +2,7 @@ import { provideExperimentalZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NanostoresService } from '@nanostores/angular';
-import { of } from 'rxjs';
+import { EMPTY, of } from 'rxjs';
 
 import { sceneStore } from '../../state/game-state';
 import { profileTabStore } from '../../state/profile-state';
@@ -18,9 +18,20 @@ class NanostoresServiceStub {
   ngOnDestroy = () => {};
 }
 
+/**
+ * Stub Router — provides the minimal surface that RouterLink and RouterLinkActive
+ * need to initialize without errors. RouterLinkActive subscribes to `events` in
+ * its constructor; RouterLink calls `createUrlTree` and `serializeUrl` to build
+ * the href; `isActive` is checked by RouterLinkActive to set the active class.
+ */
 class RouterStub {
   url = '/profile';
   navigate = jest.fn().mockResolvedValue(true);
+  /** RouterLinkActive subscribes to this in its constructor. */
+  events = EMPTY;
+  createUrlTree = jest.fn().mockReturnValue({});
+  serializeUrl = jest.fn().mockReturnValue('');
+  isActive = jest.fn().mockReturnValue(false);
 }
 
 describe('ProfileComponent', () => {
