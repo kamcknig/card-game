@@ -4,8 +4,20 @@
   gap: 10px;
 }
 
+/* Fixed-width icon slot keeps checkboxes and names aligned across all player rows. */
+.player-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25em;
+}
+
 input {
   margin-right: 10px;
+}
+
+.moderation-button:first-of-type {
+  margin-left: auto;
 }
 
 .moderation-button {
