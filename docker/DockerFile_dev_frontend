@@ -2,11 +2,21 @@
 # Uses ng serve for hot-reload instead of ng build + nginx
 FROM node:24-alpine
 
+WORKDIR /app
+
+# Install dependencies at build time so node_modules are musl-compatible.
+# A named volume in docker-compose shadows the bind-mounted source node_modules
+# with this musl-built copy, preventing glibc/musl binary mismatches (e.g. rollup).
+COPY shared/package.json shared/yarn.lock ./shared/
+RUN cd shared && yarn install --frozen-lockfile
+
+COPY angular-frontend/package.json angular-frontend/yarn.lock ./angular-frontend/
+RUN cd angular-frontend && yarn install --frozen-lockfile
+
 WORKDIR /app/angular-frontend
 
 EXPOSE 51455
 
-# Source code and node_modules are bind-mounted at runtime via docker-compose volumes
 # Entrypoint runs env.sh to inject runtime env vars, then starts ng serve
 COPY docker/env.sh /env.sh
 RUN chmod +x /env.sh
