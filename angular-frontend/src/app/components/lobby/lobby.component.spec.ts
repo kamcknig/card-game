@@ -1,3 +1,4 @@
+import { provideExperimentalZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NanostoresService } from '@nanostores/angular';
 import { of } from 'rxjs';
@@ -11,7 +12,7 @@ import { LobbyComponent } from './lobby.component';
  * SceneBannerComponent (auth username store).
  */
 class NanostoresServiceStub {
-  useStore = jasmine.createSpy('useStore').and.callFake(() => of(undefined));
+  useStore = jest.fn().mockImplementation(() => of(undefined));
   ngOnDestroy = () => {};
 }
 
@@ -20,8 +21,8 @@ class NanostoresServiceStub {
  * actions. Tracking the calls is sufficient for assertions.
  */
 class SocketServiceStub {
-  emit = jasmine.createSpy('emit');
-  disconnect = jasmine.createSpy('disconnect');
+  emit = jest.fn();
+  disconnect = jest.fn();
 }
 
 describe('LobbyComponent', () => {
@@ -35,6 +36,8 @@ describe('LobbyComponent', () => {
     await TestBed.configureTestingModule({
       imports: [LobbyComponent],
       providers: [
+        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
+        provideExperimentalZonelessChangeDetection(),
         { provide: NanostoresService, useClass: NanostoresServiceStub },
         { provide: SocketService, useValue: socketStub },
       ],

@@ -1,3 +1,4 @@
+import { provideExperimentalZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { PlayerComponent } from './player-name-input.component';
@@ -8,7 +9,9 @@ describe('PlayerComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [PlayerComponent]
+      imports: [PlayerComponent],
+      // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
+      providers: [provideExperimentalZonelessChangeDetection()],
     })
     .compileComponents();
 

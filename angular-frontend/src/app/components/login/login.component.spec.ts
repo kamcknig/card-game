@@ -1,3 +1,4 @@
+import { provideExperimentalZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AuthService, pendingRegistrationCodeStore } from '../../core/auth/auth.service';
@@ -15,14 +16,14 @@ class AuthServiceStub {
   usernameAvailable = true;
   validateCodeResult: { ok: boolean; valid: boolean } = { ok: true, valid: true };
 
-  login = jasmine.createSpy('login').and.callFake(async () => this.loginResult);
-  register = jasmine.createSpy('register').and.callFake(async () => this.registerResult);
-  checkUsernameAvailability = jasmine
-    .createSpy('checkUsernameAvailability')
-    .and.callFake(async () => this.usernameAvailable);
-  validateRegistrationCode = jasmine
-    .createSpy('validateRegistrationCode')
-    .and.callFake(async () => this.validateCodeResult);
+  login = jest.fn().mockImplementation(async () => this.loginResult);
+  register = jest.fn().mockImplementation(async () => this.registerResult);
+  checkUsernameAvailability = jest
+    .fn()
+    .mockImplementation(async () => this.usernameAvailable);
+  validateRegistrationCode = jest
+    .fn()
+    .mockImplementation(async () => this.validateCodeResult);
 }
 
 describe('LoginComponent', () => {
@@ -38,7 +39,11 @@ describe('LoginComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [LoginComponent],
-      providers: [{ provide: AuthService, useValue: authStub }],
+      providers: [
+        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
+        provideExperimentalZonelessChangeDetection(),
+        { provide: AuthService, useValue: authStub },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LoginComponent);
@@ -190,7 +195,11 @@ describe('LoginComponent', () => {
     await TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [LoginComponent],
-      providers: [{ provide: AuthService, useValue: authStub }],
+      providers: [
+        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
+        provideExperimentalZonelessChangeDetection(),
+        { provide: AuthService, useValue: authStub },
+      ],
     }).compileComponents();
 
     const f = TestBed.createComponent(LoginComponent);
@@ -206,7 +215,11 @@ describe('LoginComponent', () => {
     await TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [LoginComponent],
-      providers: [{ provide: AuthService, useValue: authStub }],
+      providers: [
+        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
+        provideExperimentalZonelessChangeDetection(),
+        { provide: AuthService, useValue: authStub },
+      ],
     }).compileComponents();
 
     TestBed.createComponent(LoginComponent);
@@ -232,7 +245,11 @@ describe('LoginComponent', () => {
     await TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [LoginComponent],
-      providers: [{ provide: AuthService, useValue: authStub }],
+      providers: [
+        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
+        provideExperimentalZonelessChangeDetection(),
+        { provide: AuthService, useValue: authStub },
+      ],
     }).compileComponents();
 
     const f = TestBed.createComponent(LoginComponent);
@@ -253,7 +270,11 @@ describe('LoginComponent', () => {
     await TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [LoginComponent],
-      providers: [{ provide: AuthService, useValue: authStub }],
+      providers: [
+        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
+        provideExperimentalZonelessChangeDetection(),
+        { provide: AuthService, useValue: authStub },
+      ],
     }).compileComponents();
 
     const f = TestBed.createComponent(LoginComponent);

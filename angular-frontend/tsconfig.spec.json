@@ -13,15 +13,18 @@
     // pipeline. "node" resolution works with Jest's module mapper and does not
     // impose ESM/CJS strictness that would break Angular's ESM packages.
     "moduleResolution": "node",
-    // The shared/ package (consumed by both server and client) uses explicit
-    // `.ts` extensions in its re-exports for Deno compatibility.
-    // noEmit is required alongside allowImportingTsExtensions (the options are
-    // incompatible with output).
+    // The shared/ package uses explicit .ts extensions in re-exports for Deno
+    // compatibility. allowImportingTsExtensions permits those imports;
+    // rewriteRelativeImportExtensions rewrites .ts paths to .js in emitted
+    // output so that noEmit is not required (unlike the paired noEmit approach).
     "allowImportingTsExtensions": true,
-    "noEmit": true
+    "rewriteRelativeImportExtensions": true
   },
   "include": [
-    "src/**/*.spec.ts",
+    "src/**/*.ts",
     "src/**/*.d.ts"
+  ],
+  "exclude": [
+    "src/test.ts"
   ]
 }

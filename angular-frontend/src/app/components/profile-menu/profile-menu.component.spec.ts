@@ -1,3 +1,4 @@
+import { provideExperimentalZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NanostoresService } from '@nanostores/angular';
 import { of } from 'rxjs';
@@ -44,6 +45,8 @@ describe('ProfileMenuComponent', () => {
     await TestBed.configureTestingModule({
       imports: [ProfileMenuComponent],
       providers: [
+        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
+        provideExperimentalZonelessChangeDetection(),
         { provide: NanostoresService, useClass: NanostoresServiceStub },
         { provide: AuthService, useValue: authStub },
         { provide: SocketService, useValue: socketStub },
@@ -69,7 +72,8 @@ describe('ProfileMenuComponent', () => {
 
   it('toggleDropdown opens the dropdown and stops event propagation', () => {
     const event = new MouseEvent('click');
-    spyOn(event, 'stopPropagation');
+    // Use Jest's spyOn to replace the stopPropagation method with a spy.
+    jest.spyOn(event, 'stopPropagation');
 
     component.toggleDropdown(event);
 
