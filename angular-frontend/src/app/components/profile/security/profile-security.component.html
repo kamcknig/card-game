@@ -1,0 +1,138 @@
+<section class="security-section" aria-label="Security settings">
+  <h2 class="section-title">Security settings</h2>
+
+  <section class="change-password-section">
+    <h3>Change password</h3>
+    <form class="change-password-form" (ngSubmit)="submitChangePassword()">
+      <label class="form-field">
+        <span class="form-label">Current password</span>
+        <input
+          type="password"
+          class="form-input"
+          [value]="currentPassword()"
+          (input)="currentPassword.set($any($event.target).value)"
+          autocomplete="current-password"
+        />
+      </label>
+      <app-new-password-fields
+        [(primary)]="newPassword"
+        [(confirm)]="confirmNewPassword"
+        primaryLabel="New password"
+        confirmLabel="Confirm new password"
+        primaryAutocomplete="new-password"
+        confirmAutocomplete="new-password"
+      />
+      @if (changePasswordError(); as err) {
+        <p class="form-field-error">{{ err }}</p>
+      }
+      @if (changePasswordSuccess(); as msg) {
+        <p class="form-success">{{ msg }}</p>
+      }
+      <div class="form-actions">
+        <button
+          type="submit"
+          class="panel-button"
+          [disabled]="changePasswordSubmitting() || !!newPasswordFields()?.mismatch() || confirmNewPassword().length === 0"
+        >
+          Update password
+        </button>
+      </div>
+    </form>
+  </section>
+
+  @if (isAdmin()) {
+    <section class="reg-codes-section">
+      <h3>Registration codes</h3>
+
+      <form class="reg-code-form" (ngSubmit)="submitCreateRegistrationCode()">
+        <label class="form-field">
+          <span class="form-label">Max uses</span>
+          <input
+            type="number"
+            class="form-input"
+            min="1"
+            [value]="regCodeMaxUses()"
+            (input)="regCodeMaxUses.set(+$any($event.target).value || 1)"
+          />
+        </label>
+        <label class="form-field">
+          <span class="form-label">Expires in (days, blank = never)</span>
+          <input
+            type="number"
+            class="form-input"
+            min="1"
+            [value]="regCodeExpiresInDays() ?? ''"
+            (input)="regCodeExpiresInDays.set($any($event.target).value ? +$any($event.target).value : null)"
+          />
+        </label>
+        @if (regCodeError(); as err) {
+          <p class="form-field-error">{{ err }}</p>
+        }
+        @if (regCodeUrl(); as url) {
+          <div class="reg-code-result">
+            <span class="reg-code-result__label">Registration link:</span>
+            <span class="reg-code-result__url">{{ url }}</span>
+            <button
+              type="button"
+              class="reg-code-result__copy"
+              (click)="copyRegCodeUrl(url)"
+              aria-label="Copy registration link"
+            >
+              <lucide-icon [img]="CopyIcon" [size]="16" />
+            </button>
+          </div>
+        }
+        <div class="form-actions">
+          <button type="submit" class="panel-button" [disabled]="regCodeSubmitting()">
+            Create code
+          </button>
+        </div>
+      </form>
+
+      @if (regCodes().length) {
+        <table class="reg-codes-table">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Created by</th>
+              <th>Uses</th>
+              <th>Expires</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (c of regCodes(); track c.code) {
+              <tr>
+                <td class="reg-code-value">{{ c.code }}</td>
+                <td>{{ c.createdBy }}</td>
+                <td>{{ c.usedCount }} / {{ c.maxUses }}</td>
+                <td>{{ c.expiresAt ? (c.expiresAt | date:'short') : 'Never' }}</td>
+                <td class="reg-code-actions">
+                  <button
+                    type="button"
+                    class="reg-code-actions__copy"
+                    (click)="copyRegCodeUrl(buildRegCodeUrl(c.code))"
+                    title="Copy registration URL to clipboard"
+                    [attr.aria-label]="'Copy registration URL for ' + c.code"
+                  >
+                    <lucide-icon [img]="CopyIcon" [size]="14" />
+                    <span>Copy URL</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="panel-button panel-button--danger"
+                    (click)="disableRegistrationCode(c.code)"
+                  >
+                    Disable
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <p class="reg-codes-empty">No active codes.</p>
+      }
+    </section>
+  }
+</section>
