@@ -206,8 +206,10 @@ export class LoginComponent implements OnInit {
 
         const result = await this._authService.register(username, password, code);
         if (result.ok) {
-          this.successMessage.set('Account created — please sign in.');
+          // setMode clears all fields and messages; set the success toast and
+          // restore the username AFTER calling setMode so they survive the clear.
           this.setMode('signin');
+          this.successMessage.set('Account created — please sign in.');
           // Keep the username prefilled so the new user only has to type the
           // password they just entered.
           this.username.set(username);

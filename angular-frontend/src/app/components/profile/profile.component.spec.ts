@@ -1,3 +1,4 @@
+import { provideExperimentalZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NanostoresService } from '@nanostores/angular';
 import { of } from 'rxjs';
@@ -10,9 +11,11 @@ import { ProfileComponent } from './profile.component';
 /**
  * Stub NanostoresService — covers SceneBannerComponent's auth username
  * subscription which is part of the ProfileComponent render tree.
+ * Returns an observable emitting the store's current value at subscription
+ * time, so that toSignal() in components picks up the correct initial value.
  */
 class NanostoresServiceStub {
-  useStore = jasmine.createSpy('useStore').and.callFake(() => of(undefined));
+  useStore = jest.fn().mockImplementation((store: { get(): unknown }) => of(store.get()));
   ngOnDestroy = () => {};
 }
 
@@ -22,24 +25,24 @@ class NanostoresServiceStub {
  */
 class AuthServiceStub {
   changePasswordResult: { ok: boolean; message?: string; revokedSessions?: number } = { ok: true };
-  changePassword = jasmine
-    .createSpy('changePassword')
-    .and.callFake(async () => this.changePasswordResult);
+  changePassword = jest
+    .fn()
+    .mockImplementation(async () => this.changePasswordResult);
 
   listCodesResult: { ok: boolean; codes?: any[]; message?: string } = { ok: true, codes: [] };
-  listRegistrationCodes = jasmine
-    .createSpy('listRegistrationCodes')
-    .and.callFake(async () => this.listCodesResult);
+  listRegistrationCodes = jest
+    .fn()
+    .mockImplementation(async () => this.listCodesResult);
 
   createCodeResult: { ok: boolean; code?: string; message?: string } = { ok: true, code: 'TEST-CODE' };
-  createRegistrationCode = jasmine
-    .createSpy('createRegistrationCode')
-    .and.callFake(async () => this.createCodeResult);
+  createRegistrationCode = jest
+    .fn()
+    .mockImplementation(async () => this.createCodeResult);
 
   disableCodeResult: { ok: boolean; message?: string } = { ok: true };
-  disableRegistrationCode = jasmine
-    .createSpy('disableRegistrationCode')
-    .and.callFake(async () => this.disableCodeResult);
+  disableRegistrationCode = jest
+    .fn()
+    .mockImplementation(async () => this.disableCodeResult);
 }
 
 describe('ProfileComponent', () => {
@@ -53,6 +56,8 @@ describe('ProfileComponent', () => {
     await TestBed.configureTestingModule({
       imports: [ProfileComponent],
       providers: [
+        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
+        provideExperimentalZonelessChangeDetection(),
         { provide: NanostoresService, useClass: NanostoresServiceStub },
         { provide: AuthService, useValue: authStub },
       ],
@@ -85,6 +90,8 @@ describe('ProfileComponent', () => {
     await TestBed.configureTestingModule({
       imports: [ProfileComponent],
       providers: [
+        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
+        provideExperimentalZonelessChangeDetection(),
         { provide: NanostoresService, useClass: NanostoresServiceStub },
         { provide: AuthService, useValue: authStub },
       ],
@@ -201,6 +208,8 @@ describe('ProfileComponent', () => {
     await TestBed.configureTestingModule({
       imports: [ProfileComponent],
       providers: [
+        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
+        provideExperimentalZonelessChangeDetection(),
         { provide: NanostoresService, useClass: NanostoresServiceStub },
         { provide: AuthService, useValue: authStub },
       ],
@@ -225,6 +234,8 @@ describe('ProfileComponent', () => {
     await TestBed.configureTestingModule({
       imports: [ProfileComponent],
       providers: [
+        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
+        provideExperimentalZonelessChangeDetection(),
         { provide: NanostoresService, useClass: NanostoresServiceStub },
         { provide: AuthService, useValue: authStub },
       ],
@@ -322,7 +333,7 @@ describe('ProfileComponent', () => {
 
   it('copyRegCodeUrl: calls navigator.clipboard.writeText with the provided URL', async () => {
     // Define a clipboard stub on navigator for the test environment.
-    const writeTextSpy = jasmine.createSpy('writeText').and.returnValue(Promise.resolve());
+    const writeTextSpy = jest.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', {
       value: { writeText: writeTextSpy },
       configurable: true,
