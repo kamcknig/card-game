@@ -2,6 +2,7 @@ import { provideExperimentalZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatchSummary } from 'shared/types';
 
+import { matchSummaryStore } from '../../state/match-state';
 import { GameSummaryComponent } from './game-summary.component';
 
 describe('GameSummaryComponent', () => {
@@ -16,11 +17,13 @@ describe('GameSummaryComponent', () => {
     })
     .compileComponents();
 
+    // Populate the store before instantiation — the component reads
+    // matchSummaryStore via a computed signal rather than an Input.
+    const minimalSummary: MatchSummary = { playerSummary: [] };
+    matchSummaryStore.set(minimalSummary);
+
     fixture = TestBed.createComponent(GameSummaryComponent);
     component = fixture.componentInstance;
-    // Provide the required matchSummary input before triggering change detection.
-    const minimalSummary: MatchSummary = { playerSummary: [] };
-    fixture.componentRef.setInput('matchSummary', minimalSummary);
     fixture.detectChanges();
   });
 
