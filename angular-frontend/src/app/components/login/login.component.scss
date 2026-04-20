@@ -64,6 +64,52 @@
   font-weight: 500;
 }
 
+// Invalid registration-code modal shown when a deep-link code fails server validation.
+.invalid-code-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: min(360px, 90vw);
+  padding: 2rem;
+  border: 1px solid var(--theme-border-subtle);
+  border-radius: 12px;
+  background: var(--theme-surface-card);
+  color: var(--theme-text-primary);
+
+  &__title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  &__body {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--theme-text-secondary);
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  &__confirm {
+    border: 1px solid var(--theme-border-action);
+    background: var(--theme-action-primary-bg);
+    color: var(--theme-text-primary);
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+
+    &:hover {
+      opacity: 0.85;
+    }
+  }
+}
+
 .login-button {
   border: 1px solid var(--theme-border-action);
   background: var(--theme-action-primary-bg);

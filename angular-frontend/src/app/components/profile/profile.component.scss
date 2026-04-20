@@ -115,13 +115,67 @@
   margin-bottom: 1.5rem;
 }
 
-// Displays the newly generated code in a monospaced block after creation.
+// Displays the registration URL with a copy button after creation.
 .reg-code-result {
-  word-break: break-all;
-  font-family: monospace;
-  background: var(--color-surface-raised, #2a2a2a);
-  padding: 0.5rem 0.75rem;
-  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+
+  &__label {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  &__url {
+    font-family: monospace;
+    font-size: 0.85em;
+    word-break: break-all;
+    flex: 1;
+  }
+
+  &__copy {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem;
+    color: inherit;
+    flex-shrink: 0;
+
+    &:hover {
+      opacity: 0.7;
+    }
+  }
+}
+
+// Action cell in the codes table — copy and disable buttons sit side by side.
+.reg-code-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+
+  &__copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: none;
+    border: 1px solid var(--theme-border-action);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: inherit;
+    cursor: pointer;
+
+    &:hover {
+      opacity: 0.7;
+    }
+  }
 }
 
 .reg-codes-table {
