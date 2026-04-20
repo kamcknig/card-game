@@ -42,12 +42,10 @@
 // Back button injected into the banner header actions slot.
 .back-button {
   border: 1px solid var(--theme-border-action);
-  background: transparent;
+  background: var(--theme-surface-card);
   color: var(--theme-text-primary);
   border-radius: 6px;
-  padding: 6px 14px;
-  font-weight: 600;
-  font-size: 0.875rem;
+  padding: 7px 12px;
   cursor: pointer;
 }
 

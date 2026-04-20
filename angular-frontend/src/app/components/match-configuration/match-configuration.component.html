@@ -2,19 +2,27 @@
   <div sceneHeaderActions class="header-actions">
     @if (isGameOwner()) {
       <button
-        class="secondary-action-button"
+        class="config-icon-button"
+        title="Save Config"
         (click)="openSaveDialog()"
         [disabled]="!hasConfigurationChanges()"
-      >Save Config</button>
-      <button class="secondary-action-button" (click)="openLoadDialog()">Load Config</button>
+      >
+        <lucide-icon [img]="SaveIcon" [size]="18" />
+      </button>
+      <button class="config-icon-button" title="Load Config" (click)="openLoadDialog()">
+        <lucide-icon [img]="LoadIcon" [size]="18" />
+      </button>
       <button
-        class="secondary-action-button"
+        class="config-icon-button"
+        title="Clear Config"
         (click)="clearConfiguration()"
         [disabled]="!canClearConfiguration()"
-      >Clear Config</button>
+      >
+        <lucide-icon [img]="ClearIcon" [size]="18" />
+      </button>
     }
     @if (activeLobbyGameId(); as activeGameId) {
-      <button class="leave-game-button" (click)="leaveGame(activeGameId)">Leave Game</button>
+      <button class="leave-game-button" (click)="leaveGame(activeGameId)">Back to Lobby</button>
     }
   </div>
 
