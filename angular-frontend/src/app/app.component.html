@@ -1,44 +1,5 @@
-<ng-container [ngSwitch]="scene()">
-  <app-login *ngSwitchCase="'login'"></app-login>
-  <app-lobby *ngSwitchCase="'lobby'"></app-lobby>
-  <app-profile *ngSwitchCase="'profile'"></app-profile>
-  <app-match-configuration *ngSwitchCase="'configuration'"></app-match-configuration>
-  <app-game-summary [matchSummary]="matchSummary()!" *ngSwitchCase="'gameSummary'"></app-game-summary>
-</ng-container>
-
-@if (scene() === 'match' && matchStarted()) {
-  <app-match-supply
-    [visible]="true"
-    [scoreRect]="scoreViewRect()"
-  ></app-match-supply>
-  <app-match-landscapes
-    [visible]="true"
-    [scoreRect]="scoreViewRect()"
-  ></app-match-landscapes>
-  <app-match-player-area
-    [visible]="true"
-    [scoreRect]="scoreViewRect()"
-    (nextPhaseRequested)="onNextPhaseRequested()"
-    (playAllTreasuresRequested)="onPlayAllTreasuresRequested()"
-  ></app-match-player-area>
-  <app-match-non-supply
-    [visible]="true"
-    [scoreRect]="scoreViewRect()"
-  ></app-match-non-supply>
-  <app-pile-selection-action></app-pile-selection-action>
-}
-
-@if (scene() === 'match') {
-  <app-match-hud
-    [ngClass]="{'match-started': matchStarted()}"
-    (scoreViewResize)="onScoreViewResize($event)"
-    (nextPhaseRequested)="onNextPhaseRequested()"
-    (playAllTreasuresRequested)="onPlayAllTreasuresRequested()"
-  ></app-match-hud>
-}
+<router-outlet />
 
 <app-card-detail-dialog></app-card-detail-dialog>
 <app-way-picker-overlay></app-way-picker-overlay>
 <app-prompt-dialog-host></app-prompt-dialog-host>
-
-<router-outlet />
