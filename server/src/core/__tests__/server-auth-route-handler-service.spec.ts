@@ -989,6 +989,136 @@ Deno.test('ServerAuthRouteHandlerService: GET /auth/check-username is case-insen
   });
 });
 
+// ── GET /auth/registration-codes/validate ────────────────────────────────────
+
+Deno.test('ServerAuthRouteHandlerService: GET /auth/registration-codes/validate missing code → 200 valid:false', async () => {
+  await withIsolatedEnv({}, async () => {
+    const { service } = makeService({});
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/registration-codes/validate', { method: 'GET' }),
+    );
+
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.ok, true);
+    assertEquals(body.valid, false);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: GET /auth/registration-codes/validate unknown code → 200 valid:false', async () => {
+  await withIsolatedEnv({}, async () => {
+    const { service } = makeService({});
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/registration-codes/validate?code=DOESNOTEXIST', { method: 'GET' }),
+    );
+
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.ok, true);
+    assertEquals(body.valid, false);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: GET /auth/registration-codes/validate active code → 200 valid:true', async () => {
+  await withIsolatedEnv({}, async () => {
+    const { service, regCodeStore } = makeService({});
+    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 5, now: Date.now() });
+
+    const res = await dispatch(
+      service,
+      new Request(`http://localhost/auth/registration-codes/validate?code=${rec.code}`, { method: 'GET' }),
+    );
+
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.ok, true);
+    assertEquals(body.valid, true);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: GET /auth/registration-codes/validate disabled code → 200 valid:false', async () => {
+  await withIsolatedEnv({}, async () => {
+    const { service, regCodeStore } = makeService({});
+    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 5, now: Date.now() });
+    regCodeStore.disable(rec.code);
+
+    const res = await dispatch(
+      service,
+      new Request(`http://localhost/auth/registration-codes/validate?code=${rec.code}`, { method: 'GET' }),
+    );
+
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.ok, true);
+    assertEquals(body.valid, false);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: GET /auth/registration-codes/validate expired code → 200 valid:false', async () => {
+  await withIsolatedEnv({}, async () => {
+    const { service, regCodeStore } = makeService({});
+    const past = Date.now() - 1_000;
+    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: past, maxUses: 5, now: past - 1_000 });
+
+    const res = await dispatch(
+      service,
+      new Request(`http://localhost/auth/registration-codes/validate?code=${rec.code}`, { method: 'GET' }),
+    );
+
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.ok, true);
+    assertEquals(body.valid, false);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: GET /auth/registration-codes/validate exhausted code → 200 valid:false', async () => {
+  await withIsolatedEnv({}, async () => {
+    const { service, regCodeStore } = makeService({});
+    const now = Date.now();
+    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 1, now });
+    // Consume the single allowed use.
+    regCodeStore.recordUse(rec.code, now);
+
+    const res = await dispatch(
+      service,
+      new Request(`http://localhost/auth/registration-codes/validate?code=${rec.code}`, { method: 'GET' }),
+    );
+
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.ok, true);
+    assertEquals(body.valid, false);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: GET /auth/registration-codes/validate requires no auth token', async () => {
+  // Public endpoint — no Authorization header should be needed even for a valid code.
+  await withIsolatedEnv({}, async () => {
+    const { service, regCodeStore } = makeService({
+      // validateToken returns undefined (no valid session), but the endpoint is public.
+      sessionServiceStub: makeSessionServiceStub({ ok: true, token: 'tok', username: 'alice' }, null),
+    });
+    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 5, now: Date.now() });
+
+    const res = await dispatch(
+      service,
+      // No Authorization header.
+      new Request(`http://localhost/auth/registration-codes/validate?code=${rec.code}`, { method: 'GET' }),
+    );
+
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.valid, true);
+  });
+});
+
+// ── GET /auth/check-username trims whitespace (existing) ──────────────────────
+
 Deno.test('ServerAuthRouteHandlerService: GET /auth/check-username trims whitespace', async () => {
   // The form passes the username verbatim; the endpoint should treat
   // surrounding whitespace as part of the empty-input convenience path so

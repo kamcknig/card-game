@@ -99,8 +99,19 @@
                 @if (regCodeError(); as err) {
                   <p class="form-field-error">{{ err }}</p>
                 }
-                @if (regCodeResult(); as code) {
-                  <p class="reg-code-result">New code: <strong>{{ code }}</strong></p>
+                @if (regCodeUrl(); as url) {
+                  <div class="reg-code-result">
+                    <span class="reg-code-result__label">Registration link:</span>
+                    <span class="reg-code-result__url">{{ url }}</span>
+                    <button
+                      type="button"
+                      class="reg-code-result__copy"
+                      (click)="copyRegCodeUrl(url)"
+                      aria-label="Copy registration link"
+                    >
+                      <lucide-icon [img]="CopyIcon" [size]="16" />
+                    </button>
+                  </div>
                 }
                 <div class="form-actions">
                   <button type="submit" class="panel-button" [disabled]="regCodeSubmitting()">
@@ -127,7 +138,17 @@
                         <td>{{ c.createdBy }}</td>
                         <td>{{ c.usedCount }} / {{ c.maxUses }}</td>
                         <td>{{ c.expiresAt ? (c.expiresAt | date:'short') : 'Never' }}</td>
-                        <td>
+                        <td class="reg-code-actions">
+                          <button
+                            type="button"
+                            class="reg-code-actions__copy"
+                            (click)="copyRegCodeUrl(buildRegCodeUrl(c.code))"
+                            title="Copy registration URL to clipboard"
+                            [attr.aria-label]="'Copy registration URL for ' + c.code"
+                          >
+                            <lucide-icon [img]="CopyIcon" [size]="14" />
+                            <span>Copy URL</span>
+                          </button>
                           <button
                             type="button"
                             class="panel-button panel-button--danger"

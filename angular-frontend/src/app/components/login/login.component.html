@@ -106,3 +106,28 @@
     </form>
   </div>
 </app-scene-content>
+
+@if (showInvalidCodeModal()) {
+  <app-ui-dialog
+    [closeOnBackdrop]="false"
+    [backdropVariant]="'strong'"
+    [zIndex]="5000"
+  >
+    <div class="invalid-code-dialog">
+      <h2 class="invalid-code-dialog__title">Invalid registration link</h2>
+      <p class="invalid-code-dialog__body">
+        The registration code in this link is invalid, expired, or has already been used.
+        You can still register if you have a valid code.
+      </p>
+      <div class="invalid-code-dialog__actions">
+        <button
+          type="button"
+          class="invalid-code-dialog__confirm"
+          (click)="dismissInvalidCodeModal()"
+        >
+          OK
+        </button>
+      </div>
+    </div>
+  </app-ui-dialog>
+}

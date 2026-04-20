@@ -10,6 +10,7 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
+import { Copy, LucideAngularModule } from 'lucide-angular';
 import { AuthService, authIsAdminStore } from '../../core/auth/auth.service';
 import { SceneContentComponent } from '../scene-content/scene-content.component';
 import { NewPasswordFieldsComponent } from '../ui/new-password-fields/new-password-fields.component';
@@ -29,7 +30,7 @@ import { profileTabStore, ProfileTab } from '../../state/profile-state';
 @Component({
   selector: 'app-profile',
   standalone: true,
-  imports: [SceneContentComponent, FormsModule, NewPasswordFieldsComponent, DatePipe],
+  imports: [SceneContentComponent, FormsModule, NewPasswordFieldsComponent, DatePipe, LucideAngularModule],
   templateUrl: './profile.component.html',
   styleUrl: './profile.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -37,6 +38,9 @@ import { profileTabStore, ProfileTab } from '../../state/profile-state';
 export class ProfileComponent implements OnInit {
   private readonly _authService = inject(AuthService);
   private readonly _nanoService = inject(NanostoresService);
+
+  /** Lucide icon reference for the copy-to-clipboard button. */
+  readonly CopyIcon = Copy;
 
   // Drives the active left-nav tab; initialized from profileTabStore in ngOnInit.
   readonly selectedNav = signal<ProfileTab>('security');
@@ -59,7 +63,10 @@ export class ProfileComponent implements OnInit {
    */
   readonly regCodeExpiresInDays = signal<number | null>(null);
 
-  /** The code string returned after a successful creation. */
+  /** The full registration URL built from window.location.origin after a successful creation. */
+  readonly regCodeUrl = signal<string | undefined>(undefined);
+
+  /** The raw code string returned after a successful creation. */
   readonly regCodeResult = signal<string | undefined>(undefined);
 
   /** Error message from the last create-code attempt, if any. */
@@ -132,6 +139,7 @@ export class ProfileComponent implements OnInit {
   async submitCreateRegistrationCode(): Promise<void> {
     this.regCodeResult.set(undefined);
     this.regCodeError.set(undefined);
+    this.regCodeUrl.set(undefined);
     this.regCodeSubmitting.set(true);
 
     try {
@@ -146,7 +154,10 @@ export class ProfileComponent implements OnInit {
       });
 
       if (result.ok && result.code) {
+        // Build the full registration URL so the admin can share a direct link.
+        const url = `${window.location.origin}?registrationCode=${encodeURIComponent(result.code)}`;
         this.regCodeResult.set(result.code);
+        this.regCodeUrl.set(url);
         await this._loadRegistrationCodes();
       } else {
         this.regCodeError.set(result.message ?? 'Failed to create code');
@@ -162,6 +173,22 @@ export class ProfileComponent implements OnInit {
   async disableRegistrationCode(code: string): Promise<void> {
     await this._authService.disableRegistrationCode(code);
     await this._loadRegistrationCodes();
+  }
+
+  /**
+   * Builds a full registration URL for the given code using the current window origin.
+   * Used both for the post-creation result area and for per-row copy buttons.
+   */
+  buildRegCodeUrl(code: string): string {
+    return `${window.location.origin}?registrationCode=${encodeURIComponent(code)}`;
+  }
+
+  /**
+   * Copies the given registration URL to the clipboard.
+   * Falls back silently when the Clipboard API is unavailable.
+   */
+  copyRegCodeUrl(url: string): void {
+    navigator.clipboard.writeText(url).catch(() => undefined);
   }
 
   /**

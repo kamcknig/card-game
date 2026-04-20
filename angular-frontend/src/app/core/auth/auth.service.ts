@@ -17,9 +17,15 @@ export const authIsAdminStore = atom<boolean>(
   localStorage.getItem('authIsAdmin') === 'true',
 );
 
+// Holds a registration code parsed from the URL query string on startup.
+// Consumed (cleared) once LoginComponent reads it during initialization.
+// Not localStorage-backed — only valid for the current page load.
+export const pendingRegistrationCodeStore = atom<string | undefined>(undefined);
+
 (globalThis as any).authUsernameStore = authUsernameStore;
 (globalThis as any).authTokenStore = authTokenStore;
 (globalThis as any).authIsAdminStore = authIsAdminStore;
+(globalThis as any).pendingRegistrationCodeStore = pendingRegistrationCodeStore;
 
 /**
  * Manages client-side authentication state and server login requests.
@@ -253,6 +259,26 @@ export class AuthService {
       return { ok: true };
     } catch {
       return { ok: false, message: 'Unable to reach server' };
+    }
+  }
+
+  /**
+   * Checks whether a registration code is currently redeemable.
+   *
+   * Public endpoint — no auth token required. Returns `{ ok, valid }` where
+   * `valid` is false when the code is unknown, disabled, expired, or exhausted.
+   * Network errors resolve to `{ ok: false, valid: false }` so the caller can
+   * treat connectivity failures the same as an invalid code.
+   */
+  async validateRegistrationCode(code: string): Promise<{ ok: boolean; valid: boolean }> {
+    try {
+      const response = await fetch(
+        `${environment.wsHost}/auth/registration-codes/validate?code=${encodeURIComponent(code)}`,
+      );
+      const body = await response.json().catch(() => ({ ok: false, valid: false }));
+      return { ok: body.ok ?? false, valid: body.valid ?? false };
+    } catch {
+      return { ok: false, valid: false };
     }
   }
 

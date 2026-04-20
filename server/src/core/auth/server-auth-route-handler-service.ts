@@ -139,6 +139,11 @@ export class ServerAuthRouteHandlerService {
       return this.handleListRegistrationCodes(req);
     }
 
+    // GET /auth/registration-codes/validate?code=<value> (public): check code validity.
+    if (parts.length === 3 && parts[1] === 'registration-codes' && parts[2] === 'validate' && req.method === 'GET') {
+      return this.handleValidateRegistrationCode(req, url);
+    }
+
     // DELETE /auth/registration-codes/:code (authenticated): disable code.
     if (parts.length === 3 && parts[1] === 'registration-codes' && req.method === 'DELETE') {
       return this.handleDisableRegistrationCode(req, parts[2]!);
@@ -636,6 +641,37 @@ export class ServerAuthRouteHandlerService {
     this.registrationCodeStore.disable(code);
     this.loggerService.info(`[auth route] registration code ...${code.slice(-6)} disabled by '${username}'`);
     return this.jsonResponse({ ok: true }, 200, req);
+  }
+
+  /**
+   * Handles GET /auth/registration-codes/validate?code=<value>.
+   *
+   * Public, unauthenticated endpoint that reports whether a given registration
+   * code can currently be redeemed. A code is valid when it exists, is not
+   * disabled, has not expired, and has not reached its maximum use count.
+   *
+   * Returns `{ ok: true, valid: boolean }`. Always responds 200 so the client
+   * cannot distinguish "unknown code" from "exhausted code" — both return
+   * `{ valid: false }` without leaking which condition triggered.
+   */
+  private handleValidateRegistrationCode(req: Request, url: URL): Response {
+    const code = (url.searchParams.get('code') ?? '').trim();
+    if (!code) {
+      this.loggerService.debug('[auth route] validate-registration-code: empty code param');
+      return this.jsonResponse({ ok: true, valid: false }, 200, req);
+    }
+
+    const now = Date.now();
+    const rec = this.registrationCodeStore.get(code);
+    const valid = (
+      rec !== undefined &&
+      !rec.disabled &&
+      (rec.expiresAt === null || rec.expiresAt > now) &&
+      rec.usedCount < rec.maxUses
+    );
+
+    this.loggerService.debug(`[auth route] validate-registration-code: ...${code.slice(-6)} valid=${valid}`);
+    return this.jsonResponse({ ok: true, valid }, 200, req);
   }
 
   /**

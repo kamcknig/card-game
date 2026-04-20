@@ -251,6 +251,32 @@ describe('ProfileComponent', () => {
     expect(authStub.listRegistrationCodes).toHaveBeenCalled();
   });
 
+  it('submitCreateRegistrationCode: success sets regCodeUrl containing the code and current origin', async () => {
+    authStub.createCodeResult = { ok: true, code: 'NEW-CODE' };
+    authStub.listCodesResult = { ok: true, codes: [] };
+
+    await component.submitCreateRegistrationCode();
+
+    const url = component.regCodeUrl();
+    expect(url).toBeDefined();
+    expect(url).toContain('?registrationCode=NEW-CODE');
+    expect(url).toContain(window.location.origin);
+  });
+
+  it('submitCreateRegistrationCode: clears regCodeUrl at the start of a new submission', async () => {
+    // Prime with a previous URL.
+    authStub.createCodeResult = { ok: true, code: 'FIRST-CODE' };
+    authStub.listCodesResult = { ok: true, codes: [] };
+    await component.submitCreateRegistrationCode();
+    expect(component.regCodeUrl()).toBeDefined();
+
+    // Second submission that fails — regCodeUrl must be cleared immediately.
+    authStub.createCodeResult = { ok: false, message: 'forbidden' };
+    await component.submitCreateRegistrationCode();
+
+    expect(component.regCodeUrl()).toBeUndefined();
+  });
+
   it('submitCreateRegistrationCode: server failure sets regCodeError', async () => {
     authStub.createCodeResult = { ok: false, message: 'forbidden' };
 
@@ -279,5 +305,31 @@ describe('ProfileComponent', () => {
 
     expect(authStub.disableRegistrationCode).toHaveBeenCalledWith('SOME-CODE');
     expect(authStub.listRegistrationCodes).toHaveBeenCalled();
+  });
+
+  // --- URL builder and clipboard helpers ---
+
+  it('buildRegCodeUrl: returns a URL containing the code as a query param', () => {
+    const url = component.buildRegCodeUrl('ABC-123');
+    expect(url).toContain('?registrationCode=ABC-123');
+    expect(url).toContain(window.location.origin);
+  });
+
+  it('buildRegCodeUrl: URL-encodes special characters in the code', () => {
+    const url = component.buildRegCodeUrl('code with spaces');
+    expect(url).toContain('registrationCode=code%20with%20spaces');
+  });
+
+  it('copyRegCodeUrl: calls navigator.clipboard.writeText with the provided URL', async () => {
+    // Define a clipboard stub on navigator for the test environment.
+    const writeTextSpy = jasmine.createSpy('writeText').and.returnValue(Promise.resolve());
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText: writeTextSpy },
+      configurable: true,
+    });
+
+    component.copyRegCodeUrl('http://localhost?registrationCode=TEST');
+
+    expect(writeTextSpy).toHaveBeenCalledWith('http://localhost?registrationCode=TEST');
   });
 });

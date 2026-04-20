@@ -3,8 +3,18 @@ import { appConfig } from './app/app.config';
 import { AppComponent } from './app/app.component';
 import { SocketService } from './app/core/socket-service/socket.service';
 import { socketToGameEventMap } from './app/core/socket-service/socket-event-map';
-import { AuthService, authTokenStore } from './app/core/auth/auth.service';
+import { AuthService, authTokenStore, pendingRegistrationCodeStore } from './app/core/auth/auth.service';
 import { sceneStore } from './app/state/game-state';
+
+// Stage any registration code from the URL before the app bootstraps so that
+// LoginComponent can read pendingRegistrationCodeStore in its constructor.
+// If the user has a valid session this value is ignored — validateStoredToken
+// below will navigate to the lobby before the login scene is ever shown.
+const _startupParams = new URLSearchParams(window.location.search);
+const _startupRegCode = _startupParams.get('registrationCode');
+if (_startupRegCode) {
+  pendingRegistrationCodeStore.set(_startupRegCode.trim());
+}
 
 bootstrapApplication(AppComponent, appConfig)
   .then(async appRef => {
@@ -33,6 +43,9 @@ bootstrapApplication(AppComponent, appConfig)
       // configuration or match (matchConfigurationUpdated / matchReady).
       sceneStore.set('lobby');
       connectSocket();
+      // A valid session means the user goes to the lobby; discard any staged
+      // registration code so it is not consumed on a future logout/revisit.
+      pendingRegistrationCodeStore.set(undefined);
     }
 
     // Subscribe to auth token changes so the socket connects after a successful
