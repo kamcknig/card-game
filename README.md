@@ -230,6 +230,24 @@ az containerapp ingress sticky-sessions set \
   --affinity sticky
 ```
 
+## Development Docker Compose
+
+A `docker-compose.dev.yml` is provided for local development with hot-reload:
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
+This starts the game server on port 3001 and the Angular dev server on port 51455. Source files are bind-mounted so changes are picked up immediately by `ng serve`.
+
+**Important — rebuild when dependencies change**: The dev frontend image installs `node_modules` at build time (inside the container) so the correct musl-compatible binaries are used on Alpine Linux. When `angular-frontend/package.json` or `shared/package.json` changes, the image must be rebuilt:
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
+Without a rebuild after a dependency change, the container will use stale `node_modules` and may fail with missing native module errors (e.g. `@rollup/rollup-linux-x64-musl`).
+
 ## Production Docker Compose (Local Testing)
 
 A `docker-compose.prod.yml` is provided for testing production images locally:

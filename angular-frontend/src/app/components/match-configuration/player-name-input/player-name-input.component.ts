@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input } from '@an
 import { NanostoresService } from '@nanostores/angular';
 import { Player, PlayerId } from 'shared/types';
 import { filter, switchMap } from 'rxjs';
-import { NgIf, NgStyle } from '@angular/common';
+import { NgIf } from '@angular/common';
 import { playerStore, selfPlayerIdStore } from '../../../state/player-state';
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { gameOwnerIdStore } from '../../../state/game-state';
@@ -14,7 +14,6 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
   standalone: true,
   imports: [
     NgIf,
-    NgStyle
   ],
   styleUrls: ['./player-name-input.component.scss'],
   templateUrl: './player-name-input.component.html',

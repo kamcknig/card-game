@@ -26,6 +26,7 @@ import {
   TraitNoId,
   WayNoId
 } from 'shared/types';
+import { Router } from '@angular/router';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
 import { playerIdStore, selfPlayerIdStore } from '../../state/player-state';
@@ -33,7 +34,7 @@ import { NgClass, NgOptimizedImage, NgStyle } from '@angular/common';
 import { expansionListStore } from '../../state/expansion-list-state';
 import { matchConfigurationStore } from '../../state/match-state';
 import { SocketService } from '../../core/socket-service/socket.service';
-import { gameOwnerIdStore, sceneStore } from '../../state/game-state';
+import { gameOwnerIdStore } from '../../state/game-state';
 import {
   activeLobbyGameIdStore,
   lobbyGamesStore,
@@ -91,6 +92,7 @@ export class MatchConfigurationComponent implements OnDestroy {
   readonly LoadIcon = FolderOpen;
   readonly ClearIcon = Trash2;
 
+  private readonly _router = inject(Router);
   private readonly _nanoStoreService = inject(NanostoresService);
   private readonly _socketService = inject(SocketService);
   private readonly _saveNameInput$ = new Subject<string>();
@@ -362,7 +364,7 @@ export class MatchConfigurationComponent implements OnDestroy {
   leaveGame(gameId: string) {
     activeLobbyGameIdStore.set(undefined);
     lobbyStatusMessageStore.set(undefined);
-    sceneStore.set('lobby');
+    void this._router.navigate(['/lobby']);
     this._socketService.emit('leaveLobbyGame', gameId);
   }
 

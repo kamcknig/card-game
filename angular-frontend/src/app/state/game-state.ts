@@ -39,8 +39,3 @@ function updatePausedState() {
 export const gameOwnerIdStore = atom<PlayerId | undefined>();
 (globalThis as any).gameOwnerIdStore = gameOwnerIdStore;
 
-export type SceneNames = 'login' | 'lobby' | 'configuration' | 'match' | 'gameSummary' | 'profile';
-
-// The application starts at the login scene until the user authenticates.
-export const sceneStore = atom<SceneNames>('login');
-(globalThis as any).sceneStore = sceneStore;

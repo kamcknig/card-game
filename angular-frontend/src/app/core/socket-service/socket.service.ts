@@ -2,9 +2,12 @@ import { Injectable } from "@angular/core";
 import { io, Socket } from "socket.io-client";
 import { environment } from "../../../environments/environment";
 import { v4 as uuidV4 } from "uuid";
-import { SocketEventMap } from "./socket-event-map";
 import { ServerEmitEvents, ServerListenEvents } from "shared/types";
+import { ClientListenEventNames, ClientListenEvents } from "../../../types";
 import { ServerEmitEventNames } from "../../../types";
+
+/** Map of server-to-client socket event names to their handler functions. */
+export type SocketEventMap = Partial<{ [p in ClientListenEventNames]: ClientListenEvents[p] }>;
 
 @Injectable({
   providedIn: "root",

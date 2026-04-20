@@ -18,12 +18,11 @@ export const routes: Routes = [
     component: ProfileComponent,
     canActivate: [authGuard],
     children: [
+      // Bare /profile falls through to security. Navigation from ProfileMenuComponent
+      // always targets /profile/security or /profile/settings directly.
+      { path: '', redirectTo: 'security', pathMatch: 'full' },
       { path: 'security', component: ProfileSecurityComponent },
       { path: 'settings', component: ProfileSettingsComponent },
-      // No default child redirect here on purpose: ProfileComponent.ngOnInit
-      // reads profileTabStore and navigates to the correct child. A default
-      // redirect would race that logic and always land on 'security', breaking
-      // ProfileMenu's deep-link to 'settings'.
     ],
   },
   { path: 'configuration', component: MatchConfigurationComponent, canActivate: [authGuard] },

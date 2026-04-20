@@ -4,8 +4,6 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { NanostoresService } from '@nanostores/angular';
 import { EMPTY, of } from 'rxjs';
 
-import { sceneStore } from '../../state/game-state';
-import { profileTabStore } from '../../state/profile-state';
 import { ProfileComponent } from './profile.component';
 
 /**
@@ -25,7 +23,7 @@ class NanostoresServiceStub {
  * the href; `isActive` is checked by RouterLinkActive to set the active class.
  */
 class RouterStub {
-  url = '/profile';
+  url = '/profile/security';
   navigate = jest.fn().mockResolvedValue(true);
   /** RouterLinkActive subscribes to this in its constructor. */
   events = EMPTY;
@@ -53,63 +51,18 @@ describe('ProfileComponent', () => {
       ],
     }).compileComponents();
 
-    // Reset shared atoms so state from one test does not leak into the next.
-    profileTabStore.set('security');
-    sceneStore.set('profile');
+    fixture = TestBed.createComponent(ProfileComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
   });
 
   it('should create', () => {
-    routerStub.url = '/profile/security';
-    fixture = TestBed.createComponent(ProfileComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
     expect(component).toBeTruthy();
   });
 
-  it('backToLobby sets sceneStore to lobby', () => {
-    routerStub.url = '/profile/security';
-    fixture = TestBed.createComponent(ProfileComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
-
+  it('backToLobby navigates to /lobby', () => {
     component.backToLobby();
 
-    expect(sceneStore.get()).toBe('lobby');
-  });
-
-  it('ngOnInit on bare /profile URL navigates to the tab stored in profileTabStore', () => {
-    routerStub.url = '/profile';
-    profileTabStore.set('settings');
-
-    fixture = TestBed.createComponent(ProfileComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
-
-    expect(routerStub.navigate).toHaveBeenCalledWith(
-      ['settings'],
-      expect.objectContaining({ relativeTo: expect.anything() }),
-    );
-  });
-
-  it('ngOnInit on /profile/security (refresh) does not override the URL', () => {
-    routerStub.url = '/profile/security';
-    profileTabStore.set('settings'); // even if store says settings, URL wins
-
-    fixture = TestBed.createComponent(ProfileComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
-
-    expect(routerStub.navigate).not.toHaveBeenCalled();
-  });
-
-  it('ngOnInit on /profile/settings (refresh) does not override the URL', () => {
-    routerStub.url = '/profile/settings';
-    profileTabStore.set('security');
-
-    fixture = TestBed.createComponent(ProfileComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
-
-    expect(routerStub.navigate).not.toHaveBeenCalled();
+    expect(routerStub.navigate).toHaveBeenCalledWith(['/lobby']);
   });
 });
