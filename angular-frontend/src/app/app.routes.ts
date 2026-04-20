@@ -20,7 +20,10 @@ export const routes: Routes = [
     children: [
       { path: 'security', component: ProfileSecurityComponent },
       { path: 'settings', component: ProfileSettingsComponent },
-      { path: '', redirectTo: 'security', pathMatch: 'full' },
+      // No default child redirect here on purpose: ProfileComponent.ngOnInit
+      // reads profileTabStore and navigates to the correct child. A default
+      // redirect would race that logic and always land on 'security', breaking
+      // ProfileMenu's deep-link to 'settings'.
     ],
   },
   { path: 'configuration', component: MatchConfigurationComponent, canActivate: [authGuard] },

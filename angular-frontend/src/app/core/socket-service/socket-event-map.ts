@@ -82,10 +82,17 @@ export const socketToGameEventMap = (): SocketEventMap => {
 
   map['lobbySnapshot'] = games => {
     lobbyGamesStore.set(games);
-    // Keep lobby as default scene while no active game is tracked.
-    if (!activeLobbyGameIdStore.get()) {
-      clearMatchUiOverlays();
-      debugRuntimeContextStore.set(undefined);
+    // The server only sends lobbySnapshot when the session is not in any
+    // active game, so this event is authoritative. Clear transient match UI
+    // state and, if the user is currently on a scene that requires match
+    // data (match/configuration/gameSummary), redirect to lobby.
+    // Lobby/profile/login are left untouched so a refresh on those pages
+    // stays put.
+    clearMatchUiOverlays();
+    debugRuntimeContextStore.set(undefined);
+    const current = sceneStore.get();
+    if (current === 'match' || current === 'configuration' || current === 'gameSummary') {
+      activeLobbyGameIdStore.set(undefined);
       sceneStore.set('lobby');
     }
   };

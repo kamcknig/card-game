@@ -32,8 +32,16 @@ export class ProfileComponent implements OnInit {
   private readonly _route = inject(ActivatedRoute);
 
   ngOnInit(): void {
-    // Honour the tab requested by the profile menu before navigation.
-    void this._router.navigate([profileTabStore.get()], { relativeTo: this._route });
+    // Only redirect from the bare /profile path. If the URL already targets a
+    // specific child route (/profile/security or /profile/settings), respect
+    // it — this keeps refresh and deep-link navigation on the current tab.
+    // The '' → 'security' child redirect in app.routes.ts handles the bare
+    // /profile case when profileTabStore has its default value; the explicit
+    // navigation below covers ProfileMenuComponent deep-linking to 'settings'.
+    const url = this._router.url.split('?')[0];
+    if (url === '/profile' || url === '/profile/') {
+      void this._router.navigate([profileTabStore.get()], { relativeTo: this._route });
+    }
   }
 
   /** Returns to the lobby scene. */

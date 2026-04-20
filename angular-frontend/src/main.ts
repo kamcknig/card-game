@@ -4,7 +4,6 @@ import { AppComponent } from './app/app.component';
 import { SocketService } from './app/core/socket-service/socket.service';
 import { socketToGameEventMap } from './app/core/socket-service/socket-event-map';
 import { AuthService, authTokenStore, pendingRegistrationCodeStore } from './app/core/auth/auth.service';
-import { sceneStore } from './app/state/game-state';
 
 // Stage any registration code from the URL before the app bootstraps so that
 // LoginComponent can read pendingRegistrationCodeStore in its constructor.
@@ -38,10 +37,12 @@ bootstrapApplication(AppComponent, appConfig)
     // Try to restore a previous auth session from localStorage.
     const hasValidToken = await authService.validateStoredToken();
     if (hasValidToken) {
-      // Transition to lobby immediately so the user doesn't see the login screen
-      // on refresh. Server events will correct the scene if the user was in
-      // configuration or match (matchConfigurationUpdated / matchReady).
-      sceneStore.set('lobby');
+      // URL-based routing keeps the user on the page they refreshed on
+      // (e.g. /match on match rejoin, /profile/security). The Angular Router's
+      // initial navigation and auth guards handle invalid destinations:
+      // /login with a valid token is redirected to /lobby by guestGuard.
+      // Server events (matchReady, matchConfigurationUpdated) update sceneStore
+      // if the user's session state requires a different scene.
       connectSocket();
       // A valid session means the user goes to the lobby; discard any staged
       // registration code so it is not consumed on a future logout/revisit.

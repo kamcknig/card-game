@@ -1,9 +1,9 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  effect,
   inject,
   OnDestroy,
-  OnInit,
   signal,
 } from '@angular/core';
 import { NgClass } from '@angular/common';
@@ -20,6 +20,7 @@ import { MatchNonSupplyComponent } from './non-supply/match-non-supply.component
 import { PileSelectionActionComponent } from './pile-selection/pile-selection-action.component';
 import { MatchHudComponent } from './match-hud/match-hud.component';
 import { matchStartedStore } from '../../state/match-state';
+import { selfPlayerIdStore } from '../../state/player-state';
 
 /** Container component for the active match screen. Manages MatchScene lifecycle. */
 @Component({
@@ -37,7 +38,7 @@ import { matchStartedStore } from '../../state/match-state';
   templateUrl: './match.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MatchComponent implements OnInit, OnDestroy {
+export class MatchComponent implements OnDestroy {
   private readonly _socketService = inject(SocketService);
   private readonly _promptDialogCoordinator = inject(PromptDialogCoordinatorService);
   private readonly _wayPickerOverlay = inject(WayPickerOverlayService);
@@ -51,8 +52,36 @@ export class MatchComponent implements OnInit, OnDestroy {
 
   readonly matchStarted = toSignal(this._nanoStores.useStore(matchStartedStore), { initialValue: false });
 
-  /** Creates and initialises the MatchScene controller when the match route activates. */
-  async ngOnInit(): Promise<void> {
+  /** Tracks when the server has identified the local player. Drives MatchScene creation. */
+  readonly selfPlayerId = toSignal(
+    this._nanoStores.useStore(selfPlayerIdStore),
+    { initialValue: selfPlayerIdStore.get() },
+  );
+
+  constructor() {
+    // Defer MatchScene creation until selfPlayerIdStore is populated. On
+    // fresh match entry the store is already set (from when the user joined
+    // the lobby game); on page refresh it starts undefined and gets set when
+    // the socket reconnects and the server emits setPlayer. Creating the
+    // scene earlier would throw because MatchScene's constructor requires
+    // selfPlayerIdStore. MatchScene.initialize then emits clientReady, which
+    // is what tells the server to emit matchStarted — so waiting for
+    // matchStarted instead would deadlock fresh match starts.
+    effect(() => {
+      if (this.selfPlayerId() !== undefined && !this.matchScene()) {
+        void this._initMatchScene();
+      }
+    });
+  }
+
+  /** Destroys the MatchScene controller when leaving the match route. */
+  ngOnDestroy(): void {
+    this.matchScene()?.destroy();
+    this.matchScene.set(undefined);
+  }
+
+  /** Instantiates and initialises the MatchScene controller. */
+  private async _initMatchScene(): Promise<void> {
     const scene = new MatchScene(
       this._socketService,
       this._promptDialogCoordinator,
@@ -60,12 +89,6 @@ export class MatchComponent implements OnInit, OnDestroy {
     );
     await scene.initialize();
     this.matchScene.set(scene);
-  }
-
-  /** Destroys the MatchScene controller when leaving the match route. */
-  ngOnDestroy(): void {
-    this.matchScene()?.destroy();
-    this.matchScene.set(undefined);
   }
 
   /** Relays score view resize events to sub-components and the match controller. */
