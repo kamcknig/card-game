@@ -6,13 +6,12 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { Router } from '@angular/router';
 import { NanostoresService } from '@nanostores/angular';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { LucideAngularModule, UserCircle } from 'lucide-angular';
 import { AuthService, authUsernameStore } from '../../core/auth/auth.service';
 import { SocketService } from '../../core/socket-service/socket.service';
-import { sceneStore } from '../../state/game-state';
-import { profileTabStore } from '../../state/profile-state';
 
 /**
  * Profile icon button with dropdown menu.
@@ -30,6 +29,7 @@ import { profileTabStore } from '../../state/profile-state';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProfileMenuComponent {
+  private readonly _router = inject(Router);
   private readonly _nanoStores = inject(NanostoresService);
   private readonly _authService = inject(AuthService);
   private readonly _socketService = inject(SocketService);
@@ -65,22 +65,16 @@ export class ProfileMenuComponent {
     this.dropdownOpen.update(open => !open);
   }
 
-  /**
-   * Navigates to the profile scene with the Security tab active.
-   */
+  /** Navigates to the Security tab of the profile route. */
   openProfile(): void {
     this.dropdownOpen.set(false);
-    profileTabStore.set('security');
-    sceneStore.set('profile');
+    void this._router.navigate(['/profile/security']);
   }
 
-  /**
-   * Navigates to the profile scene with the Settings tab active.
-   */
+  /** Navigates to the Settings tab of the profile route. */
   openSettings(): void {
     this.dropdownOpen.set(false);
-    profileTabStore.set('settings');
-    sceneStore.set('profile');
+    void this._router.navigate(['/profile/settings']);
   }
 
   /**
@@ -91,6 +85,6 @@ export class ProfileMenuComponent {
     this.dropdownOpen.set(false);
     await this._authService.logout();
     this._socketService.disconnect();
-    sceneStore.set('login');
+    void this._router.navigate(['/login']);
   }
 }

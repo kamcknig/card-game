@@ -1,8 +1,8 @@
 import { provideExperimentalZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 
 import { AuthService, pendingRegistrationCodeStore } from '../../core/auth/auth.service';
-import { sceneStore } from '../../state/game-state';
 import { LoginComponent } from './login.component';
 
 /**
@@ -26,13 +26,22 @@ class AuthServiceStub {
     .mockImplementation(async () => this.validateCodeResult);
 }
 
+/**
+ * Stub Router — LoginComponent calls navigate() on successful sign-in.
+ */
+class RouterStub {
+  navigate = jest.fn().mockResolvedValue(true);
+}
+
 describe('LoginComponent', () => {
   let component: LoginComponent;
   let fixture: ComponentFixture<LoginComponent>;
   let authStub: AuthServiceStub;
+  let routerStub: RouterStub;
 
   beforeEach(async () => {
     authStub = new AuthServiceStub();
+    routerStub = new RouterStub();
 
     // Ensure no deep-link code is staged before the component is constructed.
     pendingRegistrationCodeStore.set(undefined);
@@ -43,16 +52,13 @@ describe('LoginComponent', () => {
         // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
         provideExperimentalZonelessChangeDetection(),
         { provide: AuthService, useValue: authStub },
+        { provide: Router, useValue: routerStub },
       ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LoginComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
-
-    // Reset the shared scene atom between tests so sceneStore.set('lobby')
-    // from one test does not bleed into the next.
-    sceneStore.set('login');
   });
 
   afterEach(() => {
@@ -102,7 +108,7 @@ describe('LoginComponent', () => {
     expect(component.showPassword()).toBe(false);
   });
 
-  it('signin: failing login surfaces the server message without changing scene', async () => {
+  it('signin: failing login surfaces the server message without navigating', async () => {
     authStub.loginResult = { ok: false, message: 'Username/password does not match' };
     component.username.set('alice');
     component.password.set('wrong');
@@ -110,16 +116,16 @@ describe('LoginComponent', () => {
 
     expect(authStub.login).toHaveBeenCalled();
     expect(component.errorMessage()).toBe('Username/password does not match');
-    expect(sceneStore.get()).toBe('login');
+    expect(routerStub.navigate).not.toHaveBeenCalled();
   });
 
-  it('signin: successful login transitions to the lobby scene', async () => {
+  it('signin: successful login navigates to the lobby route', async () => {
     authStub.loginResult = { ok: true };
     component.username.set('alice');
     component.password.set('dominion');
     await component.onSubmit();
 
-    expect(sceneStore.get()).toBe('lobby');
+    expect(routerStub.navigate).toHaveBeenCalledWith(['/lobby']);
     expect(component.errorMessage()).toBeUndefined();
   });
 
@@ -199,6 +205,7 @@ describe('LoginComponent', () => {
         // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
         provideExperimentalZonelessChangeDetection(),
         { provide: AuthService, useValue: authStub },
+        { provide: Router, useValue: routerStub },
       ],
     }).compileComponents();
 
@@ -219,6 +226,7 @@ describe('LoginComponent', () => {
         // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
         provideExperimentalZonelessChangeDetection(),
         { provide: AuthService, useValue: authStub },
+        { provide: Router, useValue: routerStub },
       ],
     }).compileComponents();
 
@@ -249,6 +257,7 @@ describe('LoginComponent', () => {
         // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
         provideExperimentalZonelessChangeDetection(),
         { provide: AuthService, useValue: authStub },
+        { provide: Router, useValue: routerStub },
       ],
     }).compileComponents();
 
@@ -274,6 +283,7 @@ describe('LoginComponent', () => {
         // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
         provideExperimentalZonelessChangeDetection(),
         { provide: AuthService, useValue: authStub },
+        { provide: Router, useValue: routerStub },
       ],
     }).compileComponents();
 

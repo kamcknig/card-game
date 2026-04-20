@@ -1,12 +1,11 @@
 import { provideExperimentalZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { NanostoresService } from '@nanostores/angular';
 import { of } from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { SocketService } from '../../core/socket-service/socket.service';
-import { sceneStore } from '../../state/game-state';
-import { profileTabStore } from '../../state/profile-state';
 import { ProfileMenuComponent } from './profile-menu.component';
 
 /**
@@ -32,15 +31,24 @@ class SocketServiceStub {
   disconnect = jest.fn();
 }
 
+/**
+ * Stub Router — ProfileMenuComponent calls navigate() for profile, settings, and logout.
+ */
+class RouterStub {
+  navigate = jest.fn().mockResolvedValue(true);
+}
+
 describe('ProfileMenuComponent', () => {
   let component: ProfileMenuComponent;
   let fixture: ComponentFixture<ProfileMenuComponent>;
   let authStub: AuthServiceStub;
   let socketStub: SocketServiceStub;
+  let routerStub: RouterStub;
 
   beforeEach(async () => {
     authStub = new AuthServiceStub();
     socketStub = new SocketServiceStub();
+    routerStub = new RouterStub();
 
     await TestBed.configureTestingModule({
       imports: [ProfileMenuComponent],
@@ -50,12 +58,9 @@ describe('ProfileMenuComponent', () => {
         { provide: NanostoresService, useClass: NanostoresServiceStub },
         { provide: AuthService, useValue: authStub },
         { provide: SocketService, useValue: socketStub },
+        { provide: Router, useValue: routerStub },
       ],
     }).compileComponents();
-
-    // Reset shared atoms so state from one test does not leak into the next.
-    sceneStore.set('lobby');
-    profileTabStore.set('security');
 
     fixture = TestBed.createComponent(ProfileMenuComponent);
     component = fixture.componentInstance;
@@ -111,35 +116,32 @@ describe('ProfileMenuComponent', () => {
     expect(component.dropdownOpen()).toBe(true);
   });
 
-  it('openProfile sets profileTabStore to security, navigates to profile scene, and closes the dropdown', () => {
+  it('openProfile navigates to /profile/security and closes the dropdown', () => {
     component.dropdownOpen.set(true);
-    profileTabStore.set('settings'); // start with a different value to confirm override
 
     component.openProfile();
 
-    expect(profileTabStore.get()).toBe('security');
-    expect(sceneStore.get()).toBe('profile');
+    expect(routerStub.navigate).toHaveBeenCalledWith(['/profile/security']);
     expect(component.dropdownOpen()).toBe(false);
   });
 
-  it('openSettings sets profileTabStore to settings, navigates to profile scene, and closes the dropdown', () => {
+  it('openSettings navigates to /profile/settings and closes the dropdown', () => {
     component.dropdownOpen.set(true);
 
     component.openSettings();
 
-    expect(profileTabStore.get()).toBe('settings');
-    expect(sceneStore.get()).toBe('profile');
+    expect(routerStub.navigate).toHaveBeenCalledWith(['/profile/settings']);
     expect(component.dropdownOpen()).toBe(false);
   });
 
-  it('logout calls auth.logout, disconnects the socket, navigates to the login scene, and closes the dropdown', async () => {
+  it('logout calls auth.logout, disconnects the socket, navigates to /login, and closes the dropdown', async () => {
     component.dropdownOpen.set(true);
 
     await component.logout();
 
     expect(authStub.logout).toHaveBeenCalled();
     expect(socketStub.disconnect).toHaveBeenCalled();
-    expect(sceneStore.get()).toBe('login');
+    expect(routerStub.navigate).toHaveBeenCalledWith(['/login']);
     expect(component.dropdownOpen()).toBe(false);
   });
 });

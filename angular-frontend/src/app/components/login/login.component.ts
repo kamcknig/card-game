@@ -2,12 +2,12 @@ import { ChangeDetectionStrategy, Component, OnInit, inject, signal, viewChild }
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged, switchMap, tap } from 'rxjs/operators';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { Eye, EyeOff, LucideAngularModule } from 'lucide-angular';
 import { SceneContentComponent } from '../scene-content/scene-content.component';
 import { NewPasswordFieldsComponent } from '../ui/new-password-fields/new-password-fields.component';
 import { UiDialogComponent } from '../ui/dialog/ui-dialog.component';
 import { AuthService, pendingRegistrationCodeStore } from '../../core/auth/auth.service';
-import { sceneStore } from '../../state/game-state';
 
 /**
  * Login scene component that gates access to the lobby.
@@ -32,6 +32,7 @@ import { sceneStore } from '../../state/game-state';
 })
 export class LoginComponent implements OnInit {
   private readonly _authService = inject(AuthService);
+  private readonly _router = inject(Router);
 
   // Lucide icon references exposed to the template for the sign-in password
   // visibility toggle.
@@ -182,7 +183,7 @@ export class LoginComponent implements OnInit {
           'user',
         );
         if (result.ok) {
-          sceneStore.set('lobby');
+          void this._router.navigate(['/lobby']);
         } else {
           // Surface server messages verbatim so rate-limit / lockout text
           // reaches the user (e.g. 'Too many attempts', 'Account temporarily
