@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Card, CardId, CardKey, MatchSummary, PlayerId } from 'shared/types';
 import { playerStore } from '../../state/player-state';
 import { DOCUMENT, NgOptimizedImage } from '@angular/common';
 import { cardStore } from '../../state/card-state';
 import { DeckEntriesPipe } from './deck-entries.pipe';
+import { matchSummaryStore } from '../../state/match-state';
 
 @Component({
   selector: 'app-game-summary',
@@ -16,7 +17,8 @@ import { DeckEntriesPipe } from './deck-entries.pipe';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class GameSummaryComponent {
-  matchSummary = input.required<MatchSummary>();
+  /** Match summary populated by the gameOver socket event before this route activates. */
+  readonly matchSummary = computed<MatchSummary>(() => matchSummaryStore.get()!);
 
   private readonly _document = inject(DOCUMENT);
   // Applies static title for browser tabs when summary view is active.
