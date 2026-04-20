@@ -149,7 +149,7 @@ Use consistent levels and meaningful context:
 # Build, Test, and Development Commands
 
 Install dependencies in each package before running:
-- `npm install` (root), `cd server && npm install`, `cd angular-frontend && npm install`.
+- `npm install` (root), `cd server && npm install`, `cd angular-frontend && yarn install` (angular-frontend uses yarn).
 
 Key commands:
 - `npm run watch` (from root): run both server and frontend concurrently.
