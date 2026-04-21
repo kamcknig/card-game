@@ -1,6 +1,8 @@
 <div class="content">
-  <!-- left half, victory points and -->
-  <div class="pane left">
+  <!-- Left pane — final standings -->
+  <section class="pane left" aria-labelledby="gs-standings-title">
+    <h2 id="gs-standings-title" class="pane-title">Final Standings</h2>
+
     <div class="player-score-content">
       @for (playerSummary of playerSummaries(); track playerSummary.playerId) {
         <div class="player-score-wrapper">
@@ -8,7 +10,7 @@
 
           <div class="hr-rule place-name-separator"><div class="line"></div></div>
 
-          <span>{{ playerSummary.playerName }}</span>
+          <span class="player-name">{{ playerSummary.playerName }}</span>
 
           <div class="hr-rule turn-score-separator"><div class="line"></div></div>
 
@@ -29,12 +31,14 @@
         </div>
       }
     </div>
-  </div>
+  </section>
 
-  <div class="vertical-rule"></div>
+  <div class="vertical-rule" aria-hidden="true"></div>
 
-  <!-- right half, decks -->
-  <div class="pane right">
+  <!-- Right pane — deck summaries -->
+  <section class="pane right" aria-labelledby="gs-decks-title">
+    <h2 id="gs-decks-title" class="pane-title">Decks</h2>
+
     @for (deck of playerDecks(); track deck.playerId) {
       <div class="player-deck-summary">
         <div>{{ deck.playerName }}</div>
@@ -52,5 +56,5 @@
         </div>
       </div>
     }
-  </div>
+  </section>
 </div>

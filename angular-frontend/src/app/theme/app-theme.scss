@@ -1,4 +1,15 @@
+/* ═══════════════════════════════════════════════════════════════
+   App theme tokens. Light values on :root are the default.
+   Dark values override the same names under [data-theme="dark"].
+   Components only ever read var(--theme-*) — they're theme-agnostic.
+   ═══════════════════════════════════════════════════════════════ */
+
 :root {
+  /* ─── Typography ─── */
+  --theme-font-display: 'Cinzel', Georgia, serif;
+  --theme-font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --theme-font-accent: 'Lora', Georgia, serif;
+
   /* Text roles */
   --theme-text-primary: #2a241a;
   --theme-text-secondary: #544630;
@@ -7,6 +18,7 @@
   --theme-text-banner-subtitle: #7a5d3d;
   --theme-text-banner-shadow-main: #1a3650;
   --theme-text-banner-shadow-glow: rgba(12, 34, 52, 0.8);
+
   /* Source accent roles used by logs and source-labeled set-aside tabs. */
   --theme-color-source-default: #ffffff;
   --theme-color-source-treasure: #fdda56;
@@ -63,4 +75,45 @@
   --card-small-height: 150px;
   --card-landscape-width: 280px;
   --card-landscape-height: 124px;
+}
+
+/* ─── Dark theme overrides ─── */
+:root[data-theme="dark"] {
+  --theme-text-primary: #e8dfd2;
+  --theme-text-secondary: #a99b87;
+  --theme-text-banner: #d4b679;
+  --theme-text-banner-subtitle: #b8a077;
+  --theme-text-banner-shadow-main: #000000;
+  --theme-text-banner-shadow-glow: rgba(0, 0, 0, 0.9);
+
+  /* Dampen oversaturated source colors for dark theme legibility. */
+  --theme-color-source-default: #f0e8dc;
+  --theme-color-source-treasure: #e6c54a;
+  --theme-color-source-victory: #6fa84a;
+  --theme-color-source-curse: #b054d4;
+  --theme-color-source-duration: #d97a2c;
+
+  --theme-surface-app-start: #1a1714;
+  --theme-surface-app-end: #231f1a;
+  --theme-surface-header: #3d3226;
+  --theme-surface-nav: #231f1a;
+  --theme-surface-panel: #2c2620;
+  --theme-surface-card: #342d25;
+  --theme-surface-danger-soft: #4a2620;
+  --theme-surface-count-badge: #5a4e3e;
+
+  --theme-border-subtle: #3d3429;
+  --theme-border-section-light: #4a3f32;
+  --theme-border-strong: #8b7a62;
+  --theme-border-action: #6b5d48;
+  --theme-border-danger: #c45a42;
+
+  --theme-action-secondary-bg: #2c2620;
+  --theme-action-nav-selected-bg: #4a3f32;
+  --theme-action-primary-bg: #5a4e3e;
+  --theme-action-primary-muted-bg: #453b2e;
+  --theme-action-danger-soft-bg: #5a2e25;
+  --theme-action-disabled-bg: #2a251f;
+  --theme-border-disabled: #4a4238;
+  --theme-text-disabled: #6b6153;
 }

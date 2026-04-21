@@ -3,6 +3,7 @@ import { NanostoresService } from '@nanostores/angular';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { authUsernameStore } from '../../core/auth/auth.service';
 import { ProfileMenuComponent } from '../profile-menu/profile-menu.component';
+import { ThemeToggleComponent } from '../ui/theme-toggle/theme-toggle.component';
 
 /**
  * Shared banner header rendered at the top of every non-match scene.
@@ -13,7 +14,7 @@ import { ProfileMenuComponent } from '../profile-menu/profile-menu.component';
 @Component({
   selector: 'app-scene-banner',
   standalone: true,
-  imports: [ProfileMenuComponent],
+  imports: [ProfileMenuComponent, ThemeToggleComponent],
   templateUrl: './scene-banner.component.html',
   styleUrl: './scene-banner.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -12,25 +12,37 @@
   border-right: 1px solid var(--theme-border-subtle);
   padding: 16px;
   background: var(--theme-surface-nav);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .nav-button {
   width: 100%;
-  border: 1px solid var(--theme-border-action);
-  background: var(--theme-action-secondary-bg);
-  color: var(--theme-text-primary);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--theme-text-secondary);
   border-radius: 8px;
   padding: 10px 12px;
   text-align: left;
+  font-family: var(--theme-font-body);
   font-weight: 600;
+  font-size: 0.95rem;
+
+  &:hover {
+    color: var(--theme-text-primary);
+    background: var(--theme-action-secondary-bg);
+  }
 }
 
 .nav-button.selected {
   background: var(--theme-action-nav-selected-bg);
+  color: var(--theme-text-primary);
+  border-color: var(--theme-border-action);
 }
 
 .lobby-content {
-  padding: 20px;
+  padding: 24px;
 }
 
 .content-header {
@@ -38,10 +50,15 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  margin-bottom: 8px;
 
   h2 {
     margin: 0;
-    font-size: 1.2rem;
+    font-family: var(--theme-font-display);
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--theme-text-primary);
   }
 }
 
@@ -50,21 +67,31 @@
   background: var(--theme-action-primary-bg);
   color: var(--theme-text-primary);
   border-radius: 6px;
-  padding: 8px 12px;
+  padding: 8px 14px;
+  font-family: var(--theme-font-display);
   font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.82rem;
 }
 
 .status-message {
   margin: 14px 0;
   border: 1px solid var(--theme-border-danger);
   background: var(--theme-surface-danger-soft);
+  color: var(--theme-text-primary);
   border-radius: 6px;
   padding: 10px 12px;
 }
 
 .empty-state {
-  margin-top: 24px;
+  margin-top: 32px;
+  padding: 32px;
+  text-align: center;
   color: var(--theme-text-secondary);
+  border: 2px dashed var(--theme-border-subtle);
+  border-radius: 10px;
+  font-style: italic;
 }
 
 .game-list {
@@ -84,7 +111,13 @@
   border: 1px solid var(--theme-border-subtle);
   border-radius: 8px;
   background: var(--theme-surface-card);
-  padding: 10px 12px;
+  padding: 12px 14px;
+  transition: border-color 120ms ease, transform 120ms ease;
+
+  &:hover {
+    border-color: var(--theme-border-action);
+    transform: translateY(-1px);
+  }
 }
 
 .join-button {
@@ -92,18 +125,22 @@
   border-radius: 6px;
   background: var(--theme-action-primary-muted-bg);
   color: var(--theme-text-primary);
-  padding: 6px 10px;
+  padding: 6px 12px;
   font-weight: 600;
+  font-size: 0.85rem;
 }
 
 .game-name {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-weight: 600;
 }
 
 .game-count {
   font-variant-numeric: tabular-nums;
+  color: var(--theme-text-secondary);
+  font-size: 0.9rem;
 }
 
 @media (max-width: 900px) {
