@@ -64,10 +64,15 @@ type SelectionModalKind =
   | 'prophecies';
 type SelectionModalState = {
   kind: SelectionModalKind;
-  excludedItems: ({ cardKey: string; } | null)[];
+  /** Card keys pre-selected when the modal opens (current configuration state). */
+  initialSelectionKeys: string[];
   catalogKind: SearchCatalogKind;
   imageSize: 'half' | 'full';
   filterBasicCards: boolean;
+  /** Maximum number of cards the user may select; Infinity for no limit. */
+  maxSelections: number;
+  /** Display title shown in the modal header. */
+  title: string;
 };
 
 @Component({
@@ -477,55 +482,67 @@ export class MatchConfigurationComponent implements OnDestroy {
       case 'bannedKingdom':
         this.activeSelectionModal.set({
           kind,
-          excludedItems: [...this.preSelectedKingdoms(), ...this.bannedKingdoms()],
+          initialSelectionKeys: this.bannedKingdoms().map((c) => c.cardKey),
           catalogKind: 'cards',
           imageSize: 'half',
           filterBasicCards: true,
+          maxSelections: Infinity,
+          title: 'Banned Cards',
         });
         return;
       case 'kingdom':
         this.activeSelectionModal.set({
           kind,
-          excludedItems: [...this.preSelectedKingdoms(), ...this.bannedKingdoms()],
+          initialSelectionKeys: this.selectedKingdoms().map((c) => c.cardKey),
           catalogKind: 'cards',
           imageSize: 'half',
           filterBasicCards: true,
+          maxSelections: 10,
+          title: 'Kingdom Cards',
         });
         return;
       case 'events':
         this.activeSelectionModal.set({
           kind,
-          excludedItems: this.preSelectedEvents(),
+          initialSelectionKeys: this.selectedEvents().map((e) => e.cardKey),
           catalogKind: 'events',
           imageSize: 'full',
           filterBasicCards: false,
+          maxSelections: Infinity,
+          title: 'Events',
         });
         return;
       case 'landmarks':
         this.activeSelectionModal.set({
           kind,
-          excludedItems: this.preSelectedLandmarks(),
+          initialSelectionKeys: this.selectedLandmarks().map((l) => l.cardKey),
           catalogKind: 'landmarks',
           imageSize: 'full',
           filterBasicCards: false,
+          maxSelections: Infinity,
+          title: 'Landmarks',
         });
         return;
       case 'projects':
         this.activeSelectionModal.set({
           kind,
-          excludedItems: this.preSelectedProjects(),
+          initialSelectionKeys: this.selectedProjects().map((p) => p.cardKey),
           catalogKind: 'projects',
           imageSize: 'full',
           filterBasicCards: false,
+          maxSelections: Infinity,
+          title: 'Projects',
         });
         return;
       case 'ways':
         this.activeSelectionModal.set({
           kind,
-          excludedItems: this.preSelectedWays(),
+          initialSelectionKeys: this.selectedWays().map((w) => w.cardKey),
           catalogKind: 'ways',
           imageSize: 'full',
           filterBasicCards: false,
+          maxSelections: Infinity,
+          title: 'Ways',
         });
         return;
       case 'allies':
@@ -534,19 +551,23 @@ export class MatchConfigurationComponent implements OnDestroy {
         }
         this.activeSelectionModal.set({
           kind,
-          excludedItems: this.preSelectedAllies(),
+          initialSelectionKeys: this.selectedAllies().map((a) => a.cardKey),
           catalogKind: 'allies',
           imageSize: 'full',
           filterBasicCards: false,
+          maxSelections: 1,
+          title: 'Allies',
         });
         return;
       case 'traits':
         this.activeSelectionModal.set({
           kind,
-          excludedItems: this.preSelectedTraits(),
+          initialSelectionKeys: this.selectedTraits().map((t) => t.cardKey),
           catalogKind: 'traits',
           imageSize: 'full',
           filterBasicCards: false,
+          maxSelections: Infinity,
+          title: 'Traits',
         });
         return;
       case 'prophecies':
@@ -555,10 +576,12 @@ export class MatchConfigurationComponent implements OnDestroy {
         }
         this.activeSelectionModal.set({
           kind,
-          excludedItems: this.preSelectedProphecies(),
+          initialSelectionKeys: this.selectedProphecies().map((p) => p.cardKey),
           catalogKind: 'prophecies',
           imageSize: 'full',
           filterBasicCards: false,
+          maxSelections: 1,
+          title: 'Prophecies',
         });
         return;
     }
@@ -569,38 +592,52 @@ export class MatchConfigurationComponent implements OnDestroy {
     this.activeSelectionModal.set(undefined);
   }
 
-  // Routes selected modal item to the matching configuration handler.
-  onSelectionModalItemSelected(item: SelectableSearchResult) {
+  // Routes the confirmed multi-selection to the matching configuration handler and closes.
+  onSelectionModalConfirmed(items: SelectableSearchResult[]) {
     const modalKind = this.activeSelectionModal()?.kind;
     if (!modalKind) return;
 
     switch (modalKind) {
       case 'bannedKingdom':
-        this.onBannedKingdomSelected(item as CardNoId);
+        this.emitMatchConfigurationUpdate({
+          bannedKingdoms: this.sortByCardKey(items as CardNoId[]),
+        });
         break;
       case 'kingdom':
-        this.onKingdomSelected(item as CardNoId);
+        this.updateKingdomSelections(items as CardNoId[]);
         break;
       case 'events':
-        this.onEventSelected(item as EventNoId);
+        this.emitMatchConfigurationUpdate({
+          events: this.sortByCardKey(items as EventNoId[]),
+        });
         break;
       case 'landmarks':
-        this.onLandmarkSelected(item as LandmarkNoId);
+        this.emitMatchConfigurationUpdate({
+          landmarks: this.sortByCardKey(items as LandmarkNoId[]),
+        });
         break;
       case 'projects':
-        this.onProjectSelected(item as ProjectNoId);
+        this.emitMatchConfigurationUpdate({
+          projects: this.sortByCardKey(items as ProjectNoId[]),
+        });
         break;
       case 'ways':
-        this.onWaySelected(item as WayNoId);
+        this.emitMatchConfigurationUpdate({
+          ways: this.sortByCardKey(items as WayNoId[]),
+        });
         break;
       case 'allies':
-        this.onAllySelected(item as AllyNoId);
+        if (!this.canAddAlly()) break;
+        this.emitMatchConfigurationUpdate({ allies: items as AllyNoId[] });
         break;
       case 'traits':
-        this.onTraitSelected(item as TraitNoId);
+        this.emitMatchConfigurationUpdate({
+          traits: this.sortByCardKey(items as TraitNoId[]),
+        });
         break;
       case 'prophecies':
-        this.onProphecySelected(item as ProphecyNoId);
+        if (!this.canAddProphecy()) break;
+        this.emitMatchConfigurationUpdate({ prophecies: items as ProphecyNoId[] });
         break;
     }
 
@@ -661,70 +698,6 @@ export class MatchConfigurationComponent implements OnDestroy {
     if (!this.isGameOwner()) return;
     const remainingProphecies = this.selectedProphecies().filter((entry) => entry.cardKey !== prophecy.cardKey);
     this.emitMatchConfigurationUpdate({ prophecies: remainingProphecies });
-  }
-
-  // Adds one kingdom card selected from the search modal.
-  onKingdomSelected(selectedCard: CardNoId) {
-    if (!this.isGameOwner()) return;
-    const kingdoms = [...this.selectedKingdoms(), selectedCard];
-    this.updateKingdomSelections(kingdoms);
-  }
-
-  // Adds one event selected from the search modal.
-  onEventSelected(selectedEvent: EventNoId) {
-    if (!this.isGameOwner()) return;
-    const selectedEvents = [...this.selectedEvents(), selectedEvent];
-    this.emitMatchConfigurationUpdate({ events: this.sortByCardKey(selectedEvents) });
-  }
-
-  // Adds one landmark selected from the search modal.
-  onLandmarkSelected(selectedLandmark: LandmarkNoId) {
-    if (!this.isGameOwner()) return;
-    const selectedLandmarks = [...this.selectedLandmarks(), selectedLandmark];
-    this.emitMatchConfigurationUpdate({ landmarks: this.sortByCardKey(selectedLandmarks) });
-  }
-
-  // Adds one project selected from the search modal.
-  onProjectSelected(selectedProject: ProjectNoId) {
-    if (!this.isGameOwner()) return;
-    const selectedProjects = [...this.selectedProjects(), selectedProject];
-    this.emitMatchConfigurationUpdate({ projects: this.sortByCardKey(selectedProjects) });
-  }
-
-  // Adds one way selected from the search modal.
-  onWaySelected(selectedWay: WayNoId) {
-    if (!this.isGameOwner()) return;
-    const selectedWays = [...this.selectedWays(), selectedWay];
-    this.emitMatchConfigurationUpdate({ ways: this.sortByCardKey(selectedWays) });
-  }
-
-  // Adds one trait selected from the search modal.
-  onTraitSelected(selectedTrait: TraitNoId) {
-    if (!this.isGameOwner()) return;
-    const selectedTraits = [...this.selectedTraits(), selectedTrait];
-    this.emitMatchConfigurationUpdate({ traits: this.sortByCardKey(selectedTraits) });
-  }
-
-  // Adds one ally selected from the search modal.
-  onAllySelected(selectedAlly: AllyNoId) {
-    if (!this.isGameOwner() || !this.canAddAlly()) return;
-    this.emitMatchConfigurationUpdate({ allies: [selectedAlly] });
-  }
-
-  // Adds one prophecy selected from the search modal.
-  onProphecySelected(selectedProphecy: ProphecyNoId) {
-    if (!this.isGameOwner() || !this.canAddProphecy()) return;
-    this.emitMatchConfigurationUpdate({ prophecies: [selectedProphecy] });
-  }
-
-  // Adds one banned kingdom card if it is not already banned.
-  onBannedKingdomSelected(selectedCard: CardNoId) {
-    if (!this.isGameOwner()) return;
-    const currentBanned = this.bannedKingdoms();
-    const exists = currentBanned.some((entry) => entry.cardKey === selectedCard.cardKey);
-    if (exists) return;
-
-    this.emitMatchConfigurationUpdate({ bannedKingdoms: this.sortByCardKey([...currentBanned, selectedCard]) });
   }
 
   // Removes one kingdom card from the banned list.

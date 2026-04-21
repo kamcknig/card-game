@@ -13,6 +13,7 @@
   /* Text roles */
   --theme-text-primary: #2a241a;
   --theme-text-secondary: #544630;
+  --theme-text-tertiary: #7a6a55;
   --theme-text-on-dark: #ffffff;
   --theme-text-banner: #6b5033;
   --theme-text-banner-subtitle: #7a5d3d;
@@ -47,6 +48,7 @@
 
   /* Border roles */
   --theme-border-subtle: #bca98d;
+  --theme-border-medium: #9e8b72;
   --theme-border-section-light: #c8b798;
   --theme-border-strong: #7f6746;
   --theme-border-action: #826a48;
@@ -62,6 +64,9 @@
   --theme-action-disabled-opacity: 0.65;
   --theme-border-disabled: #a99981;
   --theme-text-disabled: #6b6153;
+
+  /* Accent roles */
+  --theme-accent-gold: #8b6f47;
 
   /* Status roles */
   --theme-color-ready: #2e7d32;
@@ -85,6 +90,7 @@
 :root[data-theme="dark"] {
   --theme-text-primary: #e8dfd2;
   --theme-text-secondary: #a99b87;
+  --theme-text-tertiary: #7a6e5e;
   --theme-text-banner: #5a4220;
   --theme-text-banner-subtitle: #6b5033;
   --theme-text-banner-shadow-main: #000000;
@@ -108,10 +114,13 @@
   --theme-surface-count-badge: #5a4e3e;
 
   --theme-border-subtle: #3d3429;
+  --theme-border-medium: #5a4e3e;
   --theme-border-section-light: #4a3f32;
   --theme-border-strong: #8b7a62;
   --theme-border-action: #6b5d48;
   --theme-border-danger: #c45a42;
+
+  --theme-accent-gold: #c9a84c;
 
   --theme-action-secondary-bg: #2c2620;
   --theme-action-nav-selected-bg: #4a3f32;
