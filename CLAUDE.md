@@ -143,6 +143,7 @@ Use consistent levels and meaningful context:
   docs
 - CI/CD pipeline, production architecture, secrets: [`README.md`](README.md#cicd-pipeline)
 - Azure operations (containers, env vars, rollback, troubleshooting): [`docs/azure-operations.md`](docs/azure-operations.md)
+- Frontend design guidelines (tokens, typography, theming, component patterns): [`docs/design-guidelines.md`](docs/design-guidelines.md)
 - Dockerfiles: `docker/` (production and dev images)
 - GitHub Actions workflows: `.github/workflows/`
 

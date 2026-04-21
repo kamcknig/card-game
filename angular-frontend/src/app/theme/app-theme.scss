@@ -33,6 +33,7 @@
   --theme-color-source-hex: #f2a9ff;
   --theme-color-source-state: #c4d4ff;
   --theme-color-source-artifact: #ffdca8;
+  --theme-color-winner: #b89340;
 
   /* Surface roles */
   --theme-surface-app-start: #efe7da;
@@ -62,6 +63,9 @@
   --theme-border-disabled: #a99981;
   --theme-text-disabled: #6b6153;
 
+  /* Status roles */
+  --theme-color-ready: #2e7d32;
+
   /* Overlay roles */
   --theme-overlay-color: #000000;
   --theme-overlay-alpha-soft: 0.5;
@@ -81,8 +85,8 @@
 :root[data-theme="dark"] {
   --theme-text-primary: #e8dfd2;
   --theme-text-secondary: #a99b87;
-  --theme-text-banner: #d4b679;
-  --theme-text-banner-subtitle: #b8a077;
+  --theme-text-banner: #5a4220;
+  --theme-text-banner-subtitle: #6b5033;
   --theme-text-banner-shadow-main: #000000;
   --theme-text-banner-shadow-glow: rgba(0, 0, 0, 0.9);
 
@@ -92,6 +96,7 @@
   --theme-color-source-victory: #6fa84a;
   --theme-color-source-curse: #b054d4;
   --theme-color-source-duration: #d97a2c;
+  --theme-color-winner: #e6c54a;
 
   --theme-surface-app-start: #1a1714;
   --theme-surface-app-end: #231f1a;
@@ -116,4 +121,6 @@
   --theme-action-disabled-bg: #2a251f;
   --theme-border-disabled: #4a4238;
   --theme-text-disabled: #6b6153;
+
+  --theme-color-ready: var(--theme-color-source-victory);
 }

@@ -25,6 +25,7 @@ import {
 import { debugRuntimeContextStore } from '../../state/debug-runtime-state';
 import { selectableSearchCatalogStore } from '../../state/selectable-search-state';
 import { waitingOnPlayerIdStore } from '../../state/match-ui-overlay-state';
+import { logEntryIdsStore, logStore } from '../../state/log-state';
 import { SocketEventMap, SocketService } from './socket.service';
 
 /**
@@ -101,6 +102,13 @@ export class SocketEventMapService {
       }
 
       this._clearMatchUiOverlays();
+      // Reset match stores so a potential restart starts patching from a clean slate.
+      // Without this, the second match's initial patchMatch is applied on top of the
+      // first match's state, which can cause applyPatch to throw and silently drop the
+      // patch — leaving matchStore, cardSourceStore, and derived state stale.
+      matchStore.set(null);
+      cardSourceStore.set({});
+      cardSourceTagMapStore.set({});
       matchSummaryStore.set(summary);
       void this._router.navigate(['/game-summary']);
     };
@@ -176,6 +184,9 @@ export class SocketEventMapService {
     };
 
     map['matchReady'] = async () => {
+      // Clear first-match log entries so the second match starts with an empty log.
+      logEntryIdsStore.set([]);
+      logStore.set({});
       this._clearMatchUiOverlays();
       const cardsById = cardStore.get();
       if (!cardsById || Object.keys(cardsById).length === 0) {

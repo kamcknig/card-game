@@ -116,6 +116,10 @@ Imported via tsconfig path `shared/*` → `../shared/src/*`. No build step — T
 - Card images at `public/assets/card-images/base-v2/{full-size,half-size}/`
 - Dev server port: 51455
 
+## Design Guidelines
+
+All visual design decisions — color tokens, typography, theming rules, component patterns, and the QA checklist for new components — are documented in [`docs/design-guidelines.md`](../docs/design-guidelines.md). Consult and update that document whenever making or changing design decisions.
+
 ## Icons
 
 All icons use [`lucide-angular`](https://lucide.dev/guide/packages/lucide-angular). Do not add inline SVGs or Unicode glyphs for iconography.

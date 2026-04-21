@@ -1,6 +1,10 @@
 <section class="scene-content-shell">
   <app-scene-banner [subtitle]="subtitle()">
-    <!-- Scene-specific banner actions (leave button, etc). -->
+    <!-- Re-project nav actions (left side of action bar) -->
+    <ng-container ngProjectAs="[sceneNavActions]">
+      <ng-content select="[sceneNavActions]"></ng-content>
+    </ng-container>
+    <!-- Re-project header actions (right side of action bar) -->
     <ng-content select="[sceneHeaderActions]"></ng-content>
   </app-scene-banner>
 
@@ -8,4 +12,3 @@
     <ng-content></ng-content>
   </section>
 </section>
-

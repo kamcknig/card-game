@@ -11,8 +11,8 @@ import { authGuard } from './core/guards/auth.guard';
 import { guestGuard } from './core/guards/guest.guard';
 
 export const routes: Routes = [
-  { path: 'login', component: LoginComponent, canActivate: [guestGuard] },
-  { path: 'lobby', component: LobbyComponent, canActivate: [authGuard] },
+  { path: 'login', component: LoginComponent, canActivate: [guestGuard], title: 'Dominion' },
+  { path: 'lobby', component: LobbyComponent, canActivate: [authGuard], title: 'Dominion - Lobby' },
   {
     path: 'profile',
     component: ProfileComponent,
@@ -21,13 +21,14 @@ export const routes: Routes = [
       // Bare /profile falls through to security. Navigation from ProfileMenuComponent
       // always targets /profile/security or /profile/settings directly.
       { path: '', redirectTo: 'security', pathMatch: 'full' },
-      { path: 'security', component: ProfileSecurityComponent },
-      { path: 'settings', component: ProfileSettingsComponent },
+      { path: 'security', component: ProfileSecurityComponent, title: 'Dominion - Profile' },
+      { path: 'settings', component: ProfileSettingsComponent, title: 'Dominion - Settings' },
     ],
   },
-  { path: 'configuration', component: MatchConfigurationComponent, canActivate: [authGuard] },
-  { path: 'match', component: MatchComponent, canActivate: [authGuard] },
-  { path: 'game-summary', component: GameSummaryComponent, canActivate: [authGuard] },
+  { path: 'configuration', component: MatchConfigurationComponent, canActivate: [authGuard], title: 'Dominion - Match Configuration' },
+  // Title is overridden dynamically by match-scene.ts once the player name is known.
+  { path: 'match', component: MatchComponent, canActivate: [authGuard], title: 'Dominion' },
+  { path: 'game-summary', component: GameSummaryComponent, canActivate: [authGuard], title: 'Dominion - Game Summary' },
   { path: '', redirectTo: 'login', pathMatch: 'full' },
   { path: '**', redirectTo: 'login' },
 ];

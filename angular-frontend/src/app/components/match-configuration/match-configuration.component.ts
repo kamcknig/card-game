@@ -50,7 +50,7 @@ import { SceneContentComponent } from '../scene-content/scene-content.component'
 import { UiDialogComponent } from '../ui/dialog/ui-dialog.component';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { compare } from 'fast-json-patch';
-import { FolderOpen, LucideAngularModule, Save, Trash2 } from 'lucide-angular';
+import { FolderOpen, LogOut, LucideAngularModule, Save, Trash2 } from 'lucide-angular';
 
 type SelectionModalKind =
   | 'bannedKingdom'
@@ -91,6 +91,7 @@ export class MatchConfigurationComponent implements OnDestroy {
   readonly SaveIcon = Save;
   readonly LoadIcon = FolderOpen;
   readonly ClearIcon = Trash2;
+  readonly LeaveIcon = LogOut;
 
   private readonly _router = inject(Router);
   private readonly _nanoStoreService = inject(NanostoresService);

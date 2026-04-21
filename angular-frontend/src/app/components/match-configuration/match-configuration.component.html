@@ -1,28 +1,37 @@
 <app-scene-content [subtitle]="activeGameName()">
+  <!-- Left side of action bar: leave game -->
+  <div sceneNavActions>
+    @if (activeLobbyGameId(); as activeGameId) {
+      <button class="leave-game-button" (click)="leaveGame(activeGameId)">
+        <lucide-icon [img]="LeaveIcon" [size]="16" />
+        Leave Game
+      </button>
+    }
+  </div>
+
+  <!-- Right side of action bar: config actions -->
   <div sceneHeaderActions class="header-actions">
     @if (isGameOwner()) {
       <button
-        class="config-icon-button"
-        title="Save Config"
+        class="config-action-button"
         (click)="openSaveDialog()"
         [disabled]="!hasConfigurationChanges()"
       >
-        <lucide-icon [img]="SaveIcon" [size]="18" />
+        <lucide-icon [img]="SaveIcon" [size]="16" />
+        Save
       </button>
-      <button class="config-icon-button" title="Load Config" (click)="openLoadDialog()">
-        <lucide-icon [img]="LoadIcon" [size]="18" />
+      <button class="config-action-button" (click)="openLoadDialog()">
+        <lucide-icon [img]="LoadIcon" [size]="16" />
+        Load
       </button>
       <button
-        class="config-icon-button"
-        title="Clear Config"
+        class="config-action-button"
         (click)="clearConfiguration()"
         [disabled]="!canClearConfiguration()"
       >
-        <lucide-icon [img]="ClearIcon" [size]="18" />
+        <lucide-icon [img]="ClearIcon" [size]="16" />
+        Clear
       </button>
-    }
-    @if (activeLobbyGameId(); as activeGameId) {
-      <button class="leave-game-button" (click)="leaveGame(activeGameId)">Back to Lobby</button>
     }
   </div>
 

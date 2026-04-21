@@ -1,70 +1,67 @@
+* {
+  font-size: 36px;
+}
+
 :host, .content {
   height: 100%;
 }
 
 :host {
   display: block;
-  color: var(--theme-text-primary);
-  background: linear-gradient(150deg, var(--theme-surface-app-start) 0%, var(--theme-surface-app-end) 100%);
+}
+
+.vertical-rule {
+  width: 1px;
+  background-color: black;
+  align-self: stretch;
 }
 
 .content {
   display: flex;
   flex-direction: row;
   flex: 1;
-  padding: 24px;
-  gap: 24px;
-}
-
-.vertical-rule {
-  width: 1px;
-  background: var(--theme-border-subtle);
-  align-self: stretch;
+  padding: 20px;
 }
 
 .pane {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 16px;
-  overflow-y: auto;
+  padding: 20px;
 
   &.left {
     max-width: 40%;
   }
 }
 
-// ─── Standings grid ───
 .player-score-content {
   display: grid;
-  row-gap: 16px;
+  row-gap: 20px;
   grid-template-columns:
     60px 1fr max-content 1fr 60px 1fr max-content;
   align-items: center;
-  font-family: var(--theme-font-body);
-  font-size: 1rem;
-}
 
-.player-score-wrapper {
-  display: contents;
+  .player-score-wrapper {
+    display: contents;
 
-  .hr-rule {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    div.hr-rule {
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
-    .line {
-      width: 100%;
-      height: 1px;
-      background: var(--theme-border-subtle);
-      margin: 0 10px;
+      .line {
+        width: 100%;
+        height: 2px;
+        background: black;
+        margin: 0 10px; /* This finally works! */
+      }
     }
-  }
 
-  .score-container {
-    position: relative;
-    width: 45px;
-    height: 45px;
+    .score-container {
+      position: relative;
+      width: 45px;
+      height: 45px;
+    }
   }
 }
 
@@ -73,7 +70,7 @@
   height: auto;
   display: inline-block;
   object-fit: contain;
-  filter: brightness(0.6);
+  filter: brightness(.5);
 }
 
 .score-value {
@@ -81,11 +78,10 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-family: var(--theme-font-display);
-  font-weight: 700;
-  font-size: 18px;
-  color: var(--theme-text-on-dark);
+  font-weight: bold;
   pointer-events: none;
+  color: white;
+  font-size: 24px;
 }
 
 .place {
@@ -95,50 +91,21 @@
   width: 45px;
   height: 45px;
   border-radius: 50%;
-  border: 2px solid var(--theme-border-strong);
-  color: var(--theme-text-primary);
-  font-family: var(--theme-font-display);
-  font-weight: 700;
-  font-size: 1.1rem;
+  border: 2px solid black;
+  font-weight: bold;
 }
 
-// Highlight the winner's place badge with treasure-gold.
-.player-score-wrapper:first-of-type .place {
-  border-color: var(--theme-color-source-treasure);
-  color: var(--theme-color-source-treasure);
-  background: color-mix(in srgb, var(--theme-color-source-treasure) 14%, transparent);
-}
-
-.turns-taken {
-  color: var(--theme-text-secondary);
-  font-size: 0.9rem;
-  font-variant-numeric: tabular-nums;
-}
-
-// ─── Deck summary panels ───
 .player-deck-summary {
-  border: 1px solid var(--theme-border-subtle);
-  background: var(--theme-surface-card);
-  border-radius: 10px;
-  padding: 16px;
+  border: 2px solid black;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 12px;
-
-  > div:first-child {
-    font-family: var(--theme-font-display);
-    font-size: 1rem;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--theme-text-secondary);
-  }
+  gap: 20px;
 
   .deck-summary {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 20px;
   }
 
   .card-summary {
@@ -146,38 +113,18 @@
       position: relative;
       height: 30px;
       overflow: hidden;
-      border-radius: 4px;
     }
 
     .count {
       text-align: center;
-      width: 22px;
-      height: 22px;
-      font-family: var(--theme-font-body);
-      font-weight: 700;
-      font-size: 11px;
-      line-height: 22px;
+      width: 30px;
+      height: 30px;
+      font-size: 24px;
       position: absolute;
       top: 0;
       left: 0;
-      background: var(--theme-action-primary-bg);
-      color: var(--theme-text-primary);
-      border: 1px solid var(--theme-border-action);
-      border-radius: 4px;
+      background: red;
+      border: 2px solid black;
     }
   }
-}
-
-.pane-title {
-  margin: 0 0 20px;
-  font-family: var(--theme-font-display);
-  font-size: 0.95rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--theme-text-secondary);
-}
-
-.player-name {
-  font-weight: 600;
 }

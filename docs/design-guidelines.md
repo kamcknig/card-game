@@ -1,0 +1,217 @@
+# Dominion Clone — Design Guidelines for Claude Code
+
+**Repo:** `kamcknig/card-game` · **Frontend:** `angular-frontend/src/`
+
+> Keep this document up to date whenever a design decision changes — token names, color values, new component patterns, etc.
+
+## Typography
+
+Three Google Fonts, loaded via CDN `<link>` in `index.html`:
+
+| Font | CSS token | Role | Weights |
+|---|---|---|---|
+| **Cinzel** | `var(--theme-font-display)` | Display — h1–h4, section titles, panel titles, primary button labels, banner title, place badges, stat labels | 500, 600, 700 |
+| **Source Sans 3** | `var(--theme-font-body)` | Body — paragraphs, inputs, labels, player names, card names, menus, secondary buttons, meta text. **Default for everything.** | 400, 500, 600, 700 |
+| **Lora** (italic) | `var(--theme-font-accent)` | Accent — **game log only** (`<app-game-log>`). Nowhere else. Narrator voice. | 400, 500, italic 400 |
+
+**Decision rule:** title/ceremony → Cinzel · body text the user reads/types → Source Sans 3 · game-event narrator in the log → Lora italic.
+
+**Never** use hardcoded font-family strings. Always use `var(--theme-font-display)`, `var(--theme-font-body)`, or `var(--theme-font-accent)`.
+
+Cinzel headings should use `letter-spacing: 0.04em–0.12em` and often `text-transform: uppercase`.
+
+## Theming
+
+The app supports **Light**, **Dark**, and **Auto** (OS preference) themes.
+
+- Theme state is owned by `ThemeService` (`src/app/core/theme.service.ts`), which writes `data-theme="light"|"dark"` on `<html>`.
+- A flash-prevention `<script>` in `index.html` reads `localStorage('dominion-theme')` before Angular boots.
+- All colors MUST use CSS custom properties (tokens). **Never hardcode hex colors in component SCSS.**
+- Theme toggle component: `<app-theme-toggle>` (standalone, lives in shared or ui folder).
+- Dark theme overrides live under `:root[data-theme="dark"]` in `app-theme.scss`.
+
+## Design Tokens
+
+All tokens are defined in `src/app/theme/app-theme.scss` on `:root` (light) with `:root[data-theme="dark"]` overrides.
+
+**CRITICAL: All tokens use the `--theme-` prefix.** Never use unprefixed token names. The only exceptions are card dimension tokens (`--card-width`, `--card-height`, etc.).
+
+### Surfaces
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| `--theme-surface-app-start` | `#efe7da` | `#1a1714` | App gradient start |
+| `--theme-surface-app-end` | `#e4d7c1` | `#231f1a` | App gradient end |
+| `--theme-surface-header` | `#c1a277` | `#3d3226` | Header bar |
+| `--theme-surface-nav` | `#e6dac6` | `#231f1a` | Navigation sidebar |
+| `--theme-surface-panel` | `#e8d8c1` | `#2c2620` | Panel backgrounds |
+| `--theme-surface-card` | `#f2e9da` | `#342d25` | Card/row backgrounds |
+| `--theme-surface-danger-soft` | `#f9dfd8` | `#4a2620` | Danger background |
+| `--theme-surface-count-badge` | `#aaaaaa` | `#5a4e3e` | Count badge bg |
+
+### Text
+| Token | Light | Dark |
+|---|---|---|
+| `--theme-text-primary` | `#2a241a` | `#e8dfd2` |
+| `--theme-text-secondary` | `#544630` | `#a99b87` |
+| `--theme-text-on-dark` | `#ffffff` | (same) |
+| `--theme-text-disabled` | `#6b6153` | `#6b6153` |
+| `--theme-text-banner` | `#6b5033` | `#d4b679` |
+| `--theme-text-banner-subtitle` | `#7a5d3d` | `#b8a077` |
+| `--theme-text-banner-shadow-main` | `#1a3650` | `#000000` |
+| `--theme-text-banner-shadow-glow` | `rgba(12,34,52,0.8)` | `rgba(0,0,0,0.9)` |
+
+### Borders
+| Token | Light | Dark |
+|---|---|---|
+| `--theme-border-subtle` | `#bca98d` | `#3d3429` |
+| `--theme-border-section-light` | `#c8b798` | `#4a3f32` |
+| `--theme-border-strong` | `#7f6746` | `#8b7a62` |
+| `--theme-border-action` | `#826a48` | `#6b5d48` |
+| `--theme-border-danger` | `#b84d38` | `#c45a42` |
+| `--theme-border-disabled` | `#a99981` | `#4a4238` |
+
+### Interactive / Action
+| Token | Light | Dark |
+|---|---|---|
+| `--theme-action-secondary-bg` | `#f4ecde` | `#2c2620` |
+| `--theme-action-nav-selected-bg` | `#dbc39a` | `#4a3f32` |
+| `--theme-action-primary-bg` | `#dcc093` | `#5a4e3e` |
+| `--theme-action-primary-muted-bg` | `#e1c89e` | `#453b2e` |
+| `--theme-action-danger-soft-bg` | `#f0cbcb` | `#5a2e25` |
+| `--theme-action-disabled-bg` | `#d8d0c2` | `#2a251f` |
+| `--theme-action-disabled-opacity` | `0.65` | (same) |
+
+### Overlays
+| Token | Light | Dark |
+|---|---|---|
+| `--theme-overlay-color` | `#000000` | (same) |
+| `--theme-overlay-alpha-soft` | `0.5` | (same) |
+| `--theme-overlay-alpha-medium` | `0.6` | (same) |
+| `--theme-overlay-alpha-strong` | `0.8` | (same) |
+| `--theme-panel-bg` | `rgba(0,0,0, var(--theme-overlay-alpha-medium))` | (same) |
+
+### Card Type / Source Colors (shared across themes unless dark-overridden)
+| Token | Light | Dark (if different) |
+|---|---|---|
+| `--theme-color-source-default` | `#ffffff` | `#f0e8dc` |
+| `--theme-color-source-treasure` | `#fdda56` | `#e6c54a` |
+| `--theme-color-source-victory` | `#8efb49` | `#6fa84a` |
+| `--theme-color-source-curse` | `#d45ffb` | `#b054d4` |
+| `--theme-color-source-duration` | `#ff8d34` | `#d97a2c` |
+| `--theme-color-source-event` | `#ffe0a8` | — |
+| `--theme-color-source-landmark` | `#ffd09d` | — |
+| `--theme-color-source-project` | `#b6f1ad` | — |
+| `--theme-color-way` | `#9fc6ff` | — |
+| `--theme-color-source-boon` | `#a4f0ff` | — |
+| `--theme-color-source-hex` | `#f2a9ff` | — |
+| `--theme-color-source-state` | `#c4d4ff` | — |
+| `--theme-color-source-artifact` | `#ffdca8` | — |
+
+### Status Colors
+| Token | Light | Dark | Use |
+|---|---|---|---|
+| `--theme-color-ready` | `#2e7d32` | `var(--theme-color-source-victory)` | Ready/success state indicators |
+
+### Card Dimensions (no `--theme-` prefix)
+| Token | Value |
+|---|---|
+| `--card-width` | `150px` |
+| `--card-height` | `240px` |
+| `--card-small-height` | `150px` |
+| `--card-landscape-width` | `280px` |
+| `--card-landscape-height` | `124px` |
+
+## Component Patterns
+
+### App Background
+Always use the gradient: `background: linear-gradient(150deg, var(--theme-surface-app-start) 0%, var(--theme-surface-app-end) 100%)`.
+
+### Buttons
+- **Primary:** `background: var(--theme-action-primary-bg)`, `color: var(--theme-text-primary)`, `border: 1px solid var(--theme-border-action)`, `border-radius: 6px`.
+- **Primary muted:** `background: var(--theme-action-primary-muted-bg)` — for join/secondary-primary actions.
+- **Secondary:** `background: var(--theme-action-secondary-bg)`, `border: 1px solid var(--theme-border-action)`.
+- **Danger:** `background: var(--theme-action-danger-soft-bg)`, `border: 1px solid var(--theme-border-danger)`.
+- Primary button labels use `font-family: var(--theme-font-display); letter-spacing: 0.05–0.08em; text-transform: uppercase`.
+- All buttons: `transition: background 150ms, border-color 120ms, color 120ms`.
+- Disabled state: `background: var(--theme-action-disabled-bg); opacity: var(--theme-action-disabled-opacity); filter: saturate(0.45); cursor: not-allowed; border-color: var(--theme-border-disabled); color: var(--theme-text-disabled)`.
+
+### Inputs
+- `background: var(--theme-surface-panel)`, `border: 1px solid var(--theme-border-action)`, `border-radius: 6px`.
+- Focus: `border-color: var(--theme-border-strong); box-shadow: 0 0 0 2px rgba(130,106,72,0.2)`.
+- Shared classes: `.form-field`, `.form-label`, `.form-input`, `.form-input-wrapper`, `.form-input-toggle`, `.form-field-error` are defined globally in `styles.scss`.
+
+### Cards / Rows
+- `background: var(--theme-surface-card)`, `border: 1px solid var(--theme-border-subtle)`, `border-radius: 8px`.
+- Hover (lobby rows): `border-color: var(--theme-border-action); transform: translateY(-1px)`.
+
+### Section Titles
+- `font-family: var(--theme-font-display); font-size: 0.9–1rem; font-weight: 600; letter-spacing: 0.08–0.12em; text-transform: uppercase; color: var(--theme-text-secondary)`.
+
+### Config Sections
+- `border: 1px solid var(--theme-border-section-light)`, `border-radius: 8px`.
+
+### Scene Banner
+- Banner header: `background: var(--theme-surface-header)`, `border-bottom: 1px solid var(--theme-border-strong)`.
+- Title: Cinzel 700, uppercase, `letter-spacing: 0.08–0.12em`, with text-shadow using `var(--theme-text-banner-shadow-main)` and `var(--theme-text-banner-shadow-glow)`.
+- Actions row: absolute top-right, contains theme toggle + profile menu.
+
+### Overlay Panels (match HUD, modals)
+- `background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong))`.
+- `color: var(--theme-text-on-dark)`.
+- `border: 1px solid var(--theme-border-strong)`.
+
+## Expansion Icons
+
+Expansion icon PNGs are solid black on transparent. They are tinted via CSS `filter` (brightness/sepia/hue-rotate chains). Two options exist:
+- **Option A:** Single warm-bronze tint for all icons, with dark-theme warm-gold override.
+- **Option B:** Per-expansion thematic colors via `[attr.data-expansion]` data attribute, keyed to `expansion.name`.
+
+Both use `transition: filter 120ms ease`. Dark theme applies `:host-context([data-theme="dark"])` overrides. Selected state gets a brighter tint.
+
+## Key Rules
+
+1. **Never hardcode colors.** Always use `var(--theme-*)` tokens. Run `grep -rE "#[0-9a-fA-F]{3,6}" angular-frontend/src/app/components` to find violations.
+2. **Never hardcode font-family.** Use `var(--theme-font-display)`, `var(--theme-font-body)`, or `var(--theme-font-accent)`.
+3. **No universal font-size rules.** The `* { font-size: 36px }` in game-summary was a known bug — never do this.
+4. **Both themes must work.** Every new component should look correct in light AND dark. Test by toggling `document.documentElement.setAttribute('data-theme', 'dark')`.
+5. **Transitions on theme-sensitive properties:** `background-color 180ms ease, color 180ms ease` on surfaces; `filter 120ms ease` on icons.
+6. **Angular standalone components** are preferred for new UI pieces.
+7. **`:host-context([data-theme="dark"])`** is the pattern for dark-theme overrides inside Angular component SCSS. If it doesn't work in your build, use a global selector in `styles.scss` instead.
+8. **All new tokens must use the `--theme-` prefix** to match the existing convention.
+
+## File Structure
+
+```
+src/
+├── index.html              # Font links + theme flash-prevention script
+├── styles.scss             # Global resets, shared .form-* / button classes
+├── app/
+│   ├── core/
+│   │   └── theme.service.ts          # ThemeService (signal-based, providedIn: root)
+│   ├── shared/ (or components/ui/)
+│   │   └── theme-toggle/
+│   │       └── theme-toggle.component.ts
+│   ├── components/
+│   │   ├── scene-banner/             # App header with banner image + toggle
+│   │   ├── scene-content/            # Scrollable content wrapper
+│   │   ├── login/
+│   │   ├── lobby/
+│   │   ├── match-configuration/
+│   │   ├── match/match-hud/          # In-game HUD + overlays
+│   │   ├── match/match-hud/game-log/ # Lora italic narrator voice
+│   │   └── game-summary/            # Standings + deck summary
+│   └── theme/
+│       └── app-theme.scss            # ALL token definitions (light + dark)
+```
+
+## QA Checklist for Any New Component
+
+- [ ] Uses only `var(--theme-*)` tokens for colors, fonts, spacing
+- [ ] Headings use `var(--theme-font-display)` with appropriate letter-spacing
+- [ ] Body text uses `var(--theme-font-body)` (inherited from global)
+- [ ] Looks correct in both light and dark themes
+- [ ] Buttons follow the primary/secondary/danger pattern above using `--theme-action-*` and `--theme-border-*` tokens
+- [ ] Disabled states use `--theme-action-disabled-bg`, `--theme-border-disabled`, `--theme-text-disabled`, `--theme-action-disabled-opacity`
+- [ ] Interactive elements have `transition` for smooth state changes
+- [ ] No `* { }` universal rules that could break descendants
+- [ ] New tokens (if any) follow the `--theme-` prefix convention
