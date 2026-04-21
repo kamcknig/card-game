@@ -19,6 +19,7 @@ export class ThemeService {
 
   private readonly osPrefersDark = signal<boolean>(
     typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
     window.matchMedia('(prefers-color-scheme: dark)').matches
   );
 
@@ -40,7 +41,7 @@ export class ThemeService {
     });
 
     // React to OS preference flips while 'auto' is active.
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
       const mq = window.matchMedia('(prefers-color-scheme: dark)');
       const handler = (e: MediaQueryListEvent) => this.osPrefersDark.set(e.matches);
       mq.addEventListener('change', handler);
