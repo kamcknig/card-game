@@ -9,6 +9,8 @@ All resources live in the `turkeysunite` resource group in the East US region.
 | Resource | Name | Purpose |
 |----------|------|---------|
 | Container Registry (ACR) | `turkeysunite` | Stores Docker images (`turkeysunite.azurecr.io`) |
+| Storage Account | `turkeysunite` | Azure Files share for persistent game data |
+| Azure Files Share | `dominion-game-data` | Mounted into server container at `/app/server/game-data` |
 | Container Apps Environment | `dominion-clone-env` | Shared networking layer |
 | Container App | `dominion-clone-server` | Deno game server (port 3000) |
 | Container App | `dominion-clone-frontend` | nginx + Angular SPA (port 80) |
@@ -17,11 +19,13 @@ All resources live in the `turkeysunite` resource group in the East US region.
 
 ### Azure Portal
 
-1. Go to **Container Apps** > select your app (e.g. `dominion-clone-server`)
-2. **Overview** page shows running status, FQDN, and resource usage
-3. **Application > Revisions and replicas** — shows all revisions, which is active, traffic weight, and creation time
-4. **Application > Log stream** — live container stdout/stderr logs
-5. **Monitoring > Logs** — query historical logs via Log Analytics
+1. Search for **Container Apps** in the top search bar (or find it in your starred favorites in the left sidebar)
+2. Select your app (e.g. `dominion-clone-server`)
+3. **Overview** page shows running status, FQDN, and resource usage
+4. **Application > Revisions and replicas** — shows all revisions, which is active, traffic weight, and creation time
+5. **Monitoring > Log stream** — live container stdout/stderr logs
+6. **Monitoring > Logs** — query historical logs via Log Analytics
+7. **Application > Containers** — shows the running image reference including the tag
 
 ### Azure CLI
 
@@ -51,11 +55,11 @@ az containerapp logs show \
 
 ### Automatic (CI/CD)
 
-Publishing a GitHub release triggers the full pipeline automatically:
-1. **Build and Push** builds Docker images and pushes them to ACR with the release tag (e.g., `v1.0.0`) and `latest`
-2. **Deploy** pulls the release-tagged image and updates each Container App, creating a new revision
+Merging to master triggers the full pipeline automatically:
+1. **Build and Push** builds Docker images and pushes them to ACR tagged with the short commit SHA and `latest`
+2. **Deploy** pulls the SHA-tagged image, updates each Container App creating a new revision, then rebinds the custom domain
 
-Each deploy uses a unique release tag (not `latest`) so Azure always creates a new revision. See `.github/workflows/deploy.yml` for details.
+Each deploy uses a unique SHA tag (not `latest`) so Azure always creates a new revision. See `.github/workflows/deploy.yml` for details.
 
 ### Manual Update
 
@@ -66,22 +70,39 @@ To deploy a specific image version outside of the CI/CD pipeline:
 az acr repository show-tags --name turkeysunite --repository dominion-clone-server --orderby time_desc -o table
 az acr repository show-tags --name turkeysunite --repository dominion-clone-frontend --orderby time_desc -o table
 
-# Update server to a specific release tag (e.g., v1.0.0)
+# Update server to a specific tag
 az containerapp update \
   --name dominion-clone-server \
   --resource-group turkeysunite \
-  --image turkeysunite.azurecr.io/dominion-clone-server:<release-tag>
+  --image turkeysunite.azurecr.io/dominion-clone-server:<tag>
 
-# Update frontend to a specific release tag (e.g., v1.0.0)
+# Update frontend to a specific tag
 az containerapp update \
   --name dominion-clone-frontend \
   --resource-group turkeysunite \
-  --image turkeysunite.azurecr.io/dominion-clone-frontend:<release-tag>
+  --image turkeysunite.azurecr.io/dominion-clone-frontend:<tag>
 ```
 
 New revisions typically take 30-60 seconds to start serving traffic.
 
-**Important:** Do not deploy with the `:latest` tag. Azure Container Apps only creates a new revision when the image reference string changes. Since `:latest` is always the same string, Azure skips the update. Always use the release tag (e.g., `v1.0.0`) or another unique identifier.
+**Important:** Do not deploy with the `:latest` tag. Azure Container Apps only creates a new revision when the image reference string changes. Since `:latest` is always the same string, Azure skips the update. Always use a specific tag (e.g., a short SHA).
+
+## Custom Domain
+
+The frontend is accessible at `https://dominion.turkeysunite.com` via a DNS CNAME pointing to `dominion-clone-frontend.happyglacier-53482b33.eastus.azurecontainerapps.io`.
+
+**Known issue:** The `azure/container-apps-deploy-action` clears the custom domain binding when it creates a new revision. The deploy workflow automatically rebinds it after each deploy via `az containerapp hostname bind`. If the site becomes unreachable after a deploy with `ERR_CONNECTION_RESET`, the custom domain binding was lost — run this to restore it:
+
+```bash
+az containerapp hostname bind \
+  --name dominion-clone-frontend \
+  --resource-group turkeysunite \
+  --hostname dominion.turkeysunite.com \
+  --environment dominion-clone-env \
+  --validation-method CNAME
+```
+
+This uses the existing CNAME record to validate ownership and provisions a managed certificate automatically.
 
 ## Environment Variables
 
@@ -145,13 +166,13 @@ az containerapp secret remove \
 | `GAME_DATA_ROOT` | Game data directory (`./game-data`) |
 | `END_MATCH_ON_NO_HUMANS` | End matches when all humans leave (`true`) |
 | `MATCH_STATE_MERGE_ENABLED` | Enable match state merging (`true`) |
-| `AUTH_ALLOWED_ORIGINS` | Comma-separated list of origins allowed by CORS on `/auth/*` endpoints. Use `*` for any origin (dev only). Example: `https://dominion-clone-frontend.azurecontainerapps.io` |
+| `AUTH_ALLOWED_ORIGINS` | Comma-separated list of origins allowed by CORS on `/auth/*` endpoints. Set to the custom domain in production: `https://dominion.turkeysunite.com`. Use `*` for any origin (dev only). |
 | `AUTH_RATE_LIMIT_MAX_ATTEMPTS` | Maximum failed login attempts from a single IP within the rate-limit window before returning 429. Default: `10`. |
 | `AUTH_RATE_LIMIT_WINDOW_MS` | Duration (milliseconds) of the sliding window used by the login rate limiter. Default: `60000` (1 minute). |
 | `AUTH_MAX_BODY_BYTES` | Maximum request body size (bytes) accepted on `/auth/login`. Requests exceeding this are rejected with 413. Default: `4096`. |
 | `AUTH_SESSION_TTL_MS` | Session time-to-live in milliseconds (sliding window). Each validated token has its expiry extended by this amount. Default: `604800000` (7 days). |
 | `AUTH_SESSION_STORE` | Session storage backend. `memory` (default) loses sessions on restart. `kv` uses Deno KV with a write-through cache backed by `AUTH_KV_PATH`. Set to `kv` in production for restart persistence. |
-| `AUTH_KV_PATH` | Filesystem path to the Deno KV store file used when `AUTH_SESSION_STORE=kv`. Default: `./game-data/auth.kv`. Mount an Azure Files share at the containing directory for durable persistence across container revisions. Use `':memory:'` for dev/test (not persisted). |
+| `AUTH_KV_PATH` | Filesystem path to the Deno KV store file used when `AUTH_SESSION_STORE=kv`. Set to `/app/server/game-data/auth.kv` in production (matches the Azure Files mount path). |
 | `AUTH_LOCKOUT_THRESHOLD` | Consecutive failed logins before a user account is locked (per-account, independent of the IP rate limiter). Default: `5`. |
 | `AUTH_LOCKOUT_DURATION_MS` | Lockout duration (milliseconds) once the per-account threshold is exceeded. Default: `600000` (10 minutes). |
 | `AUTH_MIN_PASSWORD_LENGTH` | Minimum password length enforced at registration and password-change. Default: `10`. |
@@ -160,24 +181,39 @@ az containerapp secret remove \
 
 | Variable | Description |
 |----------|-------------|
-| `WS_HOST` | Full URL to the server Container App (e.g. `https://dominion-clone-server.<region>.azurecontainerapps.io`). Also drives the CSP `connect-src` directive — see [Content Security Policy](#content-security-policy) below. |
+| `WS_HOST` | Full URL to the server Container App (e.g. `https://dominion-clone-server.happyglacier-53482b33.eastus.azurecontainerapps.io`). Also drives the CSP `connect-src` directive — see [Content Security Policy](#content-security-policy) below. |
 
 ## Initial Account Bootstrap
 
-The server requires at least one user account to exist before players can log in. The `auth:users` and `auth:create-reg-code` scripts write directly to the Deno KV store and can be run in a local environment targeting the production KV file.
+The server requires at least one user account to exist before players can log in. Since the KV store is backed by Azure Files, the bootstrap process creates the `auth.kv` file locally and uploads it to the share before the server starts.
 
 **Important:** stop the running server before invoking either script. The server primes an in-memory cache of the KV state at startup, so writes made while the server is running will not be visible to the running process and can also cause SQLite lock contention on the shared `auth.kv` file. See [server/README.md](../server/README.md#authentication-usage) for the full HTTP endpoint reference and bootstrap workflow.
 
 ### Creating the first user
 
-Run against the KV store file that will be mounted into the container (or after copying the file locally):
+Run locally to create the KV file, then upload it to Azure Files:
 
 ```bash
+# Create the KV file locally
 cd server
-deno task auth:users create --username <name> --password <pw> --kv /path/to/auth.kv
+deno task auth:users create --username <name> --password <pw> --kv ./game-data/auth.kv
+
+# Get the storage key
+STORAGE_KEY=$(az storage account keys list \
+  --account-name turkeysunite \
+  --resource-group turkeysunite \
+  --query "[0].value" -o tsv)
+
+# Upload auth.kv to the Azure Files share
+az storage file upload \
+  --account-name turkeysunite \
+  --share-name dominion-game-data \
+  --source ./game-data/auth.kv \
+  --path auth.kv \
+  --account-key "$STORAGE_KEY"
 ```
 
-Usernames must be 3–32 characters, alphanumeric or underscore. The `create` subcommand refuses to overwrite an existing username. Other `auth:users` subcommands: `delete`, `set-password`, `clear` (run any subcommand with `--help` for its options).
+Restart the server container so it picks up the file on startup. Usernames must be 3–32 characters, alphanumeric or underscore. The `create` subcommand refuses to overwrite an existing username. Other `auth:users` subcommands: `delete`, `set-password`, `clear` (run any subcommand with `--help` for its options).
 
 ### Creating registration codes for additional users
 
@@ -193,61 +229,98 @@ The script prints the generated code to stdout. Share it securely; anyone with t
 
 ## Session Persistence
 
-The Deno KV backend is the only persistent session storage option. It requires a
-mounted volume to survive container revisions on Azure Container Apps.
+The Deno KV backend is the only persistent session storage option. It requires a mounted Azure Files volume to survive container revisions on Azure Container Apps.
 
 ### Deno KV (`AUTH_SESSION_STORE=kv`)
 
-When `AUTH_SESSION_STORE=kv`, session data is written to the Deno KV store at
-`AUTH_KV_PATH` (default `./game-data/auth.kv`). Deno KV uses a write-through
-in-memory cache so reads are always synchronous and fast. The backing file must
-survive container restarts for sessions to persist.
+When `AUTH_SESSION_STORE=kv`, session data is written to the Deno KV store at `AUTH_KV_PATH`. Deno KV uses a write-through in-memory cache so reads are always synchronous and fast. The backing file must survive container restarts for sessions to persist.
 
-### Using Azure Files for Durable Session Storage
+### Azure Files Setup (one-time)
 
-Mount an Azure Files share at the `game-data` directory so the KV store file
-persists across revisions and restarts.
+The Azure Files share is already provisioned. These steps are for reference if it ever needs to be recreated.
 
 ```bash
-# Create a storage account and file share (one-time setup)
-az storage account create \
-  --name dominionstorage \
-  --resource-group turkeysunite \
-  --sku Standard_LRS
-
-az storage share create \
-  --account-name dominionstorage \
-  --name dominion-game-data
-
-# Store the storage key as a Container Apps secret
+# Get the storage key
 STORAGE_KEY=$(az storage account keys list \
-  --account-name dominionstorage \
+  --account-name turkeysunite \
   --resource-group turkeysunite \
   --query "[0].value" -o tsv)
 
+# Create the file share
+az storage share create \
+  --account-name turkeysunite \
+  --name dominion-game-data \
+  --account-key "$STORAGE_KEY"
+
+# Register the share with the Container Apps Environment
+az containerapp env storage set \
+  --name dominion-clone-env \
+  --resource-group turkeysunite \
+  --storage-name dominion-game-data \
+  --azure-file-account-name turkeysunite \
+  --azure-file-account-key "$STORAGE_KEY" \
+  --azure-file-share-name dominion-game-data \
+  --access-mode ReadWrite
+
+# Store the key as a container app secret
 az containerapp secret set \
   --name dominion-clone-server \
   --resource-group turkeysunite \
   --secrets storage-key="$STORAGE_KEY"
+```
 
-# Mount the Azure Files share into the container
+### Mounting the volume
+
+Azure Container Apps has no direct CLI flag for volume mounts. Use the Portal or the YAML approach.
+
+#### Portal
+
+1. **Container Apps** → `dominion-clone-server` → **Application** → **Containers**
+2. Click **Edit and deploy**
+3. Select the container → **Volume mounts** tab
+4. Add a mount: volume `dominion-game-data`, mount path `/app/server/game-data`
+5. Click **Save** and then **Create** to deploy a new revision
+
+#### CLI (YAML)
+
+```bash
+# Export current config
+az containerapp show \
+  --name dominion-clone-server \
+  --resource-group turkeysunite \
+  -o yaml > /tmp/server-app.yaml
+
+# Patch volumes and volumeMounts into the YAML
+python3 patch-volume.py
+
+# Apply
 az containerapp update \
   --name dominion-clone-server \
   --resource-group turkeysunite \
-  --storage-name dominion-game-data \
-  --storage-account dominionstorage \
-  --storage-account-key secretref:storage-key \
-  --storage-share dominion-game-data \
-  --storage-mount-path /app/server/game-data \
-  --set-env-vars AUTH_SESSION_STORE=kv AUTH_KV_PATH=/app/server/game-data/auth.kv
+  --yaml /tmp/server-app-updated.yaml
 ```
+
+Where `patch-volume.py` adds the following to the exported YAML:
+
+```python
+app['properties']['template']['volumes'] = [{
+    'name': 'game-data-volume',
+    'storageName': 'dominion-game-data',
+    'storageType': 'AzureFile'
+}]
+app['properties']['template']['containers'][0]['volumeMounts'] = [{
+    'volumeName': 'game-data-volume',
+    'mountPath': '/app/server/game-data'
+}]
+```
+
+See [Microsoft docs](https://learn.microsoft.com/en-us/azure/container-apps/storage-mounts-azure-files) for the full reference.
 
 ### Backup Considerations
 
-- The KV store file (`auth.kv`) is self-contained — copy it to back up all sessions.
+- The KV store file (`auth.kv`) is self-contained — copy it to back up all sessions and user accounts.
 - To rotate the auth store (force all users to re-login), delete the store file and restart.
-- Sessions only contain auth metadata (token, username, IP, timestamps). No game state
-  is stored here.
+- Sessions only contain auth metadata (token, username, IP, timestamps). No game state is stored here.
 
 ## Content Security Policy
 
@@ -264,7 +337,7 @@ include /etc/nginx/conf.d/security-headers.conf;
 The generated file contains:
 
 ```nginx
-add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' <WS_HOST> <WS_CONNECT_SRC>; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" always;
+add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' <WS_HOST> <WS_CONNECT_SRC>; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" always;
 add_header X-Content-Type-Options "nosniff" always;
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
@@ -284,7 +357,7 @@ Angular injects component styles as `<style>` tags at runtime, which requires `'
 
 ```bash
 # Inspect security headers from the Nginx container
-curl -si https://<frontend-fqdn>/index.html | grep -i "content-security\|x-content-type\|referrer\|permissions"
+curl -si https://dominion.turkeysunite.com/index.html | grep -i "content-security\|x-content-type\|referrer\|permissions"
 ```
 
 ## Rollback
@@ -356,6 +429,8 @@ The CI/CD pipeline requires these secrets in the GitHub repository settings (**S
 | `AZURE_RESOURCE_GROUP` | `turkeysunite` |
 | `AZURE_SERVER_APP_NAME` | `dominion-clone-server` |
 | `AZURE_FRONTEND_APP_NAME` | `dominion-clone-frontend` |
+| `AZURE_FRONTEND_HOSTNAME` | `dominion.turkeysunite.com` |
+| `AZURE_CONTAINER_APP_ENVIRONMENT` | `dominion-clone-env` |
 
 To rotate the service principal credentials:
 
@@ -386,10 +461,27 @@ az containerapp logs show \
 
 ### Deploy workflow succeeded but old version still running
 
-This happens when deploying with the `:latest` tag (same image reference string = no new revision). The deploy workflow uses release tags to avoid this. For manual updates, always use a specific release tag (e.g., `v1.0.0`).
+This happens when deploying with the `:latest` tag (same image reference string = no new revision). The deploy workflow uses SHA tags to avoid this. For manual updates, always use a specific tag.
+
+### Site unreachable with ERR_CONNECTION_RESET after deploy
+
+The custom domain binding was cleared by the deploy action. The deploy workflow automatically rebinds it, but if it failed or was skipped, run:
+
+```bash
+az containerapp hostname bind \
+  --name dominion-clone-frontend \
+  --resource-group turkeysunite \
+  --hostname dominion.turkeysunite.com \
+  --environment dominion-clone-env \
+  --validation-method CNAME
+```
 
 ### WebSocket connection fails
 
 - Verify the frontend's `WS_HOST` env var points to the server's FQDN with `https://`
 - Azure Container Apps supports WebSocket natively; no special config needed for 1 replica
 - For >1 replica, ensure sticky sessions are enabled (see [Scaling](#scaling))
+
+### Login rejected with "unknown provider"
+
+The frontend JS cached in the browser is an old version using the removed preset-password auth. Hard refresh (`Ctrl+Shift+R`) or open an incognito window to force the new app to load.
