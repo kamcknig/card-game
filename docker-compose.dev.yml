@@ -9,6 +9,10 @@ services:
       # Bind-mount source for hot-reload
       - ./angular-frontend:/app/angular-frontend
       - ./shared:/app/shared
+      # Named volumes shadow the bind-mounted node_modules with the musl-compatible
+      # copies built inside the image, preventing glibc/musl binary mismatches.
+      - frontend_node_modules:/app/angular-frontend/node_modules
+      - frontend_shared_node_modules:/app/shared/node_modules
       # Override proxy config to route to server container by service name
       - ./angular-frontend/src/proxy.conf.docker.json:/app/angular-frontend/src/proxy.conf.json:ro
     environment:
@@ -57,3 +61,5 @@ services:
 
 volumes:
   deno-cache:
+  frontend_node_modules:
+  frontend_shared_node_modules:

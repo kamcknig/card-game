@@ -6,7 +6,7 @@ $match-config-single-column-breakpoint: 940px;
   flex-direction: column;
   gap: 20px;
   padding: 24px;
-  font-family: system-ui, sans-serif;
+  font-family: var(--theme-font-body);
   color: var(--theme-text-primary);
   background: var(--theme-surface-panel);
   width: 100%;
@@ -14,31 +14,94 @@ $match-config-single-column-breakpoint: 940px;
   box-sizing: border-box;
 }
 
+
 .leave-game-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: 1px solid var(--theme-border-danger);
   background: var(--theme-action-danger-soft-bg);
   border-radius: 6px;
-  padding: 7px 12px;
+  padding: 5px 12px;
   color: var(--theme-text-primary);
+  font-family: var(--theme-font-body);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 150ms, border-color 120ms;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
+/* Secondary action buttons: expansion None/All, banned Select/Clear, Add Bot. */
 .secondary-action-button {
-  border: 1px solid var(--theme-border-strong);
-  background: var(--theme-surface-card);
+  background: var(--theme-action-secondary-bg);
+  border: 1px solid var(--theme-border-action);
   border-radius: 6px;
-  padding: 7px 12px;
+  padding: 6px 14px;
   color: var(--theme-text-primary);
+  font-family: var(--theme-font-body);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 150ms, border-color 120ms, color 120ms;
+
+  &:hover:not(:disabled) {
+    border-color: var(--theme-border-strong);
+  }
+
+  &:disabled {
+    background: var(--theme-action-disabled-bg);
+    opacity: var(--theme-action-disabled-opacity);
+    filter: saturate(0.45);
+    cursor: not-allowed;
+    border-color: var(--theme-border-disabled);
+    color: var(--theme-text-disabled);
+  }
+}
+// Text+icon buttons for Save/Load/Clear in the action bar.
+.config-action-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--theme-border-action);
+  background: var(--theme-action-secondary-bg);
+  border-radius: 6px;
+  padding: 5px 10px;
+  color: var(--theme-text-secondary);
+  font-family: var(--theme-font-body);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 150ms, border-color 120ms, color 120ms;
+
+  &:hover {
+    color: var(--theme-text-primary);
+    border-color: var(--theme-border-strong);
+  }
+
+  &:disabled {
+    opacity: var(--theme-action-disabled-opacity);
+    filter: saturate(0.45);
+    cursor: not-allowed;
+    background: var(--theme-action-disabled-bg);
+    border-color: var(--theme-border-disabled);
+    color: var(--theme-text-disabled);
+  }
 }
 
 .section-title {
   margin: 0 0 16px;
-  font-size: 1.25rem;
+  font-family: var(--theme-font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--theme-text-secondary);
 }
 
 .section-header-row {
@@ -238,6 +301,7 @@ $match-config-single-column-breakpoint: 940px;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  margin-bottom: 12px;
 }
 
 .expansion-list {
@@ -254,6 +318,45 @@ $match-config-single-column-breakpoint: 940px;
   width: 32px;
   height: auto;
   object-fit: contain;
+
+  /* Tint the solid-black PNG icons to a warm bronze that matches the
+     theme's --theme-border-strong (#7f6746). The filter stack retargets
+     a pure black source to an arbitrary hex; do not simplify it.
+     Generated with the standard black→hex filter-matrix recipe. */
+  filter:
+    brightness(0) saturate(100%)
+    invert(41%) sepia(24%) saturate(700%)
+    hue-rotate(3deg) brightness(92%) contrast(86%);
+
+  transition: filter 120ms ease;
+}
+
+/* Dark theme — retint to warm gold (~#d4b069) for legibility on the
+   dark panel. Applied via :host-context so this component can live
+   inside the themed document root. */
+:host-context([data-theme='dark']) .expansion-icon {
+  filter:
+    brightness(0) saturate(100%)
+    invert(79%) sepia(38%) saturate(451%)
+    hue-rotate(359deg) brightness(101%) contrast(94%);
+}
+
+/* Selected state (light theme): darker bronze — same hue as unselected
+   but with reduced brightness so selected icons feel heavier/active. */
+.expansion-item.selected .expansion-icon {
+  filter:
+    brightness(0) saturate(100%)
+    invert(41%) sepia(24%) saturate(700%)
+    hue-rotate(3deg) brightness(68%) contrast(92%);
+}
+
+/* Selected state (dark theme): brighter gold so selected icons stand out
+   on the dark panel. */
+:host-context([data-theme='dark']) .expansion-item.selected .expansion-icon {
+  filter:
+    brightness(0) saturate(100%)
+    invert(79%) sepia(38%) saturate(451%)
+    hue-rotate(359deg) brightness(118%) contrast(98%);
 }
 
 .expansion-item {
@@ -430,7 +533,10 @@ $match-config-single-column-breakpoint: 940px;
 
 .config-dialog h3 {
   margin: 0 0 12px;
-  font-size: 20px;
+  font-family: var(--theme-font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
 }
 
 .config-dialog-input {
@@ -457,7 +563,7 @@ $match-config-single-column-breakpoint: 940px;
 
 .config-dialog-error {
   margin-top: 8px;
-  color: #ffb3b3;
+  color: var(--theme-border-danger);
   font-size: 12px;
 }
 
@@ -503,7 +609,7 @@ $match-config-single-column-breakpoint: 940px;
 
 .saved-config-choice.active {
   border-color: var(--theme-border-action);
-  box-shadow: 0 0 0 1px rgba(0, 213, 255, 0.35);
+  box-shadow: 0 0 0 1px var(--theme-border-subtle);
 }
 
 .saved-config-delete-button {

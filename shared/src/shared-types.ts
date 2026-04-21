@@ -630,6 +630,12 @@ export interface ServerListenEvents {
   playAllTreasure: (playerId: PlayerId) => void;
   // Voluntarily leaves an active match; remaining players continue.
   resignMatch: () => void;
+  // Leaves the post-game summary and returns the player to the lobby.
+  returnToLobby: () => void;
+  // Owner-only: starts a new match immediately with the same players and configuration.
+  restartMatch: () => void;
+  // Owner-only: navigates all remaining players back to match configuration.
+  editMatch: () => void;
   // Vote to remove a disconnected human player and resume the match.
   removeDisconnectedPlayer: (playerId: PlayerId) => void;
   // Requests the preloaded selectable card-like catalog for match-configuration UI.

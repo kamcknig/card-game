@@ -30,6 +30,7 @@ import { cardStore } from '../../../state/card-state';
 import { cardSourceStore } from '../../../state/card-source-store';
 import { matchStore } from '../../../state/match-state';
 import { selfPlayerIdStore } from '../../../state/player-state';
+import { kingdomSupplies } from '../../../state/match-logic';
 import { tokenDefinitionStore } from '../../../state/token-definition-state';
 import { selectableCardStore, waySelectableCardStore } from '../../../state/interactive-logic';
 import {
@@ -49,7 +50,6 @@ import { cofferStore, debtStore, villagerStore } from '../../../state/resource-l
 import { CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
 import {
   SUPPLY_BASIC_PANEL_WIDTH_PX,
-  SUPPLY_KINGDOM_PANEL_HEIGHT_PX,
   SUPPLY_PANEL_GAP_PX
 } from '../supply/supply-layout.constants';
 import { getLandscapePanelHeightPx } from '../landscapes/landscape-layout.constants';
@@ -125,9 +125,18 @@ const WAY_PICKER_EDGE_OVERLAP_PX = 5;
 const HUD_LOG_PANEL_WIDTH_PX = 300;
 // Right margin of the HUD log stack from the viewport edge.
 const HUD_LOG_RIGHT_MARGIN_PX = 10;
-// Vertical space reserved at the bottom for the hand panel (including token trays),
-// deck/discard stacks, and the phase-status bar so the play area does not overlap them.
-const PLAYER_BOTTOM_ROW_RESERVE_PX = 400;
+
+// Bottom-row layout constants — must be kept in sync with match-player-area.component.scss.
+// Stack panel: DECK/DISCARD label (~24px) + card (240px) = 264px.
+const STACK_PANEL_HEIGHT_PX = 24 + CARD_HEIGHT;
+// Hand panel base (no token trays): 20px padding + 2px border + 8px hand-row margin + 12px card padding + 240px card.
+const HAND_PANEL_BASE_HEIGHT_PX = 20 + 2 + 8 + 12 + CARD_HEIGHT;
+// Each visible token tray group adds: 8px margin-top + 18px label + 4px margin-bottom + 24px tray height.
+const HAND_PANEL_PER_TRAY_PX = 54;
+// Phase-status bar (ACTIONS/TREASURE/BUYS) sits above the hand panel: ~38px.
+const PHASE_STATUS_BAR_HEIGHT_PX = 38;
+// Player bottom row sits 10px above the viewport bottom edge.
+const PLAYER_BOTTOM_ROW_OFFSET_PX = 10;
 
 @Component({
   selector: 'app-match-player-area',
@@ -139,6 +148,13 @@ const PLAYER_BOTTOM_ROW_RESERVE_PX = 400;
   templateUrl: './match-player-area.component.html',
   styleUrl: './match-player-area.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    // Drives play-area-panel top positioning in CSS via calc().
+    '[style.--kingdom-row-count]': 'kingdomRowCount()',
+    // Combined offset (landscape actual height + 2px border + 10px gap) added to the base
+    // top formula; 0 when no landscapes so the base formula alone provides the correct gap.
+    '[style.--landscape-display-height]': '_landscapeDisplayHeightCss()',
+  },
 })
 export class MatchPlayerAreaComponent {
   private readonly _nanoStores = inject(NanostoresService);
@@ -233,6 +249,38 @@ export class MatchPlayerAreaComponent {
     initialValue: debtStore.get(),
   });
 
+  // Reactive kingdom row count — set on the host so CSS can compute play-area-panel top.
+  private readonly _kingdomSupplies = toSignal(this._nanoStores.useStore(kingdomSupplies), {
+    initialValue: kingdomSupplies.get(),
+  });
+
+  readonly kingdomRowCount = computed(() => Math.max(2, Math.ceil((this._kingdomSupplies()?.length ?? 10) / 5)));
+
+  // Landscape display offset for the CSS top formula.
+  // When a landscape is present: the landscape top sits 20px below the kingdom bottom
+  // (R×160+42), so this offset equals: (landscape height + 2px border) + 10px gap below
+  // landscape + 10px extra for the wider kingdom-to-landscape gap = raw + 22.
+  // When no landscape: 0 — the base formula (R×160+32) already provides a 10px gap from kingdom.
+  private readonly _landscapeDisplayHeight = computed(() => {
+    const raw = getLandscapePanelHeightPx(this.countLandscapes(this._match()));
+    if (raw === 0) return 0;
+    return raw + 2 + (SUPPLY_PANEL_GAP_PX * 2);
+  });
+  readonly _landscapeDisplayHeightCss = computed(() => `${this._landscapeDisplayHeight()}px`);
+
+  // Dynamically computed bottom reserve so the play area ends with a standard gap above
+  // the phase-status bar, accounting for however many token tray groups are currently visible.
+  private readonly _playerBottomReservePx = computed(() => {
+    const trayGroups = (
+      (this.availableCubeTokens().length > 0 || this.availableTokenBadges().length > 0) ? 1 : 0
+    ) + (this.activeTokenBadges().length > 0 ? 1 : 0);
+
+    const handPanelHeight = HAND_PANEL_BASE_HEIGHT_PX + trayGroups * HAND_PANEL_PER_TRAY_PX;
+    const rowHeight = Math.max(STACK_PANEL_HEIGHT_PX, handPanelHeight);
+
+    return PLAYER_BOTTOM_ROW_OFFSET_PX + rowHeight + PHASE_STATUS_BAR_HEIGHT_PX + SUPPLY_PANEL_GAP_PX;
+  });
+
   private readonly _showCofferControls = signal(false);
   private readonly _showVillagerControls = signal(false);
   private readonly _showDebtControls = signal(false);
@@ -244,7 +292,6 @@ export class MatchPlayerAreaComponent {
   readonly layout = computed(() => {
     const rect = this.scoreRect();
     const viewport = this._viewport();
-    const match = this._match();
     const gap = SUPPLY_PANEL_GAP_PX;
 
     // Left edge: right of the basic supply panel with margin.
@@ -254,27 +301,14 @@ export class MatchPlayerAreaComponent {
       basicLeft + SUPPLY_BASIC_PANEL_WIDTH_PX
     ) + gap;
 
-    // Top edge: below the kingdom panel and optional landscape panel.
-    const landscapeCount = this.countLandscapes(match);
-    const landscapePanelHeight = getLandscapePanelHeightPx(landscapeCount);
-    let playAreaTop: number;
-    if (landscapePanelHeight > 0) {
-      // Landscape top matches the landscape overlay component's own formula.
-      const landscapeTop = gap + SUPPLY_KINGDOM_PANEL_HEIGHT_PX + gap;
-      playAreaTop = landscapeTop + landscapePanelHeight + gap;
-    } else {
-      // Without landscapes, position below the kingdom panel with a gap.
-      playAreaTop = gap + SUPPLY_KINGDOM_PANEL_HEIGHT_PX + gap;
-    }
-
     // Right edge: left of the HUD log stack.
     const playAreaRight = HUD_LOG_RIGHT_MARGIN_PX + HUD_LOG_PANEL_WIDTH_PX + gap;
 
+    // Top edge is handled by CSS via --kingdom-row-count and --landscape-display-height.
     return {
-      playAreaTop,
       playAreaLeft,
       playAreaRight,
-      playAreaBottom: PLAYER_BOTTOM_ROW_RESERVE_PX,
+      playAreaBottom: this._playerBottomReservePx(),
       handMaxWidth: Math.max(460, viewport.width - (CARD_WIDTH * 2 + STANDARD_GAP * 8)),
       handCompact: viewport.width < 1680,
     };

@@ -9,6 +9,19 @@ body {
   min-height: 100%;
   background: linear-gradient(150deg, var(--theme-surface-app-start) 0%, var(--theme-surface-app-end) 100%);
   color: var(--theme-text-primary);
+  font-family: var(--theme-font-body);
+  // Smooth theme swaps. 180ms is short enough to feel snappy but long enough
+  // to avoid a jarring flash when the user toggles dark/light.
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--theme-font-display);
+  letter-spacing: 0.02em;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
 }
 
 button {
@@ -36,15 +49,6 @@ button:disabled {
 hr {
   all: unset;
 }
-
-/*
-html, body, input {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-}
-*/
-
 
 .close-button {
   position: absolute;
@@ -103,8 +107,6 @@ html, body, input {
     box-shadow: 0 0 0 2px rgba(130, 106, 72, 0.2);
   }
 
-  // Visual affordance so disabled inputs (e.g. confirm-password before the
-  // primary password has any value) are obviously inert on the dark theme.
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -116,7 +118,6 @@ html, body, input {
   display: flex;
   align-items: center;
 
-  // Extra right padding so text does not run under the trailing toggle.
   .form-input {
     padding-right: 40px;
   }

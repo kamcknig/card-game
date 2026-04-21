@@ -141,15 +141,16 @@ Use consistent levels and meaningful context:
 - Expansion docs: `dominion-docs/expansion-docs`
 - Each expansion has a `README.md` with mechanics and links to card/event/etc
   docs
-- CI/CD pipeline, production architecture, secrets: [`README.md`](README.md#cicd-pipeline)
+- CI/CD pipeline, production architecture, secrets: [`docs/development.md`](docs/development.md#cicd-pipeline)
 - Azure operations (containers, env vars, rollback, troubleshooting): [`docs/azure-operations.md`](docs/azure-operations.md)
+- Frontend design guidelines (tokens, typography, theming, component patterns): [`docs/design-guidelines.md`](docs/design-guidelines.md)
 - Dockerfiles: `docker/` (production and dev images)
 - GitHub Actions workflows: `.github/workflows/`
 
 # Build, Test, and Development Commands
 
 Install dependencies in each package before running:
-- `npm install` (root), `cd server && npm install`, `cd angular-frontend && npm install`.
+- `npm install` (root), `cd server && npm install`, `cd angular-frontend && yarn install` (angular-frontend uses yarn).
 
 Key commands:
 - `npm run watch` (from root): run both server and frontend concurrently.
@@ -165,7 +166,7 @@ Key commands:
 
 ## CI/CD and Deployment
 
-See the root [`README.md`](README.md#cicd-pipeline) for CI/CD pipeline details, GitHub Actions workflows, required secrets, and production architecture. See [`docs/azure-operations.md`](docs/azure-operations.md) for day-to-day Azure operations (updating containers, secrets, rollback, troubleshooting).
+See [`docs/development.md`](docs/development.md#cicd-pipeline) for CI/CD pipeline details, GitHub Actions workflows, required secrets, and production architecture. See [`docs/azure-operations.md`](docs/azure-operations.md) for day-to-day Azure operations (updating containers, secrets, rollback, troubleshooting).
 
 ## Tooling Rules
 

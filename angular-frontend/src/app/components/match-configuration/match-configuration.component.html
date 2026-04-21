@@ -1,20 +1,37 @@
 <app-scene-content [subtitle]="activeGameName()">
+  <!-- Left side of action bar: leave game -->
+  <div sceneNavActions>
+    @if (activeLobbyGameId(); as activeGameId) {
+      <button class="leave-game-button" (click)="leaveGame(activeGameId)">
+        <lucide-icon [img]="LeaveIcon" [size]="16" />
+        Leave Game
+      </button>
+    }
+  </div>
+
+  <!-- Right side of action bar: config actions -->
   <div sceneHeaderActions class="header-actions">
     @if (isGameOwner()) {
       <button
-        class="secondary-action-button"
+        class="config-action-button"
         (click)="openSaveDialog()"
         [disabled]="!hasConfigurationChanges()"
-      >Save Config</button>
-      <button class="secondary-action-button" (click)="openLoadDialog()">Load Config</button>
+      >
+        <lucide-icon [img]="SaveIcon" [size]="16" />
+        Save
+      </button>
+      <button class="config-action-button" (click)="openLoadDialog()">
+        <lucide-icon [img]="LoadIcon" [size]="16" />
+        Load
+      </button>
       <button
-        class="secondary-action-button"
+        class="config-action-button"
         (click)="clearConfiguration()"
         [disabled]="!canClearConfiguration()"
-      >Clear Config</button>
-    }
-    @if (activeLobbyGameId(); as activeGameId) {
-      <button class="leave-game-button" (click)="leaveGame(activeGameId)">Leave Game</button>
+      >
+        <lucide-icon [img]="ClearIcon" [size]="16" />
+        Clear
+      </button>
     }
   </div>
 
@@ -37,7 +54,7 @@
             (click)="addComputerPlayer()"
             [disabled]="playerCount() >= 6"
           >
-            Add Computer Player
+            Add Bot
           </button>
         }
       </section>
@@ -400,13 +417,14 @@
     (close)="closeSelectionModal()"
   >
     <app-select-card-like-modal
-      [excludedItems]="modal.excludedItems"
+      [initialSelectionKeys]="modal.initialSelectionKeys"
       [catalogKind]="modal.catalogKind"
       [imageSize]="modal.imageSize"
       [filterBasicCards]="modal.filterBasicCards"
+      [maxSelections]="modal.maxSelections"
+      [title]="modal.title"
       (close)="closeSelectionModal()"
-      autofocus
-      (itemSelected)="onSelectionModalItemSelected($event)"
+      (confirmed)="onSelectionModalConfirmed($event)"
     >
     </app-select-card-like-modal>
   </app-ui-dialog>

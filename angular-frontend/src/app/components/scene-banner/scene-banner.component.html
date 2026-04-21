@@ -1,4 +1,5 @@
 <header class="scene-banner-header">
+  <!-- Decorative banner image — unchanged -->
   <div class="scene-banner" role="img" aria-label="Dominion Clone banner">
     <h1>Dominion Clone</h1>
     @if (subtitle()) {
@@ -6,11 +7,21 @@
     }
   </div>
 
-  <!-- Project scene-specific actions (e.g. Leave Game) into the banner header. -->
-  <div class="scene-banner-actions">
-    <ng-content></ng-content>
-    @if (username()) {
-      <app-profile-menu />
-    }
-  </div>
+  <!-- Action bar below the banner -->
+  <nav class="scene-action-bar">
+    <div class="action-bar-left">
+      <ng-content select="[sceneNavActions]"></ng-content>
+    </div>
+    <div class="action-bar-right">
+      <div class="action-bar-projected">
+        <ng-content></ng-content>
+      </div>
+      <span class="action-bar-divider"></span>
+      <app-theme-toggle />
+      <span class="action-bar-divider"></span>
+      @if (username()) {
+        <app-profile-menu />
+      }
+    </div>
+  </nav>
 </header>

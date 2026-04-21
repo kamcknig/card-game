@@ -43,6 +43,7 @@ import {
   getSourceAccentColorForCardLikeKind,
   getSourceAccentColorForSetAsideSourceKind
 } from '../../../core/source-accent-colors';
+import { environment } from '../../../../environments/environment';
 
 type Mat = MatTabModel;
 type RectLike = { x: number; y: number; width: number; height: number };
@@ -72,6 +73,9 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
   readonly CircleQuestionMarkIcon = CircleQuestionMark;
 
   @ViewChild('scoreView', { read: ElementRef }) scoreView!: ElementRef;
+
+  // Controls visibility of the resign confirmation dialog.
+  readonly resignDialogVisible = signal(false);
 
   // Currently displayed mat in the modal.
   readonly visibleMat = signal<Mat | null>(null);
@@ -305,6 +309,18 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
     debugOverlayVisibleStore.set(!debugOverlayVisibleStore.get());
   }
 
+  /**
+   * Sends a POST to the debug end-game endpoint, forcibly ending the active
+   * match and triggering the game-over flow on the server.
+   */
+  async debugEndGame(): Promise<void> {
+    const ctx = debugRuntimeContextStore.get();
+    if (!ctx?.gameId || !ctx.matchScopeId) return;
+    await fetch(`${environment.wsHost}/debug/games/${ctx.gameId}/matches/${ctx.matchScopeId}/end`, {
+      method: 'POST',
+    });
+  }
+
   // Forwards "next phase" requests to the active match scene via AppComponent output binding.
   onNextPhaseRequested() {
     this.nextPhaseRequested.emit();
@@ -425,12 +441,19 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
     };
   }
 
-  // Prompts the user to confirm resigning from the current match.
+  // Opens the resign confirmation dialog.
   onResignMatch() {
-    const confirmResign = window.confirm('Resign and leave this game?');
-    if (!confirmResign) {
-      return;
-    }
+    this.resignDialogVisible.set(true);
+  }
+
+  // Closes the resign dialog without resigning.
+  onCancelResign() {
+    this.resignDialogVisible.set(false);
+  }
+
+  // Confirms resign: emits the server event and closes the dialog.
+  onConfirmResign() {
+    this.resignDialogVisible.set(false);
     this._socketService.emit('resignMatch');
   }
 

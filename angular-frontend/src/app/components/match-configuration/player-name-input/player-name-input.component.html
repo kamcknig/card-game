@@ -1,8 +1,12 @@
 <div class="content" *ngIf="player() as player">
-  <span [ngStyle]="{'visibility': isOwner() ? 'visible' : 'hidden'}">👑</span>
-  @if (player.isComputer) {
-    <span title="Computer player">🤖</span>
-  }
+  <!-- Single icon slot: crown for owner, robot for computer, blank placeholder otherwise -->
+  <span class="player-icon">
+    @if (isOwner()) {
+      👑
+    } @else if (player.isComputer) {
+      🤖
+    }
+  </span>
 
   <input
     #readyCheckbox
@@ -20,9 +24,9 @@
   }
 
   @if (canModeratePlayer()) {
-    <button type="button" class="moderation-button" (click)="onKickPlayer()">Kick</button>
     @if (!player.isComputer) {
       <button type="button" class="moderation-button ban" (click)="onBanPlayer()">Ban</button>
     }
+    <button type="button" class="moderation-button" (click)="onKickPlayer()">Kick</button>
   }
 </div>

@@ -1,12 +1,13 @@
-import { ChangeDetectionStrategy, Component, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, inject, signal, viewChild } from '@angular/core';
 import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { debounceTime, distinctUntilChanged, switchMap, tap } from 'rxjs/operators';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { Eye, EyeOff, LucideAngularModule } from 'lucide-angular';
 import { SceneContentComponent } from '../scene-content/scene-content.component';
 import { NewPasswordFieldsComponent } from '../ui/new-password-fields/new-password-fields.component';
-import { AuthService } from '../../core/auth/auth.service';
-import { sceneStore } from '../../state/game-state';
+import { UiDialogComponent } from '../ui/dialog/ui-dialog.component';
+import { AuthService, pendingRegistrationCodeStore } from '../../core/auth/auth.service';
 
 /**
  * Login scene component that gates access to the lobby.
@@ -24,13 +25,14 @@ import { sceneStore } from '../../state/game-state';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [SceneContentComponent, FormsModule, NewPasswordFieldsComponent, LucideAngularModule],
+  imports: [SceneContentComponent, FormsModule, NewPasswordFieldsComponent, LucideAngularModule, UiDialogComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   private readonly _authService = inject(AuthService);
+  private readonly _router = inject(Router);
 
   // Lucide icon references exposed to the template for the sign-in password
   // visibility toggle.
@@ -53,6 +55,11 @@ export class LoginComponent {
   readonly showPassword = signal(false);
   /** Username availability error shown inline below the username field in register mode. */
   readonly usernameError = signal<string | undefined>(undefined);
+  /** True while the invalid-code modal is visible after a failed deep-link code validation. */
+  readonly showInvalidCodeModal = signal(false);
+
+  /** Tracks whether the registration code was pre-filled from a URL deep link. */
+  private _codeFromDeepLink = false;
 
   /**
    * Reference to the shared primary/confirm password component rendered in
@@ -62,6 +69,19 @@ export class LoginComponent {
   readonly newPasswordFields = viewChild(NewPasswordFieldsComponent);
 
   constructor() {
+    // Pre-fill registration code from URL deep-link if one was staged on startup.
+    // We set mode() directly (not via setMode()) to avoid clearing registrationCode,
+    // then set registrationCode separately. The store is cleared after reading so
+    // subsequent LoginComponent instantiations do not re-apply a stale value.
+    const pending = pendingRegistrationCodeStore.get();
+    if (pending) {
+      this.mode.set('register');
+      this.registrationCode.set(pending);
+      pendingRegistrationCodeStore.set(undefined);
+      // Flag so ngOnInit can validate the code asynchronously.
+      this._codeFromDeepLink = true;
+    }
+
     // Debounced username availability check — fires only in register mode.
     toObservable(this.username)
       .pipe(
@@ -79,6 +99,34 @@ export class LoginComponent {
         takeUntilDestroyed(),
       )
       .subscribe((error) => this.usernameError.set(error));
+  }
+
+  /**
+   * Validates the deep-link registration code, if any, after the component
+   * initialises. Shows the invalid-code modal and clears the code field when
+   * the server reports the code is not redeemable.
+   */
+  ngOnInit(): void {
+    if (!this._codeFromDeepLink) {
+      return;
+    }
+
+    const code = this.registrationCode();
+    if (!code) {
+      return;
+    }
+
+    void this._authService.validateRegistrationCode(code).then(result => {
+      if (!result.valid) {
+        this.registrationCode.set('');
+        this.showInvalidCodeModal.set(true);
+      }
+    });
+  }
+
+  /** Dismisses the invalid-code modal; the register form remains visible. */
+  dismissInvalidCodeModal(): void {
+    this.showInvalidCodeModal.set(false);
   }
 
   /** Toggles the password visibility state. */
@@ -135,7 +183,7 @@ export class LoginComponent {
           'user',
         );
         if (result.ok) {
-          sceneStore.set('lobby');
+          void this._router.navigate(['/lobby']);
         } else {
           // Surface server messages verbatim so rate-limit / lockout text
           // reaches the user (e.g. 'Too many attempts', 'Account temporarily
@@ -159,8 +207,10 @@ export class LoginComponent {
 
         const result = await this._authService.register(username, password, code);
         if (result.ok) {
-          this.successMessage.set('Account created — please sign in.');
+          // setMode clears all fields and messages; set the success toast and
+          // restore the username AFTER calling setMode so they survive the clear.
           this.setMode('signin');
+          this.successMessage.set('Account created — please sign in.');
           // Keep the username prefilled so the new user only has to type the
           // password they just entered.
           this.username.set(username);

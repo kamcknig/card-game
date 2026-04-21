@@ -3,13 +3,15 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
   height: 100%;
+  padding: 24px 16px;
+  box-sizing: border-box;
   background: linear-gradient(150deg, var(--theme-surface-app-start) 0%, var(--theme-surface-app-end) 100%);
 }
 
-// Phase 5 — Sign In / Register mode toggle that sits above the form card.
+// Sign In / Register mode toggle that sits above the form card.
 .login-mode-toggle {
   display: flex;
   gap: 0;
@@ -26,8 +28,11 @@
   border: none;
   background: transparent;
   color: var(--theme-text-secondary);
+  font-family: var(--theme-font-display);
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   cursor: pointer;
 
   &.is-active {
@@ -50,13 +55,14 @@
   border: 1px solid var(--theme-border-subtle);
   border-radius: 12px;
   background: var(--theme-surface-card);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
 }
 
 // Field layout (.form-field), label (.form-label), input (.form-input),
 // input wrapper (.form-input-wrapper), toggle button (.form-input-toggle),
 // and error (.form-field-error) are defined globally in src/styles.scss.
 
-// Phase 5 — success message shown after a successful registration.
+// Success message shown after a successful registration.
 .login-success {
   margin: 0;
   color: var(--theme-text-primary);
@@ -64,14 +70,63 @@
   font-weight: 500;
 }
 
+// Invalid registration-code modal shown when a deep-link code fails server validation.
+.invalid-code-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: min(360px, 90vw);
+  padding: 2rem;
+  border: 1px solid var(--theme-border-subtle);
+  border-radius: 12px;
+  background: var(--theme-surface-card);
+  color: var(--theme-text-primary);
+
+  &__title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  &__body {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--theme-text-secondary);
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  &__confirm {
+    border: 1px solid var(--theme-border-action);
+    background: var(--theme-action-primary-bg);
+    color: var(--theme-text-primary);
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+
+    &:hover {
+      opacity: 0.85;
+    }
+  }
+}
+
 .login-button {
   border: 1px solid var(--theme-border-action);
   background: var(--theme-action-primary-bg);
   color: var(--theme-text-primary);
   border-radius: 6px;
-  padding: 10px 12px;
-  font-weight: 600;
-  font-size: 1rem;
+  padding: 12px 16px;
+  font-family: var(--theme-font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   margin-top: 4px;
   cursor: pointer;
 

@@ -1,7 +1,8 @@
+import { provideExperimentalZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 
-import { AuthService } from '../../core/auth/auth.service';
-import { sceneStore } from '../../state/game-state';
+import { AuthService, pendingRegistrationCodeStore } from '../../core/auth/auth.service';
 import { LoginComponent } from './login.component';
 
 /**
@@ -13,34 +14,56 @@ class AuthServiceStub {
   loginResult: { ok: boolean; message?: string } = { ok: true };
   registerResult: { ok: boolean; message?: string } = { ok: true };
   usernameAvailable = true;
+  validateCodeResult: { ok: boolean; valid: boolean } = { ok: true, valid: true };
 
-  login = jasmine.createSpy('login').and.callFake(async () => this.loginResult);
-  register = jasmine.createSpy('register').and.callFake(async () => this.registerResult);
-  checkUsernameAvailability = jasmine
-    .createSpy('checkUsernameAvailability')
-    .and.callFake(async () => this.usernameAvailable);
+  login = jest.fn().mockImplementation(async () => this.loginResult);
+  register = jest.fn().mockImplementation(async () => this.registerResult);
+  checkUsernameAvailability = jest
+    .fn()
+    .mockImplementation(async () => this.usernameAvailable);
+  validateRegistrationCode = jest
+    .fn()
+    .mockImplementation(async () => this.validateCodeResult);
+}
+
+/**
+ * Stub Router — LoginComponent calls navigate() on successful sign-in.
+ */
+class RouterStub {
+  navigate = jest.fn().mockResolvedValue(true);
 }
 
 describe('LoginComponent', () => {
   let component: LoginComponent;
   let fixture: ComponentFixture<LoginComponent>;
   let authStub: AuthServiceStub;
+  let routerStub: RouterStub;
 
   beforeEach(async () => {
     authStub = new AuthServiceStub();
+    routerStub = new RouterStub();
+
+    // Ensure no deep-link code is staged before the component is constructed.
+    pendingRegistrationCodeStore.set(undefined);
 
     await TestBed.configureTestingModule({
       imports: [LoginComponent],
-      providers: [{ provide: AuthService, useValue: authStub }],
+      providers: [
+        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
+        provideExperimentalZonelessChangeDetection(),
+        { provide: AuthService, useValue: authStub },
+        { provide: Router, useValue: routerStub },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(LoginComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
+  });
 
-    // Reset the shared scene atom between tests so sceneStore.set('lobby')
-    // from one test does not bleed into the next.
-    sceneStore.set('login');
+  afterEach(() => {
+    // Guarantee the store is empty after each test regardless of what the test did.
+    pendingRegistrationCodeStore.set(undefined);
   });
 
   it('should create', () => {
@@ -85,7 +108,7 @@ describe('LoginComponent', () => {
     expect(component.showPassword()).toBe(false);
   });
 
-  it('signin: failing login surfaces the server message without changing scene', async () => {
+  it('signin: failing login surfaces the server message without navigating', async () => {
     authStub.loginResult = { ok: false, message: 'Username/password does not match' };
     component.username.set('alice');
     component.password.set('wrong');
@@ -93,16 +116,16 @@ describe('LoginComponent', () => {
 
     expect(authStub.login).toHaveBeenCalled();
     expect(component.errorMessage()).toBe('Username/password does not match');
-    expect(sceneStore.get()).toBe('login');
+    expect(routerStub.navigate).not.toHaveBeenCalled();
   });
 
-  it('signin: successful login transitions to the lobby scene', async () => {
+  it('signin: successful login navigates to the lobby route', async () => {
     authStub.loginResult = { ok: true };
     component.username.set('alice');
     component.password.set('dominion');
     await component.onSubmit();
 
-    expect(sceneStore.get()).toBe('lobby');
+    expect(routerStub.navigate).toHaveBeenCalledWith(['/lobby']);
     expect(component.errorMessage()).toBeUndefined();
   });
 
@@ -168,5 +191,116 @@ describe('LoginComponent', () => {
 
     expect(authStub.login).not.toHaveBeenCalled();
     expect(component.errorMessage()).toBe('Username and password are required');
+  });
+
+  // --- Deep-link pre-fill and code validation ---
+
+  it('constructor: switches to register mode and pre-fills code from pendingRegistrationCodeStore', async () => {
+    pendingRegistrationCodeStore.set('DEEP-CODE-123');
+
+    await TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [LoginComponent],
+      providers: [
+        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
+        provideExperimentalZonelessChangeDetection(),
+        { provide: AuthService, useValue: authStub },
+        { provide: Router, useValue: routerStub },
+      ],
+    }).compileComponents();
+
+    const f = TestBed.createComponent(LoginComponent);
+    f.detectChanges();
+
+    expect(f.componentInstance.mode()).toBe('register');
+    expect(f.componentInstance.registrationCode()).toBe('DEEP-CODE-123');
+  });
+
+  it('constructor: clears pendingRegistrationCodeStore after reading it', async () => {
+    pendingRegistrationCodeStore.set('DEEP-CODE-123');
+
+    await TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [LoginComponent],
+      providers: [
+        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
+        provideExperimentalZonelessChangeDetection(),
+        { provide: AuthService, useValue: authStub },
+        { provide: Router, useValue: routerStub },
+      ],
+    }).compileComponents();
+
+    TestBed.createComponent(LoginComponent);
+
+    expect(pendingRegistrationCodeStore.get()).toBeUndefined();
+  });
+
+  it('constructor: stays in signin mode when pendingRegistrationCodeStore is empty', () => {
+    // The beforeEach already creates the component with an empty store.
+    expect(component.mode()).toBe('signin');
+    expect(component.registrationCode()).toBe('');
+  });
+
+  it('ngOnInit: does not call validateRegistrationCode when no deep-link code was staged', () => {
+    // The component was created in beforeEach with an empty store, so no validation should occur.
+    expect(authStub.validateRegistrationCode).not.toHaveBeenCalled();
+  });
+
+  it('ngOnInit: does not show modal when the deep-link code is valid', async () => {
+    authStub.validateCodeResult = { ok: true, valid: true };
+    pendingRegistrationCodeStore.set('VALID-CODE');
+
+    await TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [LoginComponent],
+      providers: [
+        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
+        provideExperimentalZonelessChangeDetection(),
+        { provide: AuthService, useValue: authStub },
+        { provide: Router, useValue: routerStub },
+      ],
+    }).compileComponents();
+
+    const f = TestBed.createComponent(LoginComponent);
+    f.detectChanges();
+    // Flush the microtask queue so the validateRegistrationCode .then() callback runs.
+    await Promise.resolve();
+
+    expect(authStub.validateRegistrationCode).toHaveBeenCalledWith('VALID-CODE');
+    expect(f.componentInstance.showInvalidCodeModal()).toBe(false);
+    // Code should remain pre-filled.
+    expect(f.componentInstance.registrationCode()).toBe('VALID-CODE');
+  });
+
+  it('ngOnInit: shows invalid-code modal and clears code when deep-link code is invalid', async () => {
+    authStub.validateCodeResult = { ok: true, valid: false };
+    pendingRegistrationCodeStore.set('BAD-CODE');
+
+    await TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [LoginComponent],
+      providers: [
+        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
+        provideExperimentalZonelessChangeDetection(),
+        { provide: AuthService, useValue: authStub },
+        { provide: Router, useValue: routerStub },
+      ],
+    }).compileComponents();
+
+    const f = TestBed.createComponent(LoginComponent);
+    f.detectChanges();
+    // Flush the microtask queue so the .then() callback sets the modal signal.
+    await Promise.resolve();
+
+    expect(authStub.validateRegistrationCode).toHaveBeenCalledWith('BAD-CODE');
+    expect(f.componentInstance.showInvalidCodeModal()).toBe(true);
+    // Invalid code should be cleared so the field is ready for manual entry.
+    expect(f.componentInstance.registrationCode()).toBe('');
+  });
+
+  it('dismissInvalidCodeModal: sets showInvalidCodeModal to false', async () => {
+    component.showInvalidCodeModal.set(true);
+    component.dismissInvalidCodeModal();
+    expect(component.showInvalidCodeModal()).toBe(false);
   });
 });

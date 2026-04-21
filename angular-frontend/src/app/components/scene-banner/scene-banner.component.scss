@@ -1,15 +1,11 @@
+// ─── Banner area (decorative image) ───
 .scene-banner-header {
   position: relative;
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 12px;
+  flex-direction: column;
   width: 100%;
-  min-height: 132px;
-  // Keep a little bottom breathing room below the banner image.
-  padding: 8px 20px 8px;
-  border-bottom: 1px solid var(--theme-border-strong);
   background: var(--theme-surface-header);
+  border-bottom: 1px solid var(--theme-border-strong);
 }
 
 .scene-banner {
@@ -22,7 +18,8 @@
   min-width: min(420px, 100%);
   max-width: 100%;
   height: var(--banner-height);
-  margin: 0 auto;
+  margin: 16px auto;
+  padding: 8px 20px;
   background-image: url('/assets/ui/banner.png');
   background-repeat: no-repeat;
   background-position: center;
@@ -35,12 +32,12 @@
   top: calc(42% + 8px);
   transform: translate(-50%, -50%);
   margin: 0;
+  font-family: var(--theme-font-display);
+  font-weight: 700;
   color: var(--theme-text-banner);
-  text-shadow:
-    0 2px 0 var(--theme-text-banner-shadow-main),
-    0 0 14px var(--theme-text-banner-shadow-glow);
-  font-size: clamp(1rem, 2.1vw, 1.45rem);
-  letter-spacing: 0.08em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  font-size: clamp(1.1rem, 2.3vw, 1.6rem);
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
@@ -54,19 +51,50 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-family: var(--theme-font-body);
+  font-style: italic;
   color: var(--theme-text-banner-subtitle);
-  text-shadow:
-    0 1px 0 var(--theme-text-banner-shadow-main),
-    0 0 10px var(--theme-text-banner-shadow-glow);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
   font-size: clamp(0.75rem, 1.6vw, 1rem);
   letter-spacing: 0.04em;
 }
 
-.scene-banner-actions {
-  position: absolute;
-  right: 20px;
-  top: 14px;
+// ─── Action bar below banner ───
+.scene-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--theme-surface-panel);
+  border-top: 1px solid var(--theme-border-subtle);
+}
+
+.action-bar-left {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.action-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+// Wrapper for projected header actions; hide divider when empty.
+.action-bar-projected {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  &:empty + .action-bar-divider {
+    display: none;
+  }
+}
+
+.action-bar-divider {
+  width: 1px;
+  height: 22px;
+  background: var(--theme-border-subtle);
+  flex-shrink: 0;
 }

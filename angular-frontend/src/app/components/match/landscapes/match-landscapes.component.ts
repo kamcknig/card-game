@@ -8,6 +8,7 @@ import { matchStore } from '../../../state/match-state';
 import { selfPlayerIdStore } from '../../../state/player-state';
 import { awaitingServerLockReleaseStore, promptInteractionLockStore, selectedCardStore } from '../../../state/interactive-state';
 import { selectableCardStore } from '../../../state/interactive-logic';
+import { kingdomSupplies } from '../../../state/match-logic';
 import { displayCardDetail } from '../views/modal/display-card-detail';
 import {
   LANDSCAPE_CARD_WIDTH_PX,
@@ -15,7 +16,6 @@ import {
 } from './landscape-layout.constants';
 import {
   SUPPLY_BASIC_PANEL_WIDTH_PX,
-  SUPPLY_KINGDOM_PANEL_HEIGHT_PX,
   SUPPLY_PANEL_GAP_PX,
 } from '../supply/supply-layout.constants';
 
@@ -64,6 +64,10 @@ const CUBE_TOKEN_ID = 'cube-token';
   templateUrl: './match-landscapes.component.html',
   styleUrl: './match-landscapes.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    // Drives landscape-panel top positioning in CSS via calc().
+    '[style.--kingdom-row-count]': 'kingdomRowCount()',
+  },
 })
 export class MatchLandscapesComponent {
   private readonly _nanoStores = inject(NanostoresService);
@@ -96,14 +100,20 @@ export class MatchLandscapesComponent {
     initialValue: promptInteractionLockStore.get(),
   });
 
+  // Reactive kingdom row count — set on the host so CSS can compute landscape-panel top.
+  private readonly _kingdomSupplies = toSignal(this._nanoStores.useStore(kingdomSupplies), {
+    initialValue: kingdomSupplies.get(),
+  });
+
+  readonly kingdomRowCount = computed(() => Math.max(2, Math.ceil((this._kingdomSupplies()?.length ?? 10) / 5)));
+
   readonly panelLayout = computed(() => {
     const rect = this.scoreRect();
     const basicLeft = SUPPLY_PANEL_GAP_PX;
     const kingdomLeft = Math.max((rect?.x ?? 0) + (rect?.width ?? 0), basicLeft + SUPPLY_BASIC_PANEL_WIDTH_PX) + SUPPLY_PANEL_GAP_PX;
-    const kingdomTop = SUPPLY_PANEL_GAP_PX;
+    // Vertical position is handled by CSS via --kingdom-row-count.
     return {
       left: kingdomLeft,
-      top: kingdomTop + SUPPLY_KINGDOM_PANEL_HEIGHT_PX + SUPPLY_PANEL_GAP_PX,
     };
   });
 

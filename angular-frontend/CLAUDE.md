@@ -26,13 +26,24 @@ npm test
 
 Angular 19 with `provideExperimentalZonelessChangeDetection()`. All components use `ChangeDetectionStrategy.OnPush` with signals. No Zone.js — change detection is driven entirely by signal updates.
 
-### Scene System (No Router)
+### Scene System
 
-`AppComponent` switches between 5 scenes (`login`, `lobby`, `profile`, `configuration`, `match`, `gameSummary`) driven by `sceneStore` in `src/app/state/game-state.ts`. There is no Angular Router for main views.
+Each screen has a dedicated Angular Router route (`/login`, `/lobby`, `/profile`, `/configuration`, `/match`, `/game-summary`). `AppComponent` renders `<router-outlet />` plus three global overlays.
 
-The `profile` scene is a settings hub with a left nav (Security, Settings). The active tab on entry is controlled by `profileTabStore` in `src/app/state/profile-state.ts` — set this atom before switching to `'profile'` to deep-link to a specific tab.
+Navigation is driven directly by the Angular `Router`. Components call `router.navigate(['/path'])`
+directly. Socket-driven transitions go through `SocketEventMapService`
+(`src/app/core/socket-service/socket-event-map.service.ts`), which injects `Router` and owns
+the full socket connection lifecycle. Auth guards enforce session state at the router level.
 
-When scene is `match`, `AppComponent` creates a `MatchScene` instance (plain TypeScript class at `src/app/components/match/views/scenes/match-scene.ts`) that manages game interaction logic, prompt coordination, and way picker overlay. It is destroyed when leaving the match scene.
+Guards: `authGuard` (redirects unauthenticated users to `/login`), `guestGuard` (redirects authenticated users away from `/login` to `/lobby`). Both live in `src/app/core/guards/`.
+
+The `profile` scene is a settings hub at `/profile` with two child routes: `/profile/security`
+(`ProfileSecurityComponent`) and `/profile/settings` (`ProfileSettingsComponent`). `ProfileComponent`
+is the shell. Navigate directly to `/profile/security` or `/profile/settings` to deep-link to a
+specific tab; bare `/profile` redirects to `/profile/security` by default. Child components live
+under `src/app/components/profile/security/` and `src/app/components/profile/settings/`.
+
+When the `/match` route activates, `MatchComponent` (`src/app/components/match/match.component.ts`) creates a `MatchScene` instance (plain TypeScript class at `src/app/components/match/views/scenes/match-scene.ts`) that manages game interaction logic, prompt coordination, and way picker overlay. It is destroyed when leaving the match route via `ngOnDestroy`.
 
 ### State Management (Nanostores)
 
@@ -52,12 +63,14 @@ Components consume stores via `@nanostores/angular`'s `NanostoresService` and `t
 | `interactive-logic.ts` | Computed selectables merging server + client state |
 | `turn-state.ts` | Turn phase, current player |
 | `player-state.ts` | Per-player atoms |
-| `profile-state.ts` | `profileTabStore` — desired tab (`'security'` \| `'settings'`) on profile scene entry |
 | `core/auth/auth.service.ts` | `authTokenStore`, `authUsernameStore`, `authIsAdminStore` — session persistence atoms (localStorage-backed); `AuthService` for login/logout/registration-code HTTP calls |
 
 ### Socket Communication
 
-`SocketService` (`src/app/core/socket-service/socket.service.ts`) manages the Socket.IO connection. All server-to-store event bindings are in `socket-event-map.ts`. Server JSON patches are applied via `fast-json-patch` to update nanostores, which trigger signal updates and re-renders.
+`SocketService` (`src/app/core/socket-service/socket.service.ts`) manages the Socket.IO
+connection. All server-to-store event bindings live in `SocketEventMapService`
+(`src/app/core/socket-service/socket-event-map.service.ts`), which also owns the connection
+lifecycle (`connect()` is called from `main.ts` after auth is confirmed). Server JSON patches are applied via `fast-json-patch` to update nanostores, which trigger signal updates and re-renders.
 
 ### Prompt System
 
@@ -87,7 +100,7 @@ All components are standalone under `src/app/components/`, organized by domain:
 Admin-only UI is guarded with `@if (isAdmin())` — no route guard exists; the server enforces 403 on admin-only endpoints. Two areas currently gated:
 
 - **Match HUD** (`match-hud.component`) — debug-toggle gear button is hidden for non-admins.
-- **Profile Security pane** (`profile.component`) — "Registration codes" section (create form + active codes table with disable action) is visible only to admins. `ProfileComponent` calls `AuthService.createRegistrationCode()`, `listRegistrationCodes()`, and `disableRegistrationCode()` for this section.
+- **Profile Security pane** (`profile/security/profile-security.component`) — "Registration codes" section (create form + active codes table with disable action) is visible only to admins. `ProfileSecurityComponent` calls `AuthService.createRegistrationCode()`, `listRegistrationCodes()`, and `disableRegistrationCode()` for this section.
 
 ### Shared Package
 
@@ -102,6 +115,10 @@ Imported via tsconfig path `shared/*` → `../shared/src/*`. No build step — T
 - Card source keys use format `sourceKey` or `sourceKey:playerId` (e.g., `playerHand:1`, `setAside:TrashToken`)
 - Card images at `public/assets/card-images/base-v2/{full-size,half-size}/`
 - Dev server port: 51455
+
+## Design Guidelines
+
+All visual design decisions — color tokens, typography, theming rules, component patterns, and the QA checklist for new components — are documented in [`docs/design-guidelines.md`](../docs/design-guidelines.md). Consult and update that document whenever making or changing design decisions.
 
 ## Icons
 

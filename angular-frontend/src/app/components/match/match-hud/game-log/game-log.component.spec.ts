@@ -1,3 +1,4 @@
+import { provideExperimentalZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { GameLogComponent } from './game-log.component';
@@ -8,7 +9,9 @@ describe('GameLogComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [GameLogComponent]
+      imports: [GameLogComponent],
+      // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
+      providers: [provideExperimentalZonelessChangeDetection()],
     })
     .compileComponents();
 
