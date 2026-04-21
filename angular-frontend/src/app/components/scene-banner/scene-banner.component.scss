@@ -38,9 +38,7 @@
   font-family: var(--theme-font-display);
   font-weight: 700;
   color: var(--theme-text-banner);
-  text-shadow:
-    0 2px 0 var(--theme-text-banner-shadow-main),
-    0 0 14px var(--theme-text-banner-shadow-glow);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
   font-size: clamp(1.1rem, 2.3vw, 1.6rem);
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -59,9 +57,7 @@
   font-family: var(--theme-font-body);
   font-style: italic;
   color: var(--theme-text-banner-subtitle);
-  text-shadow:
-    0 1px 0 var(--theme-text-banner-shadow-main),
-    0 0 10px var(--theme-text-banner-shadow-glow);
+  text-shadow:0 1px 2px rgba(0, 0, 0, 0.3);
   font-size: clamp(0.75rem, 1.6vw, 1rem);
   letter-spacing: 0.04em;
 }
