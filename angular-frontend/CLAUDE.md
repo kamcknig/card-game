@@ -106,6 +106,14 @@ Admin-only UI is guarded with `@if (isAdmin())` — no route guard exists; the s
 
 Imported via tsconfig path `shared/*` → `../shared/src/*`. No build step — TypeScript consumed directly. Core types come from `shared/types`.
 
+## Content Security Policy
+
+The nginx container enforces a strict CSP with `script-src 'self'`. This means:
+
+- **No inline `<script>` blocks in `index.html` or any served HTML.** Inline scripts are blocked regardless of content. If pre-boot logic is needed (e.g. theme init), put it in a `.js` file under `public/` and load it with `<script src="/filename.js"></script>`.
+- **No `javascript:` hrefs or inline event handler attributes** (`onclick="..."`, etc.). Use Angular event bindings `(click)="..."` instead.
+- External script sources are not allowed — only same-origin scripts (`'self'`).
+
 ## Conventions
 
 - Use `input()` / `output()` signal APIs for component I/O, not decorators
