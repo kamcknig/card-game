@@ -37,6 +37,33 @@ $match-config-single-column-breakpoint: 940px;
   gap: 6px;
 }
 
+/* Secondary action buttons: expansion None/All, banned Select/Clear, Add Bot. */
+.secondary-action-button {
+  background: var(--theme-action-secondary-bg);
+  border: 1px solid var(--theme-border-action);
+  border-radius: 6px;
+  padding: 6px 14px;
+  color: var(--theme-text-primary);
+  font-family: var(--theme-font-body);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 150ms, border-color 120ms, color 120ms;
+
+  &:hover:not(:disabled) {
+    border-color: var(--theme-border-strong);
+  }
+
+  &:disabled {
+    background: var(--theme-action-disabled-bg);
+    opacity: var(--theme-action-disabled-opacity);
+    filter: saturate(0.45);
+    cursor: not-allowed;
+    border-color: var(--theme-border-disabled);
+    color: var(--theme-text-disabled);
+  }
+}
+
 // Text+icon buttons for Save/Load/Clear in the action bar.
 .config-action-button {
   display: inline-flex;
