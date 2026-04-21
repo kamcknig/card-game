@@ -26,6 +26,7 @@ import { GameMatchLifecycleCoordinatorService } from './game-match-lifecycle-coo
 import { ServerConfigService } from './server-config-service.ts';
 import {
   AddPlayerResult,
+  GameLobbyCallbacks,
   GameLobbySessionCoordinatorService,
   RemoveLobbyPlayerResult,
 } from './game-lobby-session-coordinator-service.ts';
@@ -238,17 +239,7 @@ export class Game {
       sessionId,
       socket,
       username,
-      callbacks: {
-        onStartMatch: this.startMatch,
-        onClearMatch: this.clearMatch,
-        onMatchConfigurationUpdated: this.onMatchConfigurationUpdated,
-        onCheckMatchConfigurationSaveName: this.onCheckMatchConfigurationSaveName,
-        onSaveMatchConfiguration: this.onSaveMatchConfiguration,
-        onRequestSavedMatchConfigurationList: this.onRequestSavedMatchConfigurationList,
-        onLoadSavedMatchConfiguration: this.onLoadSavedMatchConfiguration,
-        onDeleteSavedMatchConfiguration: this.onDeleteSavedMatchConfiguration,
-        onGameStateChanged: this.onGameStateChanged,
-      },
+      callbacks: this.buildLobbyCallbacks(),
       registerRemovalVoteHandler: this.registerRemovalVoteHandler,
     });
     return result;
@@ -258,19 +249,94 @@ export class Game {
   public removePlayerFromLobby(playerId: PlayerId): RemoveLobbyPlayerResult {
     return this.gameLobbySessionCoordinatorService.removePlayerFromLobby(this.runtimeState, {
       playerId,
-      callbacks: {
-        onStartMatch: this.startMatch,
-        onClearMatch: this.clearMatch,
-        onMatchConfigurationUpdated: this.onMatchConfigurationUpdated,
-        onCheckMatchConfigurationSaveName: this.onCheckMatchConfigurationSaveName,
-        onSaveMatchConfiguration: this.onSaveMatchConfiguration,
-        onRequestSavedMatchConfigurationList: this.onRequestSavedMatchConfigurationList,
-        onLoadSavedMatchConfiguration: this.onLoadSavedMatchConfiguration,
-        onDeleteSavedMatchConfiguration: this.onDeleteSavedMatchConfiguration,
-        onGameStateChanged: this.onGameStateChanged,
-      },
+      callbacks: this.buildLobbyCallbacks(),
     });
   }
+
+  // Builds the full callback set for lobby and post-game coordinator methods.
+  // Centralizing construction here ensures both addPlayer and removePlayerFromLobby,
+  // as well as post-game re-bindings, always receive a consistent callback set.
+  private buildLobbyCallbacks(): GameLobbyCallbacks {
+    return {
+      onStartMatch: this.startMatch,
+      onClearMatch: this.clearMatch,
+      onMatchConfigurationUpdated: this.onMatchConfigurationUpdated,
+      onCheckMatchConfigurationSaveName: this.onCheckMatchConfigurationSaveName,
+      onSaveMatchConfiguration: this.onSaveMatchConfiguration,
+      onRequestSavedMatchConfigurationList: this.onRequestSavedMatchConfigurationList,
+      onLoadSavedMatchConfiguration: this.onLoadSavedMatchConfiguration,
+      onDeleteSavedMatchConfiguration: this.onDeleteSavedMatchConfiguration,
+      onGameStateChanged: this.onGameStateChanged,
+      onRestartMatch: this.onRestartMatch,
+      onEditMatch: this.onEditMatch,
+    };
+  }
+
+  // Enters post-game phase after match ends; defers clearMatch until all players leave.
+  // Delegates to the coordinator to reset ready states and bind summary-screen handlers.
+  private enterPostGamePhase = (): void => {
+    this.loggerService.log('[game] match ended, entering post-game phase');
+    this.gameLobbySessionCoordinatorService.enterPostGamePhase(
+      this.runtimeState,
+      this.buildLobbyCallbacks(),
+    );
+    this.onGameStateChanged?.();
+  };
+
+  // Restarts the match immediately with all remaining connected players and current config.
+  // Players are already validated ready by the coordinator before this callback fires.
+  // The stale-controller guard in startMatch creates a fresh scope automatically.
+  private onRestartMatch = (): void => {
+    this.loggerService.info('[game] owner restarting match from post-game phase');
+    // Reset match flags — startMatch's stale-controller guard handles creating a fresh scope.
+    this.runtimeState.postGamePhase = false;
+    this.runtimeState.matchStarted = false;
+    this.startMatch();
+  };
+
+  // Resets match scope, preserves config, and returns all players to match configuration.
+  // Rebinds standard lobby handlers so the configuration screen is fully functional.
+  private onEditMatch = (): void => {
+    this.loggerService.info('[game] owner editing match from post-game phase');
+
+    // Preserve current config before createNewMatch resets it to defaults.
+    const savedConfig = structuredClone(this.runtimeState.matchConfiguration);
+
+    // Fresh match scope clears the stale match controller without touching players/sockets.
+    this.gameMatchLifecycleCoordinatorService.createNewMatch(
+      this.runtimeState,
+      this.defaultMatchConfiguration,
+    );
+
+    // Restore the configuration that was in use when the match ended.
+    this.runtimeState.matchConfiguration = savedConfig ?? structuredClone(this.defaultMatchConfiguration);
+    this.runtimeState.matchStarted = false;
+    this.runtimeState.postGamePhase = false;
+
+    // Reset all non-computer players to not-ready for the new lobby phase.
+    for (const player of this.runtimeState.players) {
+      if (!player.isComputer) {
+        player.ready = false;
+      }
+    }
+
+    // Rebind standard lobby handlers (player ready, owner config) on all connected sockets.
+    this.gameLobbySessionCoordinatorService.rebindLobbyHandlersAfterPostGame(
+      this.runtimeState,
+      this.buildLobbyCallbacks(),
+    );
+
+    // Navigate all clients to configuration; they see the current config pre-loaded.
+    this.io.in(this.runtimeState.roomName).emit('setPlayerList', this.runtimeState.players);
+    this.io
+      .in(this.runtimeState.roomName)
+      .emit('expansionList', this.runtimeState.availableExpansion.sort((a, b) => a.order - b.order));
+    this.io
+      .in(this.runtimeState.roomName)
+      .emit('matchConfigurationUpdated', this.runtimeState.matchConfiguration!);
+
+    this.onGameStateChanged?.();
+  };
 
   // Clears all current runtime state and resets to a new lobby match shell.
   private clearMatch = (): void => {
@@ -439,7 +505,9 @@ export class Game {
   private startMatch = (): void => {
     this.gameMatchLifecycleCoordinatorService.startMatch(this.runtimeState, {
       defaultMatchConfiguration: this.defaultMatchConfiguration,
-      onGameOver: this.clearMatch,
+      // Wire post-game phase entry instead of immediate clearMatch so players can
+      // return, restart, or edit from the summary screen before state is wiped.
+      onGameOver: this.enterPostGamePhase,
       registerRemovalVoteHandler: this.registerRemovalVoteHandler,
     });
     this.onGameStateChanged?.();
