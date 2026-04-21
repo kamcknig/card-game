@@ -95,6 +95,7 @@ export class Game {
     players: [],
     owner: undefined,
     matchStarted: false,
+    postGamePhase: false,
     matchScopeId: undefined,
     socketMap: new Map<PlayerId, AppSocket>(),
     matchScope: undefined,

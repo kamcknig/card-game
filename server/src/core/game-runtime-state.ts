@@ -14,6 +14,8 @@ export interface GameRuntimeState {
   players: Player[];
   owner: Player | undefined;
   matchStarted: boolean;
+  // True while the match has ended but players are still on the summary screen.
+  postGamePhase: boolean;
   // Active per-game match scope sequence id used for per-match persistence.
   matchScopeId: number | undefined;
   socketMap: Map<PlayerId, AppSocket>;
