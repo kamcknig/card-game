@@ -74,6 +74,9 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
 
   @ViewChild('scoreView', { read: ElementRef }) scoreView!: ElementRef;
 
+  // Controls visibility of the resign confirmation dialog.
+  readonly resignDialogVisible = signal(false);
+
   // Currently displayed mat in the modal.
   readonly visibleMat = signal<Mat | null>(null);
   stickyMat = false;
@@ -438,12 +441,19 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
     };
   }
 
-  // Prompts the user to confirm resigning from the current match.
+  // Opens the resign confirmation dialog.
   onResignMatch() {
-    const confirmResign = window.confirm('Resign and leave this game?');
-    if (!confirmResign) {
-      return;
-    }
+    this.resignDialogVisible.set(true);
+  }
+
+  // Closes the resign dialog without resigning.
+  onCancelResign() {
+    this.resignDialogVisible.set(false);
+  }
+
+  // Confirms resign: emits the server event and closes the dialog.
+  onConfirmResign() {
+    this.resignDialogVisible.set(false);
     this._socketService.emit('resignMatch');
   }
 
