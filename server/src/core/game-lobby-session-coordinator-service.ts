@@ -619,7 +619,13 @@ export class GameLobbySessionCoordinatorService {
         player.ready = false;
       }
     }
-    // Broadcast reset state to all clients on the summary screen.
+
+    // Owner is automatically ready — they do not press the ready button.
+    if (state.owner) {
+      state.owner.ready = true;
+    }
+
+    // Broadcast the initial ready state (owner already ready, others not) to all clients.
     this.io.in(state.roomName).emit('setPlayerList', state.players);
 
     for (const [playerId, socket] of state.socketMap.entries()) {

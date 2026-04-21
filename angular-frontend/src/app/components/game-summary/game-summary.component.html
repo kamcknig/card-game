@@ -81,19 +81,21 @@
       }
     </div>
 
-    <button
-      class="action-btn ready-toggle-btn"
-      [class.is-ready]="isSelfReady()"
-      (click)="toggleReady()"
-    >
-      @if (isSelfReady()) {
-        <lucide-icon [img]="CheckIcon" [size]="18" />
-        Ready
-      } @else {
-        <lucide-icon [img]="ClockIcon" [size]="18" />
-        Not Ready
-      }
-    </button>
+    @if (!isOwner()) {
+      <button
+        class="action-btn ready-toggle-btn"
+        [class.is-ready]="isSelfReady()"
+        (click)="toggleReady()"
+      >
+        @if (isSelfReady()) {
+          <lucide-icon [img]="CheckIcon" [size]="18" />
+          Ready
+        } @else {
+          <lucide-icon [img]="ClockIcon" [size]="18" />
+          Not Ready
+        }
+      </button>
+    }
   </div>
 
   <!-- Primary action bar -->

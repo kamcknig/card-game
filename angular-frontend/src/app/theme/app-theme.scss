@@ -62,6 +62,9 @@
   --theme-border-disabled: #a99981;
   --theme-text-disabled: #6b6153;
 
+  /* Status roles */
+  --theme-color-ready: #2e7d32;
+
   /* Overlay roles */
   --theme-overlay-color: #000000;
   --theme-overlay-alpha-soft: 0.5;
@@ -116,4 +119,6 @@
   --theme-action-disabled-bg: #2a251f;
   --theme-border-disabled: #4a4238;
   --theme-text-disabled: #6b6153;
+
+  --theme-color-ready: var(--theme-color-source-victory);
 }

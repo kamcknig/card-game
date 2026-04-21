@@ -233,7 +233,7 @@
 
         // Ready state highlights the icon in success green.
         &.ready {
-          color: var(--theme-color-source-action, #10ff19);
+          color: var(--theme-color-ready);
         }
       }
 
@@ -250,8 +250,8 @@
     // Ready toggle button — highlighted when the player is ready.
     .ready-toggle-btn {
       &.is-ready {
-        border-color: var(--theme-color-source-action, #10ff19);
-        color: var(--theme-color-source-action, #10ff19);
+        border-color: var(--theme-color-ready);
+        color: var(--theme-color-ready);
 
         &:hover {
           background: rgba(16, 255, 25, 0.1);
@@ -268,8 +268,8 @@
 
     // Restart button is visually highlighted when enabled; dimmed when disabled.
     .restart-btn {
-      border-color: var(--theme-color-source-action, #10ff19);
-      color: var(--theme-color-source-action, #10ff19);
+      border-color: var(--theme-color-ready);
+      color: var(--theme-color-ready);
 
       &:hover:not(:disabled) {
         background: rgba(16, 255, 25, 0.1);
