@@ -181,3 +181,130 @@
 .player-name {
   font-weight: 600;
 }
+
+// ─── Post-game controls ───
+
+// Container that holds the ready-up section and primary action bar below the
+// main summary content. Spans full width below the two-pane layout.
+.post-game-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem 1rem 1rem;
+  border-top: 1px solid var(--theme-border-subtle);
+
+  // Ready-up section showing per-player ready state and the toggle button.
+  .ready-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    width: 100%;
+    max-width: 400px;
+
+    .ready-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--theme-text-secondary);
+      margin: 0;
+    }
+
+    .player-ready-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      width: 100%;
+    }
+
+    // One row per player showing their ready indicator and name.
+    .player-ready-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+
+      lucide-icon {
+        // Default: not-ready state shows muted colour.
+        color: var(--theme-text-secondary);
+
+        // Ready state highlights the icon in success green.
+        &.ready {
+          color: var(--theme-color-source-action, #10ff19);
+        }
+      }
+
+      // Small badge rendered next to computer-controlled players.
+      .computer-badge {
+        font-size: 0.7rem;
+        padding: 0.1rem 0.35rem;
+        border: 1px solid var(--theme-border-subtle);
+        border-radius: 3px;
+        color: var(--theme-text-secondary);
+      }
+    }
+
+    // Ready toggle button — highlighted when the player is ready.
+    .ready-toggle-btn {
+      &.is-ready {
+        border-color: var(--theme-color-source-action, #10ff19);
+        color: var(--theme-color-source-action, #10ff19);
+
+        &:hover {
+          background: rgba(16, 255, 25, 0.1);
+        }
+      }
+    }
+  }
+
+  // Row of primary navigation buttons.
+  .action-bar {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+
+    // Restart button is visually highlighted when enabled; dimmed when disabled.
+    .restart-btn {
+      border-color: var(--theme-color-source-action, #10ff19);
+      color: var(--theme-color-source-action, #10ff19);
+
+      &:hover:not(:disabled) {
+        background: rgba(16, 255, 25, 0.1);
+      }
+
+      &:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+        border-color: var(--theme-border-subtle);
+        color: var(--theme-text-secondary);
+      }
+    }
+  }
+
+  // Shared base style for all post-game action buttons.
+  .action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1.25rem;
+    border: 1px solid var(--theme-border-subtle);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--theme-text-primary);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+
+    &:hover:not(:disabled) {
+      background: var(--theme-action-primary-bg);
+      border-color: var(--theme-border-action);
+    }
+
+    &:active:not(:disabled) {
+      background: var(--theme-action-primary-bg);
+    }
+  }
+}

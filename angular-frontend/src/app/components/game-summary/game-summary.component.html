@@ -58,3 +58,65 @@
     }
   </section>
 </div>
+
+<!-- Post-game action controls — ready-up section and navigation buttons -->
+<div class="post-game-controls">
+  <!-- Ready-up section — mirrors the match-configuration player ready UX -->
+  <div class="ready-section">
+    <h3 class="ready-title">Ready to Restart?</h3>
+
+    <div class="player-ready-list">
+      @for (entry of playerReadyList(); track entry.playerId) {
+        <div class="player-ready-row">
+          <lucide-icon
+            [img]="entry.ready ? CheckIcon : ClockIcon"
+            [size]="16"
+            [class.ready]="entry.ready"
+          />
+          <span class="player-ready-name">{{ entry.name }}</span>
+          @if (entry.isComputer) {
+            <span class="computer-badge">CPU</span>
+          }
+        </div>
+      }
+    </div>
+
+    <button
+      class="action-btn ready-toggle-btn"
+      [class.is-ready]="isSelfReady()"
+      (click)="toggleReady()"
+    >
+      @if (isSelfReady()) {
+        <lucide-icon [img]="CheckIcon" [size]="18" />
+        Ready
+      } @else {
+        <lucide-icon [img]="ClockIcon" [size]="18" />
+        Not Ready
+      }
+    </button>
+  </div>
+
+  <!-- Primary action bar -->
+  <div class="action-bar">
+    <button class="action-btn return-btn" (click)="returnToLobby()">
+      <lucide-icon [img]="ReturnIcon" [size]="18" />
+      Return to Lobby
+    </button>
+
+    @if (isOwner()) {
+      <button
+        class="action-btn restart-btn"
+        [disabled]="!canRestart()"
+        (click)="restartMatch()"
+      >
+        <lucide-icon [img]="RestartIcon" [size]="18" />
+        Restart Match
+      </button>
+
+      <button class="action-btn edit-btn" (click)="editMatch()">
+        <lucide-icon [img]="EditIcon" [size]="18" />
+        Edit Match
+      </button>
+    }
+  </div>
+</div>
