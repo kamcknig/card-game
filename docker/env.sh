@@ -26,7 +26,9 @@ WS_CONNECT_SRC=$(echo "$WS_HOST" | sed 's|^http://|ws://|; s|^https://|wss://|')
 #                                       <style> tags at runtime; nonces would be
 #                                       required to remove 'unsafe-inline' here
 #   img-src 'self' data:       -- allow inline SVG/data URIs used by Angular Material
-#   font-src 'self'            -- local fonts only
+#   font-src 'self' https://fonts.gstatic.com -- local fonts + Google Fonts files
+#   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com -- Angular inline
+#                                       styles + Google Fonts stylesheet
 #   connect-src 'self' ...     -- same-origin fetch + both HTTP and WS forms of
 #                                 the game server so auth API and Socket.IO work
 #   frame-ancestors 'none'     -- equivalent to X-Frame-Options: DENY
@@ -40,7 +42,7 @@ WS_CONNECT_SRC=$(echo "$WS_HOST" | sed 's|^http://|ws://|; s|^https://|wss://|')
 if [ -d /etc/nginx/conf.d ]; then
   cat <<NGINX_EOF > /etc/nginx/conf.d/security-headers.conf
 # Generated at container start by env.sh — do not edit by hand.
-add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' ${WS_HOST} ${WS_CONNECT_SRC}; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" always;
+add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' ${WS_HOST} ${WS_CONNECT_SRC}; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" always;
 add_header X-Content-Type-Options "nosniff" always;
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
