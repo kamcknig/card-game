@@ -63,7 +63,6 @@ $match-config-single-column-breakpoint: 940px;
     color: var(--theme-text-disabled);
   }
 }
-
 // Text+icon buttons for Save/Load/Clear in the action bar.
 .config-action-button {
   display: inline-flex;
@@ -319,6 +318,45 @@ $match-config-single-column-breakpoint: 940px;
   width: 32px;
   height: auto;
   object-fit: contain;
+
+  /* Tint the solid-black PNG icons to a warm bronze that matches the
+     theme's --theme-border-strong (#7f6746). The filter stack retargets
+     a pure black source to an arbitrary hex; do not simplify it.
+     Generated with the standard black→hex filter-matrix recipe. */
+  filter:
+    brightness(0) saturate(100%)
+    invert(41%) sepia(24%) saturate(700%)
+    hue-rotate(3deg) brightness(92%) contrast(86%);
+
+  transition: filter 120ms ease;
+}
+
+/* Dark theme — retint to warm gold (~#d4b069) for legibility on the
+   dark panel. Applied via :host-context so this component can live
+   inside the themed document root. */
+:host-context([data-theme='dark']) .expansion-icon {
+  filter:
+    brightness(0) saturate(100%)
+    invert(79%) sepia(38%) saturate(451%)
+    hue-rotate(359deg) brightness(101%) contrast(94%);
+}
+
+/* Selected state (light theme): darker bronze — same hue as unselected
+   but with reduced brightness so selected icons feel heavier/active. */
+.expansion-item.selected .expansion-icon {
+  filter:
+    brightness(0) saturate(100%)
+    invert(41%) sepia(24%) saturate(700%)
+    hue-rotate(3deg) brightness(68%) contrast(92%);
+}
+
+/* Selected state (dark theme): brighter gold so selected icons stand out
+   on the dark panel. */
+:host-context([data-theme='dark']) .expansion-item.selected .expansion-icon {
+  filter:
+    brightness(0) saturate(100%)
+    invert(79%) sepia(38%) saturate(451%)
+    hue-rotate(359deg) brightness(118%) contrast(98%);
 }
 
 .expansion-item {
