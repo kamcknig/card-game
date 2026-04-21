@@ -14,6 +14,10 @@
 
 .landscape-panel {
   position: fixed;
+  // Reactive top: kingdom_top(10) + kingdom_height(R×160+12) + gap(20) = R×160+42.
+  // Uses a 20px gap (double standard) so the landscape visually reads as separated from
+  // the dense kingdom panel above. --kingdom-row-count is set on the host by the component class.
+  top: calc(var(--kingdom-row-count, 2) * 160px + 42px);
   border: 1px solid var(--theme-border-strong);
   border-radius: 6px;
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-medium));
