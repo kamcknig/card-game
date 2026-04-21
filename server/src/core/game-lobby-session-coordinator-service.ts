@@ -22,6 +22,10 @@ export interface GameLobbyCallbacks {
   onDeleteSavedMatchConfiguration: (playerId: PlayerId, key: string) => void;
   // Notifies outer orchestrators that game state changed (players/owner/match status).
   onGameStateChanged?: () => void;
+  // Called by the coordinator when the owner requests restart from post-game phase.
+  onRestartMatch?: () => void;
+  // Called by the coordinator when the owner requests edit from post-game phase.
+  onEditMatch?: () => void;
 }
 
 export type AddPlayerResult =
