@@ -50,6 +50,16 @@ export class GameLobbySessionCoordinatorService {
       resignMatch: () => void;
     }
   >();
+  // Tracks post-game socket handlers per socket for clean unbinding.
+  private readonly postGameHandlersBySocketId = new Map<
+    string,
+    {
+      returnToLobby: () => void;
+      playerReady: (playerId: PlayerId, ready: boolean) => void;
+      restartMatch?: () => void;
+      editMatch?: () => void;
+    }
+  >();
 
   constructor(
     private readonly io: Server<ServerListenEvents, ServerEmitEvents>,
@@ -228,6 +238,17 @@ export class GameLobbySessionCoordinatorService {
       return;
     }
 
+    // Guard: during post-game phase, treat a disconnect as a voluntary return to lobby.
+    if (state.postGamePhase) {
+      const socket = state.socketMap.get(playerId);
+      // Treat disconnect during post-game summary the same as voluntarily returning to lobby.
+      this.onReturnToLobby(state, playerId, callbacks);
+      if (socket) {
+        this.runtimeSocketHandlersBySocketId.delete(socket.id);
+      }
+      return;
+    }
+
     const player = this.playerRegistryService.markPlayerDisconnected(state.players, playerId);
     if (!player) {
       state.socketMap.delete(playerId);
@@ -276,6 +297,14 @@ export class GameLobbySessionCoordinatorService {
     },
   ): void {
     const { playerId, socketId, callbacks } = args;
+
+    // Guard: during post-game phase, treat a resign as a voluntary return to lobby.
+    if (state.postGamePhase) {
+      // Treat resign during post-game summary as a voluntary return to lobby.
+      this.onReturnToLobby(state, playerId, callbacks);
+      return;
+    }
+
     if (!state.matchStarted) {
       this.loggerService.warn(`[game] ignoring resign from ${playerId}; match not started`);
       return;
@@ -576,5 +605,210 @@ export class GameLobbySessionCoordinatorService {
         state.socketMap.get(playerId)?.emit('searchWayResponse', ways);
       },
     });
+  }
+
+  // Transitions to post-game phase: resets ready states, keeps all players/sockets,
+  // and binds summary-screen action handlers.
+  public enterPostGamePhase(state: GameRuntimeState, callbacks: GameLobbyCallbacks): void {
+    this.loggerService.log('[game] entering post-game phase');
+    state.postGamePhase = true;
+
+    // Reset all non-computer players to not-ready for the restart gate.
+    for (const player of state.players) {
+      if (!player.isComputer) {
+        player.ready = false;
+      }
+    }
+    // Broadcast reset state to all clients on the summary screen.
+    this.io.in(state.roomName).emit('setPlayerList', state.players);
+
+    for (const [playerId, socket] of state.socketMap.entries()) {
+      this.bindPostGamePlayerHandlers(state, playerId, socket, callbacks);
+      if (state.owner?.id === playerId) {
+        this.bindPostGameOwnerHandlers(state, playerId, socket, callbacks);
+      }
+    }
+  }
+
+  // Binds returnToLobby and playerReady handlers for one socket in post-game phase.
+  private bindPostGamePlayerHandlers(
+    state: GameRuntimeState,
+    playerId: PlayerId,
+    socket: AppSocket,
+    callbacks: GameLobbyCallbacks,
+  ): void {
+    const existing = this.postGameHandlersBySocketId.get(socket.id);
+    if (existing) {
+      socket.off('returnToLobby', existing.returnToLobby);
+      socket.off('playerReady', existing.playerReady);
+    }
+
+    const returnToLobbyHandler = () => {
+      this.onReturnToLobby(state, playerId, callbacks);
+    };
+
+    const playerReadyHandler = (targetPlayerId: PlayerId, ready: boolean) => {
+      this.onPostGamePlayerReady(state, targetPlayerId, ready);
+    };
+
+    const current = this.postGameHandlersBySocketId.get(socket.id) ?? {};
+    this.postGameHandlersBySocketId.set(socket.id, {
+      ...current,
+      returnToLobby: returnToLobbyHandler,
+      playerReady: playerReadyHandler,
+    });
+    socket.on('returnToLobby', returnToLobbyHandler);
+    socket.on('playerReady', playerReadyHandler);
+  }
+
+  // Updates one player's ready state during post-game and broadcasts it to the room.
+  private onPostGamePlayerReady(state: GameRuntimeState, playerId: PlayerId, ready: boolean): void {
+    const player = state.players.find(p => p.id === playerId);
+    if (!player) {
+      this.loggerService.warn(`[game] post-game playerReady for unknown player ${playerId}`);
+      return;
+    }
+    this.loggerService.debug(`[game] post-game player ${playerId} ready=${ready}`);
+    player.ready = ready;
+    this.io.in(state.roomName).emit('playerReady', playerId, ready);
+  }
+
+  // Binds restartMatch and editMatch handlers for the owner socket in post-game phase.
+  private bindPostGameOwnerHandlers(
+    state: GameRuntimeState,
+    ownerId: PlayerId,
+    socket: AppSocket,
+    callbacks: GameLobbyCallbacks,
+  ): void {
+    const existing = this.postGameHandlersBySocketId.get(socket.id);
+    if (existing) {
+      if (existing.restartMatch) socket.off('restartMatch', existing.restartMatch);
+      if (existing.editMatch) socket.off('editMatch', existing.editMatch);
+    }
+
+    const restartMatchHandler = () => {
+      const connectedHumans = state.players.filter(p => p.connected && !p.isComputer);
+      const allReady = connectedHumans.length > 0 && connectedHumans.every(p => p.ready);
+      if (!allReady) {
+        this.loggerService.warn(
+          `[game] owner ${ownerId} attempted restart but not all connected players are ready`,
+        );
+        return;
+      }
+      this.loggerService.log(`[game] owner ${ownerId} restarting match from post-game phase`);
+      this.unbindAllPostGameHandlers(state);
+      callbacks.onRestartMatch?.();
+    };
+
+    const editMatchHandler = () => {
+      this.loggerService.log(`[game] owner ${ownerId} editing match from post-game phase`);
+      this.unbindAllPostGameHandlers(state);
+      callbacks.onEditMatch?.();
+    };
+
+    const current = this.postGameHandlersBySocketId.get(socket.id) ?? {
+      returnToLobby: () => {},
+      playerReady: () => {},
+    };
+    this.postGameHandlersBySocketId.set(socket.id, {
+      ...current,
+      restartMatch: restartMatchHandler,
+      editMatch: editMatchHandler,
+    });
+    socket.on('restartMatch', restartMatchHandler);
+    socket.on('editMatch', editMatchHandler);
+  }
+
+  // Removes all post-game handlers from one socket.
+  private unbindPostGameHandlers(socket: AppSocket): void {
+    const handlers = this.postGameHandlersBySocketId.get(socket.id);
+    if (!handlers) return;
+
+    socket.off('returnToLobby', handlers.returnToLobby);
+    socket.off('playerReady', handlers.playerReady);
+    if (handlers.restartMatch) socket.off('restartMatch', handlers.restartMatch);
+    if (handlers.editMatch) socket.off('editMatch', handlers.editMatch);
+    this.postGameHandlersBySocketId.delete(socket.id);
+  }
+
+  // Removes post-game handlers from every socket in the game room.
+  public unbindAllPostGameHandlers(state: GameRuntimeState): void {
+    for (const socket of state.socketMap.values()) {
+      this.unbindPostGameHandlers(socket);
+    }
+    state.postGamePhase = false;
+  }
+
+  // Rebinds standard lobby handlers on all connected player sockets after post-game phase.
+  public rebindLobbyHandlersAfterPostGame(state: GameRuntimeState, callbacks: GameLobbyCallbacks): void {
+    for (const player of state.players) {
+      if (!player.connected || player.isComputer) continue;
+      const socket = state.socketMap.get(player.id);
+      if (!socket) continue;
+
+      this.lobbySocketBindings.bindPlayerLobbyHandlers(socket, {
+        onUpdatePlayerName: (playerId, name) => this.onUpdatePlayerName(state, playerId, name),
+        onPlayerReady: (playerId, ready) =>
+          this.onPlayerReady(state, playerId, ready, callbacks.onStartMatch, socket.id),
+      });
+
+      if (state.owner?.id === player.id) {
+        this.bindOwnerLobbyHandlers(state, player.id, socket, callbacks);
+      }
+    }
+  }
+
+  // Removes one player from post-game, sends them to lobby, handles owner transfer.
+  private onReturnToLobby(
+    state: GameRuntimeState,
+    playerId: PlayerId,
+    callbacks: GameLobbyCallbacks,
+  ): void {
+    this.loggerService.log(`[game] player ${playerId} returning to lobby from post-game`);
+
+    const player = state.players.find(p => p.id === playerId);
+    if (!player) {
+      this.loggerService.warn(`[game] returnToLobby called for unknown player ${playerId}`);
+      return;
+    }
+
+    const socket = state.socketMap.get(playerId);
+    if (socket) {
+      this.unbindPostGameHandlers(socket);
+      this.unbindRuntimeSocketHandlers(socket);
+      socket.leave(state.roomName);
+      socket.join(GameLobbySessionCoordinatorService.LOBBY_ROOM_NAME);
+      socket.emit('kickedFromGame', { gameId: state.gameId, message: 'You returned to the lobby.' });
+    }
+
+    state.socketMap.delete(playerId);
+    state.players = state.players.filter(p => p.id !== playerId);
+
+    // Broadcast updated player list to remaining players on the summary screen.
+    this.io.in(state.roomName).emit('setPlayerList', state.players);
+
+    // Transfer ownership if this player was the owner.
+    if (state.owner?.id === playerId) {
+      const replacement = this.playerSessionService.findReplacementOwner(state.players, playerId);
+      state.owner = replacement;
+      if (replacement) {
+        this.io.in(state.roomName).emit('gameOwnerUpdated', replacement.id);
+        const replacementSocket = state.socketMap.get(replacement.id);
+        if (replacementSocket) {
+          this.bindPostGameOwnerHandlers(state, replacement.id, replacementSocket, callbacks);
+        }
+      }
+    }
+
+    // If no human players remain, end the post-game phase and clear match state.
+    const hasConnectedHuman = this.playerSessionService.hasConnectedHumanPlayers(state.players);
+    if (!hasConnectedHuman) {
+      this.loggerService.log('[game] no human players left in post-game phase, clearing match');
+      state.postGamePhase = false;
+      callbacks.onClearMatch();
+      return;
+    }
+
+    callbacks.onGameStateChanged?.();
   }
 }
