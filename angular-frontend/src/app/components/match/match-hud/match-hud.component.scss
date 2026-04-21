@@ -215,34 +215,6 @@ app-game-log {
   gap: 10px;
 }
 
-// Container for debug action buttons rendered below the runtime ID rows.
-.debug-runtime-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 8px;
-  border-top: 1px solid var(--theme-border-strong);
-  padding-top: 8px;
-}
-
-// Compact button for debug actions inside the runtime overlay.
-.debug-action-btn {
-  display: block;
-  width: 100%;
-  padding: 3px 8px;
-  background: transparent;
-  border: 1px solid var(--theme-border-strong);
-  border-radius: 3px;
-  color: var(--theme-text-on-dark);
-  font-size: 11px;
-  cursor: pointer;
-  text-align: left;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.08);
-  }
-}
-
 .disconnect-card {
   background: var(--theme-surface-panel);
   color: var(--theme-text-primary);

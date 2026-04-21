@@ -1,8 +1,6 @@
 <div class="content">
-  <!-- Left pane — final standings -->
-  <section class="pane left" aria-labelledby="gs-standings-title">
-    <h2 id="gs-standings-title" class="pane-title">Final Standings</h2>
-
+  <!-- left half, victory points and -->
+  <div class="pane left">
     <div class="player-score-content">
       @for (playerSummary of playerSummaries(); track playerSummary.playerId) {
         <div class="player-score-wrapper">
@@ -10,7 +8,7 @@
 
           <div class="hr-rule place-name-separator"><div class="line"></div></div>
 
-          <span class="player-name">{{ playerSummary.playerName }}</span>
+          <span>{{ playerSummary.playerName }}</span>
 
           <div class="hr-rule turn-score-separator"><div class="line"></div></div>
 
@@ -31,14 +29,12 @@
         </div>
       }
     </div>
-  </section>
+  </div>
 
-  <div class="vertical-rule" aria-hidden="true"></div>
+  <div class="vertical-rule"></div>
 
-  <!-- Right pane — deck summaries -->
-  <section class="pane right" aria-labelledby="gs-decks-title">
-    <h2 id="gs-decks-title" class="pane-title">Decks</h2>
-
+  <!-- right half, decks -->
+  <div class="pane right">
     @for (deck of playerDecks(); track deck.playerId) {
       <div class="player-deck-summary">
         <div>{{ deck.playerName }}</div>
@@ -55,70 +51,6 @@
           }
         </div>
       </div>
-    }
-  </section>
-</div>
-
-<!-- Post-game action controls — ready-up section and navigation buttons -->
-<div class="post-game-controls">
-  <!-- Ready-up section — mirrors the match-configuration player ready UX -->
-  <div class="ready-section">
-    <h3 class="ready-title">Ready to Restart?</h3>
-
-    <div class="player-ready-list">
-      @for (entry of playerReadyList(); track entry.playerId) {
-        <div class="player-ready-row">
-          <lucide-icon
-            [img]="entry.ready ? CheckIcon : ClockIcon"
-            [size]="16"
-            [class.ready]="entry.ready"
-          />
-          <span class="player-ready-name">{{ entry.name }}</span>
-          @if (entry.isComputer) {
-            <span class="computer-badge">CPU</span>
-          }
-        </div>
-      }
-    </div>
-
-    @if (!isOwner()) {
-      <button
-        class="action-btn ready-toggle-btn"
-        [class.is-ready]="isSelfReady()"
-        (click)="toggleReady()"
-      >
-        @if (isSelfReady()) {
-          <lucide-icon [img]="CheckIcon" [size]="18" />
-          Ready
-        } @else {
-          <lucide-icon [img]="ClockIcon" [size]="18" />
-          Not Ready
-        }
-      </button>
-    }
-  </div>
-
-  <!-- Primary action bar -->
-  <div class="action-bar">
-    <button class="action-btn return-btn" (click)="returnToLobby()">
-      <lucide-icon [img]="ReturnIcon" [size]="18" />
-      Return to Lobby
-    </button>
-
-    @if (isOwner()) {
-      <button
-        class="action-btn restart-btn"
-        [disabled]="!canRestart()"
-        (click)="restartMatch()"
-      >
-        <lucide-icon [img]="RestartIcon" [size]="18" />
-        Restart Match
-      </button>
-
-      <button class="action-btn edit-btn" (click)="editMatch()">
-        <lucide-icon [img]="EditIcon" [size]="18" />
-        Edit Match
-      </button>
     }
   </div>
 </div>

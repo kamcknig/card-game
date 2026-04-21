@@ -14,43 +14,57 @@ $match-config-single-column-breakpoint: 940px;
   box-sizing: border-box;
 }
 
+
 .leave-game-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: 1px solid var(--theme-border-danger);
   background: var(--theme-action-danger-soft-bg);
   border-radius: 6px;
-  padding: 7px 12px;
+  padding: 5px 12px;
   color: var(--theme-text-primary);
+  font-family: var(--theme-font-body);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 150ms, border-color 120ms;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
-.secondary-action-button {
-  border: 1px solid var(--theme-border-strong);
-  background: var(--theme-surface-card);
-  border-radius: 6px;
-  padding: 7px 12px;
-  color: var(--theme-text-primary);
-}
-
-// Icon-only variant for the header save/load/clear config buttons.
-.config-icon-button {
+// Text+icon buttons for Save/Load/Clear in the action bar.
+.config-action-button {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  border: 1px solid var(--theme-border-strong);
-  background: var(--theme-surface-card);
+  gap: 5px;
+  border: 1px solid var(--theme-border-action);
+  background: var(--theme-action-secondary-bg);
   border-radius: 6px;
-  padding: 7px;
-  color: var(--theme-text-primary);
+  padding: 5px 10px;
+  color: var(--theme-text-secondary);
+  font-family: var(--theme-font-body);
+  font-size: 0.8rem;
+  font-weight: 500;
   cursor: pointer;
+  transition: background 150ms, border-color 120ms, color 120ms;
+
+  &:hover {
+    color: var(--theme-text-primary);
+    border-color: var(--theme-border-strong);
+  }
 
   &:disabled {
-    opacity: 0.4;
+    opacity: var(--theme-action-disabled-opacity);
+    filter: saturate(0.45);
     cursor: not-allowed;
+    background: var(--theme-action-disabled-bg);
+    border-color: var(--theme-border-disabled);
+    color: var(--theme-text-disabled);
   }
 }
 
