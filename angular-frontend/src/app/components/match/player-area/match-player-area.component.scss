@@ -12,6 +12,10 @@
 
 .play-area-panel {
   position: absolute;
+  // Reactive top: kingdom_top(10) + kingdom_height(R×160+12) + standard_gap(10) = R×160+32.
+  // --landscape-display-height adds landscape actual height + 2px border + 10px gap when present (0 otherwise).
+  // Both CSS vars are set on the host by the component class.
+  top: calc(var(--kingdom-row-count, 2) * 160px + 32px + var(--landscape-display-height, 0px));
   border: 1px solid var(--theme-border-strong);
   border-radius: 6px;
   background: var(--theme-panel-bg);
