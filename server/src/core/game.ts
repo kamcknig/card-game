@@ -299,6 +299,10 @@ export class Game {
     // Reset match flags — startMatch's stale-controller guard handles creating a fresh scope.
     this.runtimeState.postGamePhase = false;
     this.runtimeState.matchStarted = false;
+    // Re-broadcast ownership so clients seed gameOwnerIdStore before the next game summary renders.
+    if (this.runtimeState.owner) {
+      this.io.in(this.runtimeState.roomName).emit('gameOwnerUpdated', this.runtimeState.owner.id);
+    }
     this.startMatch();
   };
 

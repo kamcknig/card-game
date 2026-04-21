@@ -62,6 +62,8 @@ export class GameSummaryComponent {
       const cards: Record<CardKey, { cardId: CardId; count: number; }> = {};
       for (const cardId of summary.deck) {
         const card = allCards[cardId];
+        // Guard: card may be absent from the library if cardStore was partially stale.
+        if (!card) continue;
         cards[card.cardKey] = (cards[card.cardKey] ??= { cardId, count: 0 });
         cards[card.cardKey].count++;
       }
@@ -81,9 +83,17 @@ export class GameSummaryComponent {
     }));
   });
 
-  // Reactive owner and self tracking — update immediately when gameOwnerUpdated fires.
-  private readonly _ownerIdSignal = toSignal(this._nanoStoresService.useStore(gameOwnerIdStore));
-  private readonly _selfPlayerIdSignal = toSignal(this._nanoStoresService.useStore(selfPlayerIdStore));
+  // Reactive owner and self tracking — initialValue seeds from current store state so
+  // isOwner() is correct on the first synchronous render without waiting for Angular's
+  // scheduler to flush the first nanostore emission.
+  private readonly _ownerIdSignal = toSignal(
+    this._nanoStoresService.useStore(gameOwnerIdStore),
+    { initialValue: gameOwnerIdStore.get() },
+  );
+  private readonly _selfPlayerIdSignal = toSignal(
+    this._nanoStoresService.useStore(selfPlayerIdStore),
+    { initialValue: selfPlayerIdStore.get() },
+  );
 
   // Reactive player ready list — updates whenever any player's ready state changes.
   readonly playerReadyList = toSignal(
