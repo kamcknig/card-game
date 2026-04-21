@@ -57,6 +57,18 @@ jobs:
           registryUsername: ${{ secrets.ACR_USERNAME }}
           registryPassword: ${{ secrets.ACR_PASSWORD }}
 
+      # Rebinds the custom domain after each frontend deploy. The deploy action
+      # creates a new revision which clears the custom domain binding, so this
+      # step restores it using the existing CNAME record for validation.
+      - name: Rebind frontend custom domain
+        run: |
+          az containerapp hostname bind \
+            --name ${{ secrets.AZURE_FRONTEND_APP_NAME }} \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --hostname ${{ secrets.AZURE_FRONTEND_HOSTNAME }} \
+            --environment ${{ secrets.AZURE_CONTAINER_APP_ENVIRONMENT }} \
+            --validation-method CNAME
+
       # Logs the active revision name for the server app to confirm deployment.
       - name: Verify server deployment
         run: |
