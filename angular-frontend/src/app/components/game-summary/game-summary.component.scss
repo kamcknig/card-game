@@ -105,9 +105,9 @@
 
 // Highlight the winner's place badge with treasure-gold.
 .player-score-wrapper:first-of-type .place {
-  border-color: var(--theme-color-source-treasure);
-  color: var(--theme-color-source-treasure);
-  background: color-mix(in srgb, var(--theme-color-source-treasure) 14%, transparent);
+  border-color: var(--theme-color-winner);
+  color: var(--theme-color-winner);
+  background: color-mix(in srgb, var(--theme-color-winner) 14%, transparent);
 }
 
 .turns-taken {

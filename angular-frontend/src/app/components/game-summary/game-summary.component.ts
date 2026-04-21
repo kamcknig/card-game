@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { Card, CardId, CardKey, MatchSummary, PlayerId } from 'shared/types';
 import { playerStore, selfPlayerIdStore } from '../../state/player-state';
-import { DOCUMENT, NgOptimizedImage } from '@angular/common';
+import { NgOptimizedImage } from '@angular/common';
 import { cardStore } from '../../state/card-state';
 import { DeckEntriesPipe } from './deck-entries.pipe';
 import { matchSummaryStore } from '../../state/match-state';
@@ -29,10 +29,6 @@ import { SocketService } from '../../core/socket-service/socket.service';
 export class GameSummaryComponent {
   /** Match summary populated by the gameOver socket event before this route activates. */
   readonly matchSummary = computed<MatchSummary>(() => matchSummaryStore.get()!);
-
-  private readonly _document = inject(DOCUMENT);
-  // Applies static title for browser tabs when summary view is active.
-  private readonly _documentTitleInitialized = this.initializeDocumentTitle();
 
   // Services
   private readonly _nanoStoresService = inject(NanostoresService);
@@ -129,12 +125,6 @@ export class GameSummaryComponent {
   readonly EditIcon = Settings;
   readonly CheckIcon = Check;
   readonly ClockIcon = Clock;
-
-  // Sets page title once during component initialization.
-  private initializeDocumentTitle() {
-    this._document.title = 'Game Summary';
-    return true;
-  }
 
   /**
    * Emits a request to leave the post-game summary and return to the lobby.
