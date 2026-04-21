@@ -113,6 +113,7 @@ The nginx container enforces a strict CSP with `script-src 'self'`. This means:
 - **No inline `<script>` blocks in `index.html` or any served HTML.** Inline scripts are blocked regardless of content. If pre-boot logic is needed (e.g. theme init), put it in a `.js` file under `public/` and load it with `<script src="/filename.js"></script>`.
 - **No `javascript:` hrefs or inline event handler attributes** (`onclick="..."`, etc.). Use Angular event bindings `(click)="..."` instead.
 - External script sources are not allowed — only same-origin scripts (`'self'`).
+- **`inlineCritical` is disabled in `angular.json`.** Angular's production optimizer adds `onload="this.media='all'"` to `<link>` tags when `inlineCritical` is enabled, which is an inline event handler blocked by `script-src 'self'`. The `optimization.styles.inlineCritical: false` setting in the production build config prevents this. Do not re-enable it.
 
 ## Conventions
 

@@ -482,6 +482,20 @@ az containerapp hostname bind \
 - Azure Container Apps supports WebSocket natively; no special config needed for 1 replica
 - For >1 replica, ensure sticky sessions are enabled (see [Scaling](#scaling))
 
+### Login fails with "Unable to reach server"
+
+The frontend container is missing the `WS_HOST` environment variable, so `env.js` defaults to `wsHost: 'http://localhost:3000'` which does not exist in production. All auth HTTP calls (`/auth/login`, `/auth/register`, etc.) use this value as the base URL — nginx does **not** proxy them to the server.
+
+```bash
+# Set WS_HOST on the frontend container (creates a new revision)
+az containerapp update \
+  --name dominion-clone-frontend \
+  --resource-group turkeysunite \
+  --set-env-vars WS_HOST=https://dominion-clone-server.happyglacier-53482b33.eastus.azurecontainerapps.io
+```
+
+After the revision restarts, `env.js` is regenerated with the correct `wsHost` and the CSP `connect-src` directive is updated to include both the HTTPS and WSS forms of the server URL.
+
 ### Login rejected with "unknown provider"
 
 The frontend JS cached in the browser is an old version using the removed preset-password auth. Hard refresh (`Ctrl+Shift+R`) or open an incognito window to force the new app to load.
