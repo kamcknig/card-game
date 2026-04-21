@@ -12,17 +12,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 
-  <!-- Apply saved theme before Angular boots to avoid a light->dark flash. -->
-  <script>
-    (function () {
-      try {
-        var saved = localStorage.getItem('dominion-theme');
-        if (saved === 'dark' || saved === 'light') {
-          document.documentElement.setAttribute('data-theme', saved);
-        }
-      } catch (_) { /* localStorage unavailable — fall through to default (light) */ }
-    })();
-  </script>
+  <!-- Apply saved theme before Angular boots to avoid a light→dark flash. -->
+  <script src="/theme-init.js"></script>
 
   <script src="/env.js"></script>
 </head>
