@@ -53,6 +53,7 @@ All tokens are defined in `src/app/theme/app-theme.scss` on `:root` (light) with
 |---|---|---|
 | `--theme-text-primary` | `#2a241a` | `#e8dfd2` |
 | `--theme-text-secondary` | `#544630` | `#a99b87` |
+| `--theme-text-tertiary` | `#7a6a55` | `#7a6e5e` |
 | `--theme-text-on-dark` | `#ffffff` | (same) |
 | `--theme-text-disabled` | `#6b6153` | `#6b6153` |
 | `--theme-text-banner` | `#6b5033` | `#d4b679` |
@@ -64,6 +65,7 @@ All tokens are defined in `src/app/theme/app-theme.scss` on `:root` (light) with
 | Token | Light | Dark |
 |---|---|---|
 | `--theme-border-subtle` | `#bca98d` | `#3d3429` |
+| `--theme-border-medium` | `#9e8b72` | `#5a4e3e` |
 | `--theme-border-section-light` | `#c8b798` | `#4a3f32` |
 | `--theme-border-strong` | `#7f6746` | `#8b7a62` |
 | `--theme-border-action` | `#826a48` | `#6b5d48` |
@@ -159,6 +161,59 @@ Always use the gradient: `background: linear-gradient(150deg, var(--theme-surfac
 - `background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong))`.
 - `color: var(--theme-text-on-dark)`.
 - `border: 1px solid var(--theme-border-strong)`.
+
+### Dialogs / Modals
+
+Dialogs are centered overlay panels used for card selection, confirmation prompts, settings, etc.
+
+**Backdrop:**
+- `position: fixed; inset: 0; z-index: 100`
+- `background: rgba(0, 0, 0, var(--theme-overlay-alpha-medium))` (0.6)
+- `display: flex; align-items: center; justify-content: center`
+- Click on backdrop dismisses the dialog (same as Cancel)
+
+**Dialog container:**
+- `background: var(--theme-surface-panel)` — `#2c2620` dark / `#e8d8c1` light
+- `border-radius: 12px`
+- `border: 1px solid var(--theme-border-medium)`
+- `box-shadow: 0 12px 48px rgba(0,0,0,0.5)` dark / `0 8px 32px rgba(0,0,0,0.2)` light
+- `display: flex; flex-direction: column; overflow: hidden`
+- Max dimensions: constrain to viewport with padding, e.g. `max-height: calc(100vh - 80px); max-width: calc(100vw - 40px)`
+
+**Header:**
+- `padding: 16px 20px; border-bottom: 1px solid var(--theme-border-subtle)`
+- `display: flex; align-items: center`
+- Title: `font-family: var(--theme-font-display); font-size: 15–16px; font-weight: 600; letter-spacing: 0.06–0.08em; text-transform: uppercase; color: var(--theme-text-primary)`
+- Close button (right-aligned): `background: none; border: none; color: var(--theme-text-tertiary); font-size: 22px; cursor: pointer; line-height: 1`
+- Optional subtitle / count badge: `font-size: 12–13px; color: var(--theme-text-secondary)`
+
+**Scrollable body:**
+- `flex: 1; overflow-y: auto; padding: 16px 20px`
+- Scrollbar should be thin and subtle; use `scrollbar-width: thin` or styled webkit scrollbar matching the theme
+
+**Footer:**
+- `padding: 12px 20px; border-top: 1px solid var(--theme-border-subtle)`
+- `display: flex; align-items: center; justify-content: flex-end; gap: 8px`
+- Cancel button: secondary style — `background: transparent; border: 1px solid var(--theme-border-subtle); color: var(--theme-text-tertiary); border-radius: 6px; padding: 8px 18px; font-size: 13px`
+- Confirm button: primary style — `background: var(--theme-action-primary-bg); border: 1px solid var(--theme-border-strong); color: var(--theme-text-primary); border-radius: 6px; padding: 8px 24px; font-family: var(--theme-font-display); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; font-size: 13px`
+- Optional left-aligned metadata (e.g. count): `font-size: 12px; color: var(--theme-text-tertiary)` — use `justify-content: space-between` when present
+
+**Search input (when applicable):**
+- Place in header or in a dedicated toolbar row below the header
+- `background: var(--theme-surface-app-start); border: 1px solid var(--theme-border-subtle); border-radius: 8px; padding: 9px 12px 9px 34px; font-size: 14px; color: var(--theme-text-primary)`
+- Search icon: 14×14 SVG magnifying glass, `position: absolute; left: 12px`, `stroke: var(--theme-text-tertiary)`
+- Focus: `border-color: var(--theme-border-strong)`
+
+**Filter chips (when applicable):**
+- `display: flex; gap: 4px; flex-wrap: wrap`
+- Inactive: `padding: 3px 10px; border-radius: 10px; border: 1px solid transparent; background: transparent; color: var(--theme-text-tertiary); font-size: 11px`
+- Active: `border: 1px solid var(--theme-accent-gold); background: rgba(201,168,76,0.15); color: var(--theme-accent-gold)`
+
+**Dismiss behavior:** Escape key, backdrop click, close button, and Cancel button all close without applying changes. Only the Confirm/primary action button applies.
+
+**Transitions:**
+- Backdrop: `opacity 180ms ease` (fade in/out)
+- Dialog: `transform 180ms ease, opacity 180ms ease` — enter from `translateY(8px) + opacity 0`, exit to same
 
 ## Expansion Icons
 

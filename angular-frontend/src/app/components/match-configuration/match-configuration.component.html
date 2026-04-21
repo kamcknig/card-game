@@ -417,13 +417,14 @@
     (close)="closeSelectionModal()"
   >
     <app-select-card-like-modal
-      [excludedItems]="modal.excludedItems"
+      [initialSelectionKeys]="modal.initialSelectionKeys"
       [catalogKind]="modal.catalogKind"
       [imageSize]="modal.imageSize"
       [filterBasicCards]="modal.filterBasicCards"
+      [maxSelections]="modal.maxSelections"
+      [title]="modal.title"
       (close)="closeSelectionModal()"
-      autofocus
-      (itemSelected)="onSelectionModalItemSelected($event)"
+      (confirmed)="onSelectionModalConfirmed($event)"
     >
     </app-select-card-like-modal>
   </app-ui-dialog>
