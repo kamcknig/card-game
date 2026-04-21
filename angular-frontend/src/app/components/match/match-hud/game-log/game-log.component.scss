@@ -1,20 +1,27 @@
 .content {
-  color: white;
-  background-color: rgba(0, 0, 0, 0.6);
-  border-radius: 5px;
+  color: var(--theme-text-on-dark);
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-medium));
+  border: 1px solid var(--theme-border-strong);
+  border-radius: 6px;
   width: 300px;
   height: 55vh;
   position: relative;
+  font-family: var(--theme-font-accent);
+  font-style: italic;
+  font-size: 0.95rem;
+  line-height: 1.55;
 
   .log-content {
     height: 100%;
-    padding: 10px;
+    padding: 12px 14px;
     box-sizing: border-box;
     overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--theme-border-strong) transparent;
   }
 
   :not(:last-child) {
-    margin-bottom: 4px;
+    margin-bottom: 6px;
   }
 
   ::ng-deep .log-entry {
@@ -22,13 +29,13 @@
 
     hr {
       width: 100%;
-      border-top: 2px solid white;
+      border-top: 1px solid rgba(255, 255, 255, 0.35);
       display: inline-block;
       height: 8px;
     }
 
     hr.new-player-turn {
-      border-top: 2px dashed rgba(255, 255, 255, 0.5);
+      border-top: 1px dashed rgba(255, 255, 255, 0.5);
       width: 75%;
     }
   }

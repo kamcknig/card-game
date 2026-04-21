@@ -1,3 +1,5 @@
+<app-scene-banner subtitle="Game Summary" />
+
 <div class="content">
   <!-- left half, victory points and -->
   <div class="pane left">
@@ -54,3 +56,52 @@
     }
   </div>
 </div>
+
+<footer class="action-bar">
+  <!-- Per-player ready indicators -->
+  <div class="ready-list">
+    @for (p of playerReadyList(); track p.playerId) {
+      <span class="ready-chip" [class.is-ready]="p.ready">
+        <lucide-icon [img]="p.ready ? CheckIcon : ClockIcon" [size]="14" />
+        {{ playerNamesById()[p.playerId] }}
+      </span>
+    }
+  </div>
+
+  <!-- Post-game actions -->
+  <div class="action-buttons">
+    <button type="button" class="action-btn action-btn--danger" (click)="returnToLobby()">
+      <lucide-icon [img]="ReturnIcon" [size]="16" />
+      Return to Lobby
+    </button>
+
+    @if (!isOwner()) {
+      <button
+        type="button"
+        class="action-btn"
+        [class.action-btn--active]="isSelfReady()"
+        (click)="toggleReady()"
+      >
+        <lucide-icon [img]="isSelfReady() ? CheckIcon : ClockIcon" [size]="16" />
+        {{ isSelfReady() ? 'Ready' : 'Mark Ready' }}
+      </button>
+    }
+
+    @if (isOwner()) {
+      <button type="button" class="action-btn action-btn--primary" (click)="editMatch()">
+        <lucide-icon [img]="EditIcon" [size]="16" />
+        Edit Match
+      </button>
+
+      <button
+        type="button"
+        class="action-btn action-btn--primary"
+        [disabled]="!canRestart()"
+        (click)="restartMatch()"
+      >
+        <lucide-icon [img]="RestartIcon" [size]="16" />
+        Restart Match
+      </button>
+    }
+  </div>
+</footer>

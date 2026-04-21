@@ -21,6 +21,7 @@ import { PileSelectionActionComponent } from './pile-selection/pile-selection-ac
 import { MatchHudComponent } from './match-hud/match-hud.component';
 import { matchStartedStore } from '../../state/match-state';
 import { selfPlayerIdStore } from '../../state/player-state';
+import { CardImagePreloadService } from '../../core/card-image-preload.service';
 
 /** Container component for the active match screen. Manages MatchScene lifecycle. */
 @Component({
@@ -43,6 +44,7 @@ export class MatchComponent implements OnDestroy {
   private readonly _promptDialogCoordinator = inject(PromptDialogCoordinatorService);
   private readonly _wayPickerOverlay = inject(WayPickerOverlayService);
   private readonly _nanoStores = inject(NanostoresService);
+  private readonly _imagePreload = inject(CardImagePreloadService);
 
   /** Non-Angular controller managing game interaction and socket coordination. */
   readonly matchScene = signal<MatchScene | undefined>(undefined);
@@ -59,6 +61,10 @@ export class MatchComponent implements OnDestroy {
   );
 
   constructor() {
+    // Begin background image preloading immediately. matchStore and cardStore
+    // are guaranteed populated before SocketEventMapService navigates to /match.
+    this._imagePreload.preloadMatchImages();
+
     // Defer MatchScene creation until selfPlayerIdStore is populated. On
     // fresh match entry the store is already set (from when the user joined
     // the lobby game); on page refresh it starts undefined and gets set when

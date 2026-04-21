@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { Card, CardId, CardKey, MatchSummary, PlayerId } from 'shared/types';
 import { playerStore, selfPlayerIdStore } from '../../state/player-state';
 import { NgOptimizedImage } from '@angular/common';
@@ -14,6 +14,7 @@ import {
   allConnectedPlayersReadyStore,
 } from '../../state/game-state';
 import { SocketService } from '../../core/socket-service/socket.service';
+import { SceneBannerComponent } from '../scene-banner/scene-banner.component';
 
 @Component({
   selector: 'app-game-summary',
@@ -21,6 +22,7 @@ import { SocketService } from '../../core/socket-service/socket.service';
     NgOptimizedImage,
     DeckEntriesPipe,
     LucideAngularModule,
+    SceneBannerComponent,
   ],
   templateUrl: './game-summary.component.html',
   styleUrl: './game-summary.component.scss',
@@ -125,6 +127,19 @@ export class GameSummaryComponent {
   readonly EditIcon = Settings;
   readonly CheckIcon = Check;
   readonly ClockIcon = Clock;
+
+  constructor() {
+    // The owner is always considered ready. When ownership is assigned or
+    // transferred, automatically emit a ready state of true so the restart
+    // gate never blocks on the owner. The short-circuit on isSelfReady()
+    // prevents redundant socket emissions once the server confirms ready.
+    effect(() => {
+      if (!this.isOwner()) return;
+      const selfId = this._selfPlayerIdSignal();
+      if (selfId === undefined || this.isSelfReady()) return;
+      this._socketService.emit('playerReady', selfId, true);
+    });
+  }
 
   /**
    * Emits a request to leave the post-game summary and return to the lobby.
