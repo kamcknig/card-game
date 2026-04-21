@@ -740,6 +740,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     return false;
   }
 
+  /** Forcibly ends the match immediately, bypassing end-condition evaluation. Used by the debug API. */
+  public async forceEndGame(): Promise<void> {
+    this.loggerService.log(`[match] force-ending game via debug endpoint`);
+    await this.endGame();
+  }
+
   private async endGame() {
     this.loggerService.log(`[match] ending the game`);
 

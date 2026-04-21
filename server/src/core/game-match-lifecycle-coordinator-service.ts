@@ -106,6 +106,18 @@ export class GameMatchLifecycleCoordinatorService {
     return state.matchController.applyPartialMatchUpdate(partial);
   }
 
+  /**
+   * Forcibly ends the active match without waiting for a natural end condition.
+   * Used exclusively by the debug API for development testing.
+   */
+  public async forceEndGame(state: GameRuntimeState): Promise<{ ok: boolean; error?: string }> {
+    if (!state.matchController) {
+      return { ok: false, error: 'match not initialized' };
+    }
+    await state.matchController.forceEndGame();
+    return { ok: true };
+  }
+
   // Disposes only match-lifetime resources without touching lobby players/sockets.
   public dispose(state: GameRuntimeState): void {
     state.matchScope?.dispose();

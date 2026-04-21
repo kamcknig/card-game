@@ -43,6 +43,7 @@ import {
   getSourceAccentColorForCardLikeKind,
   getSourceAccentColorForSetAsideSourceKind
 } from '../../../core/source-accent-colors';
+import { environment } from '../../../../environments/environment';
 
 type Mat = MatTabModel;
 type RectLike = { x: number; y: number; width: number; height: number };
@@ -303,6 +304,18 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
   // Toggles the HUD debug identity overlay.
   toggleDebugOverlay() {
     debugOverlayVisibleStore.set(!debugOverlayVisibleStore.get());
+  }
+
+  /**
+   * Sends a POST to the debug end-game endpoint, forcibly ending the active
+   * match and triggering the game-over flow on the server.
+   */
+  async debugEndGame(): Promise<void> {
+    const ctx = debugRuntimeContextStore.get();
+    if (!ctx?.gameId || !ctx.matchScopeId) return;
+    await fetch(`${environment.wsHost}/debug/games/${ctx.gameId}/matches/${ctx.matchScopeId}/end`, {
+      method: 'POST',
+    });
   }
 
   // Forwards "next phase" requests to the active match scene via AppComponent output binding.

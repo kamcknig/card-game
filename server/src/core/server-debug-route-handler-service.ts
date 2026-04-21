@@ -186,6 +186,18 @@ export class ServerDebugRouteHandlerService {
       return new Response('method not allowed', { status: 405 });
     }
 
+    // POST /debug/games/:gameId/matches/:matchScopeId/end
+    if (parts.length === 6 && parts[5] === 'end' && req.method === 'POST') {
+      return this.lobbyDirectoryService
+        .forceEndGameForMatch(gameId, matchScopeId)
+        .then(result => {
+          if (!result.ok) {
+            return this.jsonResponse({ error: result.error }, 400);
+          }
+          return this.jsonResponse({ ok: true });
+        });
+    }
+
     // GET /debug/games/:gameId/matches/:matchScopeId/card-library
     if (parts.length === 6 && parts[5] === 'card-library' && req.method === 'GET') {
       const exportState = this.lobbyDirectoryService.exportMatchStateForMatch(gameId, matchScopeId);

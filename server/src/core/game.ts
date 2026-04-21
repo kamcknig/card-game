@@ -227,6 +227,14 @@ export class Game {
     return this.gameMatchLifecycleCoordinatorService.mergeMatchState(this.runtimeState, partial);
   }
 
+  /**
+   * Forcibly ends the active match immediately, bypassing end-condition evaluation.
+   * Used exclusively by the debug API.
+   */
+  public forceEndGame(): Promise<{ ok: boolean; error?: string }> {
+    return this.gameMatchLifecycleCoordinatorService.forceEndGame(this.runtimeState);
+  }
+
   // Disposes match-lifetime resources for clean process shutdown.
   public dispose(): void {
     this.gameMatchLifecycleCoordinatorService.dispose(this.runtimeState);

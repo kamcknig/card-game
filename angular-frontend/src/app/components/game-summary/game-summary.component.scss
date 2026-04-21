@@ -1,9 +1,8 @@
-:host, .content {
-  height: 100%;
-}
-
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
   color: var(--theme-text-primary);
   background: linear-gradient(150deg, var(--theme-surface-app-start) 0%, var(--theme-surface-app-end) 100%);
 }
@@ -11,7 +10,9 @@
 .content {
   display: flex;
   flex-direction: row;
+  // Grow to fill remaining space above the post-game controls footer.
   flex: 1;
+  min-height: 0;
   padding: 24px;
   gap: 24px;
 }

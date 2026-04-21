@@ -250,6 +250,31 @@ export const debugOpenApiSpec = {
         },
       },
     },
+    '/debug/games/{gameId}/matches/{matchScopeId}/end': {
+      post: {
+        tags: ['debug-state'],
+        operationId: 'forceEndDebugMatch',
+        summary: 'Forcibly ends the active match, bypassing end-condition evaluation.',
+        parameters: [{ $ref: '#/components/parameters/GameId' }, { $ref: '#/components/parameters/MatchScopeId' }],
+        responses: {
+          '200': {
+            description: 'Match ended',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: { ok: { type: 'boolean' } },
+                  required: ['ok'],
+                },
+              },
+            },
+          },
+          '400': { $ref: '#/components/responses/BadRequestText' },
+          '403': { $ref: '#/components/responses/DebugApiDisabled' },
+          '404': { $ref: '#/components/responses/NotFoundText' },
+        },
+      },
+    },
     '/debug/games/{gameId}/matches/{matchScopeId}/card-library': {
       get: {
         tags: ['debug-games'],

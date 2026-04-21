@@ -340,6 +340,27 @@ export class LobbyDirectoryService {
     return resolved.record.game.mergeMatchState(partial);
   }
 
+  /**
+   * Forcibly ends the active match for a given game and match scope.
+   * Used exclusively by the debug API.
+   */
+  public async forceEndGameForMatch(
+    gameId: string,
+    matchScopeId: number,
+  ): Promise<{ ok: boolean; error?: string }> {
+    const resolved = this.resolveDebugGameAndMatch(gameId, matchScopeId);
+    if (!resolved.ok) {
+      this.loggerService.warn(
+        `[lobby directory] debug force-end rejected for game '${gameId}' matchScopeId=${matchScopeId}: ${resolved.error}`,
+      );
+      return { ok: false, error: resolved.error };
+    }
+    this.loggerService.log(
+      `[lobby directory] debug force-end for game '${gameId}' matchScopeId=${matchScopeId}`,
+    );
+    return resolved.record.game.forceEndGame();
+  }
+
   // Executes one debug expansion search for a specific game and match scope.
   public debugSearchForMatch(
     gameId: string,
