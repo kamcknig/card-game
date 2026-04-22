@@ -42,7 +42,9 @@ export const getMatchConfigDirectory = (gameId: string, matchScopeId: number): s
   return `${getMatchDataDirectory(gameId, matchScopeId)}/config`;
 };
 
-// Returns the global saved match-configuration directory.
-export const getSavedMatchConfigurationDirectory = (): string => {
-  return `${DATA_ROOT}/saves/match-configurations`;
+// Returns the per-user saved match-configuration directory when username is provided,
+// or the root saves directory when omitted (for listing all users, admin use).
+export const getSavedMatchConfigurationDirectory = (username?: string): string => {
+  const root = `${DATA_ROOT}/saves/match-configurations`;
+  return username ? `${root}/${username.toLowerCase()}` : root;
 };
