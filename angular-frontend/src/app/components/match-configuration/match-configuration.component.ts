@@ -323,6 +323,16 @@ export class MatchConfigurationComponent implements OnDestroy {
     this._socketService.off('savedMatchConfigurationList', this.onSavedConfigurationListReceived);
     this._socketService.off('matchConfigurationLoadCompleted', this.onLoadCompleted);
     this._socketService.off('matchConfigurationDeleteCompleted', this.onDeleteCompleted);
+
+    // If the user navigated away without explicitly clicking "Leave Game", emit
+    // the leave event now. leaveGame() clears the store before navigating, so
+    // this branch is skipped when that path is taken (no double-emit).
+    const activeGameId = activeLobbyGameIdStore.get();
+    if (activeGameId) {
+      activeLobbyGameIdStore.set(undefined);
+      lobbyStatusMessageStore.set(undefined);
+      this._socketService.emit('leaveLobbyGame', activeGameId);
+    }
   }
 
   // Toggles expansion selection in match configuration.

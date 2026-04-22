@@ -1,18 +1,12 @@
-* {
-  font-size: 36px;
-}
-
-:host, .content {
-  height: 100%;
-}
-
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .vertical-rule {
   width: 1px;
-  background-color: black;
+  background: var(--theme-border-subtle);
   align-self: stretch;
 }
 
@@ -20,6 +14,7 @@
   display: flex;
   flex-direction: row;
   flex: 1;
+  overflow: auto;
   padding: 20px;
 }
 
@@ -28,6 +23,7 @@
   display: flex;
   flex-direction: column;
   padding: 20px;
+  gap: 16px;
 
   &.left {
     max-width: 40%;
@@ -52,8 +48,8 @@
       .line {
         width: 100%;
         height: 2px;
-        background: black;
-        margin: 0 10px; /* This finally works! */
+        background: var(--theme-border-medium);
+        margin: 0 10px;
       }
     }
 
@@ -70,7 +66,7 @@
   height: auto;
   display: inline-block;
   object-fit: contain;
-  filter: brightness(.5);
+  filter: brightness(0.5);
 }
 
 .score-value {
@@ -78,10 +74,10 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
+  font-size: 1.5rem;
   font-weight: bold;
   pointer-events: none;
-  color: white;
-  font-size: 24px;
+  color: var(--theme-text-on-dark);
 }
 
 .place {
@@ -91,21 +87,23 @@
   width: 45px;
   height: 45px;
   border-radius: 50%;
-  border: 2px solid black;
+  border: 2px solid var(--theme-border-strong);
   font-weight: bold;
 }
 
 .player-deck-summary {
-  border: 2px solid black;
-  padding: 20px;
+  background: var(--theme-surface-card);
+  border: 1px solid var(--theme-border-medium);
+  border-radius: 8px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
 
   .deck-summary {
     display: flex;
     flex-wrap: wrap;
-    gap: 20px;
+    gap: 12px;
   }
 
   .card-summary {
@@ -119,12 +117,120 @@
       text-align: center;
       width: 30px;
       height: 30px;
-      font-size: 24px;
+      font-size: 0.85rem;
+      line-height: 30px;
       position: absolute;
       top: 0;
       left: 0;
-      background: red;
-      border: 2px solid black;
+      background: var(--theme-surface-count-badge);
+      border: 1px solid var(--theme-border-medium);
+    }
+  }
+}
+
+// Action bar footer — centered column layout
+.action-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--theme-border-subtle);
+  background: var(--theme-surface-panel);
+  flex-shrink: 0;
+}
+
+// Vertical list of player ready states
+.ready-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.ready-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--theme-font-body);
+  font-size: 0.85rem;
+  color: var(--theme-text-secondary);
+
+  &.is-ready {
+    color: var(--theme-color-ready);
+  }
+}
+
+// Row of action buttons — centered
+.action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+// Base action button (Mark Ready, Edit Match)
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 18px;
+  border-radius: 6px;
+  border: 1px solid var(--theme-border-medium);
+  background: transparent;
+  color: var(--theme-text-tertiary);
+  font-family: var(--theme-font-body);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 150ms, border-color 120ms, color 120ms;
+
+  &:hover:not(:disabled) {
+    color: var(--theme-text-primary);
+    border-color: var(--theme-border-action);
+  }
+
+  // Toggled state for the Ready button
+  &.action-btn--active {
+    background: var(--theme-action-primary-bg);
+    border-color: var(--theme-border-action);
+    color: var(--theme-text-primary);
+  }
+
+  // Danger variant — Return to Lobby (destructive / exit action)
+  &.action-btn--danger {
+    color: var(--theme-border-danger);
+    border-color: var(--theme-border-danger);
+
+    &:hover:not(:disabled) {
+      background: var(--theme-action-danger-soft-bg);
+      border-color: var(--theme-border-danger);
+      color: var(--theme-border-danger);
+    }
+  }
+
+  // Primary variant — Restart Match
+  &.action-btn--primary {
+    background: var(--theme-action-primary-bg);
+    border-color: var(--theme-border-action);
+    color: var(--theme-text-primary);
+    font-family: var(--theme-font-display);
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 8px 24px;
+
+    &:hover:not(:disabled) {
+      border-color: var(--theme-border-strong);
+    }
+
+    &:disabled {
+      background: var(--theme-action-disabled-bg);
+      opacity: var(--theme-action-disabled-opacity);
+      filter: saturate(0.45);
+      cursor: not-allowed;
+      border-color: var(--theme-border-disabled);
+      color: var(--theme-text-disabled);
     }
   }
 }

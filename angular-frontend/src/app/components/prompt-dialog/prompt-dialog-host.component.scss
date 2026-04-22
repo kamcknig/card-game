@@ -51,7 +51,11 @@
   background: var(--theme-surface-panel);
   color: var(--theme-text-primary);
   border-radius: 6px;
+  font-family: var(--theme-font-display);
   font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   min-height: 36px;
   padding: 6px 14px;
   cursor: pointer;

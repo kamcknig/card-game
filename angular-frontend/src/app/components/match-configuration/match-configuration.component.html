@@ -466,8 +466,8 @@
         <div class="config-dialog-meta">No configuration changes to save.</div>
       }
       <div class="config-dialog-actions">
-        <button (click)="submitSaveDialog()" [disabled]="!canSubmitSaveDialog()">Save</button>
-        <button (click)="closeSaveDialog()">Cancel</button>
+        <button class="config-dialog-cancel" (click)="closeSaveDialog()">Cancel</button>
+        <button class="config-dialog-confirm" (click)="submitSaveDialog()" [disabled]="!canSubmitSaveDialog()">Save</button>
       </div>
     </section>
   </app-ui-dialog>
@@ -504,7 +504,7 @@
         <div class="config-dialog-error">{{ statusMessage }}</div>
       }
       <div class="config-dialog-actions">
-        <button (click)="closeLoadDialog()">Cancel</button>
+        <button class="config-dialog-cancel" (click)="closeLoadDialog()">Cancel</button>
       </div>
     </section>
   </app-ui-dialog>

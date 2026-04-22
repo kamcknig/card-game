@@ -1,5 +1,11 @@
 <router-outlet />
 
+@if (showReconnecting()) {
+  <div class="reconnect-banner" role="status" aria-live="polite">
+    Reconnecting&hellip;
+  </div>
+}
+
 <app-card-detail-dialog></app-card-detail-dialog>
 <app-way-picker-overlay></app-way-picker-overlay>
 <app-prompt-dialog-host></app-prompt-dialog-host>

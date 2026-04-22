@@ -106,8 +106,11 @@
     color: var(--theme-text-primary);
     border-radius: 6px;
     padding: 8px 20px;
+    font-family: var(--theme-font-display);
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     cursor: pointer;
 
     &:hover {

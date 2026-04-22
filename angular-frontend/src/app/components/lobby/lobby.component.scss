@@ -126,8 +126,11 @@
   background: var(--theme-action-primary-muted-bg);
   color: var(--theme-text-primary);
   padding: 6px 12px;
+  font-family: var(--theme-font-display);
   font-weight: 600;
   font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .game-name {

@@ -26,6 +26,8 @@
   border-radius: 8px;
   padding: 10px 12px;
   text-align: left;
+  font-family: var(--theme-font-body);
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
 }
@@ -46,6 +48,9 @@
   color: var(--theme-text-primary);
   border-radius: 6px;
   padding: 7px 12px;
+  font-family: var(--theme-font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
   cursor: pointer;
 }
 
