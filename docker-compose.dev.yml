@@ -52,6 +52,8 @@ services:
       AUTH_ALLOWED_ORIGINS: "*"
       AUTH_SESSION_STORE: "kv"
       AUTH_KV_PATH: "./game-data/auth.kv"
+      GAME_DATA_STORE: "kv"
+      GAME_DATA_KV_PATH: "./game-data/game-data.kv"
       AUTH_MIN_PASSWORD_LENGTH: "10"
       AUTH_LOCKOUT_THRESHOLD: "10"
       AUTH_LOCKOUT_DURATION_MS: "600000"

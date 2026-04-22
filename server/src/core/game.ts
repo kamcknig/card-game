@@ -30,7 +30,7 @@ import {
   GameLobbySessionCoordinatorService,
   RemoveLobbyPlayerResult,
 } from './game-lobby-session-coordinator-service.ts';
-import { MatchConfigurationSaveService } from './match-configuration-save-service.ts';
+import type { MatchConfigurationSaveStore } from './match-configuration-save-store.ts';
 
 const createDefaultMatchConfiguration = (): MatchConfiguration => ({
   expansions: [
@@ -122,7 +122,7 @@ export class Game {
     // Centralized server env configuration provider.
     private readonly serverConfigService: ServerConfigService,
     // Stores named match-configuration save files for lobby owners.
-    private readonly matchConfigurationSaveService: MatchConfigurationSaveService,
+    private readonly matchConfigurationSaveService: MatchConfigurationSaveStore,
     // Coordinator that owns match lifecycle transitions and match scope creation.
     private readonly gameMatchLifecycleCoordinatorService: GameMatchLifecycleCoordinatorService,
     // Coordinator that owns lobby/session events and owner-only lobby handlers.
@@ -438,16 +438,25 @@ export class Game {
     this.io.in(this.runtimeState.roomName).emit('matchConfigurationUpdated', this.runtimeState.matchConfiguration);
   };
 
+  // Resolves the authenticated username for a player by their player id.
+  // Returns an empty string for computer players or when the player is not found.
+  private getUsernameForPlayer(playerId: PlayerId): string {
+    return this.runtimeState.players.find(p => p.id === playerId)?.name ?? '';
+  }
+
   // Sends save-name availability checks to one owner client.
   private onCheckMatchConfigurationSaveName = (playerId: PlayerId, name: string): void => {
-    const result: MatchConfigurationSaveNameCheckResult = this.matchConfigurationSaveService.checkSaveName(name);
+    const username = this.getUsernameForPlayer(playerId);
+    const result: MatchConfigurationSaveNameCheckResult = this.matchConfigurationSaveService.checkSaveName(username, name);
     this.runtimeState.socketMap.get(playerId)?.emit('matchConfigurationSaveNameChecked', result);
   };
 
   // Persists current lobby match configuration as a named save file.
   private onSaveMatchConfiguration = (playerId: PlayerId, name: string): void => {
+    const username = this.getUsernameForPlayer(playerId);
     const configuration = this.runtimeState.matchConfiguration ?? structuredClone(this.defaultMatchConfiguration);
     const result: MatchConfigurationSaveResult = this.matchConfigurationSaveService.saveConfiguration(
+      username,
       name,
       configuration,
     );
@@ -464,7 +473,8 @@ export class Game {
 
   // Loads one saved configuration and applies it through the existing update flow.
   private onLoadSavedMatchConfiguration = async (playerId: PlayerId, key: string): Promise<void> => {
-    const loadResult = this.matchConfigurationSaveService.loadConfiguration(key);
+    const username = this.getUsernameForPlayer(playerId);
+    const loadResult = this.matchConfigurationSaveService.loadConfiguration(username, key);
     if (!loadResult.ok) {
       const result: MatchConfigurationLoadResult = {
         ok: false,
@@ -490,7 +500,8 @@ export class Game {
 
   // Deletes one saved configuration and emits the current saved list back to owner.
   private onDeleteSavedMatchConfiguration = (playerId: PlayerId, key: string): void => {
-    const deleteResult = this.matchConfigurationSaveService.deleteConfiguration(key);
+    const username = this.getUsernameForPlayer(playerId);
+    const deleteResult = this.matchConfigurationSaveService.deleteConfiguration(username, key);
     const result: MatchConfigurationDeleteResult = deleteResult.ok
       ? {
           ok: true,
@@ -509,7 +520,8 @@ export class Game {
 
   // Emits the saved-configuration list to one owner client.
   private emitSavedConfigurationList(playerId: PlayerId): void {
-    const saves: SavedMatchConfigurationEntry[] = this.matchConfigurationSaveService.listSavedConfigurations();
+    const username = this.getUsernameForPlayer(playerId);
+    const saves: SavedMatchConfigurationEntry[] = this.matchConfigurationSaveService.listSavedConfigurations(username);
     this.runtimeState.socketMap.get(playerId)?.emit('savedMatchConfigurationList', saves);
   }
 

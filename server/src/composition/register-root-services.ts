@@ -35,6 +35,9 @@ import { ExpansionLoaderService } from '../core/expansion-loader-service.ts';
 import { GameScopeFactory } from '../core/game-scope-factory.ts';
 import { LobbyDirectoryService } from '../core/lobby-directory-service.ts';
 import { MatchConfigurationSaveService } from '../core/match-configuration-save-service.ts';
+import { GameDataKvProvider } from '../core/game-data-kv-provider.ts';
+import { DenoKvMatchConfigurationSaveService } from '../core/deno-kv-match-configuration-save-service.ts';
+import type { MatchConfigurationSaveStore } from '../core/match-configuration-save-store.ts';
 import { AuthSessionService } from '../core/auth/auth-session-service.ts';
 import { ServerAuthRouteHandlerService } from '../core/auth/server-auth-route-handler-service.ts';
 import { AuthRateLimiterService } from '../core/auth/auth-rate-limiter-service.ts';
@@ -79,7 +82,23 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
     matchScopeFactory: asClass(MatchScopeFactory).singleton(),
     matchConfiguratorFactory: asClass(MatchConfiguratorFactory).singleton(),
     expansionSearchService: asClass(ExpansionSearchService).singleton(),
-    matchConfigurationSaveService: asClass(MatchConfigurationSaveService).singleton(),
+    // Selects the match-configuration save store backend based on GAME_DATA_STORE env var.
+    // 'file' (default) uses per-user JSON subdirectories on disk.
+    // 'kv' uses Deno KV with a write-through cache — call DenoKvMatchConfigurationSaveService.open()
+    //   in ServerStartupService before the HTTP server accepts connections.
+    matchConfigurationSaveService: asFunction(
+      (serverConfigService: ServerConfigService, loggerService: LoggerService): MatchConfigurationSaveStore => {
+        const kind = serverConfigService.getGameDataStoreKind();
+        if (kind === 'kv') {
+          loggerService.log('[game data] match config save store: deno kv (per-user, persistent)');
+          // open() is called asynchronously during ServerStartupService.start()
+          // before the HTTP server begins accepting connections.
+          return new DenoKvMatchConfigurationSaveService(loggerService);
+        }
+        loggerService.log('[game data] match config save store: file-based (per-user subdirectories)');
+        return new MatchConfigurationSaveService(loggerService);
+      },
+    ).singleton(),
     expansionCompatibilityService: asClass(ExpansionCompatibilityService).singleton(),
     expansionCatalogService: asClass(ExpansionCatalogService).singleton(),
     rngService: asClass(RngService).singleton(),
@@ -132,6 +151,10 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
     // DenoKvSessionStore, DenoKvUserStore, and DenoKvRegistrationCodeStore
     // all share a single Deno KV database file.
     authKvProvider: asClass(AuthKvProvider).singleton(),
+    // Shared KV handle provider for game-data persistence (match config saves, etc.).
+    // Opened once from ServerStartupService when GAME_DATA_STORE=kv; kept separate
+    // from the auth KV store so the two can be backed by different files.
+    gameDataKvProvider: asClass(GameDataKvProvider).singleton(),
     // Password hashing primitives. Argon2id for all new hashes,
     // Bcrypt retained for verification of legacy rows.
     argon2idHasher: asClass(Argon2idHasher).singleton(),
