@@ -13,6 +13,9 @@ import { ServerConfigService } from './server-config-service.ts';
 import type { SessionStore } from './auth/session-store.ts';
 import type { UserStore } from './auth/user-store.ts';
 import type { RegistrationCodeStore } from './auth/registration-code-store.ts';
+import { GameDataKvProvider } from './game-data-kv-provider.ts';
+import { DenoKvMatchConfigurationSaveService } from './deno-kv-match-configuration-save-service.ts';
+import type { MatchConfigurationSaveStore } from './match-configuration-save-store.ts';
 
 // Owns one-time server startup tasks so server.ts can stay focused on composition and host wiring.
 export class ServerStartupService {
@@ -28,6 +31,8 @@ export class ServerStartupService {
     private readonly userStore: UserStore,
     private readonly registrationCodeStore: RegistrationCodeStore,
     private readonly authKvProvider: AuthKvProvider,
+    private readonly gameDataKvProvider: GameDataKvProvider,
+    private readonly matchConfigurationSaveService: MatchConfigurationSaveStore,
   ) {}
 
   // Loads expansion data/effects and notifies the lobby directory for game propagation.
@@ -52,6 +57,17 @@ export class ServerStartupService {
       if (this.registrationCodeStore instanceof DenoKvRegistrationCodeStore) {
         await this.registrationCodeStore.open(kv);
       }
+    }
+
+    // When using the Deno KV game-data store, open a single shared KV handle
+    // via GameDataKvProvider and hand it to the match-configuration save service
+    // so that all game-data consumers share a single handle (separate from
+    // the auth KV file).
+    if (this.matchConfigurationSaveService instanceof DenoKvMatchConfigurationSaveService) {
+      const kvPath = this.serverConfigService.getGameDataKvPath();
+      this.loggerService.info(`[server startup] opening game-data KV store at '${kvPath}'`);
+      const kv = await this.gameDataKvProvider.open(kvPath);
+      await this.matchConfigurationSaveService.open(kv);
     }
 
     // Register the user-account provider for per-user credential management.
