@@ -22,6 +22,9 @@ export class ServerConfigService {
     this.isMatchStateMergeEnabled();
     this.shouldEndMatchOnNoHumans();
     this.getTooltipDefaultCloseDelayMs();
+    const gameDataStore = this.getGameDataStoreKind();
+    // Eagerly validate the KV path config when the kv backend is selected.
+    if (gameDataStore === 'kv') this.getGameDataKvPath();
   }
 
   /**
@@ -95,6 +98,36 @@ export class ServerConfigService {
    */
   public getAuthKvPath(): string {
     return Deno.env.get('AUTH_KV_PATH') ?? './game-data/auth.kv';
+  }
+
+  /**
+   * Returns the game-data storage backend to use for user-facing persistence
+   * (match configuration saves, etc.).
+   *
+   * Reads from GAME_DATA_STORE. Valid values are 'file' (default) and 'kv'.
+   * - 'file': JSON files on disk, per-user subdirectories (backward-compatible).
+   * - 'kv':   Deno KV with write-through cache, per-user key namespacing.
+   */
+  public getGameDataStoreKind(): 'file' | 'kv' {
+    const raw = Deno.env.get('GAME_DATA_STORE');
+    if (!raw || !raw.trim()) {
+      return 'file';
+    }
+    const trimmed = raw.trim().toLowerCase();
+    if (trimmed === 'file' || trimmed === 'kv') {
+      return trimmed;
+    }
+    throw new Error(`[server config] GAME_DATA_STORE must be 'file' or 'kv', received '${raw}'`);
+  }
+
+  /**
+   * Returns the filesystem path for the Deno KV game-data store.
+   *
+   * Reads from GAME_DATA_KV_PATH. Defaults to './game-data/game-data.kv'.
+   * Used only when GAME_DATA_STORE=kv. Pass ':memory:' for dev/test.
+   */
+  public getGameDataKvPath(): string {
+    return Deno.env.get('GAME_DATA_KV_PATH') ?? './game-data/game-data.kv';
   }
 
   /**

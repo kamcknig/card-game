@@ -4,7 +4,7 @@ import { LobbyDirectoryService } from './lobby-directory-service.ts';
 import { ServerConfigService } from './server-config-service.ts';
 import { ExpansionCatalogService } from './expansion-catalog-service.ts';
 import { ExpansionSearchService } from './expansion-search-service.ts';
-import { MatchConfigurationSaveService } from './match-configuration-save-service.ts';
+import type { MatchConfigurationSaveStore } from './match-configuration-save-store.ts';
 import { debugOpenApiSpec } from './debug-openapi-spec.ts';
 import { AuthSessionService } from './auth/auth-session-service.ts';
 import type { UserStore } from './auth/user-store.ts';
@@ -38,7 +38,7 @@ export class ServerDebugRouteHandlerService {
     private readonly lobbyDirectoryService: LobbyDirectoryService,
     private readonly expansionCatalogService: ExpansionCatalogService,
     private readonly expansionSearchService: ExpansionSearchService,
-    private readonly matchConfigurationSaveService: MatchConfigurationSaveService,
+    private readonly matchConfigurationSaveService: MatchConfigurationSaveStore,
     private readonly serverConfigService: ServerConfigService,
     private readonly authSessionService: AuthSessionService,
     private readonly userStore: UserStore,
@@ -281,10 +281,18 @@ export class ServerDebugRouteHandlerService {
   }
 
   // Routes /debug/saved-match-configurations resources for save-file CRUD operations.
+  // Accepts an optional ?username= query param for per-user filtering.
+  // Collection-level GET/DELETE without ?username= operate across all users (admin).
+  // POST and all :key routes require ?username=.
   private handleSavedMatchConfigurationDebugRoutes(req: Request, parts: string[]): Response | Promise<Response> {
+    const url = new URL(req.url);
+    const username = url.searchParams.get('username') ?? '';
+
     // GET /debug/saved-match-configurations
     if (parts.length === 2 && req.method === 'GET') {
-      const entries = this.matchConfigurationSaveService.listSavedConfigurations();
+      const entries = username
+        ? this.matchConfigurationSaveService.listSavedConfigurations(username)
+        : this.matchConfigurationSaveService.listAllSavedConfigurations();
       return this.jsonResponse({
         count: entries.length,
         entries,
@@ -293,15 +301,18 @@ export class ServerDebugRouteHandlerService {
 
     // DELETE /debug/saved-match-configurations
     if (parts.length === 2 && req.method === 'DELETE') {
-      const deleteAllResult = this.matchConfigurationSaveService.deleteAllConfigurations();
+      const deleteAllResult = this.matchConfigurationSaveService.deleteAllConfigurations(username || undefined);
       if (!deleteAllResult.ok) {
         return this.jsonResponse(deleteAllResult, 500);
       }
       return this.jsonResponse(deleteAllResult);
     }
 
-    // POST /debug/saved-match-configurations
+    // POST /debug/saved-match-configurations — requires ?username=
     if (parts.length === 2 && req.method === 'POST') {
+      if (!username) {
+        return new Response('?username= is required for POST', { status: 400 });
+      }
       return req
         .json()
         .then(body => {
@@ -316,6 +327,7 @@ export class ServerDebugRouteHandlerService {
           }
 
           const saveResult = this.matchConfigurationSaveService.saveConfiguration(
+            username,
             saveName,
             configuration as MatchConfiguration,
           );
@@ -329,11 +341,16 @@ export class ServerDebugRouteHandlerService {
       return new Response('saved configuration key is required', { status: 400 });
     }
 
+    // All :key routes require ?username=.
+    if (!username) {
+      return new Response('?username= is required', { status: 400 });
+    }
+
     const decodedKey = decodeURIComponent(key);
 
     // GET /debug/saved-match-configurations/:key
     if (parts.length === 3 && req.method === 'GET') {
-      const getResult = this.matchConfigurationSaveService.getSavedConfiguration(decodedKey);
+      const getResult = this.matchConfigurationSaveService.getSavedConfiguration(username, decodedKey);
       if (!getResult.ok) {
         return this.jsonResponse(getResult, this.getSavedConfigurationErrorStatus(getResult.message));
       }
@@ -342,7 +359,7 @@ export class ServerDebugRouteHandlerService {
 
     // DELETE /debug/saved-match-configurations/:key
     if (parts.length === 3 && req.method === 'DELETE') {
-      const deleteResult = this.matchConfigurationSaveService.deleteConfiguration(decodedKey);
+      const deleteResult = this.matchConfigurationSaveService.deleteConfiguration(username, decodedKey);
       if (!deleteResult.ok) {
         return this.jsonResponse(deleteResult, this.getSavedConfigurationErrorStatus(deleteResult.message));
       }
@@ -358,7 +375,7 @@ export class ServerDebugRouteHandlerService {
             return new Response('invalid patch payload', { status: 400 });
           }
 
-          const existing = this.matchConfigurationSaveService.getSavedConfiguration(decodedKey);
+          const existing = this.matchConfigurationSaveService.getSavedConfiguration(username, decodedKey);
           if (!existing.ok) {
             return this.jsonResponse(existing, this.getSavedConfigurationErrorStatus(existing.message));
           }
@@ -382,6 +399,7 @@ export class ServerDebugRouteHandlerService {
             ...(configurationPatch as Partial<MatchConfiguration>),
           };
           const updateResult = this.matchConfigurationSaveService.updateConfiguration(
+            username,
             existing.entry.key,
             mergedConfiguration,
             requestedName,
@@ -390,7 +408,7 @@ export class ServerDebugRouteHandlerService {
             return this.jsonResponse(updateResult, this.getSavedConfigurationErrorStatus(updateResult.message));
           }
 
-          const refreshedSave = this.matchConfigurationSaveService.getSavedConfiguration(existing.entry.key);
+          const refreshedSave = this.matchConfigurationSaveService.getSavedConfiguration(username, existing.entry.key);
           if (!refreshedSave.ok) {
             return this.jsonResponse(refreshedSave, this.getSavedConfigurationErrorStatus(refreshedSave.message));
           }
