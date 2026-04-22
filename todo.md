@@ -1,6 +1,9 @@
 # Randoms
 
 When no cards in hand, the hand should not collapse vertically
+---
+
+show the version number in the app somewhere
 
 ---
 
