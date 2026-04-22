@@ -1,3 +1,11 @@
+# Randoms
+
+These cards have original assets but are missing full/half/detail images in public assets
+
+- hunter - from allies
+- way of the turtle - from menagerie
+- way of the worm - from menagerie
+
 # Lower priority
 
 - add pre commit to lint and or fmt

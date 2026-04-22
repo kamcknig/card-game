@@ -59,3 +59,22 @@ app-match-hud {
 app-match-hud.match-started {
   display: block;
 }
+
+// Floating banner shown when the socket connection drops and the client is
+// reconnecting. Sits above all content without blocking interaction.
+.reconnect-banner {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 6px 18px;
+  border-radius: 20px;
+  background: var(--theme-surface-panel);
+  border: 1px solid var(--theme-border-danger);
+  color: var(--theme-border-danger);
+  font-family: var(--theme-font-body);
+  font-size: 0.85rem;
+  pointer-events: none;
+  white-space: nowrap;
+}
