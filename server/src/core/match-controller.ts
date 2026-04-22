@@ -61,6 +61,10 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _registeredEvents: (keyof ServerListenEvents)[] = [];
   // Tracks nested runGameAction calls to avoid corrupting patch snapshots.
   private _actionDepth: number = 0;
+  // Set when endGame() is first entered. Used to suppress the top-level patchUpdate broadcast
+  // and any re-entrant endGame() calls that would occur when a nested action triggers the end
+  // condition before the outer broadcastPatch runs.
+  private _gameEnding: boolean = false;
   // Cached match state override loaded from disk, if provided.
   private _loadedMatchState: { match: Match; cardLibrary: Record<CardId, Card> } | null = null;
 
@@ -562,8 +566,14 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this.match.cardOverrides = this.cardPriceController.calculateOverrides() ?? {};
 
       if (isTopLevel) {
-        this.broadcastPatch({ ...this._matchSnapshot });
-        this.logManager.flushQueue();
+        // Skip broadcasting if game is already ending — a nested action fired endGame()
+        // (emitting gameOver) before this top-level broadcast ran. Sending patchUpdate
+        // after gameOver would cause the client to fail applying the patch against a null
+        // match store.
+        if (!this._gameEnding) {
+          this.broadcastPatch({ ...this._matchSnapshot });
+          this.logManager.flushQueue();
+        }
         this._matchSnapshot = null;
       }
 
@@ -747,6 +757,13 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   private async endGame() {
+    // Guard against re-entrant calls — pile counts remain depleted after the first endGame,
+    // so a second checkGameEnd would fire endGame again and emit a duplicate gameOver.
+    if (this._gameEnding) {
+      this.loggerService.debug(`[match] endGame re-entry suppressed`);
+      return;
+    }
+    this._gameEnding = true;
     this.loggerService.log(`[match] ending the game`);
 
     await this.matchEndService.endMatch({

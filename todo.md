@@ -4,31 +4,6 @@ When no cards in hand, the hand should not collapse vertically
 
 ---
 
-when a game ended naturally it gave this warning in the chrome console - need to see if same happens locally
-
-main-Q5RWLBWL.js:11 [socket event map] failed to apply match patch
-t.patchMatch	@	main-Q5RWLBWL.js:11
-t.patchUpdate	@	main-Q5RWLBWL.js:11
-(anonymous)	@	main-Q5RWLBWL.js:7
-Ue.emit	@	main-Q5RWLBWL.js:7
-emitEvent	@	main-Q5RWLBWL.js:7
-onevent	@	main-Q5RWLBWL.js:7
-onpacket	@	main-Q5RWLBWL.js:7
-Ue.emit	@	main-Q5RWLBWL.js:7
-(anonymous)	@	main-Q5RWLBWL.js:7
-Promise.then
-(anonymous)	@	main-Q5RWLBWL.js:7
-ondecoded	@	main-Q5RWLBWL.js:7
-Ue.emit	@	main-Q5RWLBWL.js:7
-add	@	main-Q5RWLBWL.js:7
-ondata	@	main-Q5RWLBWL.js:7
-Ue.emit	@	main-Q5RWLBWL.js:7
-_onPacket	@	main-Q5RWLBWL.js:7
-Ue.emit	@	main-Q5RWLBWL.js:7
-onPacket	@	main-Q5RWLBWL.js:7
-onData	@	main-Q5RWLBWL.js:7
-ws.onmessage	@	main-Q5RWLBWL.js:7
-
 These cards have original assets but are missing full/half/detail images in public assets
 
 - hunter - from allies
