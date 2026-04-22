@@ -1,4 +1,4 @@
-import { Injectable } from "@angular/core";
+import { Injectable, signal } from "@angular/core";
 import { io, Socket } from "socket.io-client";
 import { environment } from "../../../environments/environment";
 import { v4 as uuidV4 } from "uuid";
@@ -15,6 +15,9 @@ export type SocketEventMap = Partial<{ [p in ClientListenEventNames]: ClientList
 export class SocketService {
   private _socket: Socket<ServerListenEvents, ServerEmitEvents>;
   private _socketEventMap: SocketEventMap | undefined;
+
+  /** Reactive signal — true when the socket is connected, false when disconnected or reconnecting. */
+  readonly connected = signal(false);
 
   constructor() {
     let sessionId = localStorage.getItem("sessionId");
@@ -41,6 +44,7 @@ export class SocketService {
       },
     }) as unknown as Socket<ServerListenEvents, ServerEmitEvents>;
 
+    this._socket.on("connect", this.onConnect);
     this._socket.on("connect_error", this.onConnectError);
     this._socket.on("disconnect", this.onDisconnect);
   }
@@ -74,13 +78,18 @@ export class SocketService {
     }
   }
 
+  private onConnect = () => {
+    this.connected.set(true);
+  };
+
   private onConnectError = (error: any) => {
-    // todo show error screen
+    this.connected.set(false);
     console.warn("socket failed to connect");
     console.error(error);
   };
 
   private onDisconnect = () => {
+    this.connected.set(false);
     console.info("socket disconnected");
   };
 

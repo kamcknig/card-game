@@ -25,7 +25,9 @@ input {
   border-radius: 4px;
   background: var(--theme-action-secondary-bg);
   padding: 4px 8px;
+  font-family: var(--theme-font-body);
   font-size: 0.75rem;
+  font-weight: 500;
   color: var(--theme-text-primary);
 }
 

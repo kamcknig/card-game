@@ -163,7 +163,12 @@ export class SocketEventMapService {
       activeLobbyGameIdStore.set(undefined);
       this._clearMatchUiOverlays();
       debugRuntimeContextStore.set(undefined);
-      lobbyStatusMessageStore.set(payload.message);
+      // Returning to the lobby from the game summary is a voluntary action; suppress
+      // the status banner so the lobby doesn't show a redundant "returned" message.
+      const topLevel = '/' + (this._router.url.split('?')[0].split('/')[1] ?? '');
+      if (topLevel !== '/game-summary') {
+        lobbyStatusMessageStore.set(payload.message);
+      }
       void this._router.navigate(['/lobby']);
     };
 
@@ -187,6 +192,9 @@ export class SocketEventMapService {
       // Clear first-match log entries so the second match starts with an empty log.
       logEntryIdsStore.set([]);
       logStore.set({});
+      // No longer in the lobby game phase once the match starts; clear so that
+      // MatchConfigurationComponent.ngOnDestroy does not emit leaveLobbyGame.
+      activeLobbyGameIdStore.set(undefined);
       this._clearMatchUiOverlays();
       const cardsById = cardStore.get();
       if (!cardsById || Object.keys(cardsById).length === 0) {
