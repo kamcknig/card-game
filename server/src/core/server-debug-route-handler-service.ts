@@ -6,6 +6,8 @@ import { ExpansionCatalogService } from './expansion-catalog-service.ts';
 import { ExpansionSearchService } from './expansion-search-service.ts';
 import { MatchConfigurationSaveService } from './match-configuration-save-service.ts';
 import { debugOpenApiSpec } from './debug-openapi-spec.ts';
+import { AuthSessionService } from './auth/auth-session-service.ts';
+import type { UserStore } from './auth/user-store.ts';
 import {
   AllyNoId,
   ArtifactNoId,
@@ -38,6 +40,8 @@ export class ServerDebugRouteHandlerService {
     private readonly expansionSearchService: ExpansionSearchService,
     private readonly matchConfigurationSaveService: MatchConfigurationSaveService,
     private readonly serverConfigService: ServerConfigService,
+    private readonly authSessionService: AuthSessionService,
+    private readonly userStore: UserStore,
   ) {
     this.ioHandler = this.io.handler();
   }
@@ -49,8 +53,28 @@ export class ServerDebugRouteHandlerService {
       return this.ioHandler(req, info);
     }
 
+    // Respond to CORS preflight before routing or checking if the debug API is enabled.
+    if (req.method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: this.corsHeaders(req) });
+    }
+
+    const result = this.routeDebugRequest(req, url);
+    if (result instanceof Promise) {
+      return result.then(r => this.withCors(r, req));
+    }
+    return this.withCors(result, req);
+  }
+
+  // Dispatches debug requests to specific sub-handlers after confirming the API is enabled.
+  private routeDebugRequest(req: Request, url: URL): Response | Promise<Response> {
     if (!this.serverConfigService.isMatchStateExportEnabled()) {
       return new Response('debug API disabled', { status: 403 });
+    }
+
+    // Require a valid admin session token for all debug endpoints.
+    const authDenied = this.requireAdminToken(req);
+    if (authDenied) {
+      return authDenied;
     }
 
     const parts = url.pathname.split('/').filter(Boolean);
@@ -549,6 +573,69 @@ export class ServerDebugRouteHandlerService {
   // Creates a stable, cardKey-sorted list from a card/landscape keyed record.
   private sortCardLikeValues<T extends { cardKey: string }>(records: Record<string, T>): T[] {
     return Object.values(records).sort((a, b) => a.cardKey.localeCompare(b.cardKey));
+  }
+
+  /**
+   * Checks that the request carries a valid session token belonging to an admin user.
+   *
+   * Returns a 401 Response when no Bearer token is present, a 403 Response when
+   * the token is invalid/expired or the user is not an admin, and undefined when
+   * access is granted.
+   */
+  private requireAdminToken(req: Request): Response | undefined {
+    const authHeader = req.headers.get('authorization');
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() || undefined : undefined;
+
+    if (!token) {
+      return new Response('authorization required', { status: 401 });
+    }
+
+    const username = this.authSessionService.validateToken(token);
+    if (!username) {
+      return new Response('invalid or expired token', { status: 401 });
+    }
+
+    const user = this.userStore.getByUsername(username);
+    if (!user?.isAdmin) {
+      return new Response('admin access required', { status: 403 });
+    }
+
+    return undefined;
+  }
+
+  // Computes CORS response headers based on the server's configured allowed origins.
+  private corsHeaders(req?: Request): Record<string, string> {
+    const allowed = this.serverConfigService.getAuthAllowedOrigins();
+    const requestOrigin = req?.headers.get('origin') ?? '';
+    const originHeader = allowed.includes('*')
+      ? '*'
+      : allowed.includes(requestOrigin)
+        ? requestOrigin
+        : '';
+    const headers: Record<string, string> = {
+      'access-control-allow-methods': 'GET, POST, PATCH, DELETE, OPTIONS',
+      'access-control-allow-headers': 'Content-Type, Authorization',
+      'access-control-max-age': '86400',
+      'vary': 'Origin',
+    };
+    if (originHeader) {
+      headers['access-control-allow-origin'] = originHeader;
+    }
+    return headers;
+  }
+
+  // Returns a new Response with CORS headers merged in.
+  private withCors(response: Response, req: Request): Response {
+    const cors = this.corsHeaders(req);
+    const headers = new Headers(response.headers);
+    for (const [key, value] of Object.entries(cors)) {
+      headers.set(key, value);
+    }
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
   }
 
   // Creates a consistent JSON HTTP response payload.

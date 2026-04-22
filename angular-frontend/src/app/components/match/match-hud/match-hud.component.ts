@@ -29,7 +29,7 @@ import { cardSourceStore, cardSourceTagMapStore, getCardSourceStore } from '../.
 import { disconnectedHumanIdsStore } from '../../../state/game-state';
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { debugOverlayVisibleStore, debugRuntimeContextStore } from '../../../state/debug-runtime-state';
-import { authIsAdminStore } from '../../../core/auth/auth.service';
+import { authIsAdminStore, authTokenStore } from '../../../core/auth/auth.service';
 import { UiDialogComponent } from '../../ui/dialog/ui-dialog.component';
 import { cardStore } from '../../../state/card-state';
 import { matchStore } from '../../../state/match-state';
@@ -316,8 +316,10 @@ export class MatchHudComponent implements AfterViewInit, OnDestroy {
   async debugEndGame(): Promise<void> {
     const ctx = debugRuntimeContextStore.get();
     if (!ctx?.gameId || !ctx.matchScopeId) return;
+    const token = authTokenStore.get();
     await fetch(`${environment.wsHost}/debug/games/${ctx.gameId}/matches/${ctx.matchScopeId}/end`, {
       method: 'POST',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
     });
   }
 
