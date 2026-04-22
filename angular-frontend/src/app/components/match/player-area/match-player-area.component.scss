@@ -39,6 +39,7 @@
   border-radius: 6px;
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
   color: var(--theme-text-on-dark);
+  font-family: var(--theme-font-body);
   font-size: 13px;
   font-weight: 600;
   padding: 6px 10px;
@@ -189,8 +190,9 @@
   padding: 6px 10px;
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
   color: var(--theme-text-on-dark);
+  font-family: var(--theme-font-body);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -252,8 +254,9 @@
   border-radius: 4px;
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
   color: var(--theme-text-on-dark);
+  font-family: var(--theme-font-body);
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
 }
 
@@ -350,9 +353,11 @@
   padding: 10px 12px;
   color: var(--theme-text-on-dark);
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
+  font-family: var(--theme-font-display);
   font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   cursor: pointer;
 }
 
