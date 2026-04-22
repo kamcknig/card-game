@@ -27,14 +27,7 @@ export class CardInteractivityController {
     private readonly actionService: ActionService,
     private readonly promptService: PromptService,
     private readonly loggerService: LoggerService,
-  ) {
-    this.socketMap.forEach(s => {
-      s.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
-      s.on('cardTappedAsWay', (pId, cId, wId) => this.onCardTappedAsWay(pId, cId, wId));
-      s.on('cardLikeTapped', (pId, cId) => this.onCardLikeTapped(pId, cId));
-      s.on('playAllTreasure', async pId => await this.onPlayAllTreasure(pId));
-    });
-  }
+  ) {}
 
   public playerAdded(s: AppSocket | undefined) {
     s?.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
