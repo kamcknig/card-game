@@ -227,6 +227,38 @@ deno task auth:create-reg-code --expires-in 24h --max-uses 1 --created-by <your-
 
 The script prints the generated code to stdout. Share it securely; anyone with the code can register an account at `POST /auth/register`.
 
+## Game Data KV Bootstrap
+
+The server opens a separate `game-data.kv` Deno KV store (independent from `auth.kv`) for game-data persistence such as per-user match configuration saves. Like the auth store, it lives on the Azure Files share at `dominion-game-data/game-data.kv`, mounted into the container at `/app/server/game-data/game-data.kv`.
+
+**Important:** this file must be bootstrapped locally and uploaded before the server can start in any environment that does not already have it on the share. `Deno.openKv()` cannot reliably *create* a new SQLite database on Azure Files SMB — the byte-range locks SQLite uses during header initialization don't behave correctly on SMB, producing `Error: database is locked` at startup. Opening an *existing* valid SQLite file works fine, so this bootstrap is a one-time-per-environment task. (This is the same reason `auth.kv` is bootstrapped via local create + upload.)
+
+### Bootstrapping the file
+
+```bash
+# Create an initialized empty Deno KV file locally
+deno eval --unstable-kv "const kv = await Deno.openKv('/tmp/game-data.kv'); kv.close();"
+
+# Verify it has a real SQLite header (~36 KB, starting with "SQLite format 3")
+head -c 16 /tmp/game-data.kv | xxd
+
+# Get the storage key
+STORAGE_KEY=$(az storage account keys list \
+  --account-name turkeysunite \
+  --resource-group turkeysunite \
+  --query "[0].value" -o tsv)
+
+# Upload to the Azure Files share
+az storage file upload \
+  --account-name turkeysunite \
+  --share-name dominion-game-data \
+  --source /tmp/game-data.kv \
+  --path game-data.kv \
+  --account-key "$STORAGE_KEY"
+```
+
+Restart the server container after upload (`az containerapp revision restart ...`) so the next startup attempt picks up the file. See [Server fails to start with `Error: database is locked`](#server-fails-to-start-with-error-database-is-locked) under Troubleshooting if a previous startup left behind a 0-byte stub.
+
 ## Session Persistence
 
 The Deno KV backend is the only persistent session storage option. It requires a mounted Azure Files volume to survive container revisions on Azure Container Apps.
@@ -499,3 +531,38 @@ After the revision restarts, `env.js` is regenerated with the correct `wsHost` a
 ### Login rejected with "unknown provider"
 
 The frontend JS cached in the browser is an old version using the removed preset-password auth. Hard refresh (`Ctrl+Shift+R`) or open an incognito window to force the new app to load.
+
+### Server fails to start with `Error: database is locked`
+
+`Deno.openKv()` cannot create a new SQLite database on Azure Files SMB. If startup logs show:
+
+```
+[ERROR] [SERVER] startup failed
+[ERROR] Error: database is locked
+[ERROR]     at async Object.openKv (ext:deno_kv/01_db.ts:9:15)
+[ERROR]     at async GameDataKvProvider.open (...)
+```
+
+the share is missing a properly initialized `game-data.kv` (or a previous startup attempt left a 0-byte stub there). Diagnose and recover:
+
+```bash
+STORAGE_KEY=$(az storage account keys list \
+  --account-name turkeysunite --resource-group turkeysunite \
+  --query "[0].value" -o tsv)
+
+# Inspect the share — a valid file is ~36 KB; 0 bytes is the broken state
+az storage file list \
+  --account-name turkeysunite \
+  --share-name dominion-game-data \
+  --account-key "$STORAGE_KEY" \
+  --query "[].{name:name,size:properties.contentLength}" -o table
+
+# If a corrupt 0-byte game-data.kv exists, delete it
+az storage file delete \
+  --account-name turkeysunite \
+  --share-name dominion-game-data \
+  --path game-data.kv \
+  --account-key "$STORAGE_KEY"
+```
+
+Then bootstrap a fresh file following [Game Data KV Bootstrap](#game-data-kv-bootstrap) and restart the failing revision (`az containerapp revision restart ...`).
