@@ -14,23 +14,40 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Detect relevant changes
+        id: changes
+        run: |
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          if echo "$CHANGED" | grep -qE '^(server|shared)/'; then
+            echo "relevant=true" >> $GITHUB_OUTPUT
+          else
+            echo "relevant=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Setup Deno
+        if: steps.changes.outputs.relevant == 'true'
         uses: denoland/setup-deno@v2
         with:
           deno-version: '2.7.7'
 
       - name: Install server dependencies
+        if: steps.changes.outputs.relevant == 'true'
         run: deno install
 
       - name: Install shared dependencies
+        if: steps.changes.outputs.relevant == 'true'
         working-directory: shared
         run: yarn install
 
       - name: Run server unit tests with coverage
+        if: steps.changes.outputs.relevant == 'true'
         run: deno task test:unit:coverage
 
       - name: Upload coverage artifact
+        if: steps.changes.outputs.relevant == 'true'
         uses: actions/upload-artifact@v5
         with:
           name: server-coverage
