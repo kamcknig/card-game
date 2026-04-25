@@ -2,6 +2,9 @@ name: Server CI
 
 on:
   pull_request:
+    paths:
+      - 'server/**'
+      - 'shared/**'
 
 jobs:
   lint:
