@@ -40,7 +40,10 @@ export class AppComponent {
     initialValue: authTokenStore.get(),
   });
 
-  // Show the reconnecting banner only when authenticated and the socket is down.
-  // Avoids showing a "reconnecting" state on the login page before auth completes.
-  readonly showReconnecting = computed(() => !!this._authToken() && !this._socketService.connected());
+  // Show the reconnecting banner only when authenticated, the socket has previously been
+  // connected, and is now down. Avoids a false positive on initial load before the socket
+  // has had a chance to connect for the first time.
+  readonly showReconnecting = computed(
+    () => !!this._authToken() && this._socketService.hasEverConnected() && !this._socketService.connected(),
+  );
 }
