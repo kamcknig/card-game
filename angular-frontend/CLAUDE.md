@@ -115,6 +115,8 @@ The nginx container enforces a strict CSP with `script-src 'self'`. This means:
 - External script sources are not allowed — only same-origin scripts (`'self'`).
 - **`inlineCritical` is disabled in `angular.json`.** Angular's production optimizer adds `onload="this.media='all'"` to `<link>` tags when `inlineCritical` is enabled, which is an inline event handler blocked by `script-src 'self'`. The `optimization.styles.inlineCritical: false` setting in the production build config prevents this. Do not re-enable it.
 
+`connect-src` is `'self'` — all backend traffic (`/auth/`, `/socket.io/`, `/debug/`, `/status`) is reverse-proxied by nginx (see `docker/nginx.conf`, `docker/env.sh`), so `${environment.wsHost}/...` resolves to a same-origin URL when `wsHost` is `''` (the default). If you ever set `WS_HOST_OVERRIDE` at runtime to point the bundle at a remote backend, you must also widen the CSP `connect-src` to include that origin (and its `ws://`/`wss://` form) — that path bypasses the nginx proxy.
+
 ## Conventions
 
 - Use `input()` / `output()` signal APIs for component I/O, not decorators

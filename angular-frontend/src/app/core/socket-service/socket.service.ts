@@ -133,6 +133,19 @@ export class SocketService {
   }
 
   /**
+   * (Re)opens the underlying Socket.IO connection. Idempotent — Socket.IO
+   * itself ignores connect() while already connected. The auth callback
+   * passed to io() re-reads the auth token from localStorage on every
+   * connection attempt, so calling this after a fresh login picks up the
+   * new token automatically.
+   */
+  public connect(): void {
+    if (!this._socket.connected) {
+      this._socket.connect();
+    }
+  }
+
+  /**
    * Disconnects the socket from the server.
    */
   public disconnect(): void {

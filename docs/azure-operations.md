@@ -184,7 +184,8 @@ az containerapp secret remove \
 
 | Variable | Description |
 |----------|-------------|
-| `WS_HOST` | Full URL to the server Container App (e.g. `https://dominion-clone-server.happyglacier-53482b33.eastus.azurecontainerapps.io`). Also drives the CSP `connect-src` directive — see [Content Security Policy](#content-security-policy) below. |
+| `WS_HOST` | Full URL of the server Container App that nginx proxies backend requests to (e.g. `https://dominion-clone-server.happyglacier-53482b33.eastus.azurecontainerapps.io`). The frontend nginx runs reverse-proxy `location` blocks for `/auth/`, `/socket.io/`, `/debug/`, and `/status` against this URL — the browser only ever talks to the frontend origin. See [Backend Proxying](#backend-proxying) and [Content Security Policy](#content-security-policy) below. |
+| `WS_HOST_OVERRIDE` | Optional. When set, written verbatim into `env.js` so the Angular bundle issues fully-qualified backend requests instead of relative URLs. Only useful when bypassing the nginx proxy (e.g. running the static bundle against a remote backend without nginx). Leave unset in standard deployments. |
 
 ## Initial Account Bootstrap
 
@@ -365,9 +366,41 @@ See [Microsoft docs](https://learn.microsoft.com/en-us/azure/container-apps/stor
 - To rotate the auth store (force all users to re-login), delete the store file and restart.
 - Sessions only contain auth metadata (token, username, IP, timestamps). No game state is stored here.
 
+## Backend Proxying
+
+The frontend nginx container reverse-proxies all backend-bound paths to the server Container App so the browser only ever talks to the frontend origin. This eliminates cross-origin requests and CORS preflights at runtime.
+
+### How it works
+
+`docker/env.sh` writes `/etc/nginx/conf.d/proxy-locations.conf` at container start, substituting `WS_HOST` into a set of `location` blocks. `docker/nginx.conf` includes that file inside its `server` block, so the generated proxy rules are picked up without rebuilding the image.
+
+Forwarded paths:
+
+| Path | Notes |
+|------|-------|
+| `/auth/` | Login, register, logout, sessions, registration codes, change-password. |
+| `/socket.io/` | Socket.IO traffic. nginx is configured with `Upgrade`/`Connection: upgrade` and an extended `proxy_read_timeout` so long-lived WebSocket frames are not dropped. |
+| `/debug/` | Server-side debug routes (admin-gated by the backend). |
+| `/status` | Server health endpoint. Exact-match so it never collides with the SPA fallback. |
+
+Each generated location sets:
+
+- `proxy_pass ${WS_HOST}` — preserves the request URI when no path is appended.
+- `proxy_ssl_server_name on` — required for SNI when `WS_HOST` is HTTPS (which it is on Azure).
+- `Host` header rewritten to the backend FQDN so backend host-based routing / TLS sees its own hostname.
+- `X-Forwarded-For` and `X-Forwarded-Proto` so the backend can identify the originating client and scheme.
+
+### Frontend-bundle implications
+
+Because nginx handles forwarding, the Angular bundle issues **relative-URL** requests. `docker/env.sh` writes `wsHost: ''` into `env.js` so `${environment.wsHost}/auth/login` becomes `/auth/login`, which the browser sends to the frontend origin and nginx forwards to `WS_HOST` internally. Set `WS_HOST_OVERRIDE` to bypass this and force fully-qualified backend URLs (rare — see the env-vars table).
+
+### Local-vs-production parity
+
+`angular-frontend/src/proxy.conf.json` (and its docker variant `proxy.conf.docker.json`) declare the same forwards for the Angular dev server. Keep both in sync when adding or renaming backend paths.
+
 ## Content Security Policy
 
-The Nginx frontend container sends a `Content-Security-Policy` header (and companion security headers) on every response. The policy is generated dynamically by `docker/env.sh` at container start so the `connect-src` directive can include the runtime `WS_HOST` value without rebuilding the image.
+The Nginx frontend container sends a `Content-Security-Policy` header (and companion security headers) on every response. The policy is generated dynamically by `docker/env.sh` at container start.
 
 ### How it works
 
@@ -380,17 +413,17 @@ include /etc/nginx/conf.d/security-headers.conf;
 The generated file contains:
 
 ```nginx
-add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' <WS_HOST> <WS_CONNECT_SRC>; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" always;
+add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" always;
 add_header X-Content-Type-Options "nosniff" always;
 add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
 ```
 
-where `<WS_HOST>` is the value of the `WS_HOST` environment variable and `<WS_CONNECT_SRC>` is its WebSocket equivalent (`http://` → `ws://`, `https://` → `wss://`).
+`connect-src 'self'` is sufficient because all XHR and WebSocket targets are same-origin (proxied by nginx — see [Backend Proxying](#backend-proxying)). No remote URL needs to be allow-listed in the CSP.
 
 ### No additional environment variables required
 
-The CSP is derived entirely from `WS_HOST`. No new env vars need to be set. Ensure `WS_HOST` is set correctly in the frontend Container App (it must already be set for Socket.IO to work).
+The CSP is static apart from being regenerated each container start. Set `WS_HOST` for the proxy upstream — that's the only var the frontend container needs.
 
 ### Known concession: `style-src 'unsafe-inline'`
 
@@ -521,13 +554,18 @@ az containerapp hostname bind \
 
 ### WebSocket connection fails
 
-- Verify the frontend's `WS_HOST` env var points to the server's FQDN with `https://`
-- Azure Container Apps supports WebSocket natively; no special config needed for 1 replica
-- For >1 replica, ensure sticky sessions are enabled (see [Scaling](#scaling))
+- Verify the frontend's `WS_HOST` env var points to the server's FQDN with `https://` so nginx can resolve the upstream.
+- Azure Container Apps supports WebSocket natively; no special config needed for 1 replica.
+- For >1 replica, ensure sticky sessions are enabled (see [Scaling](#scaling)).
+- Browser DevTools should show Socket.IO connecting to `wss://<frontend-domain>/socket.io/...` — *not* the server FQDN — because nginx proxies the upgrade. If you see a cross-origin URL, `WS_HOST_OVERRIDE` is set or an old image is running (pre-proxy).
 
 ### Login fails with "Unable to reach server"
 
-The frontend container is missing the `WS_HOST` environment variable, so `env.js` defaults to `wsHost: 'http://localhost:3000'` which does not exist in production. All auth HTTP calls (`/auth/login`, `/auth/register`, etc.) use this value as the base URL — nginx does **not** proxy them to the server.
+With nginx proxying enabled, `/auth/*` is forwarded same-origin via `proxy-locations.conf`. "Unable to reach server" usually means the proxy upstream is misconfigured. Check, in order:
+
+1. `WS_HOST` is set on the frontend Container App and points to the server's FQDN (HTTPS for Azure Container Apps).
+2. The server Container App is reachable from the frontend container (no internal-only ingress restrictions in front of the server).
+3. `curl -i https://<frontend-domain>/status` returns the server's status JSON. A `502` indicates the upstream is unreachable; a `404` indicates the running image predates the proxy work and only serves the SPA fallback (rebuild & redeploy).
 
 ```bash
 # Set WS_HOST on the frontend container (creates a new revision)
@@ -537,7 +575,7 @@ az containerapp update \
   --set-env-vars WS_HOST=https://dominion-clone-server.happyglacier-53482b33.eastus.azurecontainerapps.io
 ```
 
-After the revision restarts, `env.js` is regenerated with the correct `wsHost` and the CSP `connect-src` directive is updated to include both the HTTPS and WSS forms of the server URL.
+After the revision restarts, `proxy-locations.conf` is regenerated with the new upstream and nginx picks it up immediately.
 
 ### Login rejected with "unknown provider"
 

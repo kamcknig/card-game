@@ -8,8 +8,12 @@ services:
     ports:
       - "80:80"
     environment:
-      # Set to the publicly accessible server address
-      WS_HOST: "http://localhost:3000"
+      # Upstream backend URL used by nginx proxying for /auth, /socket.io,
+      # /debug, and /status. The browser only ever talks to this nginx
+      # origin, so wsHost in env.js is left as ''. Set this to the docker
+      # compose service hostname so nginx can resolve the server container
+      # internally.
+      WS_HOST: "http://server:3000"
     restart: unless-stopped
     depends_on:
       - server
