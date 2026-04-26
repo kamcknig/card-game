@@ -13,10 +13,21 @@ import { AuthSessionService } from './auth/auth-session-service.ts';
  * Validates the auth token from the socket handshake query using
  * `AuthSessionService` before registering the connection. Authentication
  * is provider-agnostic — only the session token is checked here.
+ *
+ * Enforces the one-user one-tab policy at the socket layer: when a new
+ * socket authenticates as username U, any prior socket bound to U is sent
+ * the `sessionTakenOver` event and forcibly disconnected. Tracked via the
+ * per-username socket-id map below; the disconnect listener cleans the
+ * entry up so a normal close (refresh, network drop) does not leave a
+ * stale binding behind.
  */
 export class ServerSocketGatewayService {
   // Tracks whether the connection handler has already been registered.
   private registered = false;
+
+  // Active socket id per username. Single-tab enforcement keeps this 1:1;
+  // a fresh connection kicks the prior entry before recording the new id.
+  private readonly socketIdByUsername = new Map<string, string>();
 
   constructor(
     private readonly io: Server<ServerListenEvents, ServerEmitEvents>,
@@ -64,8 +75,57 @@ export class ServerSocketGatewayService {
       }
 
       this.loggerService.info(`[SERVER] authenticated user '${username}' for session ${sessionId}`);
+
+      // Enforce one-user one-tab: kick any prior socket for the same
+      // username before recording this socket as the active one. The
+      // kicked client receives `sessionTakenOver` so it can clear local
+      // auth state and redirect to /login rather than going zombie.
+      this.kickPriorSocketForUsername(username, socket.id);
+      this.socketIdByUsername.set(username, socket.id);
+      socket.on('disconnect', () => {
+        // Only drop the binding if this socket is still the recorded one.
+        // A normal close after a takeover-kick must not erase the new
+        // socket's entry — that would leak a stale username binding.
+        if (this.socketIdByUsername.get(username) === socket.id) {
+          this.socketIdByUsername.delete(username);
+        }
+      });
+
       // Pass the validated username so it is used as the player's display name.
       this.lobbyDirectoryService.registerConnection(sessionId, socket, username);
     });
+  }
+
+  /**
+   * Forcibly disconnects any prior socket for the given username so the
+   * newly authenticated socket becomes the sole connection for that user.
+   *
+   * Emits `sessionTakenOver` first so the client can perform a clean
+   * frontend logout (clear localStorage, navigate to /login) instead of
+   * relying on the generic disconnect signal. Skips when no prior socket
+   * exists or the recorded id matches the incoming socket (no-op for the
+   * first connection / reconnect of the same socket).
+   */
+  private kickPriorSocketForUsername(username: string, incomingSocketId: string): void {
+    const priorId = this.socketIdByUsername.get(username);
+    if (!priorId || priorId === incomingSocketId) {
+      return;
+    }
+    // Reach into the default ('/') namespace's connected-sockets map.
+    // The typed `Server` exposes only emit-style helpers; per-id lookup
+    // lives on the namespace.
+    const priorSocket = this.io.of('/').sockets.get(priorId);
+    if (!priorSocket) {
+      // The recorded id is stale (the socket already closed). Drop the
+      // binding so the new connection cleanly takes over without trying
+      // to emit to a dead socket.
+      this.socketIdByUsername.delete(username);
+      return;
+    }
+    this.loggerService.info(
+      `[SERVER] kicking prior socket ${priorId} for '${username}' — session taken over by ${incomingSocketId}`,
+    );
+    priorSocket.emit('sessionTakenOver');
+    priorSocket.disconnect(true);
   }
 }

@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { CardKey, LogEntry, Match } from 'shared/types';
+import { AuthService } from '../auth/auth.service';
 import { playerIdStore, playerStore, selfPlayerIdStore } from '../../state/player-state';
 import {
   matchConfigurationStore,
@@ -39,6 +40,7 @@ import { SocketEventMap, SocketService } from './socket.service';
 export class SocketEventMapService {
   private readonly _router = inject(Router);
   private readonly _socketService = inject(SocketService);
+  private readonly _authService = inject(AuthService);
 
   /**
    * Tracks whether server-to-client event handlers have been registered.
@@ -93,6 +95,16 @@ export class SocketEventMapService {
       for (const logEntry of logEntries) {
         logManager.addLogEntry(logEntry);
       }
+    };
+
+    // Server-initiated forced logout: a newer socket has authenticated for
+    // this user and the server is about to disconnect us. Clear local auth
+    // state synchronously (so authGuard sees the cleared token on the next
+    // navigation) and bounce the user back to /login. The follow-up
+    // disconnect event will fire after this handler returns.
+    map['sessionTakenOver'] = () => {
+      this._authService.clearAuth();
+      void this._router.navigate(['/login']);
     };
 
     map['matchConfigurationUpdated'] = config => {
