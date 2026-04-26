@@ -86,3 +86,37 @@ docker build -f docker/DockerFile_web_app --build-arg BUILD_CONFIG=development -
 # nginx forwards /auth, /socket.io, /debug, /status to the IP:port below
 docker run -d -p 8080:80 -e WS_HOST=http://192.168.1.100:4000 dominion-web
 ```
+
+## Authentication
+
+The client uses email-based registration — no invite code is required. The
+register form collects a username, email, and password. Availability of each
+is checked on field blur before the form can be submitted.
+
+When `STORAGE_BACKEND=supabase` on the server, new accounts require email
+confirmation before the first login. After registering, the user receives a
+confirmation email with a link to click. The login form surfaces a clear error
+if the user attempts to sign in before confirming.
+
+### Legacy-user add-email gate
+
+Users whose accounts predate the email-registration feature have `email = null`
+in the database. When such a user logs in, the server returns `needsEmail: true`
+in the login response. The client stores this flag (localStorage-backed) and
+enforces the following restrictions until the user attaches an email:
+
+- **Create game** and **Join game** actions in the lobby show a dialog
+  directing the user to `/profile/security` instead of sending the socket
+  request.
+- The server enforces the same gate independently as a defence-in-depth
+  measure.
+
+The `/profile/security` page shows an "Account" section with an add-email
+form. Submitting a valid email and the current password attaches the email,
+provisions a Supabase Auth user (supabase backend), and sends a confirmation
+email. Once submitted, the `needsEmail` flag is cleared and the lobby
+restrictions are lifted immediately — the user is not required to wait for
+email confirmation before creating or joining games.
+
+Read-only navigation (browsing the lobby list, viewing the profile page, etc.)
+is always available regardless of the `needsEmail` flag.

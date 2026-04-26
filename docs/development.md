@@ -47,11 +47,35 @@ The Angular dev server proxies `/socket.io` and `/debug` requests to the game se
 
 ## Authentication
 
-The server ships with no default accounts and no open self-registration —
-every account is created via `POST /auth/register` using a registration code
-issued by an authenticated user. Bootstrap the first user via the CLI scripts
-with the server stopped; see [server/README.md](../server/README.md#authentication-usage)
-for the full workflow and HTTP endpoint reference.
+The server ships with no default accounts. New accounts are created via open
+email-based registration at `POST /auth/register` — no invite code is required.
+Bootstrap the first user via the CLI scripts with the server stopped; see
+[server/README.md](../server/README.md#authentication-usage) for the full
+workflow and HTTP endpoint reference.
+
+### Email confirmation in local development
+
+When `STORAGE_BACKEND=supabase` and the local Supabase CLI stack is running
+(`supabase start`), outbound email is not delivered to real inboxes. Instead,
+the Supabase CLI starts an **Inbucket**-based email capture server. All emails
+sent by Supabase Auth (confirmation links, password resets, etc.) are
+intercepted and available at:
+
+```
+http://localhost:54324
+```
+
+Open that URL in a browser after registering a new account to retrieve the
+confirmation link and click through it — no real mail server or SMTP
+credentials are needed for local development.
+
+The `[auth.email]` section of `supabase/config.toml` has
+`enable_confirmations = true`, which is the setting that gates first login
+behind email verification. The Inbucket server is configured in the
+`[inbucket]` section of the same file (port `54324`).
+
+When `STORAGE_BACKEND=kv`, no email is sent at registration and no
+confirmation step exists.
 
 ## Docker
 

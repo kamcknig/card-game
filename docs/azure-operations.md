@@ -171,7 +171,7 @@ az containerapp secret remove \
 | `AUTH_RATE_LIMIT_WINDOW_MS` | Duration (milliseconds) of the sliding window used by the login rate limiter. Default: `60000` (1 minute). |
 | `AUTH_MAX_BODY_BYTES` | Maximum request body size (bytes) accepted on `/auth/login`. Requests exceeding this are rejected with 413. Default: `4096`. |
 | `AUTH_SESSION_TTL_MS` | Session time-to-live in milliseconds (sliding window). Each validated token has its expiry extended by this amount. Default: `604800000` (7 days). |
-| `STORAGE_BACKEND` | Unified storage backend — drives both auth (sessions, users, registration codes) and game data (match-configuration saves). Allowed values: `kv` (Deno KV with a write-through cache, backed by Azure Files) or `supabase` (Postgres tables in a Supabase project). When unset or invalid the server still boots and `/status` reports a `STORAGE_BACKEND_INVALID` error issue (the frontend shows this on `/server-status`) — set this var on every revision. |
+| `STORAGE_BACKEND` | Unified storage backend — drives both auth (sessions, users) and game data (match-configuration saves). Allowed values: `kv` (Deno KV, backed by Azure Files) or `supabase` (Postgres tables in a Supabase project). When unset or invalid the server still boots and `/status` reports a `STORAGE_BACKEND_INVALID` error issue (the frontend shows this on `/server-status`) — set this var on every revision. |
 | `AUTH_KV_PATH` | Filesystem path to the Deno KV auth store file used when `STORAGE_BACKEND=kv`. Set to `/app/server/game-data/auth.kv` in production (matches the Azure Files mount path). |
 | `GAME_DATA_KV_PATH` | Filesystem path to the Deno KV game-data store file used when `STORAGE_BACKEND=kv`. Set to `/app/server/game-data/game-data.kv` in production. |
 | `SUPABASE_URL` | Supabase project URL. Required when `STORAGE_BACKEND=supabase`. Stored as a plain env var (it is not secret). |
@@ -217,19 +217,9 @@ az storage file upload \
   --account-key "$STORAGE_KEY"
 ```
 
-Restart the server container so it picks up the file on startup. Usernames must be 3–32 characters, alphanumeric or underscore. The `create` subcommand refuses to overwrite an existing username. Other `auth:users` subcommands: `delete`, `set-password`, `clear` (run any subcommand with `--help` for its options).
+Restart the server container so it picks up the file on startup. Usernames must be 3–32 characters, alphanumeric or underscore. The `create` subcommand refuses to overwrite an existing username. Other `auth:users` subcommands: `delete`, `set-password`, `set-email`, `clear` (run any subcommand with `--help` for its options).
 
-### Creating registration codes for additional users
-
-Once a user exists and can log in, they can create registration codes via the API (`POST /auth/registration-codes`) — this is the preferred path because the running server's in-memory cache picks them up immediately. For offline/operator use with the server stopped:
-
-```bash
-cd server
-deno task auth:create-reg-code --expires-in 24h --max-uses 1 --created-by <your-username> --kv /path/to/auth.kv
-# Duration strings: 30s, 10m, 24h, 7d
-```
-
-The script prints the generated code to stdout. Share it securely; anyone with the code can register an account at `POST /auth/register`.
+Additional accounts are created via open email-based registration at `POST /auth/register`. Registration codes are no longer required or supported.
 
 ## Game Data KV Bootstrap
 
@@ -265,19 +255,46 @@ Restart the server container after upload (`az containerapp revision restart ...
 
 ## Storage Persistence
 
-The server supports two persistent storage backends, selected via `STORAGE_BACKEND`. Both drive auth (sessions, users, registration codes) and game data (match-configuration saves) together — splitting them is not supported.
+The server supports two persistent storage backends, selected via `STORAGE_BACKEND`. Both drive auth (sessions, users) and game data (match-configuration saves) together — splitting them is not supported.
 
 ### Deno KV (`STORAGE_BACKEND=kv`)
 
-When `STORAGE_BACKEND=kv`, all state is written to two Deno KV files at `AUTH_KV_PATH` and `GAME_DATA_KV_PATH`. Each store uses a write-through in-memory cache so reads are always synchronous and fast. The backing files must survive container restarts for sessions and saved configurations to persist — on Azure Container Apps this requires a mounted Azure Files volume (see _Azure Files Setup_ below). The bootstrap workflow for the KV files is documented in [_Initial Account Bootstrap_](#initial-account-bootstrap) and [_Game Data KV Bootstrap_](#game-data-kv-bootstrap) above.
+When `STORAGE_BACKEND=kv`, all state is written to two Deno KV files at `AUTH_KV_PATH` and `GAME_DATA_KV_PATH`. All reads go directly to the KV store on every call — there is no in-memory cache. The backing files must survive container restarts for sessions and saved configurations to persist — on Azure Container Apps this requires a mounted Azure Files volume (see _Azure Files Setup_ below). The bootstrap workflow for the KV files is documented in [_Initial Account Bootstrap_](#initial-account-bootstrap) and [_Game Data KV Bootstrap_](#game-data-kv-bootstrap) above.
 
 ### Supabase (`STORAGE_BACKEND=supabase`)
 
-When `STORAGE_BACKEND=supabase`, the server reads and writes Postgres tables in a Supabase project (`auth_users`, `auth_sessions`, `auth_registration_codes`, `match_configuration_saves`). The same write-through cache pattern is used — only the persistence layer changes. No volume mount is required because state lives in Supabase. Required env vars: `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (the service-role key must be a Container Apps secret).
+When `STORAGE_BACKEND=supabase`, the server reads and writes Postgres tables in a Supabase project (`auth_users`, `auth_sessions`, `match_configuration_saves`). All user-store reads go directly to the database — there is no in-memory cache. No volume mount is required because state lives in Supabase. Required env vars: `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (the service-role key must be a Container Apps secret).
 
-Apply the schema once with `supabase db push` against the migration file in `supabase/migrations/`. To migrate an existing KV deployment to Supabase, run `deno task migrate-kv-to-supabase` from a host that can reach both the KV files and the Supabase project — see [server/README.md § Migrating from KV to Supabase](../server/README.md#migrating-from-kv-to-supabase).
+Apply the schema once with `supabase db push` against the migration files in `supabase/migrations/`. To migrate an existing KV deployment to Supabase, run `deno task migrate-kv-to-supabase` from a host that can reach both the KV files and the Supabase project — see [server/README.md § Migrating from KV to Supabase](../server/README.md#migrating-from-kv-to-supabase).
 
 If the Supabase project is unreachable at startup, the server still boots and the `/status` endpoint reports an `error`-level `SUPABASE_OPEN_FAILED` issue; the frontend redirects to `/server-status` so users see the failure rather than a blank screen.
+
+### Email confirmation (Supabase backend)
+
+Email confirmation is required for new accounts registered with `STORAGE_BACKEND=supabase`. When a user registers or attaches an email to a legacy account, Supabase automatically sends a "Confirm signup" email. The following dashboard settings must be correct for confirmation emails to work in production.
+
+**Email template**
+
+The confirmation email template lives in the Supabase dashboard under **Authentication → Email Templates → Confirm signup**. Set the subject to `Confirm your email for Dominion` and include a call-to-action link using `{{ .ConfirmationURL }}` in the HTML body. The template is configured per-project in the dashboard; it is not stored in the repository.
+
+**URL configuration**
+
+In the dashboard under **Authentication → URL Configuration**:
+
+- **Site URL**: `https://dominion.turkeysunite.com` — used to construct the confirmation link that is included in the email.
+- **Redirect URLs**: add both `https://dominion.turkeysunite.com/login` and `https://dominion.turkeysunite.com/profile/security` so post-confirmation redirects are permitted by Supabase.
+
+**Debugging undelivered confirmation emails**
+
+When a user reports that a confirmation email never arrived, check the following in the Supabase dashboard:
+
+1. **Authentication → Users** — confirm the user row exists and that `email_confirmed_at` is `null`. If the row is missing, the registration call failed before creating the Supabase Auth user.
+2. **Authentication → Logs** (or the project's log explorer) — filter for `email` or the user's address to see whether Supabase attempted delivery and what SMTP response it received.
+3. If using a custom SMTP provider (**Authentication → Settings → SMTP**), verify the provider credentials and check that the sending domain has valid SPF/DKIM records. Without a custom SMTP provider, Supabase uses its shared sending infrastructure with strict daily limits — switch to a dedicated provider for production workloads with more than a handful of sign-ups per day.
+
+**Legacy user migration**
+
+Existing users (rows with `email = null`) are migrated lazily — they complete an add-email flow at their next login. There is no batch script; the server handles the transition automatically on a per-user basis.
 
 ### Azure Files Setup (one-time)
 
@@ -378,7 +395,7 @@ Forwarded paths:
 
 | Path | Notes |
 |------|-------|
-| `/auth/` | Login, register, logout, sessions, registration codes, change-password. |
+| `/auth/` | Login, register, logout, sessions, change-password, email attachment, availability checks. |
 | `/socket.io/` | Socket.IO traffic. nginx is configured with `Upgrade`/`Connection: upgrade` and an extended `proxy_read_timeout` so long-lived WebSocket frames are not dropped. |
 | `/debug/` | Server-side debug routes (admin-gated by the backend). |
 | `/status` | Server health endpoint. Exact-match so it never collides with the SPA fallback. |
