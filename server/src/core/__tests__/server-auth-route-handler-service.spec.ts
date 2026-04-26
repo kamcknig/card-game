@@ -807,7 +807,7 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/registration-codes authenti
     const { service, regCodeStore, userStore } = makeService({
       sessionServiceStub: makeSessionServiceStub({ ok: true, token: 'tok', username: 'alice' }, 'alice'),
     });
-    const alice = userStore.create({ username: 'alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: Date.now() });
+    const alice = await userStore.create({ username: 'alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: Date.now() });
     userStore.setAdmin(alice.id, true);
 
     const res = await dispatch(
@@ -853,7 +853,7 @@ Deno.test('ServerAuthRouteHandlerService: DELETE /auth/registration-codes/:code 
     const { service, regCodeStore, userStore } = makeService({
       sessionServiceStub: makeSessionServiceStub({ ok: true, token: 'tok', username: 'alice' }, 'alice'),
     });
-    const alice = userStore.create({ username: 'alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: Date.now() });
+    const alice = await userStore.create({ username: 'alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: Date.now() });
     userStore.setAdmin(alice.id, true);
     const rec = regCodeStore.create({ createdBy: 'alice', expiresAt: null, maxUses: 5, now: Date.now() });
 
@@ -875,7 +875,7 @@ Deno.test('ServerAuthRouteHandlerService: GET /auth/registration-codes returns a
     const { service, regCodeStore, userStore } = makeService({
       sessionServiceStub: makeSessionServiceStub({ ok: true, token: 'tok', username: 'alice' }, 'alice'),
     });
-    const alice = userStore.create({ username: 'alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: Date.now() });
+    const alice = await userStore.create({ username: 'alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: Date.now() });
     userStore.setAdmin(alice.id, true);
     regCodeStore.create({ createdBy: 'alice', expiresAt: null, maxUses: 1, now: Date.now() });
     const expired = regCodeStore.create({

@@ -1,4 +1,4 @@
-import { assertEquals, assertThrows } from '@std/assert';
+import { assertEquals, assertRejects } from '@std/assert';
 import { InMemoryUserStore } from '../auth/in-memory-user-store.ts';
 import { DenoKvUserStore } from '../auth/deno-kv-user-store.ts';
 import type { LoggerService } from '../logger-service.ts';
@@ -23,7 +23,7 @@ const testOpts = { sanitizeOps: false, sanitizeResources: false };
 const runConformanceSuite = (name: string, factory: () => Promise<UserStore>) => {
   Deno.test(`${name}: create() stores with lowercase lookup key`, testOpts, async () => {
     const store = await factory();
-    const rec = store.create({
+    const rec = await store.create({
       username: 'Alice',
       passwordHash: 'hash',
       passwordAlgo: 'argon2id',
@@ -36,15 +36,19 @@ const runConformanceSuite = (name: string, factory: () => Promise<UserStore>) =>
 
   Deno.test(`${name}: create() refuses duplicate username (case-insensitive)`, testOpts, async () => {
     const store = await factory();
-    store.create({ username: 'Alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: 1 });
-    assertThrows(() =>
-      store.create({ username: 'alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: 1 })
-    );
+    await store.create({ username: 'Alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: 1 });
+    // create() returns Promise<UserRecord> but the duplicate-username guard
+    // still throws synchronously before the Promise.resolve wrapper. The
+    // async arrow converts that sync throw into a rejection so assertRejects
+    // sees it consistently across both backends.
+    await assertRejects(async () => {
+      await store.create({ username: 'alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: 1 });
+    });
   });
 
   Deno.test(`${name}: recordFailure() increments failedAttempts`, testOpts, async () => {
     const store = await factory();
-    const rec = store.create({ username: 'Alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: 1 });
+    const rec = await store.create({ username: 'Alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: 1 });
     const updated = store.recordFailure(rec.id, 2);
     assertEquals(updated.failedAttempts, 1);
     assertEquals(store.recordFailure(rec.id, 3).failedAttempts, 2);
@@ -52,7 +56,7 @@ const runConformanceSuite = (name: string, factory: () => Promise<UserStore>) =>
 
   Deno.test(`${name}: resetFailures() clears counters and lock`, testOpts, async () => {
     const store = await factory();
-    const rec = store.create({ username: 'Alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: 1 });
+    const rec = await store.create({ username: 'Alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: 1 });
     store.recordFailure(rec.id, 2);
     store.setLockedUntil(rec.id, 9_999);
     store.resetFailures(rec.id);
@@ -63,7 +67,7 @@ const runConformanceSuite = (name: string, factory: () => Promise<UserStore>) =>
 
   Deno.test(`${name}: updatePassword() swaps algorithm and hash`, testOpts, async () => {
     const store = await factory();
-    const rec = store.create({ username: 'Alice', passwordHash: 'h1', passwordAlgo: 'argon2id', now: 1 });
+    const rec = await store.create({ username: 'Alice', passwordHash: 'h1', passwordAlgo: 'argon2id', now: 1 });
     store.updatePassword(rec.id, 'h2', 'bcrypt', 100);
     const after = store.getById(rec.id)!;
     assertEquals(after.passwordHash, 'h2');
@@ -73,7 +77,7 @@ const runConformanceSuite = (name: string, factory: () => Promise<UserStore>) =>
 
   Deno.test(`${name}: setDisabled() toggles the disabled flag`, testOpts, async () => {
     const store = await factory();
-    const rec = store.create({ username: 'Alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: 1 });
+    const rec = await store.create({ username: 'Alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: 1 });
     store.setDisabled(rec.id, true);
     assertEquals(store.getById(rec.id)?.disabled, true);
     store.setDisabled(rec.id, false);
