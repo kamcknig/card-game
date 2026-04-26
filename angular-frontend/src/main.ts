@@ -24,22 +24,26 @@ bootstrapApplication(AppComponent, appConfig)
     const serverStatusService = injector.get(ServerStatusService);
 
     // Check server health before any auth or socket work.
-    // On error, redirect to /server-status and skip the rest of bootstrap.
+    // On error, navigate to /server-status (initial navigation is disabled in
+    // app.config.ts so this is the only place that triggers it) and skip the
+    // rest of bootstrap.
+    const router = injector.get(Router);
     await serverStatusService.fetchOnce();
     if (serverStatusStore.get()?.status === 'error') {
-      injector.get(Router).navigate(['/server-status']);
+      await router.navigate(['/server-status']);
       return;
     }
 
-    // Try to restore a previous auth session from localStorage.
+    // Try to restore a previous auth session from localStorage. validateStoredToken
+    // clears the stored token when the server reports it as invalid, so by the time
+    // we trigger initial navigation below the auth guards see the correct token state.
     const hasValidToken = await authService.validateStoredToken();
+    // Trigger the deferred initial navigation now that server health and auth
+    // state are settled. This preserves the URL the user refreshed on (e.g.
+    // /match, /profile/security) but ensures guards evaluate against the
+    // cleared-or-confirmed token, not the stale localStorage value.
+    await router.initialNavigation();
     if (hasValidToken) {
-      // URL-based routing keeps the user on the page they refreshed on
-      // (e.g. /match on match rejoin, /profile/security). The Angular Router's
-      // initial navigation and auth guards handle invalid destinations:
-      // /login with a valid token is redirected to /lobby by guestGuard.
-      // Server events (matchReady, matchConfigurationUpdated) update the route
-      // if the user's session state requires a different scene.
       socketEventMapService.connect();
       // A valid session means the user goes to the lobby; discard any staged
       // registration code so it is not consumed on a future logout/revisit.
