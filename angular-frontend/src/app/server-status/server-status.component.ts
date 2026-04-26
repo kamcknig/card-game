@@ -1,8 +1,15 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { NanostoresService } from '@nanostores/angular';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { serverStatusStore } from '../core/server-status/server-status.service';
+import { Router } from '@angular/router';
+import { ServerStatusService, serverStatusStore } from '../core/server-status/server-status.service';
+import { authTokenStore } from '../core/auth/auth.service';
+
+// Polling interval for re-checking /status while the user is parked on the
+// /server-status page. Short enough that a recovered server lets the user back
+// in quickly, long enough to avoid hammering an unhealthy server.
+const SERVER_STATUS_POLL_INTERVAL_MS = 10_000;
 
 /**
  * Displays the current server health snapshot from serverStatusStore.
@@ -130,12 +137,36 @@ import { serverStatusStore } from '../core/server-status/server-status.service';
     </div>
   `,
 })
-export class ServerStatusComponent {
+export class ServerStatusComponent implements OnInit {
   private readonly _nanoStores = inject(NanostoresService);
+  private readonly _serverStatusService = inject(ServerStatusService);
+  private readonly _router = inject(Router);
+  private readonly _destroyRef = inject(DestroyRef);
 
   // Reactive snapshot — updates if the store changes while the component is mounted.
   readonly status = toSignal(
     this._nanoStores.useStore(serverStatusStore),
     { initialValue: serverStatusStore.get() },
   );
+
+  ngOnInit(): void {
+    // Poll /status while the user is on this page so they are sent back to
+    // the app as soon as the server recovers — without requiring a manual
+    // refresh. The serverStatusRedirectGuard handles inbound navigation; this
+    // interval covers users already parked here.
+    const intervalId = setInterval(() => {
+      void this.recheck();
+    }, SERVER_STATUS_POLL_INTERVAL_MS);
+
+    this._destroyRef.onDestroy(() => clearInterval(intervalId));
+  }
+
+  // Re-fetches /status and, if the server is no longer in error, navigates to
+  // the appropriate landing page (mirrors serverStatusRedirectGuard).
+  private async recheck(): Promise<void> {
+    await this._serverStatusService.fetchOnce();
+    if (serverStatusStore.get()?.status !== 'error') {
+      void this._router.navigate([authTokenStore.get() ? '/lobby' : '/login']);
+    }
+  }
 }
