@@ -73,11 +73,14 @@ docker build -f docker/DockerFile_web_app -t dominion-web .
 # game server (default port 3000 inside container)
 docker run -d -p 3000:3000 --name dominion-server dominion-server
 
-# web client (nginx on port 80, point WS_HOST to the server)
-docker run -d -p 8080:80 -e WS_HOST=http://localhost:3000 --name dominion-web dominion-web
+# web client (nginx on port 80; WS_HOST is the upstream nginx proxies to)
+docker run -d -p 8080:80 \
+  --link dominion-server \
+  -e WS_HOST=http://dominion-server:3000 \
+  --name dominion-web dominion-web
 ```
 
-Then open `http://localhost:8080` in your browser.
+Then open `http://localhost:8080` in your browser. The browser only ever talks to the frontend nginx; nginx forwards `/auth/`, `/socket.io/`, `/debug/`, and `/status` to the server using the `WS_HOST` URL.
 
 ### Server Docker Configuration
 
@@ -99,9 +102,14 @@ All other server environment variables listed in `server/README.md` can also be 
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `WS_HOST` | `http://localhost:3000` | WebSocket server URL the client connects to |
+| `WS_HOST` | `http://localhost:3000` | Upstream backend URL that nginx proxies `/auth/`, `/socket.io/`, `/debug/`, and `/status` to. The browser only ever talks to the nginx origin. |
+| `WS_HOST_OVERRIDE` | _(unset)_ | Optional. When set, written verbatim into `env.js` so the Angular bundle issues fully-qualified backend requests instead of relative URLs. Only useful when bypassing the nginx proxy. |
 
-The `WS_HOST` variable is injected at container startup via `docker/env.sh`, which writes a `env.js` file loaded by the Angular app before bootstrapping.
+`docker/env.sh` runs at container startup and:
+
+1. Writes `env.js` with `wsHost: ''` (or the value of `WS_HOST_OVERRIDE` when set) so the Angular app issues relative-URL requests by default.
+2. Generates `/etc/nginx/conf.d/proxy-locations.conf` with `proxy_pass` blocks pointing at `WS_HOST`. `nginx.conf` includes that file so the proxy rules are applied without rebuilding the image.
+3. Generates `/etc/nginx/conf.d/security-headers.conf` with the CSP and other headers.
 
 ### Example: Custom Ports
 
@@ -109,7 +117,7 @@ The `WS_HOST` variable is injected at container startup via `docker/env.sh`, whi
 # server on port 4000
 docker run -d -p 4000:4000 -e PORT=4000 dominion-server
 
-# web client connecting to server at a custom host
+# web client whose nginx proxies to a custom backend host
 docker run -d -p 9090:80 -e WS_HOST=http://192.168.1.100:4000 dominion-web
 ```
 
@@ -150,7 +158,7 @@ A `docker-compose.prod.yml` is provided for testing production images locally:
 docker compose -f docker-compose.prod.yml up --build
 ```
 
-This starts the server on port 3000 and the frontend on port 80, with the frontend's `WS_HOST` pointing to `http://localhost:3000`.
+This starts the server on port 3000 and the frontend on port 80. The frontend nginx proxies backend paths to the server via `WS_HOST=http://server:3000` (the docker-compose service hostname), so the browser only talks to the frontend on port 80.
 
 ## CI/CD Pipeline
 
@@ -203,7 +211,7 @@ Azure Container Apps Environment (card-game-env)
 └── dominion-clone-frontend  ← nginx + Angular static files, port 80, external ingress
 ```
 
-Both apps have external ingress and are accessible via their `.azurecontainerapps.io` FQDNs (HTTPS provided by default). The frontend connects to the server directly via the `WS_HOST` environment variable — nginx does not proxy WebSocket traffic.
+Both apps have external ingress and are accessible via their `.azurecontainerapps.io` FQDNs (HTTPS provided by default). The frontend nginx **reverse-proxies** `/auth/`, `/socket.io/`, `/debug/`, and `/status` to the server using the `WS_HOST` environment variable, so the browser only ever talks to the frontend domain. See [Backend Proxying](./azure-operations.md#backend-proxying) in the Azure operations guide for the per-route configuration and proxying behaviour.
 
 ### Azure Services
 
@@ -238,7 +246,8 @@ Both apps have external ingress and are accessible via their `.azurecontainerapp
 
 | Variable | Description |
 |----------|-------------|
-| `WS_HOST` | Full URL to the server Container App (e.g. `https://dominion-clone-server.<region>.azurecontainerapps.io`) |
+| `WS_HOST` | Upstream backend URL nginx proxies `/auth/`, `/socket.io/`, `/debug/`, and `/status` to (e.g. `https://dominion-clone-server.<region>.azurecontainerapps.io`). |
+| `WS_HOST_OVERRIDE` | Optional. When set, written verbatim into `env.js` so the Angular bundle issues fully-qualified backend URLs instead of relative ones. Only useful when bypassing the nginx proxy. Leave unset in production. |
 
 ### Rollback
 
