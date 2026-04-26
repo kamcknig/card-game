@@ -15,8 +15,9 @@ const generateCode = (): string => {
 };
 
 /**
- * In-memory {@link RegistrationCodeStore} used by tests and the memory-backed
- * session store mode (AUTH_SESSION_STORE=memory).
+ * In-memory {@link RegistrationCodeStore} used by tests only — production
+ * composition selects DenoKvRegistrationCodeStore or SupabaseRegistrationCodeStore
+ * via STORAGE_BACKEND.
  *
  * Identical semantics to {@link DenoKvRegistrationCodeStore} without any disk
  * persistence. All methods are synchronous and backed by a plain Map.

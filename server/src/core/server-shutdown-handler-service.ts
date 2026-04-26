@@ -3,15 +3,17 @@ import { LoggerService } from './logger-service.ts';
 import { AuthSessionCleanupService } from './auth/auth-session-cleanup-service.ts';
 import { AuthKvProvider } from './auth/auth-kv-provider.ts';
 import { GameDataKvProvider } from './game-data-kv-provider.ts';
+import { SupabaseClientProvider } from './storage/supabase-client-provider.ts';
 
 /**
  * Owns process shutdown signal handling for graceful server teardown.
  *
- * Stops the auth session cleanup timer and closes both the shared auth KV
- * handle and the shared game-data KV handle on shutdown so no stray callbacks
- * fire and both KV files are released cleanly. All auth stores share the auth
- * KV handle (see AuthKvProvider); all game-data stores share the game-data KV
- * handle (see GameDataKvProvider).
+ * Stops the auth session cleanup timer and closes the shared auth KV handle,
+ * the shared game-data KV handle, and the Supabase client on shutdown so no
+ * stray callbacks fire and all handles are released cleanly. All auth stores
+ * share the auth KV handle (see AuthKvProvider); all game-data stores share
+ * the game-data KV handle (see GameDataKvProvider); the Supabase client is a
+ * no-op close (supabase-js exposes no disconnect method).
  */
 export class ServerShutdownHandlerService {
   // Tracks registration state to prevent duplicate listeners.
@@ -23,6 +25,7 @@ export class ServerShutdownHandlerService {
     private readonly authSessionCleanupService: AuthSessionCleanupService,
     private readonly authKvProvider: AuthKvProvider,
     private readonly gameDataKvProvider: GameDataKvProvider,
+    private readonly supabaseClientProvider: SupabaseClientProvider,
   ) {}
 
   // Registers SIGINT behavior to dispose runtime resources and stop serving.
@@ -45,6 +48,8 @@ export class ServerShutdownHandlerService {
       // pending fire-and-forget writes may fail after this point and their errors
       // are logged by the individual store methods.
       this.gameDataKvProvider.close();
+      // Close the Supabase client (no-op for supabase-js; exists for symmetry).
+      this.supabaseClientProvider.close();
       this.lobbyDirectoryService.dispose();
       shutdownController.abort();
       Deno.exit();

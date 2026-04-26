@@ -33,7 +33,7 @@ export class InMemoryUserStore implements UserStore {
     passwordHash: string;
     passwordAlgo: 'argon2id';
     now: number;
-  }): UserRecord {
+  }): Promise<UserRecord> {
     const key = args.username.toLowerCase();
     if (this.byUsername.has(key)) {
       throw new Error(`[auth users] username already exists: '${args.username}'`);
@@ -54,7 +54,7 @@ export class InMemoryUserStore implements UserStore {
 
     this.byUsername.set(key, rec);
     this.byId.set(rec.id, rec);
-    return rec;
+    return Promise.resolve(rec);
   }
 
   public updatePassword(id: number, passwordHash: string, algo: PasswordAlgo, now: number): void {

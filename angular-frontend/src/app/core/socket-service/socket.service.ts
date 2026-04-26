@@ -19,6 +19,9 @@ export class SocketService {
   /** Reactive signal — true when the socket is connected, false when disconnected or reconnecting. */
   readonly connected = signal(false);
 
+  /** Reactive signal — true once the socket has successfully connected at least once. Never resets to false. */
+  readonly hasEverConnected = signal(false);
+
   constructor() {
     let sessionId = localStorage.getItem("sessionId");
 
@@ -80,6 +83,7 @@ export class SocketService {
 
   private onConnect = () => {
     this.connected.set(true);
+    this.hasEverConnected.set(true);
   };
 
   private onConnectError = (error: any) => {

@@ -6,6 +6,7 @@ import type { UserStore } from './user-store.ts';
 import type { RegistrationCodeStore } from './registration-code-store.ts';
 import { Argon2idHasher } from './password-hasher.ts';
 import { UserAccountAuthProvider } from './user-account-auth-provider.ts';
+import { buildCorsHeaders } from '../cors-utils.ts';
 
 /**
  * Matches usernames allowed during registration.
@@ -436,7 +437,7 @@ export class ServerAuthRouteHandlerService {
     // original-case username so the display name matches what the user typed.
     try {
       const hash = await this.argon2idHasher.hash(password);
-      this.userStore.create({ username, passwordHash: hash, passwordAlgo: 'argon2id', now });
+      await this.userStore.create({ username, passwordHash: hash, passwordAlgo: 'argon2id', now });
       this.loggerService.info(
         `[auth register] new account created for '${username}' using code ...${code.slice(-6)} from ${remoteIp}`,
       );
@@ -731,37 +732,12 @@ export class ServerAuthRouteHandlerService {
   }
 
   /**
-   * Builds CORS headers based on the configured origin allowlist.
+   * Delegates to {@link buildCorsHeaders} using the configured allowed origins.
    *
-   * When the allowlist contains `*`, falls back to wildcard behavior (dev
-   * mode). Otherwise, echoes the request origin only if it appears in the
-   * allowlist; requests from unlisted origins receive no allow-origin header
-   * so browsers will refuse the response. The `Vary: Origin` header prevents
-   * caches from serving the wrong allow-origin to a different origin.
+   * Thin wrapper so call sites in this class stay unchanged after the
+   * CORS logic was extracted to cors-utils.ts.
    */
   private corsHeaders(req?: Request): Record<string, string> {
-    const allowed = this.serverConfigService.getAuthAllowedOrigins();
-    const requestOrigin = req?.headers.get('origin') ?? '';
-
-    // When the allowlist is exactly ['*'], fall back to wildcard behavior.
-    const originHeader = allowed.includes('*')
-      ? '*'
-      : allowed.includes(requestOrigin)
-        ? requestOrigin
-        : '';
-
-    const headers: Record<string, string> = {
-      'access-control-allow-methods': 'GET, POST, DELETE, OPTIONS',
-      'access-control-allow-headers': 'Content-Type, Authorization',
-      'access-control-max-age': '86400',
-      'vary': 'Origin',
-    };
-
-    // Only include the allow-origin header when the origin is permitted.
-    if (originHeader) {
-      headers['access-control-allow-origin'] = originHeader;
-    }
-
-    return headers;
+    return buildCorsHeaders(this.serverConfigService.getAuthAllowedOrigins(), req, 'GET, POST, DELETE, OPTIONS');
   }
 }

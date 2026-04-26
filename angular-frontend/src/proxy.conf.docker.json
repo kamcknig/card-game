@@ -17,5 +17,11 @@
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"
+  },
+  "/status": {
+    "target": "http://server:3001",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
   }
 }

@@ -2,6 +2,7 @@ import { Server } from 'socket.io';
 import { ServerEmitEvents, ServerListenEvents } from 'shared/types/index.ts';
 import { LobbyDirectoryService } from './lobby-directory-service.ts';
 import { ServerConfigService } from './server-config-service.ts';
+import { buildCorsHeaders } from './cors-utils.ts';
 import { ExpansionCatalogService } from './expansion-catalog-service.ts';
 import { ExpansionSearchService } from './expansion-search-service.ts';
 import type { MatchConfigurationSaveStore } from './match-configuration-save-store.ts';
@@ -621,25 +622,14 @@ export class ServerDebugRouteHandlerService {
     return undefined;
   }
 
-  // Computes CORS response headers based on the server's configured allowed origins.
+  // Delegates to buildCorsHeaders using the server's configured allowed origins.
+  // The debug API permits PATCH in addition to the standard methods.
   private corsHeaders(req?: Request): Record<string, string> {
-    const allowed = this.serverConfigService.getAuthAllowedOrigins();
-    const requestOrigin = req?.headers.get('origin') ?? '';
-    const originHeader = allowed.includes('*')
-      ? '*'
-      : allowed.includes(requestOrigin)
-        ? requestOrigin
-        : '';
-    const headers: Record<string, string> = {
-      'access-control-allow-methods': 'GET, POST, PATCH, DELETE, OPTIONS',
-      'access-control-allow-headers': 'Content-Type, Authorization',
-      'access-control-max-age': '86400',
-      'vary': 'Origin',
-    };
-    if (originHeader) {
-      headers['access-control-allow-origin'] = originHeader;
-    }
-    return headers;
+    return buildCorsHeaders(
+      this.serverConfigService.getAuthAllowedOrigins(),
+      req,
+      'GET, POST, PATCH, DELETE, OPTIONS',
+    );
   }
 
   // Returns a new Response with CORS headers merged in.

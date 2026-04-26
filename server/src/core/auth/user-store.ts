@@ -59,8 +59,12 @@ export interface UserStore {
    * Throws when a user with the same (lowercased) username already exists.
    * New rows begin with `failedAttempts=0`, `lockedUntil=null`,
    * `disabled=false`, and `passwordAlgo='argon2id'`.
+   *
+   * Returns a `Promise<UserRecord>` so that Supabase-backed implementations
+   * can await the DB-assigned identity column. KV and in-memory implementations
+   * resolve synchronously via `Promise.resolve(record)`.
    */
-  create(args: { username: string; passwordHash: string; passwordAlgo: 'argon2id'; now: number }): UserRecord;
+  create(args: { username: string; passwordHash: string; passwordAlgo: 'argon2id'; now: number }): Promise<UserRecord>;
 
   /**
    * Replaces a user's password hash and records the update timestamp.
