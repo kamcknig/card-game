@@ -2,8 +2,9 @@ import { provideExperimentalZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 
+import { AuthService } from '../auth/auth.service';
 import { SocketEventMapService } from './socket-event-map.service';
-import { SocketService } from './socket.service';
+import { SocketService, SocketEventMap } from './socket.service';
 
 /**
  * Lightweight stand-in for SocketService. Only the methods that
@@ -22,17 +23,27 @@ class RouterStub {
   navigate = jest.fn();
 }
 
+class AuthServiceStub {
+  clearAuth = jest.fn();
+  clearLocalAuthState = jest.fn();
+}
+
 describe('SocketEventMapService', () => {
   let service: SocketEventMapService;
   let socket: SocketServiceStub;
+  let router: RouterStub;
+  let auth: AuthServiceStub;
 
   beforeEach(() => {
     socket = new SocketServiceStub();
+    router = new RouterStub();
+    auth = new AuthServiceStub();
     TestBed.configureTestingModule({
       providers: [
         provideExperimentalZonelessChangeDetection(),
         { provide: SocketService, useValue: socket },
-        { provide: Router, useValue: new RouterStub() },
+        { provide: Router, useValue: router },
+        { provide: AuthService, useValue: auth },
       ],
     });
     service = TestBed.inject(SocketEventMapService);
@@ -75,6 +86,43 @@ describe('SocketEventMapService', () => {
       service.connect();
 
       expect(socket.connect).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('sessionTakenOver handler', () => {
+    /**
+     * Helper that triggers a connect() to register handlers, captures the
+     * map passed to SocketService.setEventMap, and returns it so a test can
+     * invoke a specific handler directly. The real SocketService dispatches
+     * server events through this map; the stub just records it.
+     */
+    const captureEventMap = (): SocketEventMap => {
+      service.connect();
+      expect(socket.setEventMap).toHaveBeenCalledTimes(1);
+      return socket.setEventMap.mock.calls[0][0] as SocketEventMap;
+    };
+
+    it('clears in-memory auth atoms (not localStorage) when the server kicks this tab', () => {
+      const map = captureEventMap();
+      const handler = map['sessionTakenOver'];
+      expect(handler).toBeDefined();
+
+      handler!();
+
+      // Crucial: the kicked tab must NOT call clearAuth() (which writes
+      // to localStorage). localStorage is shared with the new winning
+      // tab; a write here would fire a `storage` event there and bounce
+      // it to /login too. clearLocalAuthState() is the in-memory-only
+      // variant designed for this path.
+      expect(auth.clearLocalAuthState).toHaveBeenCalledTimes(1);
+      expect(auth.clearAuth).not.toHaveBeenCalled();
+    });
+
+    it('redirects the kicked tab to /login', () => {
+      const map = captureEventMap();
+      map['sessionTakenOver']!();
+
+      expect(router.navigate).toHaveBeenCalledWith(['/login']);
     });
   });
 
