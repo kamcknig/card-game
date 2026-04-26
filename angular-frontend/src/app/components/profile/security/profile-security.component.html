@@ -1,6 +1,86 @@
 <section class="security-section" aria-label="Security settings">
   <h2 class="section-title">Security settings</h2>
 
+  <!-- Account card: shows identity fields (username, email). Legacy users
+       without an email see an add-email form; once attached the email is
+       rendered read-only. Username is always read-only. -->
+  <section class="account-section" aria-label="Account">
+    <h3>Account</h3>
+    <div class="account-field">
+      <span class="account-field__label">Username</span>
+      <span class="account-field__value">{{ username() }}</span>
+    </div>
+
+    @if (attachedEmail(); as attached) {
+      <!-- Success state: email was just attached during this session. -->
+      <div class="account-field">
+        <span class="account-field__label">Email</span>
+        <span class="account-field__value">
+          {{ attached }}
+          <span class="account-field__badge">Pending confirmation</span>
+        </span>
+      </div>
+      @if (attachEmailSuccess(); as msg) {
+        <p class="form-success">{{ msg }}</p>
+      }
+    } @else if (needsEmail()) {
+      <!-- Add-email form: shown for legacy users who have not yet attached
+           an email address to their account. -->
+      <p class="account-email-notice">
+        Add your email to your account. We'll send a confirmation link.
+      </p>
+      <form class="add-email-form" (ngSubmit)="submitAttachEmail()">
+        <label class="form-field">
+          <span class="form-label">Email</span>
+          <div class="form-input-wrapper">
+            <input
+              type="email"
+              class="form-input"
+              [value]="attachEmailValue()"
+              (input)="attachEmailValue.set($any($event.target).value)"
+              (blur)="onAttachEmailBlur()"
+              autocomplete="email"
+            />
+            @if (attachEmailStatus().checking) {
+              <span class="form-input-spinner" aria-label="Checking availability"></span>
+            }
+          </div>
+          @if (attachEmailStatus().error; as emailErr) {
+            <p class="form-field-error">{{ emailErr }}</p>
+          }
+        </label>
+        <label class="form-field">
+          <span class="form-label">Current password</span>
+          <input
+            type="password"
+            class="form-input"
+            [value]="attachEmailPassword()"
+            (input)="attachEmailPassword.set($any($event.target).value)"
+            autocomplete="current-password"
+          />
+        </label>
+        @if (attachEmailError(); as err) {
+          <p class="form-field-error">{{ err }}</p>
+        }
+        <div class="form-actions">
+          <button
+            type="submit"
+            class="panel-button"
+            [disabled]="attachEmailSubmitting() || !!attachEmailStatus().checking || !!attachEmailStatus().error || !attachEmailValue().trim() || !attachEmailPassword()"
+          >
+            Add email
+          </button>
+        </div>
+      </form>
+    } @else {
+      <!-- Read-only email display: shown when the email is already set. -->
+      <div class="account-field">
+        <span class="account-field__label">Email</span>
+        <span class="account-field__value">{{ authEmail() }}</span>
+      </div>
+    }
+  </section>
+
   <section class="change-password-section">
     <h3>Change password</h3>
     <form class="change-password-form" (ngSubmit)="submitChangePassword()">

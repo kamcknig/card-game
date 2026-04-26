@@ -6,6 +6,9 @@ import { SceneContentComponent } from '../scene-content/scene-content.component'
 import { NewPasswordFieldsComponent } from '../ui/new-password-fields/new-password-fields.component';
 import { AuthService } from '../../core/auth/auth.service';
 
+/** Intentionally permissive — the server performs the authoritative check. */
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 /**
  * Login scene component that gates access to the lobby.
  *
@@ -101,6 +104,10 @@ export class LoginComponent {
     const email = this.email().trim();
     if (!email) {
       this.emailStatus.set({ checking: false });
+      return;
+    }
+    if (!EMAIL_REGEX.test(email)) {
+      this.emailStatus.set({ checking: false, error: 'Enter a valid email address' });
       return;
     }
     this.emailStatus.set({ checking: true });

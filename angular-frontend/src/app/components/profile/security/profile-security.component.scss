@@ -3,6 +3,94 @@
   font-size: 1.2rem;
 }
 
+// Account card: shows username (always read-only) and email (read-only when
+// set, or an add-email form when not yet attached).
+.account-section {
+  max-width: 420px;
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--theme-border-subtle);
+
+  h3 {
+    margin: 0 0 12px;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+}
+
+// Read-only identity field row (Username, Email).
+.account-field {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.account-field__label {
+  min-width: 80px;
+  color: var(--theme-text-secondary);
+  font-weight: 500;
+}
+
+.account-field__value {
+  color: var(--theme-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+// "Pending confirmation" badge shown after email is attached but not yet
+// confirmed via the link sent by the server.
+.account-field__badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid var(--theme-border-subtle);
+  color: var(--theme-text-secondary);
+  background: var(--theme-surface-app-start);
+}
+
+// Notice above the add-email form explaining why an email is needed.
+.account-email-notice {
+  margin: 0 0 12px;
+  font-size: 0.875rem;
+  color: var(--theme-text-secondary);
+  line-height: 1.4;
+}
+
+// Add-email form layout mirrors the change-password form.
+.add-email-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+// CSS-only spinning availability indicator positioned to the right of
+// the email input. Matches the login form's spinner styling. The wrapper
+// (.form-input-wrapper) is defined in global styles.scss.
+.form-input-spinner {
+  position: absolute;
+  right: 10px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--theme-border-subtle);
+  border-top-color: var(--theme-text-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .change-password-section {
   max-width: 420px;
 

@@ -25,10 +25,18 @@ export const authNeedsEmailStore = atom<boolean>(
   localStorage.getItem('authNeedsEmail') === 'true',
 );
 
+// Stores the authenticated user's email address (null when not set).
+// localStorage-backed so the value survives a page refresh.
+// Login, validate, and attachEmail write to this; logout clears it.
+export const authEmailStore = atom<string | null>(
+  localStorage.getItem('authEmail') ?? null,
+);
+
 (globalThis as any).authUsernameStore = authUsernameStore;
 (globalThis as any).authTokenStore = authTokenStore;
 (globalThis as any).authIsAdminStore = authIsAdminStore;
 (globalThis as any).authNeedsEmailStore = authNeedsEmailStore;
+(globalThis as any).authEmailStore = authEmailStore;
 
 /**
  * Manages client-side authentication state and server login requests.
@@ -62,14 +70,21 @@ export class AuthService {
       }
 
       const needsEmail = body.needsEmail === true;
+      const email: string | null = typeof body.email === 'string' ? body.email : null;
       localStorage.setItem('authToken', body.token);
       localStorage.setItem('authUsername', body.username);
       localStorage.setItem('authIsAdmin', body.isAdmin ? 'true' : 'false');
       localStorage.setItem('authNeedsEmail', needsEmail ? 'true' : 'false');
+      if (email !== null) {
+        localStorage.setItem('authEmail', email);
+      } else {
+        localStorage.removeItem('authEmail');
+      }
       authTokenStore.set(body.token);
       authUsernameStore.set(body.username);
       authIsAdminStore.set(body.isAdmin ?? false);
       authNeedsEmailStore.set(needsEmail);
+      authEmailStore.set(email);
       return { ok: true };
     } catch {
       return { ok: false, message: 'Unable to reach server' };
@@ -96,12 +111,20 @@ export class AuthService {
       const body = await response.json();
       if (body.ok) {
         const needsEmail = body.needsEmail === true;
+        const email: string | null = typeof body.email === 'string' ? body.email : null;
         authUsernameStore.set(body.username);
         localStorage.setItem('authIsAdmin', body.isAdmin ? 'true' : 'false');
         authIsAdminStore.set(body.isAdmin ?? false);
         // Keep the needsEmail flag in sync across page refreshes via validate.
         localStorage.setItem('authNeedsEmail', needsEmail ? 'true' : 'false');
         authNeedsEmailStore.set(needsEmail);
+        // Keep the email in sync across page refreshes via validate.
+        if (email !== null) {
+          localStorage.setItem('authEmail', email);
+        } else {
+          localStorage.removeItem('authEmail');
+        }
+        authEmailStore.set(email);
         return true;
       }
 
@@ -121,18 +144,20 @@ export class AuthService {
   /**
    * Clears all auth state from localStorage and stores.
    *
-   * Clears the needsEmail flag as well so the email-onboarding gate is reset
-   * on the next login.
+   * Clears the needsEmail flag and cached email as well so the email-onboarding
+   * gate is reset and stale email values are not shown on the next login.
    */
   clearAuth(): void {
     localStorage.removeItem('authToken');
     localStorage.removeItem('authUsername');
     localStorage.removeItem('authIsAdmin');
     localStorage.removeItem('authNeedsEmail');
+    localStorage.removeItem('authEmail');
     authTokenStore.set(undefined);
     authUsernameStore.set(undefined);
     authIsAdminStore.set(false);
     authNeedsEmailStore.set(false);
+    authEmailStore.set(null);
   }
 
   /**
@@ -242,6 +267,54 @@ export class AuthService {
       return body.available ?? true;
     } catch {
       return true;
+    }
+  }
+
+  /**
+   * Attaches an email address to the authenticated user's account via POST /auth/email.
+   *
+   * Intended for legacy users whose accounts predate email registration
+   * (i.e. `authNeedsEmailStore` is true). On success the server either writes
+   * the email directly (kv backend) or provisions a Supabase Auth user and
+   * sends a confirmation email (supabase backend). On success, clears the
+   * `authNeedsEmailStore` flag so the lobby gate is lifted immediately.
+   *
+   * @param email     The email address to attach.
+   * @param password  The user's current password (required for re-auth).
+   */
+  async attachEmail(
+    email: string,
+    password: string,
+  ): Promise<{ ok: boolean; message?: string }> {
+    const token = authTokenStore.get();
+    if (!token) {
+      return { ok: false, message: 'Not signed in' };
+    }
+
+    try {
+      const response = await fetch(`${environment.wsHost}/auth/email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.ok) {
+        return { ok: false, message: body.message ?? 'Failed to attach email' };
+      }
+
+      // Clear the email-onboarding gate so the lobby allows create/join, and
+      // persist the attached email address so it displays in the Account card.
+      localStorage.setItem('authNeedsEmail', 'false');
+      localStorage.setItem('authEmail', email);
+      authNeedsEmailStore.set(false);
+      authEmailStore.set(email);
+      return { ok: true };
+    } catch {
+      return { ok: false, message: 'Unable to reach server' };
     }
   }
 
