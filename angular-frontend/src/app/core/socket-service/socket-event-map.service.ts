@@ -98,12 +98,14 @@ export class SocketEventMapService {
     };
 
     // Server-initiated forced logout: a newer socket has authenticated for
-    // this user and the server is about to disconnect us. Clear local auth
-    // state synchronously (so authGuard sees the cleared token on the next
-    // navigation) and bounce the user back to /login. The follow-up
-    // disconnect event will fire after this handler returns.
+    // this user and the server is about to disconnect us. Clear only the
+    // in-memory atoms (NOT localStorage) so authGuard sees the cleared
+    // token on the next navigation, but the new winning tab — which
+    // shares localStorage with us — does not get clobbered by a `storage`
+    // event that would also bounce it to /login. The follow-up disconnect
+    // event will fire after this handler returns.
     map['sessionTakenOver'] = () => {
-      this._authService.clearAuth();
+      this._authService.clearLocalAuthState();
       void this._router.navigate(['/login']);
     };
 
