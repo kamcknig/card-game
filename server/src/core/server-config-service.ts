@@ -5,9 +5,11 @@ export class ServerConfigService {
   /**
    * Validates all startup configuration used by the server process.
    *
-   * Calls `getStorageBackend()` which throws when the value is unset or
-   * unrecognized. When the backend is 'supabase', also validates that both
-   * SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are present.
+   * Storage backend validation (STORAGE_BACKEND, SUPABASE_URL,
+   * SUPABASE_SERVICE_ROLE_KEY) is intentionally NOT done here — those problems
+   * are surfaced via the health service in ServerStartupService so that the
+   * /status endpoint can report them and the frontend can render the
+   * /server-status page instead of the process crashing during DI resolution.
    */
   public validate(): void {
     this.getPort();
@@ -25,16 +27,6 @@ export class ServerConfigService {
     this.isMatchStateMergeEnabled();
     this.shouldEndMatchOnNoHumans();
     this.getTooltipDefaultCloseDelayMs();
-    // Throws if STORAGE_BACKEND is unset or not 'kv'|'supabase'.
-    const backend = this.getStorageBackend();
-    if (backend === 'supabase') {
-      if (!this.getSupabaseUrl()) {
-        throw new Error('[server config] SUPABASE_URL is required when STORAGE_BACKEND=supabase');
-      }
-      if (!this.getSupabaseServiceRoleKey()) {
-        throw new Error('[server config] SUPABASE_SERVICE_ROLE_KEY is required when STORAGE_BACKEND=supabase');
-      }
-    }
   }
 
   /**
@@ -82,19 +74,30 @@ export class ServerConfigService {
    * Returns the unified storage backend to use for all persistence.
    *
    * Reads from STORAGE_BACKEND. Allowed values are 'kv' and 'supabase'.
-   * Throws at startup if unset, empty, or unrecognized. Drives BOTH auth
-   * (sessions, users, registration codes) and game data (match-config saves).
+   * Returns `undefined` when the env var is unset, empty, or unrecognized so
+   * the server can still start and surface the problem via the /status
+   * endpoint. Use `getRawStorageBackend()` to inspect the original input
+   * (e.g. for diagnostic messages distinguishing unset from invalid).
+   * Drives BOTH auth (sessions, users, registration codes) and game data
+   * (match-config saves).
    */
-  public getStorageBackend(): 'kv' | 'supabase' {
+  public getStorageBackend(): 'kv' | 'supabase' | undefined {
     const raw = Deno.env.get('STORAGE_BACKEND');
     if (!raw || !raw.trim()) {
-      throw new Error(`[server config] STORAGE_BACKEND must be 'kv' or 'supabase'; it is currently unset`);
+      return undefined;
     }
     const trimmed = raw.trim().toLowerCase();
     if (trimmed === 'kv' || trimmed === 'supabase') {
       return trimmed as 'kv' | 'supabase';
     }
-    throw new Error(`[server config] STORAGE_BACKEND must be 'kv' or 'supabase', received '${raw}'`);
+    return undefined;
+  }
+
+  // Returns the raw STORAGE_BACKEND env value verbatim so callers can
+  // distinguish "unset" from "set to an invalid value" when reporting
+  // configuration health issues.
+  public getRawStorageBackend(): string | undefined {
+    return Deno.env.get('STORAGE_BACKEND');
   }
 
   // Returns the Supabase project URL. Required when STORAGE_BACKEND=supabase.

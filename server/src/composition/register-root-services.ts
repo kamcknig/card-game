@@ -91,6 +91,9 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
     // Selects the match-configuration save store backend based on STORAGE_BACKEND env var.
     // 'supabase' uses the Supabase-backed implementation — open() called from ServerStartupService.
     // 'kv' uses Deno KV with a write-through cache — open() called from ServerStartupService.
+    // undefined (env unset/invalid) falls back to the kv impl which is left un-opened so the
+    // empty in-memory cache acts as a no-op store; ServerStartupService records the
+    // configuration error against the health service so /status surfaces it.
     matchConfigurationSaveService: asFunction(
       (serverConfigService: ServerConfigService, loggerService: LoggerService): MatchConfigurationSaveStore => {
         const backend = serverConfigService.getStorageBackend();
@@ -100,9 +103,13 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
           // before the HTTP server begins accepting connections.
           return new SupabaseMatchConfigurationSaveService(loggerService);
         }
-        loggerService.log('[game data] match config save store: deno kv (per-user, persistent)');
-        // open() is called asynchronously during ServerStartupService.start()
-        // before the HTTP server begins accepting connections.
+        if (backend === 'kv') {
+          loggerService.log('[game data] match config save store: deno kv (per-user, persistent)');
+          // open() is called asynchronously during ServerStartupService.start()
+          // before the HTTP server begins accepting connections.
+          return new DenoKvMatchConfigurationSaveService(loggerService);
+        }
+        loggerService.warn('[game data] match config save store: unconfigured (no STORAGE_BACKEND); using empty in-memory cache');
         return new DenoKvMatchConfigurationSaveService(loggerService);
       },
     ).singleton(),
@@ -137,6 +144,8 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
     // Selects the session store backend based on STORAGE_BACKEND env var.
     // 'supabase' uses the Supabase-backed store — open() is called from ServerStartupService.
     // 'kv' uses Deno KV with a write-through cache — open() is called from ServerStartupService.
+    // undefined (env unset/invalid) falls back to the in-memory store so DI resolves cleanly;
+    // ServerStartupService records the configuration error against the health service so /status surfaces it.
     sessionStore: asFunction(
       (serverConfigService: ServerConfigService, loggerService: LoggerService): SessionStore => {
         const backend = serverConfigService.getStorageBackend();
@@ -146,10 +155,14 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
           // before the HTTP server begins accepting connections.
           return new SupabaseSessionStore(loggerService);
         }
-        loggerService.log('[auth] session store: deno kv (persistent across restarts)');
-        // open() is called asynchronously during ServerStartupService.start()
-        // before the HTTP server begins accepting connections.
-        return new DenoKvSessionStore(loggerService);
+        if (backend === 'kv') {
+          loggerService.log('[auth] session store: deno kv (persistent across restarts)');
+          // open() is called asynchronously during ServerStartupService.start()
+          // before the HTTP server begins accepting connections.
+          return new DenoKvSessionStore(loggerService);
+        }
+        loggerService.warn('[auth] session store: in-memory fallback (no STORAGE_BACKEND configured)');
+        return new InMemorySessionStore();
       },
     ).singleton(),
     authSessionService: asClass(AuthSessionService).singleton(),
@@ -175,6 +188,8 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
     argon2idHasher: asClass(Argon2idHasher).singleton(),
     bcryptHasher: asClass(BcryptHasher).singleton(),
     // User account store. Picks the backend driven by STORAGE_BACKEND.
+    // undefined (env unset/invalid) falls back to the in-memory store so DI resolves cleanly;
+    // ServerStartupService records the configuration error against the health service so /status surfaces it.
     userStore: asFunction(
       (serverConfigService: ServerConfigService, loggerService: LoggerService): UserStore => {
         const backend = serverConfigService.getStorageBackend();
@@ -182,12 +197,18 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
           loggerService.log('[auth] user store: supabase (persistent)');
           return new SupabaseUserStore(loggerService);
         }
-        loggerService.log('[auth] user store: deno kv (persistent)');
-        return new DenoKvUserStore(loggerService);
+        if (backend === 'kv') {
+          loggerService.log('[auth] user store: deno kv (persistent)');
+          return new DenoKvUserStore(loggerService);
+        }
+        loggerService.warn('[auth] user store: in-memory fallback (no STORAGE_BACKEND configured)');
+        return new InMemoryUserStore();
       },
     ).singleton(),
     // Registration code store. Mirrors the selection logic for session/user
     // stores so the same backend is used throughout auth.
+    // undefined (env unset/invalid) falls back to the in-memory store so DI resolves cleanly;
+    // ServerStartupService records the configuration error against the health service so /status surfaces it.
     registrationCodeStore: asFunction(
       (serverConfigService: ServerConfigService, loggerService: LoggerService): RegistrationCodeStore => {
         const backend = serverConfigService.getStorageBackend();
@@ -195,8 +216,12 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
           loggerService.log('[auth] registration code store: supabase (persistent)');
           return new SupabaseRegistrationCodeStore(loggerService);
         }
-        loggerService.log('[auth] registration code store: deno kv (persistent)');
-        return new DenoKvRegistrationCodeStore(loggerService);
+        if (backend === 'kv') {
+          loggerService.log('[auth] registration code store: deno kv (persistent)');
+          return new DenoKvRegistrationCodeStore(loggerService);
+        }
+        loggerService.warn('[auth] registration code store: in-memory fallback (no STORAGE_BACKEND configured)');
+        return new InMemoryRegistrationCodeStore();
       },
     ).singleton(),
     // Multi-user account provider. Sole auth provider registered with

@@ -64,32 +64,67 @@ export class ServerStartupService {
   public async start(): Promise<void> {
     const backend = this.serverConfigService.getStorageBackend();
     // Record the active backend in the health service for inclusion in /status responses.
-    this.serverHealthService.setBackend(backend);
+    // 'unknown' is used when the env var is unset or unrecognized so the frontend can still
+    // render a meaningful label on the /server-status page.
+    this.serverHealthService.setBackend(backend ?? 'unknown');
 
-    if (backend === 'supabase') {
-      // Open the shared Supabase client once, then prime each store's cache.
-      // Any failure here is non-fatal: the server continues with empty caches
-      // and the /status endpoint reports SUPABASE_OPEN_FAILED so the frontend
-      // can redirect to the /server-status error page.
-      try {
-        const url = this.serverConfigService.getSupabaseUrl()!;
-        const key = this.serverConfigService.getSupabaseServiceRoleKey()!;
-        this.supabaseClientProvider.open(url, key);
-        const client = this.supabaseClientProvider.get();
-        this.loggerService.info('[server startup] opening Supabase-backed stores');
-        await (this.userStore as SupabaseUserStore).open(client);
-        await (this.sessionStore as SupabaseSessionStore).open(client, Date.now());
-        await (this.registrationCodeStore as SupabaseRegistrationCodeStore).open(client);
-        await (this.matchConfigurationSaveService as SupabaseMatchConfigurationSaveService).open(client);
-        this.loggerService.log('[server startup] Supabase stores ready');
-      } catch (err) {
-        const message = `Failed to connect to Supabase: ${err instanceof Error ? err.message : String(err)}`;
+    if (backend === undefined) {
+      // STORAGE_BACKEND is unset or set to an unrecognized value. Surface the
+      // problem via /status instead of crashing the process — the in-memory
+      // fallback stores were already wired into DI so the rest of startup
+      // (auth provider init, expansion loading) can complete and the health
+      // route can serve the error to the frontend.
+      const raw = this.serverConfigService.getRawStorageBackend();
+      const message = raw === undefined || raw.trim() === ''
+        ? `STORAGE_BACKEND must be 'kv' or 'supabase'; it is currently unset`
+        : `STORAGE_BACKEND must be 'kv' or 'supabase', received '${raw}'`;
+      this.loggerService.error(`[server startup] ${message}`);
+      this.serverHealthService.register({
+        level: 'error',
+        code: 'STORAGE_BACKEND_INVALID',
+        message,
+      });
+    } else if (backend === 'supabase') {
+      // Validate Supabase config before attempting to open. Missing URL/key
+      // produces a dedicated SUPABASE_CONFIG_MISSING issue so the operator can
+      // distinguish "you forgot to set the env vars" from "the connection
+      // failed".
+      const url = this.serverConfigService.getSupabaseUrl();
+      const key = this.serverConfigService.getSupabaseServiceRoleKey();
+      const missing: string[] = [];
+      if (!url) missing.push('SUPABASE_URL');
+      if (!key) missing.push('SUPABASE_SERVICE_ROLE_KEY');
+      if (missing.length > 0) {
+        const message = `STORAGE_BACKEND=supabase but ${missing.join(' and ')} ${missing.length === 1 ? 'is' : 'are'} unset`;
         this.loggerService.error(`[server startup] ${message}`);
         this.serverHealthService.register({
           level: 'error',
-          code: 'SUPABASE_OPEN_FAILED',
+          code: 'SUPABASE_CONFIG_MISSING',
           message,
         });
+      } else {
+        // Open the shared Supabase client once, then prime each store's cache.
+        // Any failure here is non-fatal: the server continues with empty caches
+        // and the /status endpoint reports SUPABASE_OPEN_FAILED so the frontend
+        // can redirect to the /server-status error page.
+        try {
+          this.supabaseClientProvider.open(url!, key!);
+          const client = this.supabaseClientProvider.get();
+          this.loggerService.info('[server startup] opening Supabase-backed stores');
+          await (this.userStore as SupabaseUserStore).open(client);
+          await (this.sessionStore as SupabaseSessionStore).open(client, Date.now());
+          await (this.registrationCodeStore as SupabaseRegistrationCodeStore).open(client);
+          await (this.matchConfigurationSaveService as SupabaseMatchConfigurationSaveService).open(client);
+          this.loggerService.log('[server startup] Supabase stores ready');
+        } catch (err) {
+          const message = `Failed to connect to Supabase: ${err instanceof Error ? err.message : String(err)}`;
+          this.loggerService.error(`[server startup] ${message}`);
+          this.serverHealthService.register({
+            level: 'error',
+            code: 'SUPABASE_OPEN_FAILED',
+            message,
+          });
+        }
       }
     } else {
       // When using the Deno KV stores, open a single shared KV handle
