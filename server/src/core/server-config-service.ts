@@ -1,5 +1,16 @@
 import { toNumber } from 'es-toolkit/compat';
 
+/**
+ * Describes a configuration issue discovered during startup resolution.
+ * Used by resolveStorageConfig() to communicate warnings and errors upstream
+ * to ServerHealthService without throwing for non-fatal conditions.
+ */
+export interface ConfigIssue {
+  level: 'warning' | 'error';
+  code: string;
+  message: string;
+}
+
 // Centralizes server configuration reads from environment variables.
 export class ServerConfigService {
   // Validates all startup configuration used by the server process.
@@ -98,6 +109,36 @@ export class ServerConfigService {
    */
   public getAuthKvPath(): string {
     return Deno.env.get('AUTH_KV_PATH') ?? './game-data/auth.kv';
+  }
+
+  /**
+   * Returns the unified storage backend to use for all persistence.
+   *
+   * Reads from STORAGE_BACKEND. Allowed values are 'kv' and 'supabase'.
+   * Throws at startup if unset, empty, or unrecognized. Drives BOTH auth
+   * (sessions, users, registration codes) and game data (match-config saves).
+   */
+  public getStorageBackend(): 'kv' | 'supabase' {
+    const raw = Deno.env.get('STORAGE_BACKEND');
+    if (!raw || !raw.trim()) {
+      throw new Error(`[server config] STORAGE_BACKEND must be 'kv' or 'supabase'; it is currently unset`);
+    }
+    const trimmed = raw.trim().toLowerCase();
+    if (trimmed === 'kv' || trimmed === 'supabase') {
+      return trimmed as 'kv' | 'supabase';
+    }
+    throw new Error(`[server config] STORAGE_BACKEND must be 'kv' or 'supabase', received '${raw}'`);
+  }
+
+  // Returns the Supabase project URL. Required when STORAGE_BACKEND=supabase.
+  public getSupabaseUrl(): string | undefined {
+    return Deno.env.get('SUPABASE_URL');
+  }
+
+  // Returns the Supabase service-role key. Required when STORAGE_BACKEND=supabase.
+  // Server-side only — bypasses RLS. Never expose to the browser.
+  public getSupabaseServiceRoleKey(): string | undefined {
+    return Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   }
 
   /**

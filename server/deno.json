@@ -71,7 +71,8 @@
     "fuse.js": "npm:fuse.js@7.1.0",
     "awilix": "npm:awilix@10.0.2",
     "bcrypt": "https://deno.land/x/bcrypt@v0.4.1/mod.ts",
-    "@rabbit-company/argon2id": "jsr:@rabbit-company/argon2id@^2.1.0"
+    "@rabbit-company/argon2id": "jsr:@rabbit-company/argon2id@^2.1.0",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@^2"
   },
   "allowScripts": [
     "npm:esbuild@0.25.1",
