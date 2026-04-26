@@ -8,10 +8,20 @@ import type { PasswordAlgo } from './password-hasher.ts';
  * can be verified and rehashed to argon2id on next login. `failedAttempts`
  * and `lockedUntil` drive per-account lockout; these counters are reset on
  * successful login.
+ *
+ * `email` is nullable: a null value means the user predates the email-
+ * registration feature and has not yet attached one. New registrations always
+ * set a non-null email.
+ *
+ * `supabaseAuthId` is set when a Supabase Auth user has been provisioned for
+ * this account. For the supabase backend, login branches on this field:
+ * non-null uses `signInWithPassword`; null falls back to local argon2id.
  */
 export interface UserRecord {
   readonly id: number;
   readonly username: string;
+  /** Nullable email address. Null for users who predate email registration. */
+  email: string | null;
   passwordHash: string;
   passwordAlgo: PasswordAlgo;
   passwordUpdatedAt: number;
@@ -20,6 +30,8 @@ export interface UserRecord {
   disabled: boolean;
   isAdmin: boolean;
   readonly createdAt: number;
+  /** Supabase Auth user id. Set when a Supabase Auth user is provisioned. */
+  supabaseAuthId: string | null;
 }
 
 /**
@@ -54,9 +66,19 @@ export interface UserStore {
   getById(id: number): UserRecord | undefined;
 
   /**
+   * Returns the user record whose email matches the given address, or undefined.
+   *
+   * Lookups are case-insensitive. Returns undefined when no record has a
+   * non-null email matching the normalised address.
+   */
+  getByEmail(email: string): UserRecord | undefined;
+
+  /**
    * Creates a new user row with the supplied username and argon2id hash.
    *
    * Throws when a user with the same (lowercased) username already exists.
+   * Throws when `email` is provided and is already taken by another user
+   * (case-insensitive comparison).
    * New rows begin with `failedAttempts=0`, `lockedUntil=null`,
    * `disabled=false`, and `passwordAlgo='argon2id'`.
    *
@@ -64,7 +86,16 @@ export interface UserStore {
    * can await the DB-assigned identity column. KV and in-memory implementations
    * resolve synchronously via `Promise.resolve(record)`.
    */
-  create(args: { username: string; passwordHash: string; passwordAlgo: 'argon2id'; now: number }): Promise<UserRecord>;
+  create(args: {
+    username: string;
+    /** Optional email. Normalized to null when omitted. */
+    email?: string | null;
+    passwordHash: string;
+    passwordAlgo: 'argon2id';
+    now: number;
+    /** Optional Supabase Auth user id. Normalized to null when omitted. */
+    supabaseAuthId?: string | null;
+  }): Promise<UserRecord>;
 
   /**
    * Replaces a user's password hash and records the update timestamp.
@@ -115,6 +146,30 @@ export interface UserStore {
    * operator-only via the CLI.
    */
   setAdmin(id: number, isAdmin: boolean): void;
+
+  /**
+   * Sets the email address for an existing user.
+   *
+   * Throws when the email is already taken by a different user (case-
+   * insensitive). Callers must only invoke this when the existing email is
+   * null — this plan does not support email changes (that is out of scope).
+   *
+   * @param id  Numeric user id.
+   * @param email  New email address (stored lowercased).
+   * @param now  Current timestamp in milliseconds.
+   */
+  setEmail(id: number, email: string, now: number): void;
+
+  /**
+   * Sets or clears the Supabase Auth user id for an existing user.
+   *
+   * Invoked when a Supabase Auth user is provisioned during the add-email
+   * flow. Pass null to detach the Supabase Auth user (operator use only).
+   *
+   * @param id  Numeric user id.
+   * @param authId  Supabase Auth UUID, or null to clear.
+   */
+  setSupabaseAuthId(id: number, authId: string | null): void;
 
   /**
    * Removes the user record for the given id from the store.

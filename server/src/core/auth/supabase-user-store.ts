@@ -22,6 +22,8 @@ type DbUserRow = {
   disabled: boolean;
   is_admin: boolean;
   created_at: number;
+  /** Nullable email. Null for users who predate email registration. */
+  email: string | null;
   supabase_auth_id: string | null;
 };
 
@@ -32,6 +34,7 @@ function rowToRecord(row: DbUserRow): UserRecord {
   return {
     id: row.id,
     username: row.username,
+    email: row.email ?? null,
     passwordHash: row.password_hash,
     passwordAlgo: row.password_algo,
     passwordUpdatedAt: row.password_updated_at,
@@ -40,6 +43,7 @@ function rowToRecord(row: DbUserRow): UserRecord {
     disabled: row.disabled,
     isAdmin: row.is_admin,
     createdAt: row.created_at,
+    supabaseAuthId: row.supabase_auth_id ?? null,
   };
 }
 
@@ -50,7 +54,7 @@ function rowToRecord(row: DbUserRow): UserRecord {
  * Only the mutable columns are included; `username`, `username_lower`, and
  * `created_at` are set at insert time and never changed.
  */
-function recordToMutableRow(rec: UserRecord): Omit<DbUserRow, 'id' | 'supabase_auth_id'> {
+function recordToMutableRow(rec: UserRecord): Omit<DbUserRow, 'id'> {
   return {
     username: rec.username,
     username_lower: rec.username.toLowerCase(),
@@ -62,6 +66,8 @@ function recordToMutableRow(rec: UserRecord): Omit<DbUserRow, 'id' | 'supabase_a
     disabled: rec.disabled,
     is_admin: rec.isAdmin,
     created_at: rec.createdAt,
+    email: rec.email,
+    supabase_auth_id: rec.supabaseAuthId,
   };
 }
 
@@ -91,6 +97,10 @@ export class SupabaseUserStore implements UserStore {
   // Secondary index for O(1) id-based lookups.
   private readonly byId = new Map<number, UserRecord>();
 
+  // Secondary index keyed by lowercased email. Only populated for rows with
+  // a non-null email value.
+  private readonly byEmail = new Map<string, UserRecord>();
+
   // Shared Supabase client; set in open().
   private client: SupabaseClient | undefined;
 
@@ -115,6 +125,8 @@ export class SupabaseUserStore implements UserStore {
       const rec = rowToRecord(row);
       this.byUsername.set(rec.username.toLowerCase(), rec);
       this.byId.set(rec.id, rec);
+      // Populate the email index for rows that already have an email.
+      if (rec.email) this.byEmail.set(rec.email.toLowerCase(), rec);
       loaded++;
     }
 
@@ -136,20 +148,37 @@ export class SupabaseUserStore implements UserStore {
   }
 
   /**
+   * Returns the user record whose email matches the given address (case-
+   * insensitive), or undefined when no match is found.
+   */
+  public getByEmail(email: string): UserRecord | undefined {
+    return this.byEmail.get(email.toLowerCase());
+  }
+
+  /**
    * Inserts a new user row and returns the DB-assigned record (with id).
    *
    * Awaits the INSERT so the DB-assigned `id` is available to callers. Throws
-   * when a user with the same (lowercased) username already exists.
+   * when a user with the same (lowercased) username already exists. Throws when
+   * `email` is provided and is already taken by another user.
    */
   public async create(args: {
     username: string;
+    email?: string | null;
     passwordHash: string;
     passwordAlgo: 'argon2id';
     now: number;
+    supabaseAuthId?: string | null;
   }): Promise<UserRecord> {
     const key = args.username.toLowerCase();
     if (this.byUsername.has(key)) {
       throw new Error(`[auth users] username already exists: '${args.username}'`);
+    }
+
+    // Reject duplicate email up front (case-insensitive).
+    const emailNorm = args.email ? args.email.toLowerCase() : null;
+    if (emailNorm && this.byEmail.has(emailNorm)) {
+      throw new Error(`[auth users] email already exists: '${args.email}'`);
     }
 
     const insertRow = {
@@ -163,6 +192,8 @@ export class SupabaseUserStore implements UserStore {
       disabled: false,
       is_admin: false,
       created_at: args.now,
+      email: emailNorm,
+      supabase_auth_id: args.supabaseAuthId ?? null,
     };
 
     if (!this.client) {
@@ -183,6 +214,7 @@ export class SupabaseUserStore implements UserStore {
     const rec = rowToRecord(data);
     this.byUsername.set(key, rec);
     this.byId.set(rec.id, rec);
+    if (emailNorm) this.byEmail.set(emailNorm, rec);
 
     this.loggerService.debug(`[auth users] created user '${args.username}' with id ${rec.id}`);
     return rec;
@@ -271,7 +303,48 @@ export class SupabaseUserStore implements UserStore {
   }
 
   /**
-   * Removes the user record for the given id from both in-memory caches and
+   * Sets the email for an existing user and updates the byEmail index.
+   *
+   * Throws when the email is already taken by a different user (case-
+   * insensitive). Fires an async Supabase update in the background.
+   */
+  public setEmail(id: number, email: string, _now: number): void {
+    const rec = this.byId.get(id);
+    if (!rec) return;
+
+    const emailNorm = email.toLowerCase();
+    const existing = this.byEmail.get(emailNorm);
+    if (existing && existing.id !== id) {
+      throw new Error(`[auth users] setEmail: email already taken: '${email}'`);
+    }
+
+    // Remove the old email from the index when the record previously had one.
+    if (rec.email) this.byEmail.delete(rec.email.toLowerCase());
+
+    rec.email = emailNorm;
+    this.byEmail.set(emailNorm, rec);
+    this.persist(rec);
+
+    this.loggerService.debug(`[auth users] set email for id=${id}`);
+  }
+
+  /**
+   * Sets or clears the Supabase Auth user id for an existing user.
+   *
+   * Mutates the cached record and fires a background Supabase upsert.
+   */
+  public setSupabaseAuthId(id: number, authId: string | null): void {
+    const rec = this.byId.get(id);
+    if (!rec) return;
+
+    rec.supabaseAuthId = authId;
+    this.persist(rec);
+
+    this.loggerService.debug(`[auth users] set supabaseAuthId for id=${id}: ${authId ?? 'null'}`);
+  }
+
+  /**
+   * Removes the user record for the given id from all in-memory caches and
    * the Supabase table.
    *
    * No-ops silently when the id is not found.
@@ -283,6 +356,7 @@ export class SupabaseUserStore implements UserStore {
     const key = rec.username.toLowerCase();
     this.byId.delete(id);
     this.byUsername.delete(key);
+    if (rec.email) this.byEmail.delete(rec.email.toLowerCase());
 
     this.client
       ?.from('auth_users')
@@ -296,7 +370,7 @@ export class SupabaseUserStore implements UserStore {
   }
 
   /**
-   * Removes every user record from both in-memory caches and the Supabase table.
+   * Removes every user record from all in-memory caches and the Supabase table.
    *
    * The id sequence is preserved in the DB via the IDENTITY column so subsequent
    * creates do not reuse previously issued ids. Intended for CLI/admin use.
@@ -305,6 +379,7 @@ export class SupabaseUserStore implements UserStore {
     const count = this.byUsername.size;
     this.byUsername.clear();
     this.byId.clear();
+    this.byEmail.clear();
 
     // DELETE with a always-true filter clears all rows.
     this.client
@@ -333,7 +408,8 @@ export class SupabaseUserStore implements UserStore {
    *
    * Mutations happen on the cached object in place before this is called; this
    * method echoes the updated state to the DB. Errors are logged but do not
-   * propagate.
+   * propagate. The upsert includes `email` and `supabase_auth_id` so all
+   * mutable columns stay in sync.
    */
   private persist(rec: UserRecord): void {
     const row = { id: rec.id, ...recordToMutableRow(rec) };

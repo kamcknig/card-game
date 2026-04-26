@@ -17,6 +17,10 @@ export class InMemoryUserStore implements UserStore {
   // Secondary index for id-based lookups.
   private readonly byId = new Map<number, UserRecord>();
 
+  // Secondary index keyed by lowercased email. Only populated for rows
+  // with a non-null email value.
+  private readonly byEmail = new Map<string, UserRecord>();
+
   // Next id to issue; incremented monotonically on each create().
   private nextId = 1;
 
@@ -28,20 +32,44 @@ export class InMemoryUserStore implements UserStore {
     return this.byId.get(id);
   }
 
+  /**
+   * Returns the user record whose email matches the given address (case-
+   * insensitive), or undefined when no match is found.
+   */
+  public getByEmail(email: string): UserRecord | undefined {
+    return this.byEmail.get(email.toLowerCase());
+  }
+
+  /**
+   * Creates a new user record.
+   *
+   * Throws when a user with the same (lowercased) username already exists.
+   * Throws when `email` is provided and is already taken by another user
+   * (case-insensitive comparison).
+   */
   public create(args: {
     username: string;
+    email?: string | null;
     passwordHash: string;
     passwordAlgo: 'argon2id';
     now: number;
+    supabaseAuthId?: string | null;
   }): Promise<UserRecord> {
     const key = args.username.toLowerCase();
     if (this.byUsername.has(key)) {
       throw new Error(`[auth users] username already exists: '${args.username}'`);
     }
 
+    // Reject duplicate email up front (case-insensitive).
+    const emailNorm = args.email ? args.email.toLowerCase() : null;
+    if (emailNorm && this.byEmail.has(emailNorm)) {
+      throw new Error(`[auth users] email already exists: '${args.email}'`);
+    }
+
     const rec: UserRecord = {
       id: this.nextId++,
       username: args.username,
+      email: emailNorm,
       passwordHash: args.passwordHash,
       passwordAlgo: args.passwordAlgo,
       passwordUpdatedAt: args.now,
@@ -50,10 +78,12 @@ export class InMemoryUserStore implements UserStore {
       disabled: false,
       isAdmin: false,
       createdAt: args.now,
+      supabaseAuthId: args.supabaseAuthId ?? null,
     };
 
     this.byUsername.set(key, rec);
     this.byId.set(rec.id, rec);
+    if (emailNorm) this.byEmail.set(emailNorm, rec);
     return Promise.resolve(rec);
   }
 
@@ -104,7 +134,40 @@ export class InMemoryUserStore implements UserStore {
   }
 
   /**
-   * Removes the user record for the given id from both caches.
+   * Sets the email for an existing user and updates the byEmail index.
+   *
+   * Throws when the email is already taken by a different user (case-
+   * insensitive). Callers should only invoke this when the user's existing
+   * email is null — email changes are out of scope for this plan.
+   */
+  public setEmail(id: number, email: string, _now: number): void {
+    const rec = this.byId.get(id);
+    if (!rec) return;
+
+    const emailNorm = email.toLowerCase();
+    const existing = this.byEmail.get(emailNorm);
+    if (existing && existing.id !== id) {
+      throw new Error(`[auth users] setEmail: email already taken: '${email}'`);
+    }
+
+    // Remove the old email from the index when the record previously had one.
+    if (rec.email) this.byEmail.delete(rec.email.toLowerCase());
+
+    rec.email = emailNorm;
+    this.byEmail.set(emailNorm, rec);
+  }
+
+  /**
+   * Sets or clears the Supabase Auth user id for an existing user.
+   */
+  public setSupabaseAuthId(id: number, authId: string | null): void {
+    const rec = this.byId.get(id);
+    if (!rec) return;
+    rec.supabaseAuthId = authId;
+  }
+
+  /**
+   * Removes the user record for the given id from all caches.
    *
    * No-ops silently when the id is not found.
    */
@@ -114,10 +177,11 @@ export class InMemoryUserStore implements UserStore {
 
     this.byUsername.delete(rec.username.toLowerCase());
     this.byId.delete(id);
+    if (rec.email) this.byEmail.delete(rec.email.toLowerCase());
   }
 
   /**
-   * Removes every user record from both caches.
+   * Removes every user record from all caches.
    *
    * The id sequence counter is preserved so subsequent creates do not reuse
    * previously issued ids.
@@ -125,6 +189,7 @@ export class InMemoryUserStore implements UserStore {
   public clear(): void {
     this.byUsername.clear();
     this.byId.clear();
+    this.byEmail.clear();
   }
 
   public list(): ReadonlyArray<UserRecord> {

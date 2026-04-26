@@ -44,6 +44,10 @@ export class DenoKvUserStore implements UserStore {
   // Secondary index so getById() remains O(1) without scanning the cache.
   private readonly byId = new Map<number, UserRecord>();
 
+  // Secondary index keyed by lowercased email for getByEmail() lookups.
+  // Only entries with a non-null email are present.
+  private readonly byEmail = new Map<string, UserRecord>();
+
   // Shared KV handle, supplied by AuthKvProvider via open().
   private kv: Deno.Kv | undefined;
 
@@ -67,6 +71,8 @@ export class DenoKvUserStore implements UserStore {
       const rec = entry.value;
       this.cache.set(rec.username.toLowerCase(), rec);
       this.byId.set(rec.id, rec);
+      // Populate the email index for rows that already have an email.
+      if (rec.email) this.byEmail.set(rec.email.toLowerCase(), rec);
       if (rec.id >= this.nextId) this.nextId = rec.id + 1;
       loaded++;
     }
@@ -99,28 +105,47 @@ export class DenoKvUserStore implements UserStore {
   }
 
   /**
+   * Returns the user record whose email matches the given address (case-
+   * insensitive), or undefined when no match is found.
+   */
+  public getByEmail(email: string): UserRecord | undefined {
+    return this.byEmail.get(email.toLowerCase());
+  }
+
+  /**
    * Creates a new user row and persists it to KV.
    *
    * Throws when a user with the same (lowercased) username already exists.
+   * Throws when `email` is provided and is already taken by another user
+   * (case-insensitive comparison).
    * Returns a resolved `Promise<UserRecord>` to satisfy the {@link UserStore}
    * interface (the Supabase implementation awaits a real DB INSERT; the KV
    * implementation assigns the id locally and resolves synchronously).
    */
   public create(args: {
     username: string;
+    email?: string | null;
     passwordHash: string;
     passwordAlgo: 'argon2id';
     now: number;
+    supabaseAuthId?: string | null;
   }): Promise<UserRecord> {
     const key = args.username.toLowerCase();
     if (this.cache.has(key)) {
       throw new Error(`[auth users] username already exists: '${args.username}'`);
     }
 
+    // Reject duplicate email up front (case-insensitive).
+    const emailNorm = args.email ? args.email.toLowerCase() : null;
+    if (emailNorm && this.byEmail.has(emailNorm)) {
+      throw new Error(`[auth users] email already exists: '${args.email}'`);
+    }
+
     const id = this.nextId++;
     const rec: UserRecord = {
       id,
       username: args.username,
+      email: emailNorm,
       passwordHash: args.passwordHash,
       passwordAlgo: args.passwordAlgo,
       passwordUpdatedAt: args.now,
@@ -129,10 +154,12 @@ export class DenoKvUserStore implements UserStore {
       disabled: false,
       isAdmin: false,
       createdAt: args.now,
+      supabaseAuthId: args.supabaseAuthId ?? null,
     };
 
     this.cache.set(key, rec);
     this.byId.set(id, rec);
+    if (emailNorm) this.byEmail.set(emailNorm, rec);
 
     // Persist the row and the updated id sequence in the background.
     this.kv?.set([KEY_USERS, key], rec).catch((err: unknown) => {
@@ -233,7 +260,49 @@ export class DenoKvUserStore implements UserStore {
   }
 
   /**
-   * Removes the user record for the given id from both in-memory caches and KV.
+   * Sets the email for an existing user and updates the byEmail index.
+   *
+   * Throws when the email is already taken by a different user (case-
+   * insensitive). Callers should only invoke this when the user's existing
+   * email is null — email changes are out of scope for this plan.
+   */
+  public setEmail(id: number, email: string, _now: number): void {
+    const rec = this.byId.get(id);
+    if (!rec) return;
+
+    const emailNorm = email.toLowerCase();
+    const existing = this.byEmail.get(emailNorm);
+    if (existing && existing.id !== id) {
+      throw new Error(`[auth users] setEmail: email already taken: '${email}'`);
+    }
+
+    // Remove the old email from the index when the record previously had one.
+    if (rec.email) this.byEmail.delete(rec.email.toLowerCase());
+
+    rec.email = emailNorm;
+    this.byEmail.set(emailNorm, rec);
+    this.persist(rec);
+
+    this.loggerService.debug(`[auth users] set email for id=${id}`);
+  }
+
+  /**
+   * Sets or clears the Supabase Auth user id for an existing user.
+   *
+   * Mutates the cached record and fires a background KV write.
+   */
+  public setSupabaseAuthId(id: number, authId: string | null): void {
+    const rec = this.byId.get(id);
+    if (!rec) return;
+
+    rec.supabaseAuthId = authId;
+    this.persist(rec);
+
+    this.loggerService.debug(`[auth users] set supabaseAuthId for id=${id}: ${authId ?? 'null'}`);
+  }
+
+  /**
+   * Removes the user record for the given id from all in-memory caches and KV.
    *
    * No-ops silently when the id is not found. Intended for CLI/admin use.
    */
@@ -244,6 +313,7 @@ export class DenoKvUserStore implements UserStore {
     const key = rec.username.toLowerCase();
     this.byId.delete(id);
     this.cache.delete(key);
+    if (rec.email) this.byEmail.delete(rec.email.toLowerCase());
 
     this.kv?.delete([KEY_USERS, key]).catch((err: unknown) => {
       this.loggerService.warn(`[auth users] delete failed for '${rec.username}': ${err}`);
@@ -251,7 +321,7 @@ export class DenoKvUserStore implements UserStore {
   }
 
   /**
-   * Removes every user record from both in-memory caches and KV.
+   * Removes every user record from all in-memory caches and KV.
    *
    * The id sequence counter is preserved so subsequent creates do not reuse
    * previously issued ids. Intended for CLI/admin use.
@@ -260,6 +330,7 @@ export class DenoKvUserStore implements UserStore {
     const keys = [...this.cache.keys()];
     this.cache.clear();
     this.byId.clear();
+    this.byEmail.clear();
 
     for (const key of keys) {
       this.kv?.delete([KEY_USERS, key]).catch((err: unknown) => {
