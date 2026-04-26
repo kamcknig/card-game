@@ -528,6 +528,13 @@ export type MatchConfigurationDeleteResult = {
 
 export type ServerEmitEvents = {
   addLogEntry: (logEntry: LogEntry[]) => void;
+  // Sent by the server immediately before disconnecting a socket whose user
+  // session has been claimed by a newer connection. Enforces the one-user
+  // one-tab policy: when the same username authenticates a second socket,
+  // every prior socket for that username receives this event and is kicked.
+  // Frontend handlers should treat it as a forced logout — clear local auth
+  // state and route the user back to /login.
+  sessionTakenOver: () => void;
   cardEffectsComplete: (playerId: PlayerId, cardId?: CardId) => void;
   cardTappedComplete: (playerId: PlayerId, cardId: CardId) => void;
   doneWaitingForPlayer: (playerId?: PlayerId) => void;
