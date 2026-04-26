@@ -1,5 +1,10 @@
 /**
- * Bootstrap/maintenance CLI — manages user accounts in the Deno KV auth store.
+ * Bootstrap/maintenance CLI — manages user accounts in the auth store.
+ *
+ * Supports both the Deno KV backend (STORAGE_BACKEND=kv) and the Supabase
+ * backend (STORAGE_BACKEND=supabase). The backend is selected via the
+ * STORAGE_BACKEND environment variable; KV path (--kv / AUTH_KV_PATH) is
+ * only used when backend is 'kv'.
  *
  * Usage:
  *   deno task auth:users <command> [options]
@@ -18,7 +23,10 @@
  */
 
 import { DenoKvUserStore } from '../src/core/auth/deno-kv-user-store.ts';
+import { SupabaseUserStore } from '../src/core/auth/supabase-user-store.ts';
+import { SupabaseClientProvider } from '../src/core/storage/supabase-client-provider.ts';
 import { Argon2idHasher } from '../src/core/auth/password-hasher.ts';
+import type { UserStore } from '../src/core/auth/user-store.ts';
 import type { LoggerService } from '../src/core/logger-service.ts';
 
 // Minimal console-backed logger so we can reuse the auth store classes
@@ -57,10 +65,12 @@ const parseArgs = (args: string[]): Record<string, string> => {
   return out;
 };
 
-// Opens the KV store at the given path, creating the parent directory and KV
-// file if they do not already exist. Exits with a clear error message when the
-// store cannot be opened for any other reason (e.g. the file is corrupted).
-const openStore = async (kvPath: string): Promise<DenoKvUserStore> => {
+/**
+ * Opens the KV store at the given path, creating the parent directory and KV
+ * file if they do not already exist. Exits with a clear error message when the
+ * store cannot be opened for any other reason (e.g. the file is corrupted).
+ */
+const openKvStore = async (kvPath: string): Promise<UserStore> => {
   console.log(`[auth:users] opening KV at '${kvPath}'`);
 
   const dir = kvPath.includes('/') ? kvPath.slice(0, kvPath.lastIndexOf('/')) : '.';
@@ -77,6 +87,53 @@ const openStore = async (kvPath: string): Promise<DenoKvUserStore> => {
   return store;
 };
 
+/**
+ * Opens the Supabase-backed user store using the given URL and service-role key.
+ * Exits with a clear error message if the store cannot be opened.
+ */
+const openSupabaseStore = async (url: string, key: string): Promise<UserStore> => {
+  console.log(`[auth:users] opening Supabase store at '${url}'`);
+
+  const provider = new SupabaseClientProvider(consoleLogger);
+  provider.open(url, key);
+  const client = provider.get();
+
+  const store = new SupabaseUserStore(consoleLogger);
+  try {
+    await store.open(client);
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error(`[auth:users] could not open Supabase auth store: ${detail}`);
+    Deno.exit(1);
+  }
+  return store;
+};
+
+/**
+ * Resolves the backend from STORAGE_BACKEND env and returns an opened UserStore.
+ * For 'kv', opens the KV file at kvPath. For 'supabase', opens a Supabase client.
+ * Throws on unrecognized STORAGE_BACKEND values.
+ */
+const openStore = async (kvPath: string): Promise<UserStore> => {
+  const backend = Deno.env.get('STORAGE_BACKEND')?.trim().toLowerCase();
+
+  if (backend === 'supabase') {
+    const url = Deno.env.get('SUPABASE_URL');
+    const roleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!url || !roleKey) {
+      console.error('[auth:users] SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required when STORAGE_BACKEND=supabase');
+      Deno.exit(1);
+    }
+    return openSupabaseStore(url, roleKey);
+  }
+
+  if (backend === 'kv') {
+    return openKvStore(kvPath);
+  }
+
+  throw new Error(`[auth:users] STORAGE_BACKEND must be 'kv' or 'supabase', received '${backend ?? '(unset)'}'`);
+};
+
 // Brief pause so fire-and-forget KV writes flush before process exit.
 const flushWrites = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 100));
 
@@ -84,7 +141,11 @@ const printGlobalHelp = (): void => {
   console.log(
     `Usage: deno task auth:users <command> [options]
 
-Manages user accounts in the Deno KV auth store.
+Manages user accounts in the auth store (KV or Supabase).
+
+Backend is selected via STORAGE_BACKEND env var ('kv' or 'supabase').
+  - kv:       requires --kv <path> or AUTH_KV_PATH env (default: ./game-data/auth.kv)
+  - supabase: requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY env vars
 
 Commands:
   create        Create a new user account
@@ -94,7 +155,7 @@ Commands:
   clear         Delete all user accounts
 
 Global options:
-  --kv <path>   Path to KV file (default: AUTH_KV_PATH env or ./game-data/auth.kv)
+  --kv <path>   Path to KV file (kv backend only; default: AUTH_KV_PATH env or ./game-data/auth.kv)
   --help, -h    Show this help message
 
 Run \`deno task auth:users <command> --help\` for command-specific options.`,
@@ -158,7 +219,7 @@ const runCreate = async (args: string[], kvPath: string): Promise<void> => {
   const hasher = new Argon2idHasher();
   const hash = await hasher.hash(password);
 
-  const rec = store.create({ username, passwordHash: hash, passwordAlgo: 'argon2id', now: Date.now() });
+  const rec = await store.create({ username, passwordHash: hash, passwordAlgo: 'argon2id', now: Date.now() });
   const makeAdmin = argMap['admin'] === 'true';
   if (makeAdmin) {
     store.setAdmin(rec.id, true);
