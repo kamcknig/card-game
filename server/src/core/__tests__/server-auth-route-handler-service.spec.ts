@@ -3,6 +3,7 @@ import { ServerAuthRouteHandlerService } from '../auth/server-auth-route-handler
 import { AuthSessionService, SessionRecord } from '../auth/auth-session-service.ts';
 import { AuthRateLimiterService, Clock } from '../auth/auth-rate-limiter-service.ts';
 import { ServerConfigService } from '../server-config-service.ts';
+import { SupabaseClientProvider } from '../storage/supabase-client-provider.ts';
 import { LoggerService } from '../logger-service.ts';
 import { InMemoryUserStore } from '../auth/in-memory-user-store.ts';
 import { InMemoryRegistrationCodeStore } from '../auth/in-memory-registration-code-store.ts';
@@ -97,6 +98,15 @@ const makeSessionServiceStub = (
   } as unknown as AuthSessionService;
 };
 
+// Minimal SupabaseClientProvider stub that always throws — kv-backend tests
+// never reach the Supabase path so this is never called.
+const makeSupabaseClientProviderStub = (): SupabaseClientProvider =>
+  ({
+    get: () => {
+      throw new Error('SupabaseClientProvider stub: not available in kv tests');
+    },
+  }) as unknown as SupabaseClientProvider;
+
 // Builds the service under test with all dependencies wired.
 // Uses concrete in-memory implementations so integration-style tests can opt
 // into register / password-change flows without further stubbing.
@@ -122,7 +132,8 @@ const makeService = (opts: {
   const regCodeStore = opts.regCodeStore ?? new InMemoryRegistrationCodeStore();
   const argon2id = new Argon2idHasher();
   const bcrypt = new BcryptHasher();
-  const userProvider = new UserAccountAuthProvider(logger, userStore, argon2id, bcrypt, config, clock);
+  const supabaseClientProvider = makeSupabaseClientProviderStub();
+  const userProvider = new UserAccountAuthProvider(logger, userStore, argon2id, bcrypt, config, supabaseClientProvider, clock);
 
   return {
     service: new ServerAuthRouteHandlerService(
@@ -134,6 +145,7 @@ const makeService = (opts: {
       regCodeStore,
       argon2id,
       userProvider,
+      supabaseClientProvider,
     ),
     rateLimiter,
     userStore,
@@ -455,7 +467,8 @@ Deno.test('ServerAuthRouteHandlerService: non-/auth path → handler returns und
     const regCodeStore = new InMemoryRegistrationCodeStore();
     const argon2id = new Argon2idHasher();
     const bcrypt = new BcryptHasher();
-    const userProvider = new UserAccountAuthProvider(logger, userStore, argon2id, bcrypt, config, clock);
+    const supabaseClientProvider = makeSupabaseClientProviderStub();
+    const userProvider = new UserAccountAuthProvider(logger, userStore, argon2id, bcrypt, config, supabaseClientProvider, clock);
     const service = new ServerAuthRouteHandlerService(
       sessionService,
       logger,
@@ -465,6 +478,7 @@ Deno.test('ServerAuthRouteHandlerService: non-/auth path → handler returns und
       regCodeStore,
       argon2id,
       userProvider,
+      supabaseClientProvider,
     );
 
     const req = new Request('http://localhost/debug/state', { method: 'GET' });
@@ -637,6 +651,7 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register with valid code �
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: 'alice123',
+          email: 'alice@example.com',
           password: 'correcthorsebattery',
           registrationCode: rec.code,
         }),
@@ -665,6 +680,7 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register invalid code → 4
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: 'alice123',
+          email: 'alice@example.com',
           password: 'correcthorsebattery',
           registrationCode: 'nonexistent',
         }),
@@ -700,6 +716,7 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register duplicate username
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: 'alice123',
+          email: 'alice@example.com',
           password: 'correcthorsebattery',
           registrationCode: rec.code,
         }),
@@ -723,6 +740,7 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register expired code → 4
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: 'alice123',
+          email: 'alice@example.com',
           password: 'correcthorsebattery',
           registrationCode: rec.code,
         }),
@@ -746,6 +764,7 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register exhausted code →
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: 'alice123',
+          email: 'alice@example.com',
           password: 'correcthorsebattery',
           registrationCode: rec.code,
         }),
@@ -768,6 +787,7 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register rejects short pass
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: 'alice123',
+          email: 'alice@example.com',
           password: 'short',
           registrationCode: rec.code,
         }),
@@ -790,6 +810,7 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register rejects invalid us
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: 'has-dash',
+          email: 'alice@example.com',
           password: 'correcthorsebattery',
           registrationCode: rec.code,
         }),
@@ -1157,6 +1178,7 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register accepts minimum-le
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: 'abc',
+          email: 'abc@example.com',
           password: 'correcthorsebattery',
           registrationCode: rec.code,
         }),
@@ -1179,6 +1201,7 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register rejects 2-characte
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: 'ab',
+          email: 'ab@example.com',
           password: 'correcthorsebattery',
           registrationCode: rec.code,
         }),
@@ -1202,6 +1225,7 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register accepts 32-charact
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: 'a'.repeat(32),
+          email: 'long@example.com',
           password: 'correcthorsebattery',
           registrationCode: rec.code,
         }),
@@ -1224,6 +1248,7 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register rejects 33-charact
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: 'a'.repeat(33),
+          email: 'tolong@example.com',
           password: 'correcthorsebattery',
           registrationCode: rec.code,
         }),

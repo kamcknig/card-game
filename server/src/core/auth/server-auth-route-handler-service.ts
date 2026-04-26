@@ -1,5 +1,6 @@
 import { LoggerService } from '../logger-service.ts';
 import { ServerConfigService } from '../server-config-service.ts';
+import { SupabaseClientProvider } from '../storage/supabase-client-provider.ts';
 import { AuthSessionService } from './auth-session-service.ts';
 import { AuthRateLimiterService } from './auth-rate-limiter-service.ts';
 import type { UserStore } from './user-store.ts';
@@ -76,6 +77,7 @@ export class ServerAuthRouteHandlerService {
     private readonly registrationCodeStore: RegistrationCodeStore,
     private readonly argon2idHasher: Argon2idHasher,
     private readonly userAccountAuthProvider: UserAccountAuthProvider,
+    private readonly supabaseClientProvider: SupabaseClientProvider,
   ) {}
 
   /**
@@ -372,11 +374,18 @@ export class ServerAuthRouteHandlerService {
   /**
    * Handles POST /auth/register — public self-service registration.
    *
-   * Requires a valid registration code. Rate-limited against the same IP
-   * bucket as /auth/login so bad codes count toward the limit and
-   * brute-forcing codes is impractical. Validates username format, password
-   * strength, and registration-code state before creating the row. Does NOT
-   * return a session token — the client must log in separately.
+   * Validates username format, email format, and password strength before
+   * creating the user. Requires a valid registration code (removed in Phase 4).
+   * Rate-limited against the same IP bucket as /auth/login. Does NOT return
+   * a session token — the client must log in separately.
+   *
+   * When `STORAGE_BACKEND=supabase`, provisions a Supabase Auth user via
+   * `admin.createUser` so the confirmation email is sent automatically and
+   * subsequent logins go through Supabase Auth. The `auth_users` row is
+   * written with an empty password hash (unused for supabase logins) and the
+   * Supabase Auth user id stored in `supabase_auth_id`.
+   *
+   * When `STORAGE_BACKEND=kv`, the existing argon2id path is used unchanged.
    */
   private async handleRegister(req: Request, remoteIp: string): Promise<Response> {
     // Share the IP bucket with /auth/login so registration brute-force counts
@@ -475,8 +484,18 @@ export class ServerAuthRouteHandlerService {
       return this.jsonResponse({ ok: false, message: 'Email already registered' }, 409, req);
     }
 
-    // Hash the new password with argon2id and create the user row. Uses the
-    // original-case username so the display name matches what the user typed.
+    // Branch on backend. When the supabase backend is active, provision a
+    // Supabase Auth user so the confirmation email goes out automatically and
+    // subsequent logins are authenticated by Supabase Auth. The kv backend
+    // uses the existing local argon2id path unchanged.
+    const backend = this.serverConfigService.getStorageBackend();
+    if (backend === 'supabase') {
+      return this.registerViaSupabase(req, remoteIp, username, email, password, now, code);
+    }
+
+    // kv backend (or undefined/in-memory fallback): hash with argon2id and
+    // create the user row directly. Uses the original-case username so the
+    // display name matches what the user typed.
     try {
       const hash = await this.argon2idHasher.hash(password);
       await this.userStore.create({ username, email, passwordHash: hash, passwordAlgo: 'argon2id', now });
@@ -491,6 +510,116 @@ export class ServerAuthRouteHandlerService {
       this.loggerService.error(`[auth route] register: hashing or persist failed: ${err}`);
       return this.jsonResponse({ ok: false, message: 'Registration failed' }, 500, req);
     }
+  }
+
+  /**
+   * Supabase-backend registration path.
+   *
+   * Provisions a Supabase Auth user via `admin.createUser` (which triggers
+   * the project's confirmation email template) and then inserts the local
+   * `auth_users` row linked by `supabase_auth_id`. The password hash stored
+   * locally is an empty sentinel — supabase-backend logins authenticate via
+   * `signInWithPassword` and never touch the local hash.
+   *
+   * Error mapping:
+   * - `user_already_exists` from Supabase → 409 (same as a duplicate-email
+   *   detected before the Supabase call).
+   * - Any other Supabase error → 500.
+   * - Duplicate username / email in the local store → 409.
+   *
+   * @param req        Original HTTP request (for CORS headers).
+   * @param remoteIp   Client IP for rate-limiter bookkeeping.
+   * @param username   Validated, trimmed display username.
+   * @param email      Validated, trimmed email address.
+   * @param password   Plaintext password (passed to Supabase Auth only).
+   * @param now        Current epoch milliseconds.
+   * @param code       Registration code string (for the log entry).
+   */
+  private async registerViaSupabase(
+    req: Request,
+    remoteIp: string,
+    username: string,
+    email: string,
+    password: string,
+    now: number,
+    code: string,
+  ): Promise<Response> {
+    let client;
+    try {
+      client = this.supabaseClientProvider.get();
+    } catch (err) {
+      this.loggerService.error(`[auth route] register (supabase): Supabase client unavailable: ${err}`);
+      return this.jsonResponse({ ok: false, message: 'Registration failed' }, 500, req);
+    }
+
+    // Provision the Supabase Auth user. email_confirm: false means the user
+    // receives a confirmation email and cannot log in until they click the
+    // link (controlled by the Supabase project's email-confirmation setting).
+    const { data, error } = await client.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: false,
+      user_metadata: { username },
+    });
+
+    if (error) {
+      // A `user_already_exists` code means the email is already registered in
+      // Supabase Auth — treat it the same as a local duplicate-email collision.
+      if (error.code === 'user_already_exists') {
+        this.authRateLimiterService.recordFailure(remoteIp);
+        this.loggerService.info(
+          `[auth route] register (supabase): email already exists in Supabase Auth from ${remoteIp}`,
+        );
+        return this.jsonResponse({ ok: false, message: 'Email already registered' }, 409, req);
+      }
+
+      this.loggerService.error(
+        `[auth route] register (supabase): admin.createUser failed for '${username}': ${error.message} (code=${error.code})`,
+      );
+      return this.jsonResponse({ ok: false, message: 'Registration failed' }, 500, req);
+    }
+
+    if (!data.user) {
+      // Defensive: success response with no user object.
+      this.loggerService.error(`[auth route] register (supabase): admin.createUser returned ok but no user for '${username}'`);
+      return this.jsonResponse({ ok: false, message: 'Registration failed' }, 500, req);
+    }
+
+    const supabaseAuthId = data.user.id;
+    this.loggerService.debug(
+      `[auth route] register (supabase): Supabase Auth user provisioned for '${username}' (id=${supabaseAuthId})`,
+    );
+
+    // Insert the local auth_users row. The password hash is an empty sentinel —
+    // logins for this user go through Supabase Auth (signInWithPassword) and
+    // never consult the local hash. Both email and supabaseAuthId are set
+    // atomically so the auth-provider branching condition holds.
+    try {
+      await this.userStore.create({
+        username,
+        email,
+        passwordHash: '',
+        passwordAlgo: 'argon2id',
+        now,
+        supabaseAuthId,
+      });
+    } catch (err) {
+      // The Supabase Auth user was created but the local row failed. Log the
+      // orphan supabaseAuthId so an operator can clean up manually. The user
+      // will see "Registration failed" and can retry.
+      this.loggerService.error(
+        `[auth route] register (supabase): local auth_users insert failed for '${username}' ` +
+        `(supabaseAuthId=${supabaseAuthId}): ${err}`,
+      );
+      return this.jsonResponse({ ok: false, message: 'Registration failed' }, 500, req);
+    }
+
+    this.loggerService.info(
+      `[auth register] new supabase account created for '${username}' using code ...${code.slice(-6)} from ${remoteIp}`,
+    );
+    // Reset the limiter on the happy path.
+    this.authRateLimiterService.reset(remoteIp);
+    return this.jsonResponse({ ok: true }, 201, req);
   }
 
   /**

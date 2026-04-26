@@ -3,6 +3,7 @@ import { UserAccountAuthProvider } from '../auth/user-account-auth-provider.ts';
 import { InMemoryUserStore } from '../auth/in-memory-user-store.ts';
 import { Argon2idHasher, BcryptHasher } from '../auth/password-hasher.ts';
 import { ServerConfigService } from '../server-config-service.ts';
+import { SupabaseClientProvider } from '../storage/supabase-client-provider.ts';
 import { LoggerService } from '../logger-service.ts';
 import { Clock } from '../auth/auth-rate-limiter-service.ts';
 
@@ -53,6 +54,15 @@ const makeFakeClock = (initialMs = 0): Clock & { advance(ms: number): void } => 
   };
 };
 
+// Minimal SupabaseClientProvider stub that always throws — the kv-backend
+// tests never reach the Supabase path so this is never called.
+const makeSupabaseClientProviderStub = (): SupabaseClientProvider =>
+  ({
+    get: () => {
+      throw new Error('SupabaseClientProvider stub: not available in kv tests');
+    },
+  }) as unknown as SupabaseClientProvider;
+
 // Builds the provider under test along with all real dependencies so tests
 // exercise the full hash/verify path (real argon2id) to catch regressions.
 const makeProvider = async (opts: { clock?: Clock } = {}) => {
@@ -61,8 +71,9 @@ const makeProvider = async (opts: { clock?: Clock } = {}) => {
   const userStore = new InMemoryUserStore();
   const argon2id = new Argon2idHasher();
   const bcrypt = new BcryptHasher();
+  const supabaseClientProvider = makeSupabaseClientProviderStub();
   const clock = opts.clock ?? makeFakeClock(1_000);
-  const provider = new UserAccountAuthProvider(logger, userStore, argon2id, bcrypt, config, clock);
+  const provider = new UserAccountAuthProvider(logger, userStore, argon2id, bcrypt, config, supabaseClientProvider, clock);
   await provider.initialize();
   return { provider, userStore, argon2id, bcrypt, clock, config };
 };
