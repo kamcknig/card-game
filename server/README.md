@@ -39,17 +39,25 @@ cp .env-example .env
 
 ### Storage Backend Variables
 
-A single `STORAGE_BACKEND` env var selects the persistence layer for **both** auth (sessions, users, registration codes) and game data (match-configuration saves). The server throws at startup if it is unset or invalid.
+A single `STORAGE_BACKEND` env var selects the persistence layer for **both** auth (sessions, users, registration codes) and game data (match-configuration saves). When the value is missing or unrecognized the process still starts so `/status` can surface the misconfiguration to the frontend (see _Health endpoint_ below) — the server intentionally does not crash on storage misconfiguration so operators can diagnose it through the UI rather than the container logs.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `STORAGE_BACKEND` | _(required)_ | Selects the storage backend. Allowed values: `kv` (Deno KV) or `supabase` |
+| `STORAGE_BACKEND` | _(required for normal operation)_ | Selects the storage backend. Allowed values: `kv` (Deno KV) or `supabase`. Unset/invalid values produce a `STORAGE_BACKEND_INVALID` health issue and the in-memory fallback stores are used (no persistence) |
 | `AUTH_KV_PATH` | `./game-data/auth.kv` | Filesystem path to the Deno KV auth store. Used when `STORAGE_BACKEND=kv`. Use `':memory:'` for dev/tests |
 | `GAME_DATA_KV_PATH` | `./game-data/game-data.kv` | Filesystem path to the Deno KV game-data store. Used when `STORAGE_BACKEND=kv` |
 | `SUPABASE_URL` | _(required for `supabase`)_ | Supabase project URL. Required when `STORAGE_BACKEND=supabase` |
-| `SUPABASE_SERVICE_ROLE_KEY` | _(required for `supabase`)_ | Supabase service-role key. Server-side only — bypasses RLS. NEVER expose to a browser |
+| `SUPABASE_SERVICE_ROLE_KEY` | _(required for `supabase`)_ | Supabase service-role key. Server-side only — bypasses RLS. NEVER commit to git or expose to a browser |
 
 **Health endpoint.** Regardless of backend, the server exposes `GET /status` which returns a JSON snapshot of the current health state (overall `status`, list of `issues`, active `backend`, `startedAt` timestamp). The HTTP status is always 200 — severity is conveyed in the body so monitoring probes can branch on the JSON. The Angular frontend gates the app on this endpoint at boot and redirects to `/server-status` when the snapshot reports `error`.
+
+Issue codes the storage layer can register:
+
+| Code | Level | Cause |
+|------|-------|-------|
+| `STORAGE_BACKEND_INVALID` | error | `STORAGE_BACKEND` env var is unset or not one of `kv`/`supabase` |
+| `SUPABASE_CONFIG_MISSING` | error | `STORAGE_BACKEND=supabase` but `SUPABASE_URL` and/or `SUPABASE_SERVICE_ROLE_KEY` are unset |
+| `SUPABASE_OPEN_FAILED` | error | Connection to Supabase or initial table reads failed at startup |
 
 ### Authentication Variables
 

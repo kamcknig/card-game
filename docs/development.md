@@ -123,6 +123,17 @@ docker compose -f docker-compose.dev.yml up --build
 
 This starts the game server on port 3001 and the Angular dev server on port 51455. Source files are bind-mounted so changes are picked up immediately by `ng serve`.
 
+### Local secrets (`./.env`)
+
+`docker-compose.dev.yml` references secrets via `${VAR}` interpolation rather than embedding them inline. Compose reads them automatically from a gitignored `./.env` at the repository root. Currently used:
+
+| Variable | Required when | Notes |
+|----------|---------------|-------|
+| `SUPABASE_URL` | `STORAGE_BACKEND=supabase` | Project URL — not secret but kept alongside the key for symmetry |
+| `SUPABASE_SERVICE_ROLE_KEY` | `STORAGE_BACKEND=supabase` | Service-role key. Bypasses RLS — never commit. The repo's `.gitignore` rule `**/.env` keeps the file out of version control |
+
+If you switch the dev stack to `STORAGE_BACKEND=kv`, neither variable needs to be set; Compose will pass empty strings through and the kv branch ignores them.
+
 **Important — rebuild when dependencies change**: The dev frontend image installs `node_modules` at build time (inside the container) so the correct musl-compatible binaries are used on Alpine Linux. When `angular-frontend/package.json` or `shared/package.json` changes, the image must be rebuilt:
 
 ```bash
@@ -214,7 +225,7 @@ Both apps have external ingress and are accessible via their `.azurecontainerapp
 | `END_MATCH_ON_NO_HUMANS` | `true` | End matches when all humans leave |
 | `MATCH_STATE_MERGE_ENABLED` | `true` | Enable match state merging |
 | `AUTH_ALLOWED_ORIGINS` | _(required)_ | Comma-separated CORS origin allowlist for `/auth/*` (e.g. the frontend FQDN) |
-| `STORAGE_BACKEND` | `kv` | Unified storage backend — drives both auth and game data. Allowed values: `kv` or `supabase`. The server throws at startup if unset |
+| `STORAGE_BACKEND` | `kv` | Unified storage backend — drives both auth and game data. Allowed values: `kv` or `supabase`. When unset/invalid the server still starts and `/status` reports a `STORAGE_BACKEND_INVALID` error so the frontend can render `/server-status` instead of crashing — production revisions should always set it explicitly |
 | `AUTH_KV_PATH` | `./game-data/auth.kv` | Path to the Deno KV auth store. Used when `STORAGE_BACKEND=kv` (mount Azure Files at the containing directory for durability) |
 | `GAME_DATA_KV_PATH` | `./game-data/game-data.kv` | Path to the Deno KV game-data store. Used when `STORAGE_BACKEND=kv` |
 | `SUPABASE_URL` | _(required for `supabase`)_ | Supabase project URL. Required when `STORAGE_BACKEND=supabase` |
