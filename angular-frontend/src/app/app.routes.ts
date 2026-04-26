@@ -9,12 +9,13 @@ import { MatchComponent } from './components/match/match.component';
 import { GameSummaryComponent } from './components/game-summary/game-summary.component';
 import { authGuard } from './core/guards/auth.guard';
 import { guestGuard } from './core/guards/guest.guard';
-import { serverHealthGuard } from './core/guards/server-health.guard';
+import { serverHealthGuard, serverStatusRedirectGuard } from './core/guards/server-health.guard';
 
 export const routes: Routes = [
   {
     path: 'server-status',
     loadComponent: () => import('./server-status/server-status.component').then(m => m.ServerStatusComponent),
+    canActivate: [serverStatusRedirectGuard],
     title: 'Dominion - Server Status',
   },
   { path: 'login', component: LoginComponent, canActivate: [guestGuard], title: 'Dominion' },
