@@ -9,11 +9,13 @@ import { LoginComponent } from './login.component';
  * Stub AuthService that avoids real fetch calls during tests. The debounced
  * username-availability pipeline in LoginComponent invokes
  * `checkUsernameAvailability`; returning a resolved promise keeps it quiet.
+ * `checkEmailAvailability` is also stubbed for the email field added in Phase 2.
  */
 class AuthServiceStub {
   loginResult: { ok: boolean; message?: string } = { ok: true };
   registerResult: { ok: boolean; message?: string } = { ok: true };
   usernameAvailable = true;
+  emailAvailable = true;
   validateCodeResult: { ok: boolean; valid: boolean } = { ok: true, valid: true };
 
   login = jest.fn().mockImplementation(async () => this.loginResult);
@@ -21,6 +23,9 @@ class AuthServiceStub {
   checkUsernameAvailability = jest
     .fn()
     .mockImplementation(async () => this.usernameAvailable);
+  checkEmailAvailability = jest
+    .fn()
+    .mockImplementation(async () => this.emailAvailable);
   validateRegistrationCode = jest
     .fn()
     .mockImplementation(async () => this.validateCodeResult);
@@ -73,6 +78,7 @@ describe('LoginComponent', () => {
   it('starts in signin mode with empty fields', () => {
     expect(component.mode()).toBe('signin');
     expect(component.username()).toBe('');
+    expect(component.email()).toBe('');
     expect(component.password()).toBe('');
     expect(component.confirmPassword()).toBe('');
     expect(component.registrationCode()).toBe('');
@@ -81,6 +87,7 @@ describe('LoginComponent', () => {
   it('setMode clears every field and transient message', () => {
     // Populate some state as if the user was mid-flow.
     component.username.set('alice');
+    component.email.set('alice@example.com');
     component.password.set('pw');
     component.confirmPassword.set('pw2');
     component.registrationCode.set('abcd');
@@ -92,6 +99,7 @@ describe('LoginComponent', () => {
 
     expect(component.mode()).toBe('register');
     expect(component.username()).toBe('');
+    expect(component.email()).toBe('');
     expect(component.password()).toBe('');
     expect(component.confirmPassword()).toBe('');
     expect(component.registrationCode()).toBe('');
@@ -132,13 +140,15 @@ describe('LoginComponent', () => {
   it('register: successful submit returns to signin with a success toast and prefilled username', async () => {
     component.setMode('register');
     component.username.set('alice');
+    component.email.set('alice@example.com');
     component.password.set('correcthorse');
     component.confirmPassword.set('correcthorse');
     component.registrationCode.set('code123');
 
     await component.onSubmit();
 
-    expect(authStub.register).toHaveBeenCalledWith('alice', 'correcthorse', 'code123');
+    // register signature: (username, email, password, registrationCode)
+    expect(authStub.register).toHaveBeenCalledWith('alice', 'alice@example.com', 'correcthorse', 'code123');
     expect(component.mode()).toBe('signin');
     expect(component.username()).toBe('alice');
     expect(component.successMessage()).toContain('Account created');

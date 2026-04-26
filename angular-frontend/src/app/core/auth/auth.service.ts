@@ -17,6 +17,14 @@ export const authIsAdminStore = atom<boolean>(
   localStorage.getItem('authIsAdmin') === 'true',
 );
 
+// Tracks whether the logged-in user still needs to attach an email address.
+// true for legacy users who pre-date email registration, false once an email
+// is set. localStorage-backed so the flag survives a page refresh.
+// Login, validate, and attachEmail write to this; logout clears it.
+export const authNeedsEmailStore = atom<boolean>(
+  localStorage.getItem('authNeedsEmail') === 'true',
+);
+
 // Holds a registration code parsed from the URL query string on startup.
 // Consumed (cleared) once LoginComponent reads it during initialization.
 // Not localStorage-backed — only valid for the current page load.
@@ -25,6 +33,7 @@ export const pendingRegistrationCodeStore = atom<string | undefined>(undefined);
 (globalThis as any).authUsernameStore = authUsernameStore;
 (globalThis as any).authTokenStore = authTokenStore;
 (globalThis as any).authIsAdminStore = authIsAdminStore;
+(globalThis as any).authNeedsEmailStore = authNeedsEmailStore;
 (globalThis as any).pendingRegistrationCodeStore = pendingRegistrationCodeStore;
 
 /**
@@ -58,12 +67,15 @@ export class AuthService {
         return { ok: false, message: body.message ?? 'Login failed' };
       }
 
+      const needsEmail = body.needsEmail === true;
       localStorage.setItem('authToken', body.token);
       localStorage.setItem('authUsername', body.username);
       localStorage.setItem('authIsAdmin', body.isAdmin ? 'true' : 'false');
+      localStorage.setItem('authNeedsEmail', needsEmail ? 'true' : 'false');
       authTokenStore.set(body.token);
       authUsernameStore.set(body.username);
       authIsAdminStore.set(body.isAdmin ?? false);
+      authNeedsEmailStore.set(needsEmail);
       return { ok: true };
     } catch {
       return { ok: false, message: 'Unable to reach server' };
@@ -89,9 +101,13 @@ export class AuthService {
 
       const body = await response.json();
       if (body.ok) {
+        const needsEmail = body.needsEmail === true;
         authUsernameStore.set(body.username);
         localStorage.setItem('authIsAdmin', body.isAdmin ? 'true' : 'false');
         authIsAdminStore.set(body.isAdmin ?? false);
+        // Keep the needsEmail flag in sync across page refreshes via validate.
+        localStorage.setItem('authNeedsEmail', needsEmail ? 'true' : 'false');
+        authNeedsEmailStore.set(needsEmail);
         return true;
       }
 
@@ -110,14 +126,19 @@ export class AuthService {
 
   /**
    * Clears all auth state from localStorage and stores.
+   *
+   * Clears the needsEmail flag as well so the email-onboarding gate is reset
+   * on the next login.
    */
   clearAuth(): void {
     localStorage.removeItem('authToken');
     localStorage.removeItem('authUsername');
     localStorage.removeItem('authIsAdmin');
+    localStorage.removeItem('authNeedsEmail');
     authTokenStore.set(undefined);
     authUsernameStore.set(undefined);
     authIsAdminStore.set(false);
+    authNeedsEmailStore.set(false);
   }
 
   /**
@@ -164,12 +185,18 @@ export class AuthService {
    * Creates a new account via POST /auth/register.
    *
    * Requires a registration code issued out-of-band by an existing user or
-   * the CLI (see server/scripts/auth-create-reg-code.ts). On success the
-   * user must still log in separately — registration does not automatically
-   * establish a session.
+   * the CLI (see server/scripts/auth-create-reg-code.ts). The `email`
+   * parameter is required from Phase 2 onward — the server rejects
+   * registrations without an email with HTTP 400. On success the user must
+   * still log in separately — registration does not automatically establish a
+   * session.
+   *
+   * The `registrationCode` parameter is retained here through Phase 4, when
+   * the code system is removed. Callers must continue to supply it until then.
    */
   async register(
     username: string,
+    email: string,
     password: string,
     registrationCode: string,
   ): Promise<{ ok: boolean; message?: string }> {
@@ -177,7 +204,7 @@ export class AuthService {
       const response = await fetch(`${environment.wsHost}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, registrationCode }),
+        body: JSON.stringify({ username, email, password, registrationCode }),
       });
 
       const body = await response.json().catch(() => ({}));
@@ -320,6 +347,26 @@ export class AuthService {
     try {
       const response = await fetch(
         `${environment.wsHost}/auth/check-username?username=${encodeURIComponent(username)}`,
+      );
+      const body = await response.json().catch(() => ({ available: true }));
+      return body.available ?? true;
+    } catch {
+      return true;
+    }
+  }
+
+  /**
+   * Checks whether an email address is already registered.
+   *
+   * Returns true when the email is available, false when it is taken.
+   * Network errors resolve to true (available) so a transient failure does
+   * not block the registration form — the server will give the definitive
+   * answer on submit.
+   */
+  async checkEmailAvailability(email: string): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${environment.wsHost}/auth/check-email?email=${encodeURIComponent(email)}`,
       );
       const body = await response.json().catch(() => ({ available: true }));
       return body.available ?? true;

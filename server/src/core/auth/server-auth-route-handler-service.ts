@@ -17,6 +17,16 @@ import { buildCorsHeaders } from '../cors-utils.ts';
 const USERNAME_REGEX = /^[A-Za-z0-9_]{3,32}$/;
 
 /**
+ * Intentionally permissive email format check.
+ *
+ * Requires a local-part, an `@`, a domain, a `.`, and a TLD with no
+ * whitespace anywhere. Supabase Auth will reject anything that is actually
+ * malformed when the supabase backend is active; the server-side check is
+ * a fast, cheap guard to avoid persisting obvious garbage.
+ */
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
  * Validates a password against the configured minimum length and trivial
  * self-references (password === username).
  *
@@ -155,6 +165,11 @@ export class ServerAuthRouteHandlerService {
       return this.handleCheckUsername(req, url);
     }
 
+    // GET /auth/check-email?email=<value> (public, informational).
+    if (parts.length === 2 && parts[1] === 'check-email' && req.method === 'GET') {
+      return this.handleCheckEmail(req, url);
+    }
+
     this.loggerService.debug(`[auth route] unmatched auth path: ${req.method} ${url.pathname}`);
     return new Response('auth resource not found', { status: 404, headers: this.corsHeaders(req) });
   }
@@ -225,14 +240,17 @@ export class ServerAuthRouteHandlerService {
 
     // Reset the rate-limiter counter on successful login.
     this.authRateLimiterService.reset(remoteIp);
-    // Look up the user record to include the admin flag in the response so the
-    // client can gate admin-only UI without a separate request.
+    // Look up the user record to include the admin flag and needsEmail flag in
+    // the response so the client can gate admin-only UI and the email-onboarding
+    // flow without a separate request.
     const loggedInUser = this.userStore.getByUsername(result.username);
     const isAdmin = loggedInUser?.isAdmin ?? false;
+    // needsEmail is true for legacy users who have not yet attached an email.
+    const needsEmail = loggedInUser?.email == null;
     this.loggerService.info(
-      `[auth route] login succeeded from ${remoteIp} for '${result.username}' via '${providerName}'`,
+      `[auth route] login succeeded from ${remoteIp} for '${result.username}' via '${providerName}' (needsEmail=${needsEmail})`,
     );
-    return this.jsonResponse({ ok: true, token: result.token, username: result.username, isAdmin }, 200, req);
+    return this.jsonResponse({ ok: true, token: result.token, username: result.username, isAdmin, needsEmail }, 200, req);
   }
 
   /**
@@ -253,12 +271,15 @@ export class ServerAuthRouteHandlerService {
       return this.jsonResponse({ ok: false, message: 'invalid or expired token' }, 401, req);
     }
 
-    // Look up the user record to include the admin flag in the response so the
-    // client can gate admin-only UI without a separate validate call.
+    // Look up the user record to include the admin flag and needsEmail flag in
+    // the response so the client can gate admin-only UI and the email-onboarding
+    // flow without a separate validate call.
     const validatedUser = this.userStore.getByUsername(username);
     const isAdmin = validatedUser?.isAdmin ?? false;
-    this.loggerService.debug(`[auth route] token validated for '${username}' (isAdmin=${isAdmin})`);
-    return this.jsonResponse({ ok: true, username, isAdmin }, 200, req);
+    // needsEmail stays in sync across page refreshes via the validate endpoint.
+    const needsEmail = validatedUser?.email == null;
+    this.loggerService.debug(`[auth route] token validated for '${username}' (isAdmin=${isAdmin}, needsEmail=${needsEmail})`);
+    return this.jsonResponse({ ok: true, username, isAdmin, needsEmail }, 200, req);
   }
 
   /**
@@ -393,6 +414,7 @@ export class ServerAuthRouteHandlerService {
 
     const username = typeof body['username'] === 'string' ? (body['username'] as string).trim() : '';
     const password = typeof body['password'] === 'string' ? (body['password'] as string) : '';
+    const email = typeof body['email'] === 'string' ? (body['email'] as string).trim() : '';
     const code = typeof body['registrationCode'] === 'string' ? (body['registrationCode'] as string).trim() : '';
 
     // Username format check — narrow enough to keep logs predictable.
@@ -403,6 +425,18 @@ export class ServerAuthRouteHandlerService {
         400,
         req,
       );
+    }
+
+    // Email is required from this phase forward. Validate format with the
+    // intentionally permissive EMAIL_REGEX; Supabase Auth will enforce stricter
+    // checks when the supabase backend is active.
+    if (!email) {
+      this.authRateLimiterService.recordFailure(remoteIp);
+      return this.jsonResponse({ ok: false, message: 'Email is required' }, 400, req);
+    }
+    if (!EMAIL_REGEX.test(email)) {
+      this.authRateLimiterService.recordFailure(remoteIp);
+      return this.jsonResponse({ ok: false, message: 'Invalid email address' }, 400, req);
     }
 
     // Password strength per AUTH_MIN_PASSWORD_LENGTH and username-not-equal.
@@ -433,11 +467,19 @@ export class ServerAuthRouteHandlerService {
       return this.jsonResponse({ ok: false, message: 'Username already taken' }, 409, req);
     }
 
+    // Check for duplicate email (case-insensitive). Reject before writing any
+    // state so the consumed code is the only cost of a duplicate-email attempt.
+    if (this.userStore.getByEmail(email)) {
+      this.authRateLimiterService.recordFailure(remoteIp);
+      this.loggerService.info(`[auth route] register: email already registered from ${remoteIp}`);
+      return this.jsonResponse({ ok: false, message: 'Email already registered' }, 409, req);
+    }
+
     // Hash the new password with argon2id and create the user row. Uses the
     // original-case username so the display name matches what the user typed.
     try {
       const hash = await this.argon2idHasher.hash(password);
-      await this.userStore.create({ username, passwordHash: hash, passwordAlgo: 'argon2id', now });
+      await this.userStore.create({ username, email, passwordHash: hash, passwordAlgo: 'argon2id', now });
       this.loggerService.info(
         `[auth register] new account created for '${username}' using code ...${code.slice(-6)} from ${remoteIp}`,
       );
@@ -699,6 +741,33 @@ export class ServerAuthRouteHandlerService {
     const existing = this.userStore.getByUsername(username);
     const available = !existing;
     this.loggerService.debug(`[auth route] check-username: '${username}' available=${available}`);
+    return this.jsonResponse({ available }, 200, req);
+  }
+
+  /**
+   * Handles GET /auth/check-email?email=<value>.
+   *
+   * Public, unauthenticated endpoint that reports whether a given email address
+   * is already registered. Used by the registration form to give real-time
+   * feedback before the user submits. The lookup is case-insensitive, matching
+   * the normalisation applied during registration.
+   *
+   * Returns `{ available: true }` when no account has that email, or
+   * `{ available: false }` when one does. Emails that fail format validation
+   * are reported as available because the server will reject them on
+   * registration with a format error; this endpoint's only concern is
+   * uniqueness.
+   */
+  private handleCheckEmail(req: Request, url: URL): Response {
+    const email = (url.searchParams.get('email') ?? '').trim();
+    if (!email) {
+      this.loggerService.debug('[auth route] check-email: empty email query param');
+      return this.jsonResponse({ available: true }, 200, req);
+    }
+
+    const existing = this.userStore.getByEmail(email);
+    const available = !existing;
+    this.loggerService.debug(`[auth route] check-email: available=${available}`);
     return this.jsonResponse({ available }, 200, req);
   }
 

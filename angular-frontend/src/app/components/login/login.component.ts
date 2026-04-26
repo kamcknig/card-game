@@ -43,6 +43,8 @@ export class LoginComponent implements OnInit {
   readonly mode = signal<'signin' | 'register'>('signin');
 
   readonly username = signal('');
+  /** Email address — only used when mode() === 'register'. */
+  readonly email = signal('');
   readonly password = signal('');
   /** Confirmation of {@link password} — only used when mode() === 'register'. */
   readonly confirmPassword = signal('');
@@ -148,6 +150,7 @@ export class LoginComponent implements OnInit {
     this.successMessage.set(undefined);
     this.usernameError.set(undefined);
     this.username.set('');
+    this.email.set('');
     this.password.set('');
     this.confirmPassword.set('');
     this.registrationCode.set('');
@@ -205,7 +208,7 @@ export class LoginComponent implements OnInit {
           return;
         }
 
-        const result = await this._authService.register(username, password, code);
+        const result = await this._authService.register(username, this.email().trim(), password, code);
         if (result.ok) {
           // setMode clears all fields and messages; set the success toast and
           // restore the username AFTER calling setMode so they survive the clear.
