@@ -51,6 +51,11 @@ services:
       AUTH_RATE_LIMIT_WINDOW_MS: "60000"
       AUTH_ALLOWED_ORIGINS: "*"
       STORAGE_BACKEND: "supabase"
+      # Sourced from the gitignored ./.env file at the repo root so the
+      # service-role secret never lands in version control. Compose loads
+      # ./.env automatically when running from the repo root.
+      SUPABASE_URL: "${SUPABASE_URL}"
+      SUPABASE_SERVICE_ROLE_KEY: "${SUPABASE_SERVICE_ROLE_KEY}"
       AUTH_KV_PATH: "./game-data/auth.kv"
       GAME_DATA_KV_PATH: "./game-data/game-data.kv"
       AUTH_MIN_PASSWORD_LENGTH: "10"
