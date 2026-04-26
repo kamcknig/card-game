@@ -25,6 +25,7 @@ class RouterStub {
 
 class AuthServiceStub {
   clearAuth = jest.fn();
+  clearLocalAuthState = jest.fn();
 }
 
 describe('SocketEventMapService', () => {
@@ -101,17 +102,20 @@ describe('SocketEventMapService', () => {
       return socket.setEventMap.mock.calls[0][0] as SocketEventMap;
     };
 
-    it('clears local auth state when the server kicks this tab', () => {
+    it('clears in-memory auth atoms (not localStorage) when the server kicks this tab', () => {
       const map = captureEventMap();
       const handler = map['sessionTakenOver'];
       expect(handler).toBeDefined();
 
       handler!();
 
-      // The server is about to disconnect the socket; clearing auth here
-      // ensures authGuard sees the cleared token on the next navigation
-      // and the user does not sit with a zombie UI.
-      expect(auth.clearAuth).toHaveBeenCalledTimes(1);
+      // Crucial: the kicked tab must NOT call clearAuth() (which writes
+      // to localStorage). localStorage is shared with the new winning
+      // tab; a write here would fire a `storage` event there and bounce
+      // it to /login too. clearLocalAuthState() is the in-memory-only
+      // variant designed for this path.
+      expect(auth.clearLocalAuthState).toHaveBeenCalledTimes(1);
+      expect(auth.clearAuth).not.toHaveBeenCalled();
     });
 
     it('redirects the kicked tab to /login', () => {

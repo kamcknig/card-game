@@ -121,6 +121,27 @@ export class AuthService {
   }
 
   /**
+   * Clears only the in-memory auth atoms — leaves localStorage intact.
+   *
+   * Intended for the server-initiated takeover-kick path: when the server
+   * kicks this tab via `sessionTakenOver`, we must not propagate the clear
+   * through localStorage because the kick winner (the new tab) shares
+   * localStorage with us and would receive a `storage` event that flips
+   * its own atoms to undefined and bounces it to /login. By clearing only
+   * the local atoms, the kicked tab's authGuard redirects to /login on
+   * the next navigation while the winner tab continues unaffected. A
+   * refresh of the kicked tab will re-read the still-valid token from
+   * localStorage and re-establish a session — at which point the server
+   * will kick the previous winner. That refresh-as-takeover behaviour is
+   * intentional: the user is the only one who should escalate the kick.
+   */
+  clearLocalAuthState(): void {
+    authTokenStore.set(undefined);
+    authUsernameStore.set(undefined);
+    authIsAdminStore.set(false);
+  }
+
+  /**
    * Logs out by invalidating the server-side session and clearing local auth state.
    * The server call is best-effort — local state is always cleared.
    */
