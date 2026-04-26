@@ -3,6 +3,8 @@ import { appConfig } from './app/app.config';
 import { AppComponent } from './app/app.component';
 import { AuthService, authTokenStore, pendingRegistrationCodeStore } from './app/core/auth/auth.service';
 import { SocketEventMapService } from './app/core/socket-service/socket-event-map.service';
+import { ServerStatusService, serverStatusStore } from './app/core/server-status/server-status.service';
+import { Router } from '@angular/router';
 
 // Stage any registration code from the URL before the app bootstraps so that
 // LoginComponent can read pendingRegistrationCodeStore in its constructor.
@@ -19,6 +21,15 @@ bootstrapApplication(AppComponent, appConfig)
     const injector = appRef.injector;
     const authService = injector.get(AuthService);
     const socketEventMapService = injector.get(SocketEventMapService);
+    const serverStatusService = injector.get(ServerStatusService);
+
+    // Check server health before any auth or socket work.
+    // On error, redirect to /server-status and skip the rest of bootstrap.
+    await serverStatusService.fetchOnce();
+    if (serverStatusStore.get()?.status === 'error') {
+      injector.get(Router).navigate(['/server-status']);
+      return;
+    }
 
     // Try to restore a previous auth session from localStorage.
     const hasValidToken = await authService.validateStoredToken();
