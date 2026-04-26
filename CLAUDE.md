@@ -82,7 +82,6 @@ When rules conflict, use this order:
 - Removing commented code unless requested
 - Whitespace-only edits
 - Backwards compatibility by default (alpha software)
-- NEVER add testing without explicit permission.
 
 ## Architectural Constraints
 

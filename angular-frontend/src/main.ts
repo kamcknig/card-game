@@ -1,7 +1,13 @@
 import { bootstrapApplication } from '@angular/platform-browser';
 import { appConfig } from './app/app.config';
 import { AppComponent } from './app/app.component';
-import { AuthService, authTokenStore, pendingRegistrationCodeStore } from './app/core/auth/auth.service';
+import {
+  AuthService,
+  authIsAdminStore,
+  authTokenStore,
+  authUsernameStore,
+  pendingRegistrationCodeStore,
+} from './app/core/auth/auth.service';
 import { SocketEventMapService } from './app/core/socket-service/socket-event-map.service';
 import { ServerStatusService, serverStatusStore } from './app/core/server-status/server-status.service';
 import { Router } from '@angular/router';
@@ -50,12 +56,49 @@ bootstrapApplication(AppComponent, appConfig)
       pendingRegistrationCodeStore.set(undefined);
     }
 
-    // Subscribe to auth token changes so the socket connects after a successful
-    // fresh login. SocketEventMapService.connect() is idempotent — the internal
-    // _initialized guard prevents double-init on refresh.
+    // Subscribe to auth token changes so the socket lifecycle follows session
+    // state: connect after a fresh login (handlers registered on first call,
+    // socket reopened on subsequent calls), and disconnect on logout or
+    // external session invalidation (see the storage event handler below).
     authTokenStore.subscribe(token => {
       if (token) {
         socketEventMapService.connect();
+      } else {
+        socketEventMapService.disconnect();
+      }
+    });
+
+    // Single-session-per-user is enforced server-side: every successful login
+    // calls removeSessionsForUsername(), revoking any other tabs/devices for
+    // the same user. This tab's nanostore atoms do NOT subscribe to
+    // localStorage 'storage' events natively (those only fire in OTHER tabs),
+    // so without this listener a tab whose session was revoked elsewhere
+    // would keep its stale in-memory token, its still-open socket would no
+    // longer be backed by a valid session, and the user would see the UI
+    // silently degrade. When another tab clears or replaces the authToken
+    // we mirror that into this tab's atoms so authGuard kicks the user back
+    // to /login on the next navigation, the socket disconnects via the
+    // subscription above, and there is no zombie session left around.
+    window.addEventListener('storage', event => {
+      // Only react to changes on the auth token key from another tab/window.
+      if (event.key !== 'authToken' || event.storageArea !== localStorage) {
+        return;
+      }
+      const externalToken = event.newValue ?? undefined;
+      const currentToken = authTokenStore.get();
+      // Mirror the cleared-or-rotated token from the other tab into our
+      // atoms. When the new value differs from what we hold, the server has
+      // rotated the session out from under us; treat that as a logout in
+      // this tab.
+      if (externalToken !== currentToken) {
+        authTokenStore.set(externalToken);
+        if (!externalToken) {
+          authUsernameStore.set(undefined);
+          authIsAdminStore.set(false);
+          // Send the user back to /login so they don't sit in a route that
+          // requires auth with a now-invalid socket and a stale UI.
+          void router.navigate(['/login']);
+        }
       }
     });
   })

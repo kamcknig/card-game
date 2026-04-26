@@ -40,19 +40,44 @@ export class SocketEventMapService {
   private readonly _router = inject(Router);
   private readonly _socketService = inject(SocketService);
 
-  /** Prevents double-init: authTokenStore subscription and initial token check both call connect(). */
-  private _initialized = false;
+  /**
+   * Tracks whether server-to-client event handlers have been registered.
+   * Handler registration is one-shot — registering twice would cause every
+   * server event to fire its handler N times. Connection state, by contrast,
+   * is per-call: a logout/re-login cycle disconnects then needs to reconnect.
+   */
+  private _handlersRegistered = false;
 
   /**
-   * Registers all socket event handlers and connects the socket. Safe to call multiple times —
-   * only the first call takes effect. Should be called after auth token is confirmed valid.
+   * Registers all socket event handlers (one-shot) and ensures the socket is
+   * connected. Safe to call repeatedly — handlers are only registered on the
+   * first call, but each call (re)opens the socket if it is currently
+   * disconnected. Should be called after the auth token is confirmed valid;
+   * the SocketService auth callback re-reads the token from localStorage on
+   * every connect, so post-login calls automatically use the new token.
    */
   connect(): void {
-    if (this._initialized) return;
-    this._initialized = true;
-    this._socketService.setEventMap(this._buildMap());
-    // Warm searchable landscape data on startup so configuration search can filter locally.
-    this._socketService.emit('requestSelectableSearchCatalog');
+    if (!this._handlersRegistered) {
+      this._handlersRegistered = true;
+      this._socketService.setEventMap(this._buildMap());
+      // Warm searchable landscape data on startup so configuration search can filter locally.
+      this._socketService.emit('requestSelectableSearchCatalog');
+      return;
+    }
+    // Handlers already registered — just ensure the socket is connected so a
+    // post-logout re-login reconnects with the new token.
+    this._socketService.connect();
+  }
+
+  /**
+   * Closes the socket connection. Leaves event handlers registered so a
+   * subsequent connect() reuses them. Called from the auth subscription
+   * when the token clears (logout, or external invalidation from another
+   * tab) so the server-side connection is released cleanly with the
+   * now-revoked token rather than relying on transport-level timeouts.
+   */
+  disconnect(): void {
+    this._socketService.disconnect();
   }
 
   /** Clears transient HUD overlays when leaving match-scoped flows. */

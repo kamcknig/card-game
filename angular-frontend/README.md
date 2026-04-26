@@ -17,16 +17,16 @@ npm install
 npm run start
 ```
 
-The dev server proxies `/socket.io` and `/debug` requests to the game server at `127.0.0.1:3001` (configured in `src/proxy.conf.json`).
+The dev server proxies `/auth`, `/socket.io`, `/debug`, and `/status` requests to the game server at `127.0.0.1:3001` (configured in `src/proxy.conf.json`). When running inside the dev compose stack the alternate `src/proxy.conf.docker.json` is bind-mounted in its place to target the docker-compose service hostname instead.
 
 ## Server Connection
 
-The client connects to the game server via WebSocket. The server URL is resolved at runtime:
+The client uses **relative URLs** to talk to the backend. The frontend container's nginx (or the dev server's proxy) is responsible for forwarding `/auth/`, `/socket.io/`, `/debug/`, and `/status` to the game server. `environment.wsHost` controls the base URL prepended to those paths and is resolved at runtime as follows:
 
 1. If `window.__env.wsHost` is set (injected by `env.js`), that value is used.
-2. Otherwise it defaults to `http://localhost:3000`.
+2. Otherwise it defaults to `http://localhost:3000` (so a non-Dockerised local run works out of the box against a server on that port).
 
-In local development the proxy handles routing, so the default works out of the box as long as the server is running on port 3001.
+In production, `docker/env.sh` writes `wsHost: ''` so requests stay relative and nginx proxies them; set `WS_HOST_OVERRIDE` to inject a fully-qualified URL into `env.js` only if you want to bypass the nginx proxy entirely.
 
 ## Other Commands
 
@@ -49,7 +49,7 @@ Build and run from the repository root:
 # build
 docker build -f docker/DockerFile_web_app -t dominion-web .
 
-# run (nginx on port 80, point WS_HOST to the game server)
+# run (nginx on port 80; WS_HOST is the upstream nginx proxies backend paths to)
 docker run -d -p 8080:80 -e WS_HOST=http://localhost:3000 dominion-web
 ```
 
@@ -71,12 +71,18 @@ docker build -f docker/DockerFile_web_app --build-arg BUILD_CONFIG=development -
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `WS_HOST` | `http://localhost:3000` | WebSocket server URL the client connects to |
+| `WS_HOST` | `http://localhost:3000` | Upstream backend URL nginx proxies `/auth/`, `/socket.io/`, `/debug/`, and `/status` to. The browser only ever talks to the nginx origin. |
+| `WS_HOST_OVERRIDE` | _(unset)_ | Optional. Written verbatim into `env.js` so the bundle issues fully-qualified backend requests instead of relative ones. Only useful when bypassing the nginx proxy. |
 
-The `docker/env.sh` entrypoint script writes `WS_HOST` into `/usr/share/nginx/html/env.js` at container startup, which the Angular app loads via a `<script>` tag in `index.html`.
+`docker/env.sh` runs at container startup and:
+
+1. Writes `env.js` (loaded by `index.html`) with `wsHost: ''` (or `WS_HOST_OVERRIDE` when set), so the Angular app issues relative-URL requests by default.
+2. Generates `/etc/nginx/conf.d/proxy-locations.conf` with `proxy_pass` blocks pointing at `WS_HOST`. `nginx.conf` includes that file, so the proxy rules apply without rebuilding the image.
+3. Generates `/etc/nginx/conf.d/security-headers.conf` with the CSP and other security headers.
 
 ### Example: Custom Server URL
 
 ```bash
+# nginx forwards /auth, /socket.io, /debug, /status to the IP:port below
 docker run -d -p 8080:80 -e WS_HOST=http://192.168.1.100:4000 dominion-web
 ```
