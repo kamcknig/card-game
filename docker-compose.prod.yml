@@ -34,9 +34,8 @@ services:
       AUTH_ALLOWED_ORIGINS: "http://localhost"
       AUTH_RATE_LIMIT_MAX_ATTEMPTS: "10"
       AUTH_RATE_LIMIT_WINDOW_MS: "60000"
-      AUTH_SESSION_STORE: "kv"
+      STORAGE_BACKEND: "kv"
       AUTH_KV_PATH: "/app/server/game-data/auth.kv"
-      GAME_DATA_STORE: "kv"
       GAME_DATA_KV_PATH: "/app/server/game-data/game-data.kv"
     restart: unless-stopped
 

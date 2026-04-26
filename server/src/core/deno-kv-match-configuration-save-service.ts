@@ -30,7 +30,7 @@ type PersistedMatchConfigurationSave = {
  *
  * Defined in: server/src/core/deno-kv-match-configuration-save-service.ts
  * Consumers: Registered as `matchConfigurationSaveService` in register-root-services.ts
- *   when GAME_DATA_STORE=kv.
+ *   when STORAGE_BACKEND=kv.
  *   `open()` must be called from ServerStartupService before HTTP accepts connections.
  */
 export class DenoKvMatchConfigurationSaveService implements MatchConfigurationSaveStore {

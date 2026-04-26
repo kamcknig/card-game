@@ -16,8 +16,8 @@ import type { SessionRecord } from './auth-session-service.ts';
  *
  * Defined in: server/src/core/auth/session-store.ts
  * Consumers: AuthSessionService (injected via constructor, resolved by
- *   register-root-services.ts based on AUTH_SESSION_STORE env var).
- *   Implementations: InMemorySessionStore, DenoKvSessionStore.
+ *   register-root-services.ts based on STORAGE_BACKEND env var).
+ *   Implementations: DenoKvSessionStore, SupabaseSessionStore, InMemorySessionStore (tests only).
  */
 export interface SessionStore {
   /**

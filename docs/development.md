@@ -214,8 +214,11 @@ Both apps have external ingress and are accessible via their `.azurecontainerapp
 | `END_MATCH_ON_NO_HUMANS` | `true` | End matches when all humans leave |
 | `MATCH_STATE_MERGE_ENABLED` | `true` | Enable match state merging |
 | `AUTH_ALLOWED_ORIGINS` | _(required)_ | Comma-separated CORS origin allowlist for `/auth/*` (e.g. the frontend FQDN) |
-| `AUTH_SESSION_STORE` | `kv` | Set to `kv` for persistent sessions across restarts |
-| `AUTH_KV_PATH` | `./game-data/auth.kv` | Path to the Deno KV store (mount Azure Files at the containing directory for durability) |
+| `STORAGE_BACKEND` | `kv` | Unified storage backend — drives both auth and game data. Allowed values: `kv` or `supabase`. The server throws at startup if unset |
+| `AUTH_KV_PATH` | `./game-data/auth.kv` | Path to the Deno KV auth store. Used when `STORAGE_BACKEND=kv` (mount Azure Files at the containing directory for durability) |
+| `GAME_DATA_KV_PATH` | `./game-data/game-data.kv` | Path to the Deno KV game-data store. Used when `STORAGE_BACKEND=kv` |
+| `SUPABASE_URL` | _(required for `supabase`)_ | Supabase project URL. Required when `STORAGE_BACKEND=supabase` |
+| `SUPABASE_SERVICE_ROLE_KEY` | _(required for `supabase`)_ | Supabase service-role key. Required when `STORAGE_BACKEND=supabase` — store as a Container Apps secret, never as a plain env var |
 | `AUTH_LOCKOUT_THRESHOLD` | `5` | Failed logins before per-account lockout |
 | `AUTH_LOCKOUT_DURATION_MS` | `600000` | Account lockout duration (ms) |
 | `AUTH_MIN_PASSWORD_LENGTH` | `10` | Minimum password length for registration and password change |
