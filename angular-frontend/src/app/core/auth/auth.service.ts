@@ -99,6 +99,11 @@ export class AuthService {
       this.clearAuth();
       return false;
     } catch {
+      // Network or JSON parse failure: we can't confirm the token, so treat
+      // it as invalid and clear stored auth state. Leaving a stale token in
+      // place would let authGuard pass on the next initial navigation and
+      // strand the user inside the app without a working session.
+      this.clearAuth();
       return false;
     }
   }

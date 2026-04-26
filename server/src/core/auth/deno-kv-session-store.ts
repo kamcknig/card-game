@@ -35,7 +35,7 @@ const KEY_PREFIX = 'auth_sessions';
  *
  * Defined in: server/src/core/auth/deno-kv-session-store.ts
  * Consumers: Injected into AuthSessionService via the DI container when
- *   AUTH_SESSION_STORE=kv (see register-root-services.ts).
+ *   STORAGE_BACKEND=kv (see register-root-services.ts).
  *   `open()` must be called from ServerStartupService before the HTTP server
  *   begins accepting connections.
  */

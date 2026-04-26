@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import type { LoggerService } from './logger-service.ts';
 import type { MatchConfigurationSaveStore } from './match-configuration-save-store.ts';
 import type {
@@ -7,59 +8,81 @@ import type {
   SavedMatchConfigurationEntry,
 } from 'shared/types/index.ts';
 
-/** KV top-level prefix for all match-configuration saves. */
-const KEY_PREFIX = 'match_config_saves';
+/**
+ * Shape of a row in the `match_configuration_saves` Supabase table.
+ */
+type DbMatchConfigSaveRow = {
+  username_lower: string;
+  save_key: string;
+  display_name: string;
+  data: MatchConfiguration;
+  created_at: number;
+  updated_at: number;
+};
 
-// Shape of the value stored in KV for each save.
-type PersistedMatchConfigurationSave = {
+/**
+ * In-memory representation of a single save (mirrors the KV shape).
+ */
+type CachedSave = {
   name: string;
   savedAtMs: number;
   configuration: MatchConfiguration;
 };
 
 /**
- * Deno KV-backed implementation of {@link MatchConfigurationSaveStore}.
+ * Supabase-backed implementation of {@link MatchConfigurationSaveStore}.
+ *
+ * Uses the same write-through cache pattern as {@link DenoKvMatchConfigurationSaveService}:
+ * reads are served from a synchronous in-memory `Map`; mutations update the
+ * cache immediately and fire async Supabase writes in the background.
  *
  * All saves are namespaced under the authenticated username so users never see
- * each other's saves. Uses the write-through cache pattern: reads are served
- * from a synchronous `Map`; writes mutate the cache and fire async KV writes
- * in the background (fire-and-forget, errors are logged).
+ * each other's saves. The cache key format is `'${usernameLower}::${saveKey}'`
+ * (identical to the KV implementation) so callers do not need to know the
+ * backing store.
  *
- * KV key format: `['match_config_saves', usernameLowercase, normalizedKey]`
- * Cache key:     composite string `'${usernameLower}::${normalizedKey}'`
+ * Table: `match_configuration_saves`; composite PK `(username_lower, save_key)`.
+ * The `data` column holds the full `MatchConfiguration` object as JSONB.
  *
- * Defined in: server/src/core/deno-kv-match-configuration-save-service.ts
+ * Defined in: server/src/core/supabase-match-configuration-save-service.ts
  * Consumers: Registered as `matchConfigurationSaveService` in register-root-services.ts
- *   when STORAGE_BACKEND=kv.
- *   `open()` must be called from ServerStartupService before HTTP accepts connections.
+ *   when STORAGE_BACKEND=supabase. `open()` is called from ServerStartupService.
  */
-export class DenoKvMatchConfigurationSaveService implements MatchConfigurationSaveStore {
-  // Write-through cache keyed by composite 'usernameLower::normalizedKey'.
-  private readonly cache = new Map<string, PersistedMatchConfigurationSave>();
+export class SupabaseMatchConfigurationSaveService implements MatchConfigurationSaveStore {
+  // Write-through cache keyed by composite 'usernameLower::saveKey'.
+  private readonly cache = new Map<string, CachedSave>();
 
-  // Shared KV handle; undefined until open() completes.
-  private kv: Deno.Kv | undefined;
+  // Shared Supabase client; set in open().
+  private client: SupabaseClient | undefined;
 
   constructor(private readonly loggerService: LoggerService) {}
 
   /**
-   * Loads all saves from KV into the in-memory cache.
+   * Loads all match-configuration save rows into the in-memory cache.
    *
-   * Must be called before any synchronous store method. Accepts an already-opened
-   * KV handle (shared via GameDataKvProvider) or a path string (tests).
+   * Must be called once during server startup before the HTTP server accepts
+   * connections. Populates the per-user cache from `match_configuration_saves`.
    */
-  public async open(pathOrKv: string | Deno.Kv): Promise<void> {
-    this.kv = typeof pathOrKv === 'string' ? await Deno.openKv(pathOrKv) : pathOrKv;
+  public async open(client: SupabaseClient): Promise<void> {
+    this.client = client;
+
+    const { data, error } = await this.client.from('match_configuration_saves').select('*');
+    if (error) {
+      throw new Error(`[match config saves] failed to load from Supabase: ${error.message}`);
+    }
 
     let loaded = 0;
-    for await (const entry of this.kv.list<PersistedMatchConfigurationSave>({ prefix: [KEY_PREFIX] })) {
-      const [, username, normalizedKey] = entry.key as [string, string, string];
-      if (entry.value && typeof entry.value === 'object' && 'configuration' in entry.value) {
-        this.cache.set(this.cacheKey(username, normalizedKey), entry.value);
-        loaded++;
-      }
+    for (const row of (data ?? []) as DbMatchConfigSaveRow[]) {
+      const ck = this.cacheKey(row.username_lower, row.save_key);
+      this.cache.set(ck, {
+        name: row.display_name,
+        savedAtMs: row.updated_at,
+        configuration: row.data,
+      });
+      loaded++;
     }
-    this.loggerService.info(`[match config saves] loaded ${loaded} save(s) from KV store`);
+
+    this.loggerService.info(`[match config saves] loaded ${loaded} save(s) from Supabase`);
   }
 
   /**
@@ -91,9 +114,6 @@ export class DenoKvMatchConfigurationSaveService implements MatchConfigurationSa
 
   /**
    * Returns all saves belonging to `username`, sorted newest first.
-   *
-   * Only entries whose composite cache key begins with `usernameLower::` are
-   * included; other users' saves are never visible.
    */
   public listSavedConfigurations(username: string): SavedMatchConfigurationEntry[] {
     const prefix = `${username.toLowerCase()}::`;
@@ -108,10 +128,6 @@ export class DenoKvMatchConfigurationSaveService implements MatchConfigurationSa
 
   /**
    * Returns all saves across all users — admin/debug use only.
-   *
-   * The `key` field on each entry is the full composite cache key
-   * (`usernameLower::normalizedKey`) so callers can distinguish entries from
-   * different users.
    */
   public listAllSavedConfigurations(): SavedMatchConfigurationEntry[] {
     const result: SavedMatchConfigurationEntry[] = [];
@@ -125,8 +141,7 @@ export class DenoKvMatchConfigurationSaveService implements MatchConfigurationSa
    * Persists a configuration under the given name for the given user.
    *
    * When a save with the same normalized key already exists it is overwritten.
-   * The display name is the trimmed raw input; the normalized key is used for
-   * storage and lookup. Fires a background KV write after updating the cache.
+   * Fires a background DB upsert after updating the cache.
    */
   public saveConfiguration(username: string, name: string, configuration: MatchConfiguration): MatchConfigurationSaveResult {
     const check = this.checkSaveName(username, name);
@@ -135,16 +150,18 @@ export class DenoKvMatchConfigurationSaveService implements MatchConfigurationSa
     }
 
     const trimmedName = name.trim();
-    const payload: PersistedMatchConfigurationSave = {
-      // Prefer the trimmed raw name as the display name; fall back to the normalized key.
+    const now = Date.now();
+    const payload: CachedSave = {
       name: trimmedName.length > 0 ? trimmedName : check.normalizedName,
-      savedAtMs: Date.now(),
+      savedAtMs: now,
       configuration: structuredClone(configuration),
     };
 
-    const ck = this.cacheKey(username, check.normalizedName);
+    const usernameLower = username.toLowerCase();
+    const ck = this.cacheKey(usernameLower, check.normalizedName);
     this.cache.set(ck, payload);
-    this.persist(username, check.normalizedName, payload);
+
+    this.persist(usernameLower, check.normalizedName, payload, now);
 
     this.loggerService.info(
       `[match config saves] ${check.exists ? 'overwrote' : 'saved'} '${payload.name}' for user '${username}' (${check.normalizedName})`,
@@ -154,9 +171,6 @@ export class DenoKvMatchConfigurationSaveService implements MatchConfigurationSa
 
   /**
    * Returns the raw configuration for a saved key.
-   *
-   * Returns `ok: false` when the key cannot be normalized or no matching save
-   * exists for the user.
    */
   public loadConfiguration(
     username: string,
@@ -176,9 +190,6 @@ export class DenoKvMatchConfigurationSaveService implements MatchConfigurationSa
 
   /**
    * Returns a save entry with metadata and configuration.
-   *
-   * Returns `ok: false` when the key cannot be normalized or no matching save
-   * exists for the user.
    */
   public getSavedConfiguration(
     username: string,
@@ -204,10 +215,6 @@ export class DenoKvMatchConfigurationSaveService implements MatchConfigurationSa
 
   /**
    * Replaces the configuration for an existing save, optionally renaming it.
-   *
-   * When `requestedName` is provided and non-empty it becomes the new display
-   * name; otherwise the current display name is preserved. Returns `ok: false`
-   * when the key is invalid or the save does not exist.
    */
   public updateConfiguration(
     username: string,
@@ -220,14 +227,13 @@ export class DenoKvMatchConfigurationSaveService implements MatchConfigurationSa
       return { ok: false, key, message: 'Invalid saved configuration key.' };
     }
 
-    const ck = this.cacheKey(username, normalizedKey);
+    const usernameLower = username.toLowerCase();
+    const ck = this.cacheKey(usernameLower, normalizedKey);
     const existing = this.cache.get(ck);
     if (!existing) {
       return { ok: false, key: normalizedKey, message: 'Saved configuration was not found.' };
     }
 
-    // Prefer the caller-supplied name; fall back to the existing display name;
-    // ultimately fall back to the normalized key when neither is usable.
     const trimmedRequested = requestedName?.trim() ?? '';
     const resolvedName =
       trimmedRequested.length > 0
@@ -236,14 +242,15 @@ export class DenoKvMatchConfigurationSaveService implements MatchConfigurationSa
           ? existing.name
           : normalizedKey;
 
-    const payload: PersistedMatchConfigurationSave = {
+    const now = Date.now();
+    const payload: CachedSave = {
       name: resolvedName,
-      savedAtMs: Date.now(),
+      savedAtMs: now,
       configuration: structuredClone(configuration),
     };
 
     this.cache.set(ck, payload);
-    this.persist(username, normalizedKey, payload);
+    this.persist(usernameLower, normalizedKey, payload, now);
 
     this.loggerService.info(`[match config saves] updated '${resolvedName}' for user '${username}' (${normalizedKey})`);
     return { ok: true, key: normalizedKey, name: resolvedName };
@@ -251,9 +258,6 @@ export class DenoKvMatchConfigurationSaveService implements MatchConfigurationSa
 
   /**
    * Deletes one save for the given user.
-   *
-   * Returns `ok: false` when the key is invalid or the save does not exist.
-   * The KV deletion is fire-and-forget; errors are logged.
    */
   public deleteConfiguration(
     username: string,
@@ -264,25 +268,34 @@ export class DenoKvMatchConfigurationSaveService implements MatchConfigurationSa
       return { ok: false, key, message: 'Invalid saved configuration key.' };
     }
 
-    const ck = this.cacheKey(username, normalizedKey);
+    const usernameLower = username.toLowerCase();
+    const ck = this.cacheKey(usernameLower, normalizedKey);
     if (!this.cache.has(ck)) {
       return { ok: false, key: normalizedKey, message: 'Saved configuration was not found.' };
     }
 
     this.cache.delete(ck);
-    this.kv?.delete([KEY_PREFIX, username.toLowerCase(), normalizedKey]).catch((err: unknown) => {
-      this.loggerService.warn(`[match config saves] delete failed for '${username}/${normalizedKey}': ${err}`);
-    });
+
+    this.client
+      ?.from('match_configuration_saves')
+      .delete()
+      .eq('username_lower', usernameLower)
+      .eq('save_key', normalizedKey)
+      .then(({ error }) => {
+        if (error) {
+          this.loggerService.warn(`[match config saves] delete failed for '${username}/${normalizedKey}': ${error.message}`);
+        }
+      });
 
     this.loggerService.info(`[match config saves] deleted '${normalizedKey}' for user '${username}'`);
     return { ok: true, key: normalizedKey };
   }
 
   /**
-   * Deletes saves for `username` when provided, or all saves across all users when omitted.
+   * Deletes saves for `username` when provided, or all saves when omitted.
    *
-   * Each KV deletion is fire-and-forget; errors are logged individually.
-   * Admin/debug use when no username is given.
+   * Each removal updates the cache synchronously. DB deletes are
+   * fire-and-forget.
    */
   public deleteAllConfigurations(
     username?: string,
@@ -297,14 +310,21 @@ export class DenoKvMatchConfigurationSaveService implements MatchConfigurationSa
     }
 
     for (const ck of toDelete) {
-      // Composite key format: 'usernameLower::normalizedKey'
-      const separatorIndex = ck.indexOf('::');
-      const u = ck.slice(0, separatorIndex);
-      const normalizedKey = ck.slice(separatorIndex + 2);
-
       this.cache.delete(ck);
-      this.kv?.delete([KEY_PREFIX, u, normalizedKey]).catch((err: unknown) => {
-        this.loggerService.warn(`[match config saves] delete-all failed for '${ck}': ${err}`);
+    }
+
+    if (toDelete.length > 0) {
+      let query = this.client?.from('match_configuration_saves').delete();
+      if (username) {
+        query = query?.eq('username_lower', username.toLowerCase());
+      } else {
+        // Delete all rows — use a filter that always matches.
+        query = query?.neq('save_key', '');
+      }
+      query?.then(({ error }) => {
+        if (error) {
+          this.loggerService.warn(`[match config saves] delete-all failed${username ? ` for '${username}'` : ''}: ${error.message}`);
+        }
       });
     }
 
@@ -320,8 +340,8 @@ export class DenoKvMatchConfigurationSaveService implements MatchConfigurationSa
    * The double-colon separator (`::`) is safe because normalized keys only
    * contain `[A-Za-z0-9_-]` and usernames similarly exclude `::`.
    */
-  private cacheKey(username: string, normalizedKey: string): string {
-    return `${username.toLowerCase()}::${normalizedKey}`;
+  private cacheKey(usernameLower: string, saveKey: string): string {
+    return `${usernameLower}::${saveKey}`;
   }
 
   /**
@@ -341,15 +361,28 @@ export class DenoKvMatchConfigurationSaveService implements MatchConfigurationSa
   }
 
   /**
-   * Writes the current in-memory record back to KV in the background.
+   * Upserts the given save record to the DB in the background.
    *
-   * Mutations happen on the cached object before this is called; this method
-   * echoes the updated state to the KV store. Errors are logged but do not
-   * propagate to the caller.
+   * Uses `onConflict: 'username_lower, save_key'` so re-saves are treated as
+   * updates. Errors are logged but do not propagate.
    */
-  private persist(username: string, normalizedKey: string, save: PersistedMatchConfigurationSave): void {
-    this.kv?.set([KEY_PREFIX, username.toLowerCase(), normalizedKey], save).catch((err: unknown) => {
-      this.loggerService.warn(`[match config saves] persist failed for '${username}/${normalizedKey}': ${err}`);
-    });
+  private persist(usernameLower: string, saveKey: string, save: CachedSave, now: number): void {
+    const row: DbMatchConfigSaveRow = {
+      username_lower: usernameLower,
+      save_key: saveKey,
+      display_name: save.name,
+      data: save.configuration,
+      created_at: now,
+      updated_at: now,
+    };
+
+    this.client
+      ?.from('match_configuration_saves')
+      .upsert(row, { onConflict: 'username_lower, save_key' })
+      .then(({ error }) => {
+        if (error) {
+          this.loggerService.warn(`[match config saves] persist failed for '${usernameLower}/${saveKey}': ${error.message}`);
+        }
+      });
   }
 }

@@ -5,6 +5,7 @@ import { ServerSocketGatewayService } from './server-socket-gateway-service.ts';
 import { ServerDebugRouteHandlerService } from './server-debug-route-handler-service.ts';
 import { ServerShutdownHandlerService } from './server-shutdown-handler-service.ts';
 import { ServerAuthRouteHandlerService } from './auth/server-auth-route-handler-service.ts';
+import { ServerStatusRouteHandlerService } from './server-status-route-handler-service.ts';
 
 /**
  * Orchestrates host startup by delegating transport, routes, and shutdown
@@ -22,6 +23,7 @@ export class ServerBootstrapService {
     private readonly serverDebugRouteHandlerService: ServerDebugRouteHandlerService,
     private readonly serverShutdownHandlerService: ServerShutdownHandlerService,
     private readonly serverAuthRouteHandlerService: ServerAuthRouteHandlerService,
+    private readonly serverStatusRouteHandlerService: ServerStatusRouteHandlerService,
   ) {}
 
   // Starts socket handling, shutdown wiring, HTTP serving, and expansion startup loading.
@@ -51,6 +53,11 @@ export class ServerBootstrapService {
         const url = new URL(req.url);
         // Derive the client IP for rate limiting before routing.
         const remoteIp = this.extractRemoteIp(req, info);
+        // Status route is checked first so health can be queried even when
+        // the storage backend has failed to open.
+        if (this.serverStatusRouteHandlerService.canHandle(req)) {
+          return this.serverStatusRouteHandlerService.handleRequest(req);
+        }
         // Auth routes take priority over debug and socket.io.
         const authResponse = this.serverAuthRouteHandlerService.handleRequest(req, url, remoteIp);
         if (authResponse) {

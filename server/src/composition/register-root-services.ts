@@ -17,6 +17,8 @@ import { ServerBootstrapService } from '../core/server-bootstrap-service.ts';
 import { ServerSocketGatewayService } from '../core/server-socket-gateway-service.ts';
 import { ServerDebugRouteHandlerService } from '../core/server-debug-route-handler-service.ts';
 import { ServerShutdownHandlerService } from '../core/server-shutdown-handler-service.ts';
+import { ServerStatusRouteHandlerService } from '../core/server-status-route-handler-service.ts';
+import { ServerHealthService } from '../core/server-health-service.ts';
 import { ExpansionEffectRegistryService } from '../core/expansion-effect-registry-service.ts';
 import { ExpansionCardMetadataRegistryService } from '../core/expansion-card-metadata-registry-service.ts';
 import { ExpansionCatalogService } from '../core/expansion-catalog-service.ts';
@@ -34,9 +36,9 @@ import { ProphecyLoaderService } from '../core/prophecies/load-prophecies.ts';
 import { ExpansionLoaderService } from '../core/expansion-loader-service.ts';
 import { GameScopeFactory } from '../core/game-scope-factory.ts';
 import { LobbyDirectoryService } from '../core/lobby-directory-service.ts';
-import { MatchConfigurationSaveService } from '../core/match-configuration-save-service.ts';
 import { GameDataKvProvider } from '../core/game-data-kv-provider.ts';
 import { DenoKvMatchConfigurationSaveService } from '../core/deno-kv-match-configuration-save-service.ts';
+import { SupabaseMatchConfigurationSaveService } from '../core/supabase-match-configuration-save-service.ts';
 import type { MatchConfigurationSaveStore } from '../core/match-configuration-save-store.ts';
 import { AuthSessionService } from '../core/auth/auth-session-service.ts';
 import { ServerAuthRouteHandlerService } from '../core/auth/server-auth-route-handler-service.ts';
@@ -44,14 +46,18 @@ import { AuthRateLimiterService } from '../core/auth/auth-rate-limiter-service.t
 import { AuthSessionCleanupService } from '../core/auth/auth-session-cleanup-service.ts';
 import { InMemorySessionStore } from '../core/auth/in-memory-session-store.ts';
 import { DenoKvSessionStore } from '../core/auth/deno-kv-session-store.ts';
+import { SupabaseSessionStore } from '../core/auth/supabase-session-store.ts';
 import type { SessionStore } from '../core/auth/session-store.ts';
 import { AuthKvProvider } from '../core/auth/auth-kv-provider.ts';
+import { SupabaseClientProvider } from '../core/storage/supabase-client-provider.ts';
 import { Argon2idHasher, BcryptHasher } from '../core/auth/password-hasher.ts';
 import { InMemoryUserStore } from '../core/auth/in-memory-user-store.ts';
 import { DenoKvUserStore } from '../core/auth/deno-kv-user-store.ts';
+import { SupabaseUserStore } from '../core/auth/supabase-user-store.ts';
 import type { UserStore } from '../core/auth/user-store.ts';
 import { InMemoryRegistrationCodeStore } from '../core/auth/in-memory-registration-code-store.ts';
 import { DenoKvRegistrationCodeStore } from '../core/auth/deno-kv-registration-code-store.ts';
+import { SupabaseRegistrationCodeStore } from '../core/auth/supabase-registration-code-store.ts';
 import type { RegistrationCodeStore } from '../core/auth/registration-code-store.ts';
 import { UserAccountAuthProvider } from '../core/auth/user-account-auth-provider.ts';
 
@@ -82,21 +88,29 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
     matchScopeFactory: asClass(MatchScopeFactory).singleton(),
     matchConfiguratorFactory: asClass(MatchConfiguratorFactory).singleton(),
     expansionSearchService: asClass(ExpansionSearchService).singleton(),
-    // Selects the match-configuration save store backend based on GAME_DATA_STORE env var.
-    // 'file' (default) uses per-user JSON subdirectories on disk.
-    // 'kv' uses Deno KV with a write-through cache — call DenoKvMatchConfigurationSaveService.open()
-    //   in ServerStartupService before the HTTP server accepts connections.
+    // Selects the match-configuration save store backend based on STORAGE_BACKEND env var.
+    // 'supabase' uses the Supabase-backed implementation — open() called from ServerStartupService.
+    // 'kv' uses Deno KV with a write-through cache — open() called from ServerStartupService.
+    // undefined (env unset/invalid) falls back to the kv impl which is left un-opened so the
+    // empty in-memory cache acts as a no-op store; ServerStartupService records the
+    // configuration error against the health service so /status surfaces it.
     matchConfigurationSaveService: asFunction(
       (serverConfigService: ServerConfigService, loggerService: LoggerService): MatchConfigurationSaveStore => {
-        const kind = serverConfigService.getGameDataStoreKind();
-        if (kind === 'kv') {
+        const backend = serverConfigService.getStorageBackend();
+        if (backend === 'supabase') {
+          loggerService.log('[game data] match config save store: supabase (persistent)');
+          // open() is called asynchronously during ServerStartupService.start()
+          // before the HTTP server begins accepting connections.
+          return new SupabaseMatchConfigurationSaveService(loggerService);
+        }
+        if (backend === 'kv') {
           loggerService.log('[game data] match config save store: deno kv (per-user, persistent)');
           // open() is called asynchronously during ServerStartupService.start()
           // before the HTTP server begins accepting connections.
           return new DenoKvMatchConfigurationSaveService(loggerService);
         }
-        loggerService.log('[game data] match config save store: file-based (per-user subdirectories)');
-        return new MatchConfigurationSaveService(loggerService);
+        loggerService.warn('[game data] match config save store: unconfigured (no STORAGE_BACKEND); using empty in-memory cache');
+        return new DenoKvMatchConfigurationSaveService(loggerService);
       },
     ).singleton(),
     expansionCompatibilityService: asClass(ExpansionCompatibilityService).singleton(),
@@ -127,20 +141,27 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
     serverDebugRouteHandlerService: asClass(ServerDebugRouteHandlerService).singleton(),
     serverShutdownHandlerService: asClass(ServerShutdownHandlerService).singleton(),
     serverBootstrapService: asClass(ServerBootstrapService).singleton(),
-    // Selects the session store backend based on AUTH_SESSION_STORE env var.
-    // 'memory' (default) uses an in-process Map — sessions are lost on restart.
-    // 'kv' uses Deno KV with a write-through cache — call DenoKvSessionStore.open()
-    //   in ServerStartupService before the HTTP server accepts connections.
+    // Selects the session store backend based on STORAGE_BACKEND env var.
+    // 'supabase' uses the Supabase-backed store — open() is called from ServerStartupService.
+    // 'kv' uses Deno KV with a write-through cache — open() is called from ServerStartupService.
+    // undefined (env unset/invalid) falls back to the in-memory store so DI resolves cleanly;
+    // ServerStartupService records the configuration error against the health service so /status surfaces it.
     sessionStore: asFunction(
       (serverConfigService: ServerConfigService, loggerService: LoggerService): SessionStore => {
-        const kind = serverConfigService.getSessionStoreKind();
-        if (kind === 'kv') {
+        const backend = serverConfigService.getStorageBackend();
+        if (backend === 'supabase') {
+          loggerService.log('[auth] session store: supabase (persistent)');
+          // open() is called asynchronously during ServerStartupService.start()
+          // before the HTTP server begins accepting connections.
+          return new SupabaseSessionStore(loggerService);
+        }
+        if (backend === 'kv') {
           loggerService.log('[auth] session store: deno kv (persistent across restarts)');
           // open() is called asynchronously during ServerStartupService.start()
           // before the HTTP server begins accepting connections.
           return new DenoKvSessionStore(loggerService);
         }
-        loggerService.log('[auth] session store: in-memory (sessions lost on restart)');
+        loggerService.warn('[auth] session store: in-memory fallback (no STORAGE_BACKEND configured)');
         return new InMemorySessionStore();
       },
     ).singleton(),
@@ -152,36 +173,54 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
     // all share a single Deno KV database file.
     authKvProvider: asClass(AuthKvProvider).singleton(),
     // Shared KV handle provider for game-data persistence (match config saves, etc.).
-    // Opened once from ServerStartupService when GAME_DATA_STORE=kv; kept separate
+    // Opened once from ServerStartupService when STORAGE_BACKEND=kv; kept separate
     // from the auth KV store so the two can be backed by different files.
     gameDataKvProvider: asClass(GameDataKvProvider).singleton(),
+    // Shared Supabase client provider; opened once from ServerStartupService when
+    // STORAGE_BACKEND=supabase. All Supabase stores receive the client via open().
+    supabaseClientProvider: asClass(SupabaseClientProvider).singleton(),
+    // Tracks runtime health issues; populated by ServerStartupService after store opens.
+    serverHealthService: asClass(ServerHealthService).singleton(),
+    // Handles GET/OPTIONS /status — wired ahead of all other route handlers.
+    serverStatusRouteHandlerService: asClass(ServerStatusRouteHandlerService).singleton(),
     // Password hashing primitives. Argon2id for all new hashes,
     // Bcrypt retained for verification of legacy rows.
     argon2idHasher: asClass(Argon2idHasher).singleton(),
     bcryptHasher: asClass(BcryptHasher).singleton(),
-    // User account store. Picks the KV-backed implementation when
-    // AUTH_SESSION_STORE=kv so both session and user data share a file.
+    // User account store. Picks the backend driven by STORAGE_BACKEND.
+    // undefined (env unset/invalid) falls back to the in-memory store so DI resolves cleanly;
+    // ServerStartupService records the configuration error against the health service so /status surfaces it.
     userStore: asFunction(
       (serverConfigService: ServerConfigService, loggerService: LoggerService): UserStore => {
-        const kind = serverConfigService.getSessionStoreKind();
-        if (kind === 'kv') {
+        const backend = serverConfigService.getStorageBackend();
+        if (backend === 'supabase') {
+          loggerService.log('[auth] user store: supabase (persistent)');
+          return new SupabaseUserStore(loggerService);
+        }
+        if (backend === 'kv') {
           loggerService.log('[auth] user store: deno kv (persistent)');
           return new DenoKvUserStore(loggerService);
         }
-        loggerService.log('[auth] user store: in-memory');
+        loggerService.warn('[auth] user store: in-memory fallback (no STORAGE_BACKEND configured)');
         return new InMemoryUserStore();
       },
     ).singleton(),
     // Registration code store. Mirrors the selection logic for session/user
     // stores so the same backend is used throughout auth.
+    // undefined (env unset/invalid) falls back to the in-memory store so DI resolves cleanly;
+    // ServerStartupService records the configuration error against the health service so /status surfaces it.
     registrationCodeStore: asFunction(
       (serverConfigService: ServerConfigService, loggerService: LoggerService): RegistrationCodeStore => {
-        const kind = serverConfigService.getSessionStoreKind();
-        if (kind === 'kv') {
+        const backend = serverConfigService.getStorageBackend();
+        if (backend === 'supabase') {
+          loggerService.log('[auth] registration code store: supabase (persistent)');
+          return new SupabaseRegistrationCodeStore(loggerService);
+        }
+        if (backend === 'kv') {
           loggerService.log('[auth] registration code store: deno kv (persistent)');
           return new DenoKvRegistrationCodeStore(loggerService);
         }
-        loggerService.log('[auth] registration code store: in-memory');
+        loggerService.warn('[auth] registration code store: in-memory fallback (no STORAGE_BACKEND configured)');
         return new InMemoryRegistrationCodeStore();
       },
     ).singleton(),

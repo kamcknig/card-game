@@ -14,12 +14,13 @@
   "tasks": {
     "dev:watch": "deno run --inspect --check --env-file --allow-sys --allow-read --allow-write --allow-net --allow-env --allow-ffi --unstable-ffi --unstable-kv --watch src/server.ts",
     "dev:runbrowsers": "deno run scripts/run-browsers.js",
-    "auth:users": "deno run --allow-env --allow-read --allow-write --allow-ffi --allow-net=jsr.io --unstable-kv scripts/auth-user-mgmt.ts",
+    "auth:users": "deno run --allow-env --allow-read --allow-write --allow-ffi --allow-net --unstable-kv scripts/auth-user-mgmt.ts",
     "auth:create-reg-code": "deno run --allow-env --allow-read --allow-write --unstable-kv scripts/auth-create-reg-code.ts",
     "fmt": "oxfmt --write src/",
     "test:unit": "deno test --allow-env --allow-write --allow-read --allow-sys=cpus --allow-ffi --unstable-ffi --unstable-kv src/",
     "test:unit:watch": "deno test --allow-write --allow-env --allow-read --allow-sys=cpus --allow-ffi --unstable-ffi --unstable-kv --watch src/",
-    "test:unit:coverage": "deno test --allow-write --allow-env --allow-read --allow-sys=cpus --allow-ffi --unstable-ffi --unstable-kv --clean --coverage=coverage src/ && deno coverage coverage --exclude=src/testing/ --lcov --output=coverage/lcov.info && deno coverage coverage --exclude=src/testing/ --html"
+    "test:unit:coverage": "deno test --allow-write --allow-env --allow-read --allow-sys=cpus --allow-ffi --unstable-ffi --unstable-kv --clean --coverage=coverage src/ && deno coverage coverage --exclude=src/testing/ --lcov --output=coverage/lcov.info && deno coverage coverage --exclude=src/testing/ --html",
+    "migrate-kv-to-supabase": "deno run --allow-env --allow-read --allow-net --unstable-kv scripts/migrate-kv-to-supabase.ts"
   },
   "test": {
     "exclude": [
@@ -71,7 +72,8 @@
     "fuse.js": "npm:fuse.js@7.1.0",
     "awilix": "npm:awilix@10.0.2",
     "bcrypt": "https://deno.land/x/bcrypt@v0.4.1/mod.ts",
-    "@rabbit-company/argon2id": "jsr:@rabbit-company/argon2id@^2.1.0"
+    "@rabbit-company/argon2id": "jsr:@rabbit-company/argon2id@^2.1.0",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@^2"
   },
   "allowScripts": [
     "npm:esbuild@0.25.1",

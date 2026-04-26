@@ -2,7 +2,15 @@ import { toNumber } from 'es-toolkit/compat';
 
 // Centralizes server configuration reads from environment variables.
 export class ServerConfigService {
-  // Validates all startup configuration used by the server process.
+  /**
+   * Validates all startup configuration used by the server process.
+   *
+   * Storage backend validation (STORAGE_BACKEND, SUPABASE_URL,
+   * SUPABASE_SERVICE_ROLE_KEY) is intentionally NOT done here — those problems
+   * are surfaced via the health service in ServerStartupService so that the
+   * /status endpoint can report them and the frontend can render the
+   * /server-status page instead of the process crashing during DI resolution.
+   */
   public validate(): void {
     this.getPort();
     this.getAuthAllowedOrigins();
@@ -10,9 +18,6 @@ export class ServerConfigService {
     this.getAuthRateLimitWindowMs();
     this.getAuthMaxBodyBytes();
     this.getAuthSessionTtlMs();
-    const storeKind = this.getSessionStoreKind();
-    // Eagerly validate the path config for the kv backend when configured.
-    if (storeKind === 'kv') this.getAuthKvPath();
     this.getAuthLockoutThreshold();
     this.getAuthLockoutDurationMs();
     this.getAuthMinPasswordLength();
@@ -22,9 +27,6 @@ export class ServerConfigService {
     this.isMatchStateMergeEnabled();
     this.shouldEndMatchOnNoHumans();
     this.getTooltipDefaultCloseDelayMs();
-    const gameDataStore = this.getGameDataStoreKind();
-    // Eagerly validate the KV path config when the kv backend is selected.
-    if (gameDataStore === 'kv') this.getGameDataKvPath();
   }
 
   /**
@@ -69,65 +71,44 @@ export class ServerConfigService {
   }
 
   /**
-   * Returns the session store backend to use.
+   * Returns the unified storage backend to use for all persistence.
    *
-   * Reads from AUTH_SESSION_STORE. Valid values are 'memory' (default) and
-   * 'kv'. An unrecognized value throws at startup.
-   * - 'memory': in-process Map, sessions lost on restart (default, dev/tests).
-   * - 'kv': Deno KV with write-through cache, sessions survive restarts.
+   * Reads from STORAGE_BACKEND. Allowed values are 'kv' and 'supabase'.
+   * Returns `undefined` when the env var is unset, empty, or unrecognized so
+   * the server can still start and surface the problem via the /status
+   * endpoint. Use `getRawStorageBackend()` to inspect the original input
+   * (e.g. for diagnostic messages distinguishing unset from invalid).
+   * Drives BOTH auth (sessions, users, registration codes) and game data
+   * (match-config saves).
    */
-  public getSessionStoreKind(): 'memory' | 'kv' {
-    const raw = Deno.env.get('AUTH_SESSION_STORE');
+  public getStorageBackend(): 'kv' | 'supabase' | undefined {
+    const raw = Deno.env.get('STORAGE_BACKEND');
     if (!raw || !raw.trim()) {
-      return 'memory';
+      return undefined;
     }
     const trimmed = raw.trim().toLowerCase();
-    if (trimmed === 'memory' || trimmed === 'kv') {
-      return trimmed;
+    if (trimmed === 'kv' || trimmed === 'supabase') {
+      return trimmed as 'kv' | 'supabase';
     }
-    throw new Error(`[server config] AUTH_SESSION_STORE must be 'memory' or 'kv', received '${raw}'`);
+    return undefined;
   }
 
-  /**
-   * Returns the filesystem path for the Deno KV auth store.
-   *
-   * Reads from AUTH_KV_PATH. Defaults to './game-data/auth.kv'. Used only
-   * when AUTH_SESSION_STORE=kv. The containing directory must exist before
-   * the server starts. Pass ':memory:' to use an in-process KV store (dev
-   * and tests only — data is not persisted).
-   */
-  public getAuthKvPath(): string {
-    return Deno.env.get('AUTH_KV_PATH') ?? './game-data/auth.kv';
+  // Returns the raw STORAGE_BACKEND env value verbatim so callers can
+  // distinguish "unset" from "set to an invalid value" when reporting
+  // configuration health issues.
+  public getRawStorageBackend(): string | undefined {
+    return Deno.env.get('STORAGE_BACKEND');
   }
 
-  /**
-   * Returns the game-data storage backend to use for user-facing persistence
-   * (match configuration saves, etc.).
-   *
-   * Reads from GAME_DATA_STORE. Valid values are 'file' (default) and 'kv'.
-   * - 'file': JSON files on disk, per-user subdirectories (backward-compatible).
-   * - 'kv':   Deno KV with write-through cache, per-user key namespacing.
-   */
-  public getGameDataStoreKind(): 'file' | 'kv' {
-    const raw = Deno.env.get('GAME_DATA_STORE');
-    if (!raw || !raw.trim()) {
-      return 'file';
-    }
-    const trimmed = raw.trim().toLowerCase();
-    if (trimmed === 'file' || trimmed === 'kv') {
-      return trimmed;
-    }
-    throw new Error(`[server config] GAME_DATA_STORE must be 'file' or 'kv', received '${raw}'`);
+  // Returns the Supabase project URL. Required when STORAGE_BACKEND=supabase.
+  public getSupabaseUrl(): string | undefined {
+    return Deno.env.get('SUPABASE_URL');
   }
 
-  /**
-   * Returns the filesystem path for the Deno KV game-data store.
-   *
-   * Reads from GAME_DATA_KV_PATH. Defaults to './game-data/game-data.kv'.
-   * Used only when GAME_DATA_STORE=kv. Pass ':memory:' for dev/test.
-   */
-  public getGameDataKvPath(): string {
-    return Deno.env.get('GAME_DATA_KV_PATH') ?? './game-data/game-data.kv';
+  // Returns the Supabase service-role key. Required when STORAGE_BACKEND=supabase.
+  // Server-side only — bypasses RLS. Never expose to the browser.
+  public getSupabaseServiceRoleKey(): string | undefined {
+    return Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   }
 
   /**

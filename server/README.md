@@ -37,6 +37,28 @@ cp .env-example .env
 | `END_MATCH_ON_NO_HUMANS` | `true` | End active matches when all human players disconnect |
 | `TOOLTIP_DEFAULT_CLOSE_DELAY_MS` | _(unset)_ | Default delay (ms) before closing tooltips, sent to clients |
 
+### Storage Backend Variables
+
+A single `STORAGE_BACKEND` env var selects the persistence layer for **both** auth (sessions, users, registration codes) and game data (match-configuration saves). When the value is missing or unrecognized the process still starts so `/status` can surface the misconfiguration to the frontend (see _Health endpoint_ below) — the server intentionally does not crash on storage misconfiguration so operators can diagnose it through the UI rather than the container logs.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `STORAGE_BACKEND` | _(required for normal operation)_ | Selects the storage backend. Allowed values: `kv` (Deno KV) or `supabase`. Unset/invalid values produce a `STORAGE_BACKEND_INVALID` health issue and the in-memory fallback stores are used (no persistence) |
+| `AUTH_KV_PATH` | `./game-data/auth.kv` | Filesystem path to the Deno KV auth store. Used when `STORAGE_BACKEND=kv`. Use `':memory:'` for dev/tests |
+| `GAME_DATA_KV_PATH` | `./game-data/game-data.kv` | Filesystem path to the Deno KV game-data store. Used when `STORAGE_BACKEND=kv` |
+| `SUPABASE_URL` | _(required for `supabase`)_ | Supabase project URL. Required when `STORAGE_BACKEND=supabase` |
+| `SUPABASE_SERVICE_ROLE_KEY` | _(required for `supabase`)_ | Supabase service-role key. Server-side only — bypasses RLS. NEVER commit to git or expose to a browser |
+
+**Health endpoint.** Regardless of backend, the server exposes `GET /status` which returns a JSON snapshot of the current health state (overall `status`, list of `issues`, active `backend`, `startedAt` timestamp). The HTTP status is always 200 — severity is conveyed in the body so monitoring probes can branch on the JSON. The Angular frontend gates the app on this endpoint at boot and redirects to `/server-status` when the snapshot reports `error`.
+
+Issue codes the storage layer can register:
+
+| Code | Level | Cause |
+|------|-------|-------|
+| `STORAGE_BACKEND_INVALID` | error | `STORAGE_BACKEND` env var is unset or not one of `kv`/`supabase` |
+| `SUPABASE_CONFIG_MISSING` | error | `STORAGE_BACKEND=supabase` but `SUPABASE_URL` and/or `SUPABASE_SERVICE_ROLE_KEY` are unset |
+| `SUPABASE_OPEN_FAILED` | error | Connection to Supabase or initial table reads failed at startup |
+
 ### Authentication Variables
 
 | Variable | Default | Description |
@@ -46,8 +68,6 @@ cp .env-example .env
 | `AUTH_RATE_LIMIT_WINDOW_MS` | `60000` | Sliding-window duration (ms) for the IP rate limiter |
 | `AUTH_MAX_BODY_BYTES` | `4096` | Max request body size (bytes) on `/auth/login` and `/auth/register`. Requests exceeding this are rejected with 413 |
 | `AUTH_SESSION_TTL_MS` | `604800000` | Session TTL (ms, sliding window). Each validated token has its expiry extended by this amount. Default: 7 days |
-| `AUTH_SESSION_STORE` | `memory` | Session storage backend. `memory` loses sessions on restart. `kv` uses Deno KV with a write-through cache (see `AUTH_KV_PATH`) |
-| `AUTH_KV_PATH` | `./game-data/auth.kv` | Filesystem path to the Deno KV store (used when `AUTH_SESSION_STORE=kv`). Use `':memory:'` for dev/tests |
 | `AUTH_LOCKOUT_THRESHOLD` | `5` | Consecutive failed logins before a user account is locked (per-account, independent of the IP rate limiter) |
 | `AUTH_LOCKOUT_DURATION_MS` | `600000` | Lockout duration (ms) once the per-account threshold is exceeded. Default: 10 minutes |
 | `AUTH_MIN_PASSWORD_LENGTH` | `10` | Minimum password length enforced at registration and password-change |
@@ -78,11 +98,15 @@ HTTP (`POST /auth/registration-codes`) or by CLI scripts for bootstrapping.
 
 Before any users exist, both `/auth/login` and `/auth/registration-codes`
 reject every request, so the very first account must be provisioned directly
-against the Deno KV file. Because the running server keeps an in-memory cache
-of the KV state primed at startup, **CLI writes while the server is running
-are invisible to the running process and risk SQLite lock contention on the
-shared `auth.kv` file**. Stop the server before running the CLI scripts below,
-then restart.
+against the configured backend. The CLI script honours `STORAGE_BACKEND` and
+opens either the Deno KV file or the Supabase project accordingly.
+
+When `STORAGE_BACKEND=kv`, the running server keeps an in-memory cache of the
+KV state primed at startup, so **CLI writes while the server is running are
+invisible to the running process and risk SQLite lock contention on the shared
+`auth.kv` file**. Stop the server before running the CLI scripts below, then
+restart. The Supabase backend has no such constraint — DB writes are visible
+to the running server on its next read.
 
 ```bash
 # 1. Stop the server (so the CLI and server do not both hold auth.kv).
@@ -109,9 +133,12 @@ registration handler reads from, so new codes are visible immediately.
 
 ### CLI scripts
 
-Both scripts write to the Deno KV store directly and **must be run with the
-server stopped** to avoid stale caches and SQLite lock contention. Intended
-for bootstrapping and operator maintenance only.
+Both scripts use the backend selected by `STORAGE_BACKEND`. When that value is
+`kv`, they write to the Deno KV store directly and **must be run with the
+server stopped** to avoid stale caches and SQLite lock contention. When it is
+`supabase`, the scripts talk to the Supabase project via the service-role key
+and may run while the server is up. Intended for bootstrapping and operator
+maintenance only.
 
 ```bash
 # User management: create | delete | set-password | clear
@@ -122,6 +149,25 @@ deno task auth:users <command> [options]
 deno task auth:create-reg-code [--expires-in <duration>] [--max-uses N] [--created-by <user>] [--kv <path>]
 # Duration strings: 30s, 10m, 24h, 7d
 ```
+
+### Migrating from KV to Supabase
+
+When switching from `STORAGE_BACKEND=kv` to `STORAGE_BACKEND=supabase`, the
+`migrate-kv-to-supabase` task lifts every row from both KV files into the
+corresponding Supabase tables. Run it once after applying the SQL migration in
+`supabase/migrations/` to your Supabase project. Re-runs are idempotent.
+
+```bash
+AUTH_KV_PATH=./game-data/auth.kv \
+GAME_DATA_KV_PATH=./game-data/game-data.kv \
+SUPABASE_URL=https://<project>.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key> \
+deno task migrate-kv-to-supabase
+```
+
+The script prints per-table insert counts and a `setval` SQL statement for the
+`auth_users` identity sequence — run that statement in Supabase Studio so
+subsequent inserts do not collide with migrated ids.
 
 ## Other Commands
 

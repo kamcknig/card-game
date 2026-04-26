@@ -21,8 +21,10 @@ type PersistedMatchConfigurationSave = {
  * `{GAME_DATA_ROOT}/saves/match-configurations/{usernameLower}/{normalizedKey}.json`
  *
  * Defined in: server/src/core/match-configuration-save-service.ts
- * Registered as `matchConfigurationSaveService` in register-root-services.ts
- * when GAME_DATA_STORE is unset or 'file'.
+ * Status: legacy file-backed implementation. No longer registered — production
+ * composition (register-root-services.ts) selects DenoKvMatchConfigurationSaveService
+ * or SupabaseMatchConfigurationSaveService via STORAGE_BACKEND. Retained for
+ * historical reference and any out-of-tree tooling that imports it.
  */
 export class MatchConfigurationSaveService implements MatchConfigurationSaveStore {
   private static readonly FILE_EXTENSION = '.json';

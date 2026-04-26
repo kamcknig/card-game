@@ -71,7 +71,7 @@ Deno.test('UserAccountAuthProvider: authenticates a known user with correct pass
   await withIsolatedEnv({}, async () => {
     const { provider, userStore, argon2id } = await makeProvider();
     const hash = await argon2id.hash('strongpw-xyz');
-    userStore.create({ username: 'Alice', passwordHash: hash, passwordAlgo: 'argon2id', now: Date.now() });
+    await userStore.create({ username: 'Alice', passwordHash: hash, passwordAlgo: 'argon2id', now: Date.now() });
 
     const res = await provider.authenticate({ username: 'Alice', password: 'strongpw-xyz' });
     assertEquals(res.ok, true);
@@ -83,7 +83,7 @@ Deno.test('UserAccountAuthProvider: rejects wrong password', async () => {
   await withIsolatedEnv({}, async () => {
     const { provider, userStore, argon2id } = await makeProvider();
     const hash = await argon2id.hash('strongpw-xyz');
-    userStore.create({ username: 'Alice', passwordHash: hash, passwordAlgo: 'argon2id', now: Date.now() });
+    await userStore.create({ username: 'Alice', passwordHash: hash, passwordAlgo: 'argon2id', now: Date.now() });
 
     const res = await provider.authenticate({ username: 'Alice', password: 'wrong' });
     assertEquals(res.ok, false);
@@ -103,7 +103,7 @@ Deno.test('UserAccountAuthProvider: disabled account is refused', async () => {
   await withIsolatedEnv({}, async () => {
     const { provider, userStore, argon2id } = await makeProvider();
     const hash = await argon2id.hash('strongpw-xyz');
-    const rec = userStore.create({
+    const rec = await userStore.create({
       username: 'Alice',
       passwordHash: hash,
       passwordAlgo: 'argon2id',
@@ -121,7 +121,7 @@ Deno.test('UserAccountAuthProvider: locks account after threshold failures', asy
     const clock = makeFakeClock(1_000);
     const { provider, userStore, argon2id } = await makeProvider({ clock });
     const hash = await argon2id.hash('strongpw-xyz');
-    const rec = userStore.create({
+    const rec = await userStore.create({
       username: 'Alice',
       passwordHash: hash,
       passwordAlgo: 'argon2id',
@@ -166,7 +166,7 @@ Deno.test('UserAccountAuthProvider: rehashes bcrypt row to argon2id on successfu
   await withIsolatedEnv({}, async () => {
     const { provider, userStore, bcrypt } = await makeProvider();
     const bcryptHash = await bcrypt.hash('strongpw-xyz');
-    const rec = userStore.create({
+    const rec = await userStore.create({
       username: 'Alice',
       passwordHash: bcryptHash,
       passwordAlgo: 'argon2id',
