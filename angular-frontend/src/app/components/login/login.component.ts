@@ -1,6 +1,4 @@
 import { ChangeDetectionStrategy, Component, inject, signal, viewChild } from '@angular/core';
-import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { debounceTime, distinctUntilChanged, switchMap, tap } from 'rxjs/operators';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Eye, EyeOff, LucideAngularModule } from 'lucide-angular';
@@ -51,8 +49,13 @@ export class LoginComponent {
   readonly isSubmitting = signal(false);
   /** Controls whether the sign-in password field renders as plain text. */
   readonly showPassword = signal(false);
-  /** Username availability error shown inline below the username field in register mode. */
-  readonly usernameError = signal<string | undefined>(undefined);
+  /**
+   * Per-field availability status for the register form.
+   * `checking` is true while the server request is in flight.
+   * `error` is set when the value is already taken.
+   */
+  readonly emailStatus = signal<{ checking: boolean; error?: string }>({ checking: false });
+  readonly usernameStatus = signal<{ checking: boolean; error?: string }>({ checking: false });
 
   /**
    * Reference to the shared primary/confirm password component rendered in
@@ -60,26 +63,6 @@ export class LoginComponent {
    * button — undefined in signin mode (component is not rendered).
    */
   readonly newPasswordFields = viewChild(NewPasswordFieldsComponent);
-
-  constructor() {
-    // Debounced username availability check — fires only in register mode.
-    toObservable(this.username)
-      .pipe(
-        // Clear any previous error immediately so stale text doesn't linger while typing.
-        tap(() => this.usernameError.set(undefined)),
-        debounceTime(400),
-        distinctUntilChanged(),
-        switchMap(async (username) => {
-          if (this.mode() !== 'register' || !username.trim()) {
-            return undefined;
-          }
-          const available = await this._authService.checkUsernameAvailability(username.trim());
-          return available ? undefined : 'Username is already taken';
-        }),
-        takeUntilDestroyed(),
-      )
-      .subscribe((error) => this.usernameError.set(error));
-  }
 
   /** Toggles the password visibility state. */
   toggleShowPassword(): void {
@@ -98,11 +81,55 @@ export class LoginComponent {
     this.mode.set(next);
     this.errorMessage.set(undefined);
     this.successMessage.set(undefined);
-    this.usernameError.set(undefined);
+    // Reset per-field availability status so stale errors don't carry across modes.
+    this.usernameStatus.set({ checking: false });
+    this.emailStatus.set({ checking: false });
     this.username.set('');
     this.email.set('');
     this.password.set('');
     this.confirmPassword.set('');
+  }
+
+  /**
+   * Fires when the email input loses focus in register mode.
+   *
+   * Checks email availability against the server and updates `emailStatus`
+   * with the result. No-ops when in sign-in mode or when the field is empty.
+   */
+  async onEmailBlur(): Promise<void> {
+    if (this.mode() !== 'register') return;
+    const email = this.email().trim();
+    if (!email) {
+      this.emailStatus.set({ checking: false });
+      return;
+    }
+    this.emailStatus.set({ checking: true });
+    const available = await this._authService.checkEmailAvailability(email);
+    this.emailStatus.set({
+      checking: false,
+      error: available ? undefined : 'Email is already registered',
+    });
+  }
+
+  /**
+   * Fires when the username input loses focus in register mode.
+   *
+   * Checks username availability against the server and updates `usernameStatus`
+   * with the result. No-ops when in sign-in mode or when the field is empty.
+   */
+  async onUsernameBlur(): Promise<void> {
+    if (this.mode() !== 'register') return;
+    const username = this.username().trim();
+    if (!username) {
+      this.usernameStatus.set({ checking: false });
+      return;
+    }
+    this.usernameStatus.set({ checking: true });
+    const available = await this._authService.checkUsernameAvailability(username);
+    this.usernameStatus.set({
+      checking: false,
+      error: available ? undefined : 'Username is already taken',
+    });
   }
 
   /**

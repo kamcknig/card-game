@@ -1,6 +1,6 @@
 <app-scene-content>
   <div class="login-container">
-    <!-- Mode toggle — Phase 5 adds register alongside sign in. -->
+    <!-- Mode toggle — switches between Sign In and Register. -->
     <div class="login-mode-toggle" role="tablist" aria-label="Auth mode">
       <button
         type="button"
@@ -27,18 +27,46 @@
     <form class="login-form" (ngSubmit)="onSubmit()">
       <label class="form-field">
         <span class="form-label">Username</span>
-        <input
-          type="text"
-          class="form-input"
-          [value]="username()"
-          (input)="username.set($any($event.target).value)"
-          autocomplete="username"
-          autofocus
-        />
-        @if (mode() === 'register' && usernameError(); as uError) {
+        <div class="form-input-wrapper">
+          <input
+            type="text"
+            class="form-input"
+            [value]="username()"
+            (input)="username.set($any($event.target).value)"
+            (blur)="onUsernameBlur()"
+            autocomplete="username"
+            autofocus
+          />
+          @if (mode() === 'register' && usernameStatus().checking) {
+            <span class="form-input-spinner" aria-label="Checking availability"></span>
+          }
+        </div>
+        @if (mode() === 'register' && usernameStatus().error; as uError) {
           <p class="form-field-error">{{ uError }}</p>
         }
       </label>
+
+      @if (mode() === 'register') {
+        <label class="form-field">
+          <span class="form-label">Email</span>
+          <div class="form-input-wrapper">
+            <input
+              type="email"
+              class="form-input"
+              [value]="email()"
+              (input)="email.set($any($event.target).value)"
+              (blur)="onEmailBlur()"
+              autocomplete="email"
+            />
+            @if (emailStatus().checking) {
+              <span class="form-input-spinner" aria-label="Checking availability"></span>
+            }
+          </div>
+          @if (emailStatus().error; as eError) {
+            <p class="form-field-error">{{ eError }}</p>
+          }
+        </label>
+      }
 
       @if (mode() === 'signin') {
         <label class="form-field">
@@ -83,7 +111,7 @@
       <button
         type="submit"
         class="login-button"
-        [disabled]="isSubmitting() || (mode() === 'register' && (!!usernameError() || !!newPasswordFields()?.mismatch() || confirmPassword().length === 0))"
+        [disabled]="isSubmitting() || (mode() === 'register' && (!!usernameStatus().error || !!emailStatus().error || !!newPasswordFields()?.mismatch() || confirmPassword().length === 0))"
       >
         @if (mode() === 'signin') {
           Login
