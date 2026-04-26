@@ -111,7 +111,8 @@ export class ServerStartupService {
           this.supabaseClientProvider.open(url!, key!);
           const client = this.supabaseClientProvider.get();
           this.loggerService.info('[server startup] opening Supabase-backed stores');
-          await (this.userStore as SupabaseUserStore).open(client);
+          // open() is now synchronous — no pre-load, just stores the client reference.
+          (this.userStore as SupabaseUserStore).open(client);
           await (this.sessionStore as SupabaseSessionStore).open(client, Date.now());
           await (this.registrationCodeStore as SupabaseRegistrationCodeStore).open(client);
           await (this.matchConfigurationSaveService as SupabaseMatchConfigurationSaveService).open(client);

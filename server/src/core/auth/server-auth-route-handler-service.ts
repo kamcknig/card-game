@@ -245,7 +245,7 @@ export class ServerAuthRouteHandlerService {
     // Look up the user record to include the admin flag and needsEmail flag in
     // the response so the client can gate admin-only UI and the email-onboarding
     // flow without a separate request.
-    const loggedInUser = this.userStore.getByUsername(result.username);
+    const loggedInUser = await this.userStore.getByUsername(result.username);
     const isAdmin = loggedInUser?.isAdmin ?? false;
     // needsEmail is true for legacy users who have not yet attached an email.
     const needsEmail = loggedInUser?.email == null;
@@ -260,7 +260,7 @@ export class ServerAuthRouteHandlerService {
    *
    * Returns 401 when the header is missing or the token is not a known session.
    */
-  private handleValidate(req: Request): Response {
+  private async handleValidate(req: Request): Promise<Response> {
     const token = this.extractBearerToken(req);
     if (!token) {
       this.loggerService.debug('[auth route] validate request missing authorization header');
@@ -276,7 +276,7 @@ export class ServerAuthRouteHandlerService {
     // Look up the user record to include the admin flag and needsEmail flag in
     // the response so the client can gate admin-only UI and the email-onboarding
     // flow without a separate validate call.
-    const validatedUser = this.userStore.getByUsername(username);
+    const validatedUser = await this.userStore.getByUsername(username);
     const isAdmin = validatedUser?.isAdmin ?? false;
     // needsEmail stays in sync across page refreshes via the validate endpoint.
     const needsEmail = validatedUser?.email == null;
@@ -470,7 +470,7 @@ export class ServerAuthRouteHandlerService {
     // code — a consumed code covers the intent and the user still needs to
     // pick a free username. Tracking this as a failure keeps the limiter
     // honest.
-    if (this.userStore.getByUsername(username)) {
+    if (await this.userStore.getByUsername(username)) {
       this.authRateLimiterService.recordFailure(remoteIp);
       this.loggerService.info(`[auth route] register: username '${username}' already taken`);
       return this.jsonResponse({ ok: false, message: 'Username already taken' }, 409, req);
@@ -478,7 +478,7 @@ export class ServerAuthRouteHandlerService {
 
     // Check for duplicate email (case-insensitive). Reject before writing any
     // state so the consumed code is the only cost of a duplicate-email attempt.
-    if (this.userStore.getByEmail(email)) {
+    if (await this.userStore.getByEmail(email)) {
       this.authRateLimiterService.recordFailure(remoteIp);
       this.loggerService.info(`[auth route] register: email already registered from ${remoteIp}`);
       return this.jsonResponse({ ok: false, message: 'Email already registered' }, 409, req);
@@ -669,7 +669,7 @@ export class ServerAuthRouteHandlerService {
       return this.jsonResponse({ ok: false, message: pwError }, 400, req);
     }
 
-    const user = this.userStore.getByUsername(username);
+    const user = await this.userStore.getByUsername(username);
     if (!user) {
       // Defensive: validateToken returned a username we can no longer find.
       this.loggerService.error(`[auth route] password change: user '${username}' missing from store`);
@@ -708,7 +708,7 @@ export class ServerAuthRouteHandlerService {
     }
 
     // Restrict code creation to admin users only.
-    const requestingUser = this.userStore.getByUsername(username);
+    const requestingUser = await this.userStore.getByUsername(username);
     if (!requestingUser?.isAdmin) {
       this.loggerService.warn(`[auth route] registration-codes: non-admin access denied for '${username}'`);
       return this.jsonResponse({ ok: false, message: 'forbidden' }, 403, req);
@@ -759,7 +759,7 @@ export class ServerAuthRouteHandlerService {
    * Returns every non-disabled, non-expired code. Only admin users may access
    * this endpoint.
    */
-  private handleListRegistrationCodes(req: Request): Response {
+  private async handleListRegistrationCodes(req: Request): Promise<Response> {
     const token = this.extractBearerToken(req);
     const username = token ? this.authSessionService.validateToken(token) : undefined;
     if (!username) {
@@ -767,7 +767,7 @@ export class ServerAuthRouteHandlerService {
     }
 
     // Restrict code listing to admin users only.
-    const requestingUser = this.userStore.getByUsername(username);
+    const requestingUser = await this.userStore.getByUsername(username);
     if (!requestingUser?.isAdmin) {
       this.loggerService.warn(`[auth route] registration-codes: non-admin access denied for '${username}'`);
       return this.jsonResponse({ ok: false, message: 'forbidden' }, 403, req);
@@ -796,7 +796,7 @@ export class ServerAuthRouteHandlerService {
    * unknown; the endpoint's contract is "ensure this code cannot be used".
    * Only admin users may disable codes.
    */
-  private handleDisableRegistrationCode(req: Request, code: string): Response {
+  private async handleDisableRegistrationCode(req: Request, code: string): Promise<Response> {
     const token = this.extractBearerToken(req);
     const username = token ? this.authSessionService.validateToken(token) : undefined;
     if (!username) {
@@ -804,7 +804,7 @@ export class ServerAuthRouteHandlerService {
     }
 
     // Restrict code disabling to admin users only.
-    const requestingUser = this.userStore.getByUsername(username);
+    const requestingUser = await this.userStore.getByUsername(username);
     if (!requestingUser?.isAdmin) {
       this.loggerService.warn(`[auth route] registration-codes: non-admin access denied for '${username}'`);
       return this.jsonResponse({ ok: false, message: 'forbidden' }, 403, req);
@@ -860,14 +860,14 @@ export class ServerAuthRouteHandlerService {
    * registration with a format error; this endpoint's only concern is
    * uniqueness.
    */
-  private handleCheckUsername(req: Request, url: URL): Response {
+  private async handleCheckUsername(req: Request, url: URL): Promise<Response> {
     const username = (url.searchParams.get('username') ?? '').trim();
     if (!username) {
       this.loggerService.debug('[auth route] check-username: empty username query param');
       return this.jsonResponse({ available: true }, 200, req);
     }
 
-    const existing = this.userStore.getByUsername(username);
+    const existing = await this.userStore.getByUsername(username);
     const available = !existing;
     this.loggerService.debug(`[auth route] check-username: '${username}' available=${available}`);
     return this.jsonResponse({ available }, 200, req);
@@ -887,14 +887,14 @@ export class ServerAuthRouteHandlerService {
    * registration with a format error; this endpoint's only concern is
    * uniqueness.
    */
-  private handleCheckEmail(req: Request, url: URL): Response {
+  private async handleCheckEmail(req: Request, url: URL): Promise<Response> {
     const email = (url.searchParams.get('email') ?? '').trim();
     if (!email) {
       this.loggerService.debug('[auth route] check-email: empty email query param');
       return this.jsonResponse({ available: true }, 200, req);
     }
 
-    const existing = this.userStore.getByEmail(email);
+    const existing = await this.userStore.getByEmail(email);
     const available = !existing;
     this.loggerService.debug(`[auth route] check-email: available=${available}`);
     return this.jsonResponse({ available }, 200, req);

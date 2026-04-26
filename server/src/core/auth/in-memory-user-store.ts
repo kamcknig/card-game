@@ -5,10 +5,16 @@ import type { PasswordAlgo } from './password-hasher.ts';
  * In-memory implementation of {@link UserStore} used primarily by tests and
  * for the `memory` session-store mode (which implies no persistence).
  *
- * All operations are synchronous and live in a plain `Map<string, UserRecord>`.
+ * All operations are backed by plain `Map<string, UserRecord>` instances.
  * Identical semantics to {@link DenoKvUserStore} except that records do not
  * survive process restart. Username lookups are case-insensitive; the record
  * preserves the original casing supplied to `create()`.
+ *
+ * Read methods return `Promise.resolve(...)` to satisfy the async
+ * {@link UserStore} interface without introducing async overhead on the
+ * synchronous in-memory path. This store is not changed by Phase 3.5 —
+ * it is inherently in-memory and only used when no persistent backend is
+ * configured.
  */
 export class InMemoryUserStore implements UserStore {
   // Cache keyed by lowercased username for fast getByUsername.
@@ -24,20 +30,26 @@ export class InMemoryUserStore implements UserStore {
   // Next id to issue; incremented monotonically on each create().
   private nextId = 1;
 
-  public getByUsername(username: string): UserRecord | undefined {
-    return this.byUsername.get(username.toLowerCase());
+  /**
+   * Returns the user record matching `username` (case-insensitive).
+   */
+  public getByUsername(username: string): Promise<UserRecord | undefined> {
+    return Promise.resolve(this.byUsername.get(username.toLowerCase()));
   }
 
-  public getById(id: number): UserRecord | undefined {
-    return this.byId.get(id);
+  /**
+   * Returns the user record for the given numeric id.
+   */
+  public getById(id: number): Promise<UserRecord | undefined> {
+    return Promise.resolve(this.byId.get(id));
   }
 
   /**
    * Returns the user record whose email matches the given address (case-
    * insensitive), or undefined when no match is found.
    */
-  public getByEmail(email: string): UserRecord | undefined {
-    return this.byEmail.get(email.toLowerCase());
+  public getByEmail(email: string): Promise<UserRecord | undefined> {
+    return Promise.resolve(this.byEmail.get(email.toLowerCase()));
   }
 
   /**
@@ -87,6 +99,9 @@ export class InMemoryUserStore implements UserStore {
     return Promise.resolve(rec);
   }
 
+  /**
+   * Replaces a user's password hash and clears any pending lockout state.
+   */
   public updatePassword(id: number, passwordHash: string, algo: PasswordAlgo, now: number): void {
     const rec = this.byId.get(id);
     if (!rec) return;
@@ -98,13 +113,22 @@ export class InMemoryUserStore implements UserStore {
     rec.lockedUntil = null;
   }
 
-  public recordFailure(id: number, _now: number): UserRecord {
+  /**
+   * Increments `failedAttempts` and returns the updated record.
+   *
+   * Returns a `Promise<UserRecord>` to satisfy the async {@link UserStore}
+   * interface; the implementation is synchronous under the hood.
+   */
+  public recordFailure(id: number, _now: number): Promise<UserRecord> {
     const rec = this.byId.get(id);
     if (!rec) throw new Error(`[auth users] recordFailure: unknown id ${id}`);
     rec.failedAttempts++;
-    return rec;
+    return Promise.resolve(rec);
   }
 
+  /**
+   * Resets `failedAttempts` and `lockedUntil` to their initial values.
+   */
   public resetFailures(id: number): void {
     const rec = this.byId.get(id);
     if (!rec) return;
@@ -112,12 +136,18 @@ export class InMemoryUserStore implements UserStore {
     rec.lockedUntil = null;
   }
 
+  /**
+   * Sets or clears the `lockedUntil` timestamp.
+   */
   public setLockedUntil(id: number, until: number | null): void {
     const rec = this.byId.get(id);
     if (!rec) return;
     rec.lockedUntil = until;
   }
 
+  /**
+   * Toggles the `disabled` flag for the given user.
+   */
   public setDisabled(id: number, disabled: boolean): void {
     const rec = this.byId.get(id);
     if (!rec) return;
@@ -125,7 +155,7 @@ export class InMemoryUserStore implements UserStore {
   }
 
   /**
-   * Sets or clears the admin flag for the given user.
+   * Sets or clears the `isAdmin` flag for the given user.
    */
   public setAdmin(id: number, isAdmin: boolean): void {
     const rec = this.byId.get(id);
@@ -158,7 +188,7 @@ export class InMemoryUserStore implements UserStore {
   }
 
   /**
-   * Sets or clears the Supabase Auth user id for an existing user.
+   * Sets or clears the `supabaseAuthId` for an existing user.
    */
   public setSupabaseAuthId(id: number, authId: string | null): void {
     const rec = this.byId.get(id);
@@ -192,7 +222,13 @@ export class InMemoryUserStore implements UserStore {
     this.byEmail.clear();
   }
 
-  public list(): ReadonlyArray<UserRecord> {
-    return [...this.byUsername.values()];
+  /**
+   * Returns a snapshot of every user record currently in memory.
+   *
+   * Returns a `Promise` to satisfy the async {@link UserStore} interface;
+   * the result is resolved synchronously.
+   */
+  public list(): Promise<ReadonlyArray<UserRecord>> {
+    return Promise.resolve([...this.byUsername.values()]);
   }
 }

@@ -37,10 +37,16 @@ export interface UserRecord {
 /**
  * Pluggable persistence contract for user accounts.
  *
- * Synchronous like {@link SessionStore} so the authentication hot-path
- * avoids async overhead. Persistent implementations load all users into an
- * in-memory cache at startup via `open()` and use fire-and-forget writes
- * for mutations.
+ * All read operations query the backing store directly on every call — there
+ * is no in-memory cache. This eliminates stale-cache bugs when records are
+ * modified externally (e.g. via Studio or the CLI) and simplifies store
+ * implementations. Write operations persist directly to the backing store;
+ * the `InMemoryUserStore` is the exception and serves as its own backing
+ * store.
+ *
+ * Read methods return `Promise` to accommodate asynchronous backing stores
+ * (Deno KV and Supabase). `InMemoryUserStore` wraps synchronous map lookups
+ * with `Promise.resolve()`.
  *
  * Defined in: server/src/core/auth/user-store.ts
  * Consumers: UserAccountAuthProvider, ServerAuthRouteHandlerService (register
@@ -54,16 +60,12 @@ export interface UserStore {
    * lowercase on write and match against lowercase on read. The returned
    * `UserRecord.username` preserves the original case for display.
    */
-  getByUsername(username: string): UserRecord | undefined;
+  getByUsername(username: string): Promise<UserRecord | undefined>;
 
   /**
    * Returns the user record for a numeric id, or undefined.
-   *
-   * Used by write operations (recordFailure, updatePassword) that hold
-   * the id from a previous getByUsername call so repeated lookups stay
-   * O(1).
    */
-  getById(id: number): UserRecord | undefined;
+  getById(id: number): Promise<UserRecord | undefined>;
 
   /**
    * Returns the user record whose email matches the given address, or undefined.
@@ -71,7 +73,7 @@ export interface UserStore {
    * Lookups are case-insensitive. Returns undefined when no record has a
    * non-null email matching the normalised address.
    */
-  getByEmail(email: string): UserRecord | undefined;
+  getByEmail(email: string): Promise<UserRecord | undefined>;
 
   /**
    * Creates a new user row with the supplied username and argon2id hash.
@@ -109,10 +111,12 @@ export interface UserStore {
   /**
    * Increments the per-account failure counter and returns the updated row.
    *
-   * The returned record reflects the new `failedAttempts` so callers can
-   * decide whether to invoke `setLockedUntil`.
+   * Returns a `Promise<UserRecord>` because implementations that do not
+   * maintain an in-memory cache must read the current record before
+   * incrementing. The returned record reflects the new `failedAttempts` so
+   * callers can decide whether to invoke `setLockedUntil`.
    */
-  recordFailure(id: number, now: number): UserRecord;
+  recordFailure(id: number, now: number): Promise<UserRecord>;
 
   /**
    * Clears the failure counter and any active lock for this user.
@@ -190,7 +194,8 @@ export interface UserStore {
    * Returns a snapshot of every user record in the store.
    *
    * Intended for CLI/admin use; the route handlers never expose the full
-   * list to end users.
+   * list to end users. Returns a `Promise` to accommodate backing stores
+   * that require an asynchronous scan (Deno KV, Supabase).
    */
-  list(): ReadonlyArray<UserRecord>;
+  list(): Promise<ReadonlyArray<UserRecord>>;
 }

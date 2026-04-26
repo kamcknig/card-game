@@ -218,13 +218,13 @@ const runCreate = async (args: string[], kvPath: string): Promise<void> => {
 
   const store = await openStore(kvPath);
 
-  if (store.getByUsername(username)) {
+  if (await store.getByUsername(username)) {
     console.error(`[auth:users] username '${username}' already exists`);
     Deno.exit(1);
   }
 
   // Guard against duplicate email before hashing the password.
-  if (email && store.getByEmail(email)) {
+  if (email && await store.getByEmail(email)) {
     console.error(`[auth:users] email '${email}' already exists`);
     Deno.exit(1);
   }
@@ -278,7 +278,7 @@ const runDelete = async (args: string[], kvPath: string): Promise<void> => {
   }
 
   const store = await openStore(kvPath);
-  const rec = store.getByUsername(username);
+  const rec = await store.getByUsername(username);
   if (!rec) {
     console.error(`[auth:users] username '${username}' not found`);
     Deno.exit(1);
@@ -329,7 +329,7 @@ const runSetPassword = async (args: string[], kvPath: string): Promise<void> => 
   }
 
   const store = await openStore(kvPath);
-  const rec = store.getByUsername(username);
+  const rec = await store.getByUsername(username);
   if (!rec) {
     console.error(`[auth:users] username '${username}' not found`);
     Deno.exit(1);
@@ -390,7 +390,7 @@ const runSetAdmin = async (args: string[], kvPath: string): Promise<void> => {
 
   const flag = adminValue === 'true';
   const store = await openStore(kvPath);
-  const rec = store.getByUsername(username);
+  const rec = await store.getByUsername(username);
   if (!rec) {
     console.error(`[auth:users] username '${username}' not found`);
     Deno.exit(1);
@@ -442,7 +442,7 @@ const runSetEmail = async (args: string[], kvPath: string): Promise<void> => {
   }
 
   const store = await openStore(kvPath);
-  const rec = store.getByUsername(username);
+  const rec = await store.getByUsername(username);
   if (!rec) {
     console.error(`[auth:users] username '${username}' not found`);
     Deno.exit(1);
@@ -481,7 +481,7 @@ const runList = async (args: string[], kvPath: string): Promise<void> => {
   }
 
   const store = await openStore(kvPath);
-  const users = store.list();
+  const users = await store.list();
 
   if (users.length === 0) {
     console.log('[auth:users] no users found');
@@ -520,7 +520,7 @@ const runClear = async (args: string[], kvPath: string): Promise<void> => {
   }
 
   const store = await openStore(kvPath);
-  const count = store.list().length;
+  const count = (await store.list()).length;
   store.clear();
   await flushWrites();
   console.log(`[auth:users] cleared ${count} user(s) from the store`);

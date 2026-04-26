@@ -90,7 +90,7 @@ export class UserAccountAuthProvider implements AuthProvider {
       return { ok: false, message: 'Username/password does not match' };
     }
 
-    const user = this.userStore.getByUsername(username);
+    const user = await this.userStore.getByUsername(username);
 
     // Run a dummy verify even when the user is missing to avoid leaking
     // existence via timing. Also matches the disabled-account case.
@@ -168,7 +168,7 @@ export class UserAccountAuthProvider implements AuthProvider {
 
       // Any other Supabase error is treated as a credential failure. Increment
       // the local failure counter and apply lockout if the threshold is crossed.
-      const updated = this.userStore.recordFailure(user.id, now);
+      const updated = await this.userStore.recordFailure(user.id, now);
       this.loggerService.debug(
         `[auth:user] Supabase Auth rejected '${user.username}': ${error.message} (failures=${updated.failedAttempts})`,
       );
@@ -220,7 +220,7 @@ export class UserAccountAuthProvider implements AuthProvider {
     const valid = await verifier.verify(password, user.passwordHash);
 
     if (!valid) {
-      const updated = this.userStore.recordFailure(user.id, now);
+      const updated = await this.userStore.recordFailure(user.id, now);
       this.loggerService.debug(
         `[auth:user] rejected: wrong password for '${user.username}' (failures=${updated.failedAttempts})`,
       );
