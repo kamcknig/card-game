@@ -67,3 +67,13 @@ CREATE TABLE match_configuration_saves (
 );
 
 CREATE INDEX idx_match_configuration_saves_username ON match_configuration_saves (username_lower);
+
+-- Grants for the storage tables. Tables created via raw SQL migrations do not
+-- automatically receive the per-role default privileges that the Supabase
+-- table editor would apply, which causes service_role API calls to fail with
+-- `permission denied for table` (SQLSTATE 42501). Granting ALL to service_role
+-- restores the expected behavior; anon/authenticated are intentionally not
+-- granted because all access is mediated by the server using the secret key.
+GRANT USAGE ON SCHEMA public TO service_role;
+GRANT ALL ON auth_users, auth_sessions, auth_registration_codes, match_configuration_saves TO service_role;
+GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA public TO service_role;
