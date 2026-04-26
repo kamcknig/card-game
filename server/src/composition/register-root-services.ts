@@ -55,10 +55,6 @@ import { InMemoryUserStore } from '../core/auth/in-memory-user-store.ts';
 import { DenoKvUserStore } from '../core/auth/deno-kv-user-store.ts';
 import { SupabaseUserStore } from '../core/auth/supabase-user-store.ts';
 import type { UserStore } from '../core/auth/user-store.ts';
-import { InMemoryRegistrationCodeStore } from '../core/auth/in-memory-registration-code-store.ts';
-import { DenoKvRegistrationCodeStore } from '../core/auth/deno-kv-registration-code-store.ts';
-import { SupabaseRegistrationCodeStore } from '../core/auth/supabase-registration-code-store.ts';
-import type { RegistrationCodeStore } from '../core/auth/registration-code-store.ts';
 import { UserAccountAuthProvider } from '../core/auth/user-account-auth-provider.ts';
 
 export interface RegisterRootServicesArgs {
@@ -169,8 +165,7 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
     authRateLimiterService: asClass(AuthRateLimiterService).singleton(),
     authSessionCleanupService: asClass(AuthSessionCleanupService).singleton(),
     // Shared KV handle provider; opened once from ServerStartupService so
-    // DenoKvSessionStore, DenoKvUserStore, and DenoKvRegistrationCodeStore
-    // all share a single Deno KV database file.
+    // DenoKvSessionStore and DenoKvUserStore share a single Deno KV database file.
     authKvProvider: asClass(AuthKvProvider).singleton(),
     // Shared KV handle provider for game-data persistence (match config saves, etc.).
     // Opened once from ServerStartupService when STORAGE_BACKEND=kv; kept separate
@@ -203,25 +198,6 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
         }
         loggerService.warn('[auth] user store: in-memory fallback (no STORAGE_BACKEND configured)');
         return new InMemoryUserStore();
-      },
-    ).singleton(),
-    // Registration code store. Mirrors the selection logic for session/user
-    // stores so the same backend is used throughout auth.
-    // undefined (env unset/invalid) falls back to the in-memory store so DI resolves cleanly;
-    // ServerStartupService records the configuration error against the health service so /status surfaces it.
-    registrationCodeStore: asFunction(
-      (serverConfigService: ServerConfigService, loggerService: LoggerService): RegistrationCodeStore => {
-        const backend = serverConfigService.getStorageBackend();
-        if (backend === 'supabase') {
-          loggerService.log('[auth] registration code store: supabase (persistent)');
-          return new SupabaseRegistrationCodeStore(loggerService);
-        }
-        if (backend === 'kv') {
-          loggerService.log('[auth] registration code store: deno kv (persistent)');
-          return new DenoKvRegistrationCodeStore(loggerService);
-        }
-        loggerService.warn('[auth] registration code store: in-memory fallback (no STORAGE_BACKEND configured)');
-        return new InMemoryRegistrationCodeStore();
       },
     ).singleton(),
     // Multi-user account provider. Sole auth provider registered with

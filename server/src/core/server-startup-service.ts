@@ -7,10 +7,8 @@ import { UserAccountAuthProvider } from './auth/user-account-auth-provider.ts';
 import { AuthSessionCleanupService } from './auth/auth-session-cleanup-service.ts';
 import { DenoKvSessionStore } from './auth/deno-kv-session-store.ts';
 import { DenoKvUserStore } from './auth/deno-kv-user-store.ts';
-import { DenoKvRegistrationCodeStore } from './auth/deno-kv-registration-code-store.ts';
 import { SupabaseSessionStore } from './auth/supabase-session-store.ts';
 import { SupabaseUserStore } from './auth/supabase-user-store.ts';
-import { SupabaseRegistrationCodeStore } from './auth/supabase-registration-code-store.ts';
 import { SupabaseMatchConfigurationSaveService } from './supabase-match-configuration-save-service.ts';
 import { AuthKvProvider } from './auth/auth-kv-provider.ts';
 import { SupabaseClientProvider } from './storage/supabase-client-provider.ts';
@@ -18,7 +16,6 @@ import { ServerConfigService } from './server-config-service.ts';
 import { ServerHealthService } from './server-health-service.ts';
 import type { SessionStore } from './auth/session-store.ts';
 import type { UserStore } from './auth/user-store.ts';
-import type { RegistrationCodeStore } from './auth/registration-code-store.ts';
 import { GameDataKvProvider } from './game-data-kv-provider.ts';
 import { DenoKvMatchConfigurationSaveService } from './deno-kv-match-configuration-save-service.ts';
 import type { MatchConfigurationSaveStore } from './match-configuration-save-store.ts';
@@ -44,7 +41,6 @@ export class ServerStartupService {
     private readonly serverConfigService: ServerConfigService,
     private readonly sessionStore: SessionStore,
     private readonly userStore: UserStore,
-    private readonly registrationCodeStore: RegistrationCodeStore,
     private readonly authKvProvider: AuthKvProvider,
     private readonly gameDataKvProvider: GameDataKvProvider,
     private readonly matchConfigurationSaveService: MatchConfigurationSaveStore,
@@ -114,7 +110,6 @@ export class ServerStartupService {
           // open() is now synchronous — no pre-load, just stores the client reference.
           (this.userStore as SupabaseUserStore).open(client);
           await (this.sessionStore as SupabaseSessionStore).open(client, Date.now());
-          await (this.registrationCodeStore as SupabaseRegistrationCodeStore).open(client);
           await (this.matchConfigurationSaveService as SupabaseMatchConfigurationSaveService).open(client);
           this.loggerService.log('[server startup] Supabase stores ready');
         } catch (err) {
@@ -139,13 +134,10 @@ export class ServerStartupService {
       const kv = await this.authKvProvider.open(kvPath);
       await (this.sessionStore as DenoKvSessionStore).open(kv, Date.now());
 
-      // User/registration-code stores share the same KV handle as the session
-      // store (see register-root-services.ts selection logic).
+      // The user store shares the same KV handle as the session store
+      // (see register-root-services.ts selection logic).
       if (this.userStore instanceof DenoKvUserStore) {
         await this.userStore.open(kv);
-      }
-      if (this.registrationCodeStore instanceof DenoKvRegistrationCodeStore) {
-        await this.registrationCodeStore.open(kv);
       }
 
       // When using the Deno KV game-data store, open a single shared KV handle

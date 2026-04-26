@@ -25,16 +25,10 @@ export const authNeedsEmailStore = atom<boolean>(
   localStorage.getItem('authNeedsEmail') === 'true',
 );
 
-// Holds a registration code parsed from the URL query string on startup.
-// Consumed (cleared) once LoginComponent reads it during initialization.
-// Not localStorage-backed — only valid for the current page load.
-export const pendingRegistrationCodeStore = atom<string | undefined>(undefined);
-
 (globalThis as any).authUsernameStore = authUsernameStore;
 (globalThis as any).authTokenStore = authTokenStore;
 (globalThis as any).authIsAdminStore = authIsAdminStore;
 (globalThis as any).authNeedsEmailStore = authNeedsEmailStore;
-(globalThis as any).pendingRegistrationCodeStore = pendingRegistrationCodeStore;
 
 /**
  * Manages client-side authentication state and server login requests.
@@ -184,27 +178,21 @@ export class AuthService {
   /**
    * Creates a new account via POST /auth/register.
    *
-   * Requires a registration code issued out-of-band by an existing user or
-   * the CLI (see server/scripts/auth-create-reg-code.ts). The `email`
-   * parameter is required from Phase 2 onward — the server rejects
-   * registrations without an email with HTTP 400. On success the user must
-   * still log in separately — registration does not automatically establish a
-   * session.
-   *
-   * The `registrationCode` parameter is retained here through Phase 4, when
-   * the code system is removed. Callers must continue to supply it until then.
+   * Open self-service registration — no registration code required. The `email`
+   * parameter is required; the server rejects registrations without an email
+   * with HTTP 400. On success the user must still log in separately —
+   * registration does not automatically establish a session.
    */
   async register(
     username: string,
     email: string,
     password: string,
-    registrationCode: string,
   ): Promise<{ ok: boolean; message?: string }> {
     try {
       const response = await fetch(`${environment.wsHost}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password, registrationCode }),
+        body: JSON.stringify({ username, email, password }),
       });
 
       const body = await response.json().catch(() => ({}));
@@ -214,124 +202,6 @@ export class AuthService {
       return { ok: true };
     } catch {
       return { ok: false, message: 'Unable to reach server' };
-    }
-  }
-
-  /**
-   * Creates a new registration code via POST /auth/registration-codes.
-   *
-   * Only succeeds when the authenticated user is an admin. Returns the
-   * generated code string on success. `expiresIn` is relative milliseconds
-   * from now; omit for no time limit. `maxUses` defaults to 1 on the server.
-   */
-  async createRegistrationCode(options?: {
-    expiresIn?: number;
-    maxUses?: number;
-  }): Promise<{ ok: boolean; code?: string; expiresAt?: number | null; maxUses?: number; message?: string }> {
-    const token = authTokenStore.get();
-    if (!token) return { ok: false, message: 'Not signed in' };
-
-    try {
-      const response = await fetch(`${environment.wsHost}/auth/registration-codes`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(options ?? {}),
-      });
-
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok || !body.ok) {
-        return { ok: false, message: body.message ?? 'Failed to create code' };
-      }
-      return { ok: true, code: body.code, expiresAt: body.expiresAt, maxUses: body.maxUses };
-    } catch {
-      return { ok: false, message: 'Unable to reach server' };
-    }
-  }
-
-  /**
-   * Lists active registration codes via GET /auth/registration-codes.
-   *
-   * Only succeeds when the authenticated user is an admin. Returns non-disabled,
-   * non-expired codes in server-defined order.
-   */
-  async listRegistrationCodes(): Promise<{
-    ok: boolean;
-    codes?: Array<{
-      code: string;
-      createdAt: number;
-      createdBy: string;
-      expiresAt: number | null;
-      maxUses: number;
-      usedCount: number;
-    }>;
-    message?: string;
-  }> {
-    const token = authTokenStore.get();
-    if (!token) return { ok: false, message: 'Not signed in' };
-
-    try {
-      const response = await fetch(`${environment.wsHost}/auth/registration-codes`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok || !body.ok) {
-        return { ok: false, message: body.message ?? 'Failed to list codes' };
-      }
-      return { ok: true, codes: body.codes };
-    } catch {
-      return { ok: false, message: 'Unable to reach server' };
-    }
-  }
-
-  /**
-   * Disables a registration code via DELETE /auth/registration-codes/:code.
-   *
-   * Idempotent — returns ok even when the code was already disabled or unknown.
-   */
-  async disableRegistrationCode(code: string): Promise<{ ok: boolean; message?: string }> {
-    const token = authTokenStore.get();
-    if (!token) return { ok: false, message: 'Not signed in' };
-
-    try {
-      const response = await fetch(
-        `${environment.wsHost}/auth/registration-codes/${encodeURIComponent(code)}`,
-        {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` },
-        },
-      );
-
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok || !body.ok) {
-        return { ok: false, message: body.message ?? 'Failed to disable code' };
-      }
-      return { ok: true };
-    } catch {
-      return { ok: false, message: 'Unable to reach server' };
-    }
-  }
-
-  /**
-   * Checks whether a registration code is currently redeemable.
-   *
-   * Public endpoint — no auth token required. Returns `{ ok, valid }` where
-   * `valid` is false when the code is unknown, disabled, expired, or exhausted.
-   * Network errors resolve to `{ ok: false, valid: false }` so the caller can
-   * treat connectivity failures the same as an invalid code.
-   */
-  async validateRegistrationCode(code: string): Promise<{ ok: boolean; valid: boolean }> {
-    try {
-      const response = await fetch(
-        `${environment.wsHost}/auth/registration-codes/validate?code=${encodeURIComponent(code)}`,
-      );
-      const body = await response.json().catch(() => ({ ok: false, valid: false }));
-      return { ok: body.ok ?? false, valid: body.valid ?? false };
-    } catch {
-      return { ok: false, valid: false };
     }
   }
 

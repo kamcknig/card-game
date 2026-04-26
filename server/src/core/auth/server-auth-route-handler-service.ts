@@ -4,7 +4,6 @@ import { SupabaseClientProvider } from '../storage/supabase-client-provider.ts';
 import { AuthSessionService } from './auth-session-service.ts';
 import { AuthRateLimiterService } from './auth-rate-limiter-service.ts';
 import type { UserStore } from './user-store.ts';
-import type { RegistrationCodeStore } from './registration-code-store.ts';
 import { Argon2idHasher } from './password-hasher.ts';
 import { UserAccountAuthProvider } from './user-account-auth-provider.ts';
 import { buildCorsHeaders } from '../cors-utils.ts';
@@ -53,12 +52,16 @@ const validatePasswordStrength = (
  * Handles HTTP authentication endpoints for login, token validation, and logout.
  *
  * Routes:
- *   POST   /auth/login     — validates credentials via the selected provider
- *   GET    /auth/validate  — validates an existing session token
- *   DELETE /auth/logout    — invalidates the current session token
- *   GET    /auth/sessions  — lists active sessions for the authenticated user
- *   DELETE /auth/sessions  — revokes all sessions for the authenticated user
- *                           (pass `?keepCurrent=true` to preserve the caller's session)
+ *   POST   /auth/login           — validates credentials via the selected provider
+ *   GET    /auth/validate        — validates an existing session token
+ *   DELETE /auth/logout          — invalidates the current session token
+ *   GET    /auth/sessions        — lists active sessions for the authenticated user
+ *   DELETE /auth/sessions        — revokes all sessions for the authenticated user
+ *                                 (pass `?keepCurrent=true` to preserve the caller's session)
+ *   POST   /auth/register        — open self-service registration (email required)
+ *   POST   /auth/change-password — authenticated in-app password rotation
+ *   GET    /auth/check-username  — username availability check
+ *   GET    /auth/check-email     — email availability check
  *
  * Login requests accept an optional `provider` field to select the
  * authentication method. Defaults to 'password' for backwards compatibility.
@@ -74,7 +77,6 @@ export class ServerAuthRouteHandlerService {
     private readonly serverConfigService: ServerConfigService,
     private readonly authRateLimiterService: AuthRateLimiterService,
     private readonly userStore: UserStore,
-    private readonly registrationCodeStore: RegistrationCodeStore,
     private readonly argon2idHasher: Argon2idHasher,
     private readonly userAccountAuthProvider: UserAccountAuthProvider,
     private readonly supabaseClientProvider: SupabaseClientProvider,
@@ -140,26 +142,6 @@ export class ServerAuthRouteHandlerService {
     // POST /auth/change-password (authenticated).
     if (parts.length === 2 && parts[1] === 'change-password' && req.method === 'POST') {
       return this.handleChangePassword(req);
-    }
-
-    // POST /auth/registration-codes (authenticated): create code.
-    if (parts.length === 2 && parts[1] === 'registration-codes' && req.method === 'POST') {
-      return this.handleCreateRegistrationCode(req);
-    }
-
-    // GET /auth/registration-codes (authenticated): list codes.
-    if (parts.length === 2 && parts[1] === 'registration-codes' && req.method === 'GET') {
-      return this.handleListRegistrationCodes(req);
-    }
-
-    // GET /auth/registration-codes/validate?code=<value> (public): check code validity.
-    if (parts.length === 3 && parts[1] === 'registration-codes' && parts[2] === 'validate' && req.method === 'GET') {
-      return this.handleValidateRegistrationCode(req, url);
-    }
-
-    // DELETE /auth/registration-codes/:code (authenticated): disable code.
-    if (parts.length === 3 && parts[1] === 'registration-codes' && req.method === 'DELETE') {
-      return this.handleDisableRegistrationCode(req, parts[2]!);
     }
 
     // GET /auth/check-username?username=<value> (public, informational).
@@ -372,12 +354,12 @@ export class ServerAuthRouteHandlerService {
   }
 
   /**
-   * Handles POST /auth/register — public self-service registration.
+   * Handles POST /auth/register — open self-service registration.
    *
    * Validates username format, email format, and password strength before
-   * creating the user. Requires a valid registration code (removed in Phase 4).
-   * Rate-limited against the same IP bucket as /auth/login. Does NOT return
-   * a session token — the client must log in separately.
+   * creating the user. No registration code is required. Rate-limited against
+   * the same IP bucket as /auth/login. Does NOT return a session token — the
+   * client must log in separately.
    *
    * When `STORAGE_BACKEND=supabase`, provisions a Supabase Auth user via
    * `admin.createUser` so the confirmation email is sent automatically and
@@ -424,7 +406,6 @@ export class ServerAuthRouteHandlerService {
     const username = typeof body['username'] === 'string' ? (body['username'] as string).trim() : '';
     const password = typeof body['password'] === 'string' ? (body['password'] as string) : '';
     const email = typeof body['email'] === 'string' ? (body['email'] as string).trim() : '';
-    const code = typeof body['registrationCode'] === 'string' ? (body['registrationCode'] as string).trim() : '';
 
     // Username format check — narrow enough to keep logs predictable.
     if (!USERNAME_REGEX.test(username)) {
@@ -456,20 +437,9 @@ export class ServerAuthRouteHandlerService {
       return this.jsonResponse({ ok: false, message: pwError }, 400, req);
     }
 
-    // Validate + atomically consume the registration code. A bad or exhausted
-    // code records a failure against the IP bucket to throttle brute force.
     const now = Date.now();
-    const usedCode = this.registrationCodeStore.recordUse(code, now);
-    if (!usedCode) {
-      this.authRateLimiterService.recordFailure(remoteIp);
-      this.loggerService.warn(`[auth route] register: invalid or expired code from ${remoteIp}`);
-      return this.jsonResponse({ ok: false, message: 'Invalid or expired registration code' }, 400, req);
-    }
 
-    // Check for duplicate username (case-insensitive) AFTER consuming the
-    // code — a consumed code covers the intent and the user still needs to
-    // pick a free username. Tracking this as a failure keeps the limiter
-    // honest.
+    // Check for duplicate username (case-insensitive).
     if (await this.userStore.getByUsername(username)) {
       this.authRateLimiterService.recordFailure(remoteIp);
       this.loggerService.info(`[auth route] register: username '${username}' already taken`);
@@ -490,7 +460,7 @@ export class ServerAuthRouteHandlerService {
     // uses the existing local argon2id path unchanged.
     const backend = this.serverConfigService.getStorageBackend();
     if (backend === 'supabase') {
-      return this.registerViaSupabase(req, remoteIp, username, email, password, now, code);
+      return this.registerViaSupabase(req, remoteIp, username, email, password, now);
     }
 
     // kv backend (or undefined/in-memory fallback): hash with argon2id and
@@ -500,7 +470,7 @@ export class ServerAuthRouteHandlerService {
       const hash = await this.argon2idHasher.hash(password);
       await this.userStore.create({ username, email, passwordHash: hash, passwordAlgo: 'argon2id', now });
       this.loggerService.info(
-        `[auth register] new account created for '${username}' using code ...${code.slice(-6)} from ${remoteIp}`,
+        `[auth register] new account created for '${username}' from ${remoteIp}`,
       );
       // Reset the limiter on the happy path so a legitimate registration does
       // not push the IP closer to a future lockout.
@@ -533,7 +503,6 @@ export class ServerAuthRouteHandlerService {
    * @param email      Validated, trimmed email address.
    * @param password   Plaintext password (passed to Supabase Auth only).
    * @param now        Current epoch milliseconds.
-   * @param code       Registration code string (for the log entry).
    */
   private async registerViaSupabase(
     req: Request,
@@ -542,7 +511,6 @@ export class ServerAuthRouteHandlerService {
     email: string,
     password: string,
     now: number,
-    code: string,
   ): Promise<Response> {
     let client;
     try {
@@ -615,7 +583,7 @@ export class ServerAuthRouteHandlerService {
     }
 
     this.loggerService.info(
-      `[auth register] new supabase account created for '${username}' using code ...${code.slice(-6)} from ${remoteIp}`,
+      `[auth register] new supabase account created for '${username}' from ${remoteIp}`,
     );
     // Reset the limiter on the happy path.
     this.authRateLimiterService.reset(remoteIp);
@@ -692,158 +660,6 @@ export class ServerAuthRouteHandlerService {
       `[auth route] password changed for '${username}' — revoked ${revoked} sibling session(s)`,
     );
     return this.jsonResponse({ ok: true, revokedSessions: revoked }, 200, req);
-  }
-
-  /**
-   * Handles POST /auth/registration-codes — create a new invite code.
-   *
-   * Only admin users may issue codes. Body: `{ expiresIn?: number (ms), maxUses?: number }`.
-   * expiresIn is relative to `now()`; omit it for no time limit. maxUses defaults to 1.
-   */
-  private async handleCreateRegistrationCode(req: Request): Promise<Response> {
-    const token = this.extractBearerToken(req);
-    const username = token ? this.authSessionService.validateToken(token) : undefined;
-    if (!username) {
-      return this.jsonResponse({ ok: false, message: 'unauthorized' }, 401, req);
-    }
-
-    // Restrict code creation to admin users only.
-    const requestingUser = await this.userStore.getByUsername(username);
-    if (!requestingUser?.isAdmin) {
-      this.loggerService.warn(`[auth route] registration-codes: non-admin access denied for '${username}'`);
-      return this.jsonResponse({ ok: false, message: 'forbidden' }, 403, req);
-    }
-
-    const contentLength = Number(req.headers.get('content-length') ?? '0');
-    const maxBytes = this.serverConfigService.getAuthMaxBodyBytes();
-    if (contentLength > maxBytes) {
-      return new Response('payload too large', { status: 413, headers: this.corsHeaders(req) });
-    }
-
-    // Body is optional for this endpoint — default to 1-use, no expiry.
-    let body: Record<string, unknown> = {};
-    if (req.headers.get('content-type')?.includes('application/json')) {
-      try {
-        const parsed = await req.json();
-        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-          body = parsed as Record<string, unknown>;
-        }
-      } catch {
-        return new Response('invalid json', { status: 400, headers: this.corsHeaders(req) });
-      }
-    }
-
-    const now = Date.now();
-    const expiresIn = typeof body['expiresIn'] === 'number' ? (body['expiresIn'] as number) : undefined;
-    const expiresAt = expiresIn !== undefined && expiresIn > 0 ? now + expiresIn : null;
-    const maxUses = typeof body['maxUses'] === 'number' && body['maxUses']! > 0
-      ? Math.floor(body['maxUses'] as number)
-      : 1;
-
-    const rec = this.registrationCodeStore.create({
-      createdBy: username,
-      expiresAt,
-      maxUses,
-      now,
-    });
-
-    this.loggerService.info(
-      `[auth route] registration code created by '${username}' (expiresAt=${expiresAt}, maxUses=${maxUses})`,
-    );
-    return this.jsonResponse({ ok: true, code: rec.code, expiresAt: rec.expiresAt, maxUses: rec.maxUses }, 201, req);
-  }
-
-  /**
-   * Handles GET /auth/registration-codes — list active codes for operator use.
-   *
-   * Returns every non-disabled, non-expired code. Only admin users may access
-   * this endpoint.
-   */
-  private async handleListRegistrationCodes(req: Request): Promise<Response> {
-    const token = this.extractBearerToken(req);
-    const username = token ? this.authSessionService.validateToken(token) : undefined;
-    if (!username) {
-      return this.jsonResponse({ ok: false, message: 'unauthorized' }, 401, req);
-    }
-
-    // Restrict code listing to admin users only.
-    const requestingUser = await this.userStore.getByUsername(username);
-    if (!requestingUser?.isAdmin) {
-      this.loggerService.warn(`[auth route] registration-codes: non-admin access denied for '${username}'`);
-      return this.jsonResponse({ ok: false, message: 'forbidden' }, 403, req);
-    }
-
-    const now = Date.now();
-    const visible = this.registrationCodeStore
-      .list()
-      .filter(c => !c.disabled && (c.expiresAt === null || c.expiresAt > now))
-      .map(c => ({
-        code: c.code,
-        createdAt: c.createdAt,
-        createdBy: c.createdBy,
-        expiresAt: c.expiresAt,
-        maxUses: c.maxUses,
-        usedCount: c.usedCount,
-      }));
-
-    return this.jsonResponse({ ok: true, codes: visible }, 200, req);
-  }
-
-  /**
-   * Handles DELETE /auth/registration-codes/:code — idempotent disable.
-   *
-   * Returns 200 whether the code existed, was already disabled, or is
-   * unknown; the endpoint's contract is "ensure this code cannot be used".
-   * Only admin users may disable codes.
-   */
-  private async handleDisableRegistrationCode(req: Request, code: string): Promise<Response> {
-    const token = this.extractBearerToken(req);
-    const username = token ? this.authSessionService.validateToken(token) : undefined;
-    if (!username) {
-      return this.jsonResponse({ ok: false, message: 'unauthorized' }, 401, req);
-    }
-
-    // Restrict code disabling to admin users only.
-    const requestingUser = await this.userStore.getByUsername(username);
-    if (!requestingUser?.isAdmin) {
-      this.loggerService.warn(`[auth route] registration-codes: non-admin access denied for '${username}'`);
-      return this.jsonResponse({ ok: false, message: 'forbidden' }, 403, req);
-    }
-
-    this.registrationCodeStore.disable(code);
-    this.loggerService.info(`[auth route] registration code ...${code.slice(-6)} disabled by '${username}'`);
-    return this.jsonResponse({ ok: true }, 200, req);
-  }
-
-  /**
-   * Handles GET /auth/registration-codes/validate?code=<value>.
-   *
-   * Public, unauthenticated endpoint that reports whether a given registration
-   * code can currently be redeemed. A code is valid when it exists, is not
-   * disabled, has not expired, and has not reached its maximum use count.
-   *
-   * Returns `{ ok: true, valid: boolean }`. Always responds 200 so the client
-   * cannot distinguish "unknown code" from "exhausted code" — both return
-   * `{ valid: false }` without leaking which condition triggered.
-   */
-  private handleValidateRegistrationCode(req: Request, url: URL): Response {
-    const code = (url.searchParams.get('code') ?? '').trim();
-    if (!code) {
-      this.loggerService.debug('[auth route] validate-registration-code: empty code param');
-      return this.jsonResponse({ ok: true, valid: false }, 200, req);
-    }
-
-    const now = Date.now();
-    const rec = this.registrationCodeStore.get(code);
-    const valid = (
-      rec !== undefined &&
-      !rec.disabled &&
-      (rec.expiresAt === null || rec.expiresAt > now) &&
-      rec.usedCount < rec.maxUses
-    );
-
-    this.loggerService.debug(`[auth route] validate-registration-code: ...${code.slice(-6)} valid=${valid}`);
-    return this.jsonResponse({ ok: true, valid }, 200, req);
   }
 
   /**

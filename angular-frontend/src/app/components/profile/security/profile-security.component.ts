@@ -1,77 +1,37 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  OnInit,
   inject,
   signal,
   viewChild,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
-import { Copy, LucideAngularModule } from 'lucide-angular';
 import { AuthService, authIsAdminStore } from '../../../core/auth/auth.service';
 import { NewPasswordFieldsComponent } from '../../ui/new-password-fields/new-password-fields.component';
 
 /**
  * Security settings pane routed at /profile/security.
  *
- * Handles change-password form and, for admin users, registration code
- * creation and management.
+ * Handles the change-password form.
  */
 @Component({
   selector: 'app-profile-security',
   standalone: true,
-  imports: [FormsModule, NewPasswordFieldsComponent, DatePipe, LucideAngularModule],
+  imports: [FormsModule, NewPasswordFieldsComponent],
   templateUrl: './profile-security.component.html',
   styleUrl: './profile-security.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ProfileSecurityComponent implements OnInit {
+export class ProfileSecurityComponent {
   private readonly _authService = inject(AuthService);
   private readonly _nanoService = inject(NanostoresService);
-
-  /** Lucide icon reference for the copy-to-clipboard button. */
-  readonly CopyIcon = Copy;
 
   /** True when the logged-in user has admin privileges. */
   readonly isAdmin = toSignal(this._nanoService.useStore(authIsAdminStore), {
     initialValue: authIsAdminStore.get(),
   });
-
-  // --- Registration code form state ---
-
-  /** Number of registrations the new code may be used for. */
-  readonly regCodeMaxUses = signal(1);
-
-  /**
-   * Expiry for the new code in days from now, or null for no expiry.
-   * The user enters a number in the form; null means the field is empty.
-   */
-  readonly regCodeExpiresInDays = signal<number | null>(null);
-
-  /** The full registration URL built from window.location.origin after a successful creation. */
-  readonly regCodeUrl = signal<string | undefined>(undefined);
-
-  /** The raw code string returned after a successful creation. */
-  readonly regCodeResult = signal<string | undefined>(undefined);
-
-  /** Error message from the last create-code attempt, if any. */
-  readonly regCodeError = signal<string | undefined>(undefined);
-
-  /** True while a create-code request is in-flight. */
-  readonly regCodeSubmitting = signal(false);
-
-  /** Snapshot of active registration codes fetched from the server. */
-  readonly regCodes = signal<Array<{
-    code: string;
-    createdAt: number;
-    createdBy: string;
-    expiresAt: number | null;
-    maxUses: number;
-    usedCount: number;
-  }>>([]);
 
   // --- Change-password form state ---
 
@@ -88,83 +48,6 @@ export class ProfileSecurityComponent implements OnInit {
    * Used to read its `mismatch` signal when gating the submit button.
    */
   readonly newPasswordFields = viewChild(NewPasswordFieldsComponent);
-
-  ngOnInit(): void {
-    // Pre-populate the registration codes list for admin users.
-    if (this.isAdmin()) {
-      void this._loadRegistrationCodes();
-    }
-  }
-
-  /**
-   * Loads the current list of active registration codes from the server and
-   * updates regCodes. Silently ignores errors — the UI shows an empty list.
-   */
-  private async _loadRegistrationCodes(): Promise<void> {
-    const result = await this._authService.listRegistrationCodes();
-    if (result.ok && result.codes) {
-      this.regCodes.set(result.codes);
-    }
-  }
-
-  /**
-   * Submits a create-registration-code request using the current form state.
-   * On success, updates regCodeResult and refreshes the code list.
-   */
-  async submitCreateRegistrationCode(): Promise<void> {
-    this.regCodeResult.set(undefined);
-    this.regCodeError.set(undefined);
-    this.regCodeUrl.set(undefined);
-    this.regCodeSubmitting.set(true);
-
-    try {
-      const expiresInDays = this.regCodeExpiresInDays();
-      const expiresIn = expiresInDays !== null && expiresInDays > 0
-        ? expiresInDays * 24 * 60 * 60 * 1000
-        : undefined;
-
-      const result = await this._authService.createRegistrationCode({
-        maxUses: this.regCodeMaxUses(),
-        expiresIn,
-      });
-
-      if (result.ok && result.code) {
-        // Build the full registration URL so the admin can share a direct link.
-        const url = `${window.location.origin}?registrationCode=${encodeURIComponent(result.code)}`;
-        this.regCodeResult.set(result.code);
-        this.regCodeUrl.set(url);
-        await this._loadRegistrationCodes();
-      } else {
-        this.regCodeError.set(result.message ?? 'Failed to create code');
-      }
-    } finally {
-      this.regCodeSubmitting.set(false);
-    }
-  }
-
-  /**
-   * Disables the given registration code and refreshes the list.
-   */
-  async disableRegistrationCode(code: string): Promise<void> {
-    await this._authService.disableRegistrationCode(code);
-    await this._loadRegistrationCodes();
-  }
-
-  /**
-   * Builds a full registration URL for the given code using the current window origin.
-   * Used both for the post-creation result area and for per-row copy buttons.
-   */
-  buildRegCodeUrl(code: string): string {
-    return `${window.location.origin}?registrationCode=${encodeURIComponent(code)}`;
-  }
-
-  /**
-   * Copies the given registration URL to the clipboard.
-   * Falls back silently when the Clipboard API is unavailable.
-   */
-  copyRegCodeUrl(url: string): void {
-    navigator.clipboard.writeText(url).catch(() => undefined);
-  }
 
   /**
    * Submits the password change request.

@@ -349,8 +349,8 @@ const printSetAdminHelp = (): void => {
   console.log(
     `Usage: deno task auth:users set-admin --username <name> --admin <true|false> [--kv <path>]
 
-Grants or revokes admin privileges for an existing user account. Admin users may
-create, list, and disable registration codes, and have access to the debug overlay.
+Grants or revokes admin privileges for an existing user account. Admin users
+have access to the debug overlay.
 Promotion is operator-only; there is no HTTP API for this operation.
 
 Options:
