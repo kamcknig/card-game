@@ -102,13 +102,16 @@ export class DenoKvUserStore implements UserStore {
    * Creates a new user row and persists it to KV.
    *
    * Throws when a user with the same (lowercased) username already exists.
+   * Returns a resolved `Promise<UserRecord>` to satisfy the {@link UserStore}
+   * interface (the Supabase implementation awaits a real DB INSERT; the KV
+   * implementation assigns the id locally and resolves synchronously).
    */
   public create(args: {
     username: string;
     passwordHash: string;
     passwordAlgo: 'argon2id';
     now: number;
-  }): UserRecord {
+  }): Promise<UserRecord> {
     const key = args.username.toLowerCase();
     if (this.cache.has(key)) {
       throw new Error(`[auth users] username already exists: '${args.username}'`);
@@ -139,7 +142,7 @@ export class DenoKvUserStore implements UserStore {
       this.loggerService.warn(`[auth users] id seq update failed: ${err}`);
     });
 
-    return rec;
+    return Promise.resolve(rec);
   }
 
   /**
