@@ -50,7 +50,7 @@ services:
       AUTH_RATE_LIMIT_MAX_ATTEMPTS: "10"
       AUTH_RATE_LIMIT_WINDOW_MS: "60000"
       AUTH_ALLOWED_ORIGINS: "*"
-      STORAGE_BACKEND: "kv"
+      STORAGE_BACKEND: "supabase"
       AUTH_KV_PATH: "./game-data/auth.kv"
       GAME_DATA_KV_PATH: "./game-data/game-data.kv"
       AUTH_MIN_PASSWORD_LENGTH: "10"
