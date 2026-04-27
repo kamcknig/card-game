@@ -155,34 +155,29 @@
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
-// Secondary action — same shape as .login-button but with the panel-style
-// surface so it reads as a less-prominent submit. Kept separate rather than
-// reusing .login-button so future tweaks to the primary action don't
-// accidentally restyle this one.
+// Secondary action — same shape and typography as .login-button so the
+// two read as a paired primary/secondary submit. Uses the Secondary
+// button tokens from docs/design-guidelines.md (action-secondary-bg +
+// border-action) to differentiate the action priority. Kept separate
+// rather than reusing .login-button so future tweaks to the primary
+// action don't accidentally restyle this one.
 .login-resend-submit {
-  border: 1px solid var(--theme-border-subtle);
-  background: var(--theme-surface-panel);
+  border: 1px solid var(--theme-border-action);
+  background: var(--theme-action-secondary-bg);
   color: var(--theme-text-primary);
   border-radius: 6px;
-  padding: 10px 14px;
+  padding: 12px 16px;
   font-family: var(--theme-font-display);
-  font-weight: 600;
-  font-size: 0.85rem;
-  letter-spacing: 0.06em;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  margin-top: 4px;
   cursor: pointer;
+  transition: background 150ms, border-color 120ms, color 120ms;
 
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
-  }
-
-  &:hover:not(:disabled) {
-    background: var(--theme-action-primary-bg);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--theme-border-strong);
-    outline-offset: 2px;
   }
 }
