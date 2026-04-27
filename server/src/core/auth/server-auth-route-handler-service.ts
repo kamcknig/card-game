@@ -594,10 +594,20 @@ export class ServerAuthRouteHandlerService {
     // Provision the Supabase Auth user via signUp (not admin.createUser) so
     // Supabase's built-in confirmation email is sent automatically. admin.createUser
     // creates the user but never triggers the email flow.
+    //
+    // Pass `emailRedirectTo` derived from the request Origin so the confirmation
+    // link points back at whichever frontend initiated the registration
+    // (localhost in dev, the production domain in prod). Without this, Supabase
+    // would substitute the dashboard Site URL into every confirmation email,
+    // which means a single hard-coded environment.
+    const emailRedirectOrigin = this.resolveEmailRedirectOrigin(req);
     const { data, error } = await client.auth.signUp({
       email,
       password,
-      options: { data: { username } },
+      options: {
+        data: { username },
+        ...(emailRedirectOrigin ? { emailRedirectTo: emailRedirectOrigin } : {}),
+      },
     });
 
     if (error) {
@@ -941,10 +951,19 @@ export class ServerAuthRouteHandlerService {
 
     // Provision a Supabase Auth user for this existing local account via signUp
     // (not admin.createUser) so the confirmation email is sent automatically.
+    //
+    // Pass `emailRedirectTo` derived from the request Origin so the confirmation
+    // link points back at whichever frontend initiated the attach-email flow,
+    // mirroring the registration path. See resolveEmailRedirectOrigin for the
+    // allowlist-based validation that prevents redirect-url injection.
+    const emailRedirectOrigin = this.resolveEmailRedirectOrigin(req);
     const { data, error } = await client.auth.signUp({
       email,
       password,
-      options: { data: { username } },
+      options: {
+        data: { username },
+        ...(emailRedirectOrigin ? { emailRedirectTo: emailRedirectOrigin } : {}),
+      },
     });
 
     if (error) {
@@ -1048,5 +1067,32 @@ export class ServerAuthRouteHandlerService {
    */
   private corsHeaders(req?: Request): Record<string, string> {
     return buildCorsHeaders(this.serverConfigService.getAuthAllowedOrigins(), req, 'GET, POST, DELETE, OPTIONS');
+  }
+
+  /**
+   * Resolves the redirect origin to use for Supabase confirmation emails.
+   *
+   * Reads the request `Origin` header and validates it against the same
+   * `AUTH_ALLOWED_ORIGINS` allowlist used for CORS, so an attacker cannot
+   * coerce Supabase into emailing confirmation links pointing at an
+   * attacker-controlled domain. Returns `undefined` when the origin is
+   * missing or unlisted, in which case Supabase falls back to the dashboard
+   * Site URL. When the allowlist is exactly `['*']` (dev-mode wildcard),
+   * the request origin is trusted as-is so local development continues to
+   * work without explicit per-origin configuration.
+   *
+   * @param req  Incoming HTTP request.
+   * @returns    Validated origin (e.g. `https://dominion.turkeysunite.com`) or undefined.
+   */
+  private resolveEmailRedirectOrigin(req: Request): string | undefined {
+    const requestOrigin = req.headers.get('origin');
+    if (!requestOrigin) {
+      return undefined;
+    }
+    const allowed = this.serverConfigService.getAuthAllowedOrigins();
+    if (allowed.includes('*') || allowed.includes(requestOrigin)) {
+      return requestOrigin;
+    }
+    return undefined;
   }
 }
