@@ -97,7 +97,7 @@ automatically per user at login.
 | `POST` | `/auth/register` | public (rate-limited) | Create an account. Body: `{ username, email, password }` |
 | `POST` | `/auth/email` | bearer | Attach an email to a legacy account. Body: `{ email, password }` |
 | `POST` | `/auth/change-password` | bearer | Rotate the caller's password |
-| `GET` | `/auth/validate` | bearer | Validate an existing token. Response includes `needsEmail: boolean` |
+| `GET` | `/auth/validate` | bearer | Validate an existing token and refresh user state. Returns 401 and invalidates the session if: the local user record no longer exists, the account's `disabled` flag is set, or (supabase backend) the Supabase Auth user has been deleted or banned. Response includes `needsEmail: boolean` |
 | `DELETE` | `/auth/logout` | bearer | Invalidate the caller's token |
 | `GET` | `/auth/sessions` | bearer | List the caller's active sessions |
 | `DELETE` | `/auth/sessions[?keepCurrent=true]` | bearer | Revoke the caller's sessions |

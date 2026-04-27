@@ -77,6 +77,43 @@ behind email verification. The Inbucket server is configured in the
 When `STORAGE_BACKEND=kv`, no email is sent at registration and no
 confirmation step exists.
 
+### Supabase SMTP (hosted project)
+
+When targeting a hosted Supabase project (not the local CLI stack), Supabase's
+free tier allows only 2 outbound auth emails per hour. For any real usage,
+configure a custom SMTP provider in the Supabase dashboard under
+**Authentication → SMTP Settings**. The project uses [Resend](https://resend.com)
+as its SMTP provider:
+
+| Field | Value |
+|-------|-------|
+| Host | `smtp.resend.com` |
+| Port | `465` |
+| Username | `resend` |
+| Password | your Resend API key (`re_...`) |
+| Sender email | a verified address on your Resend domain |
+
+A verified sending domain must be configured in Resend before outbound email
+works. The confirmation email link uses the **Site URL** configured in
+**Authentication → URL Configuration** — set this to the frontend URL
+(e.g. `http://localhost:51455` for local dev or the production FQDN).
+
+### Applying Supabase migrations
+
+SQL migrations live in `supabase/migrations/`. To apply them to a hosted
+Supabase project:
+
+```bash
+# Link to the project once (project-ref is the ID in the dashboard URL)
+supabase link --project-ref <project-ref>
+
+# Push pending migrations
+supabase db push
+```
+
+`supabase db push` is idempotent — it only applies migrations that have not
+been recorded in the project's migration history table.
+
 ## Docker
 
 Docker images are built from the `docker/` directory. Both Dockerfiles expect to be built from the repository root so they can copy the `shared/`, `server/`, and `angular-frontend/` directories.

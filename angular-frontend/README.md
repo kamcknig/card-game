@@ -98,6 +98,19 @@ confirmation before the first login. After registering, the user receives a
 confirmation email with a link to click. The login form surfaces a clear error
 if the user attempts to sign in before confirming.
 
+### Single-session enforcement and cross-tab behaviour
+
+The server enforces one active socket connection per user. When a new tab or
+device logs in, the server sends a `sessionTakenOver` event to any existing
+socket for that user and disconnects it.
+
+On the client side, when one tab logs in the other open tabs detect the new
+`authToken` in localStorage via the `storage` event and immediately disconnect
+their sockets so they cannot compete with the new session. The displaced tabs
+navigate to `/login`. Refreshing a displaced tab re-reads the token from
+localStorage and re-establishes the session, which in turn displaces whichever
+tab currently holds it — this escalation is intentional.
+
 ### Legacy-user add-email gate
 
 Users whose accounts predate the email-registration feature have `email = null`
