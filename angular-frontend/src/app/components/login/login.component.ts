@@ -133,6 +133,45 @@ export class LoginComponent {
   }
 
   /**
+   * Fires when the resend email input loses focus.
+   *
+   * Validates the address format with the same EMAIL_REGEX used by the
+   * register form so the user gets a format error before clicking Send.
+   * No-ops when the field is empty so an untouched blur (e.g. tabbing
+   * past) does not flag a phantom error. Does NOT check availability —
+   * the resend endpoint is intentionally not an enumeration oracle, so
+   * we never call /auth/check-email here.
+   */
+  onResendEmailBlur(): void {
+    const email = this.resendEmail().trim();
+    if (!email) {
+      this.resendError.set(undefined);
+      return;
+    }
+    if (!EMAIL_REGEX.test(email)) {
+      this.resendError.set('Enter a valid email address');
+      return;
+    }
+    this.resendError.set(undefined);
+  }
+
+  /**
+   * Updates the resend email signal and clears any standing error message.
+   *
+   * Routed through a method (instead of an inline signal.set) so a blur-
+   * generated 'Enter a valid email address' error does not persist while
+   * the user types a fix — the moment they edit the field, stale feedback
+   * is cleared. Submission re-validates so an invalid value never reaches
+   * the server.
+   */
+  onResendEmailInput(value: string): void {
+    this.resendEmail.set(value);
+    if (this.resendError()) {
+      this.resendError.set(undefined);
+    }
+  }
+
+  /**
    * Submits the resend-confirmation request to the server.
    *
    * The server intentionally responds with the same generic success
