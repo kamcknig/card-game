@@ -43,9 +43,7 @@ A single `STORAGE_BACKEND` env var selects the persistence layer for **both** au
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `STORAGE_BACKEND` | _(required for normal operation)_ | Selects the storage backend. Allowed values: `kv` (Deno KV) or `supabase`. Unset/invalid values produce a `STORAGE_BACKEND_INVALID` health issue and the in-memory fallback stores are used (no persistence) |
-| `AUTH_KV_PATH` | `./game-data/auth.kv` | Filesystem path to the Deno KV auth store. Used when `STORAGE_BACKEND=kv`. Use `':memory:'` for dev/tests |
-| `GAME_DATA_KV_PATH` | `./game-data/game-data.kv` | Filesystem path to the Deno KV game-data store. Used when `STORAGE_BACKEND=kv` |
+| `STORAGE_BACKEND` | _(required for normal operation)_ | Selects the storage backend. Allowed values: `in-memory` (no persistence, dev/test only) or `supabase`. Unset/invalid values produce a `STORAGE_BACKEND_INVALID` health issue and the in-memory fallback stores are used (no persistence) |
 | `SUPABASE_URL` | _(required for `supabase`)_ | Supabase project URL. Required when `STORAGE_BACKEND=supabase` |
 | `SUPABASE_SERVICE_ROLE_KEY` | _(required for `supabase`)_ | Supabase service-role key. Server-side only — bypasses RLS. NEVER commit to git or expose to a browser |
 
@@ -55,7 +53,7 @@ Issue codes the storage layer can register:
 
 | Code | Level | Cause |
 |------|-------|-------|
-| `STORAGE_BACKEND_INVALID` | error | `STORAGE_BACKEND` env var is unset or not one of `kv`/`supabase` |
+| `STORAGE_BACKEND_INVALID` | error | `STORAGE_BACKEND` env var is unset or not one of `in-memory`/`supabase` |
 | `SUPABASE_CONFIG_MISSING` | error | `STORAGE_BACKEND=supabase` but `SUPABASE_URL` and/or `SUPABASE_SERVICE_ROLE_KEY` are unset |
 | `SUPABASE_OPEN_FAILED` | error | Connection to Supabase or initial table reads failed at startup |
 
@@ -79,8 +77,9 @@ New accounts are created via open email-based registration at
 Supabase Auth is the identity authority: registration provisions a Supabase Auth
 user and sends a confirmation email; login is resolved via
 `supabase.auth.signInWithPassword` after the server looks up the email for the
-supplied username. When `STORAGE_BACKEND=kv`, argon2id handles password
-verification locally and no email is sent.
+supplied username. When `STORAGE_BACKEND=in-memory`, argon2id handles password
+verification locally, no email is sent, and all data is lost when the process
+exits.
 
 **Legacy users** (rows with `email = null`, predating this feature) continue to
 log in using the local argon2id fallback. On their next login the server includes
@@ -108,23 +107,20 @@ automatically per user at login.
 
 Before any users exist, `/auth/login` rejects every request, so the very first
 account must be provisioned directly against the configured backend. The CLI
-script honours `STORAGE_BACKEND` and opens either the Deno KV file or the
-Supabase project accordingly.
+script honours `STORAGE_BACKEND` and targets the appropriate backend.
 
-When `STORAGE_BACKEND=kv`, the running server reads the KV store directly on
-every call, but the underlying SQLite file can still experience lock contention
-if the CLI and server both hold it simultaneously. Stop the server before running
-the CLI scripts below for the KV backend, then restart. The Supabase backend has
-no such constraint — DB writes are visible to the running server on its next read.
+When `STORAGE_BACKEND=supabase`, the script talks to the Supabase project via the
+service-role key and may run while the server is up — DB writes are visible to
+the running server on its next read. When `STORAGE_BACKEND=in-memory`, all state
+lives only in the running process and cannot be bootstrapped via CLI before
+startup; use open registration at `POST /auth/register` to create the first
+account once the server is running.
 
 ```bash
-# 1. Stop the server (kv backend only — to avoid SQLite lock contention).
-# 2. Create the first user directly in the store.
-deno task auth:users create --username <name> --password <pw> [--kv <path>]
+# 1. Create the first user directly in the store (supabase backend).
+deno task auth:users create --username <name> --password <pw>
 
-# 3. Restart the server.
-
-# 4. Log in to mint a session token.
+# 2. Log in to mint a session token.
 curl -sSX POST http://localhost:3001/auth/login \
   -H 'content-type: application/json' \
   -d '{"username":"<name>","password":"<pw>"}'
@@ -136,35 +132,16 @@ directly — no registration code is needed.
 ### CLI scripts
 
 The user management script uses the backend selected by `STORAGE_BACKEND`. When
-that value is `kv`, it writes to the Deno KV store directly and should be run
-with the server stopped to avoid SQLite lock contention. When it is `supabase`,
-the script talks to the Supabase project via the service-role key and may run
-while the server is up. Intended for bootstrapping and operator maintenance only.
+that value is `supabase`, the script talks to the Supabase project via the
+service-role key and may run while the server is up. The `in-memory` backend
+does not support CLI user management — all state is transient. Intended for
+bootstrapping and operator maintenance only.
 
 ```bash
 # User management: create | delete | set-password | set-email | list | clear
 # Run a subcommand with --help for its options.
 deno task auth:users <command> [options]
 ```
-
-### Migrating from KV to Supabase
-
-When switching from `STORAGE_BACKEND=kv` to `STORAGE_BACKEND=supabase`, the
-`migrate-kv-to-supabase` task lifts every row from both KV files into the
-corresponding Supabase tables. Run it once after applying the SQL migration in
-`supabase/migrations/` to your Supabase project. Re-runs are idempotent.
-
-```bash
-AUTH_KV_PATH=./game-data/auth.kv \
-GAME_DATA_KV_PATH=./game-data/game-data.kv \
-SUPABASE_URL=https://<project>.supabase.co \
-SUPABASE_SERVICE_ROLE_KEY=<service-role-key> \
-deno task migrate-kv-to-supabase
-```
-
-The script prints per-table insert counts and a `setval` SQL statement for the
-`auth_users` identity sequence — run that statement in Supabase Studio so
-subsequent inserts do not collide with migrated ids.
 
 ## Other Commands
 

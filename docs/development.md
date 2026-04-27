@@ -74,8 +74,8 @@ The `[auth.email]` section of `supabase/config.toml` has
 behind email verification. The Inbucket server is configured in the
 `[inbucket]` section of the same file (port `54324`).
 
-When `STORAGE_BACKEND=kv`, no email is sent at registration and no
-confirmation step exists.
+When `STORAGE_BACKEND=in-memory`, no email is sent at registration and no
+confirmation step exists. All data is lost when the server process exits.
 
 ### Supabase SMTP (hosted project)
 
@@ -201,7 +201,7 @@ This starts the game server on port 3001 and the Angular dev server on port 5145
 | `SUPABASE_URL` | `STORAGE_BACKEND=supabase` | Project URL — not secret but kept alongside the key for symmetry |
 | `SUPABASE_SERVICE_ROLE_KEY` | `STORAGE_BACKEND=supabase` | Service-role key. Bypasses RLS — never commit. The repo's `.gitignore` rule `**/.env` keeps the file out of version control |
 
-If you switch the dev stack to `STORAGE_BACKEND=kv`, neither variable needs to be set; Compose will pass empty strings through and the kv branch ignores them.
+If you switch the dev stack to `STORAGE_BACKEND=in-memory`, neither variable needs to be set; Compose will pass empty strings through and the in-memory branch ignores them.
 
 **Important — rebuild when dependencies change**: The dev frontend image installs `node_modules` at build time (inside the container) so the correct musl-compatible binaries are used on Alpine Linux. When `angular-frontend/package.json` or `shared/package.json` changes, the image must be rebuilt:
 
@@ -294,9 +294,7 @@ Both apps have external ingress and are accessible via their `.azurecontainerapp
 | `END_MATCH_ON_NO_HUMANS` | `true` | End matches when all humans leave |
 | `MATCH_STATE_MERGE_ENABLED` | `true` | Enable match state merging |
 | `AUTH_ALLOWED_ORIGINS` | _(required)_ | Comma-separated CORS origin allowlist for `/auth/*` (e.g. the frontend FQDN) |
-| `STORAGE_BACKEND` | `kv` | Unified storage backend — drives both auth and game data. Allowed values: `kv` or `supabase`. When unset/invalid the server still starts and `/status` reports a `STORAGE_BACKEND_INVALID` error so the frontend can render `/server-status` instead of crashing — production revisions should always set it explicitly |
-| `AUTH_KV_PATH` | `./game-data/auth.kv` | Path to the Deno KV auth store. Used when `STORAGE_BACKEND=kv` (mount Azure Files at the containing directory for durability) |
-| `GAME_DATA_KV_PATH` | `./game-data/game-data.kv` | Path to the Deno KV game-data store. Used when `STORAGE_BACKEND=kv` |
+| `STORAGE_BACKEND` | `supabase` | Unified storage backend — drives both auth and game data. Allowed values: `in-memory` (no persistence, dev/test only) or `supabase`. When unset/invalid the server still starts and `/status` reports a `STORAGE_BACKEND_INVALID` error so the frontend can render `/server-status` instead of crashing — production revisions should always set it explicitly |
 | `SUPABASE_URL` | _(required for `supabase`)_ | Supabase project URL. Required when `STORAGE_BACKEND=supabase` |
 | `SUPABASE_SERVICE_ROLE_KEY` | _(required for `supabase`)_ | Supabase service-role key. Required when `STORAGE_BACKEND=supabase` — store as a Container Apps secret, never as a plain env var |
 | `AUTH_LOCKOUT_THRESHOLD` | `5` | Failed logins before per-account lockout |
