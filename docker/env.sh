@@ -40,7 +40,11 @@ WS_HOST="${WS_HOST:-http://localhost:3000}"
 BACKEND_HOST=$(echo "$WS_HOST" | sed -E 's|^[a-zA-Z]+://||; s|/.*$||')
 
 # Only emit nginx config when running inside an nginx image.
-if [ -d /etc/nginx/conf.d ]; then
+# Files are written to /etc/nginx/snippets/ rather than /etc/nginx/conf.d/ so
+# that nginx's main config wildcard (include conf.d/*.conf at http level) does
+# not re-include them outside a server block, which would cause a fatal startup
+# error for the location directives in proxy-locations.conf.
+if [ -d /etc/nginx/snippets ]; then
   # Generated security-headers include. Regenerated on every container start.
   #
   # Directives:
@@ -57,7 +61,7 @@ if [ -d /etc/nginx/conf.d ]; then
   #   frame-ancestors 'none'     -- equivalent to X-Frame-Options: DENY
   #   base-uri 'self'            -- prevent base-tag injection attacks
   #   form-action 'self'         -- prevent form hijacking
-  cat <<NGINX_EOF > /etc/nginx/conf.d/security-headers.conf
+  cat <<NGINX_EOF > /etc/nginx/snippets/security-headers.conf
 # Generated at container start by env.sh — do not edit by hand.
 add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';" always;
 add_header X-Content-Type-Options "nosniff" always;
@@ -70,7 +74,7 @@ NGINX_EOF
   # everything stays same-origin in the browser. Each location reuses the
   # same proxy_set_header block; Socket.IO additionally needs the upgrade
   # headers and an extended read timeout for long-lived WebSocket frames.
-  cat <<NGINX_EOF > /etc/nginx/conf.d/proxy-locations.conf
+  cat <<NGINX_EOF > /etc/nginx/snippets/proxy-locations.conf
 # Generated at container start by env.sh — do not edit by hand.
 # Upstream: ${WS_HOST}
 
