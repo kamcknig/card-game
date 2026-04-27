@@ -530,19 +530,17 @@ export class ServerAuthRouteHandlerService {
       return this.jsonResponse({ ok: false, message: 'Registration failed' }, 500, req);
     }
 
-    // Provision the Supabase Auth user. email_confirm: false means the user
-    // receives a confirmation email and cannot log in until they click the
-    // link (controlled by the Supabase project's email-confirmation setting).
-    const { data, error } = await client.auth.admin.createUser({
+    // Provision the Supabase Auth user via signUp (not admin.createUser) so
+    // Supabase's built-in confirmation email is sent automatically. admin.createUser
+    // creates the user but never triggers the email flow.
+    const { data, error } = await client.auth.signUp({
       email,
       password,
-      email_confirm: false,
-      user_metadata: { username },
+      options: { data: { username } },
     });
 
     if (error) {
-      // A `user_already_exists` code means the email is already registered in
-      // Supabase Auth — treat it the same as a local duplicate-email collision.
+      // `user_already_exists` can surface if the email is already registered.
       if (error.code === 'user_already_exists') {
         this.authRateLimiterService.recordFailure(remoteIp);
         this.loggerService.info(
@@ -551,15 +549,29 @@ export class ServerAuthRouteHandlerService {
         return this.jsonResponse({ ok: false, message: 'Email already registered' }, 409, req);
       }
 
+      // Supabase-specific error code returned when the project's outbound email
+      // quota is exhausted (free tier: 2 emails/hour). Surface a clear message
+      // so the user knows to wait rather than retrying immediately.
+      if (error.code === 'over_email_send_rate_limit') {
+        this.loggerService.warn(
+          `[auth route] register (supabase): email rate limit hit for '${username}' from ${remoteIp}`,
+        );
+        return this.jsonResponse(
+          { ok: false, message: 'Too many confirmation emails sent — please wait an hour and try again' },
+          429,
+          req,
+        );
+      }
+
       this.loggerService.error(
-        `[auth route] register (supabase): admin.createUser failed for '${username}': ${error.message} (code=${error.code})`,
+        `[auth route] register (supabase): signUp failed for '${username}': ${error.message} (code=${error.code})`,
       );
       return this.jsonResponse({ ok: false, message: 'Registration failed' }, 500, req);
     }
 
     if (!data.user) {
       // Defensive: success response with no user object.
-      this.loggerService.error(`[auth route] register (supabase): admin.createUser returned ok but no user for '${username}'`);
+      this.loggerService.error(`[auth route] register (supabase): signUp returned ok but no user for '${username}'`);
       return this.jsonResponse({ ok: false, message: 'Registration failed' }, 500, req);
     }
 
@@ -864,21 +876,16 @@ export class ServerAuthRouteHandlerService {
       return this.jsonResponse({ ok: false, message: 'Failed to attach email' }, 500, req);
     }
 
-    // Provision a new Supabase Auth user for this existing local account.
-    // email_confirm: false means the user must confirm their email before
-    // signing in via Supabase Auth (controlled by the project's email
-    // confirmation setting).
-    const { data, error } = await client.auth.admin.createUser({
+    // Provision a Supabase Auth user for this existing local account via signUp
+    // (not admin.createUser) so the confirmation email is sent automatically.
+    const { data, error } = await client.auth.signUp({
       email,
       password,
-      email_confirm: false,
-      user_metadata: { username },
+      options: { data: { username } },
     });
 
     if (error) {
-      // A `user_already_exists` code means the email is already registered in
-      // Supabase Auth — treat it as a duplicate-email collision even though the
-      // local store check passed (race condition or out-of-band creation).
+      // `user_already_exists` can surface if the email is already in Supabase Auth.
       if (error.code === 'user_already_exists') {
         this.loggerService.info(
           `[auth route] POST /auth/email (supabase): email already exists in Supabase Auth for '${username}'`,
@@ -886,8 +893,22 @@ export class ServerAuthRouteHandlerService {
         return this.jsonResponse({ ok: false, message: 'Email is already registered' }, 409, req);
       }
 
+      // Supabase-specific error code returned when the project's outbound email
+      // quota is exhausted (free tier: 2 emails/hour). Surface a clear message
+      // so the user knows to wait rather than retrying immediately.
+      if (error.code === 'over_email_send_rate_limit') {
+        this.loggerService.warn(
+          `[auth route] POST /auth/email (supabase): email rate limit hit for '${username}'`,
+        );
+        return this.jsonResponse(
+          { ok: false, message: 'Too many confirmation emails sent — please wait an hour and try again' },
+          429,
+          req,
+        );
+      }
+
       this.loggerService.error(
-        `[auth route] POST /auth/email (supabase): admin.createUser failed for '${username}': ${error.message} (code=${error.code})`,
+        `[auth route] POST /auth/email (supabase): signUp failed for '${username}': ${error.message} (code=${error.code})`,
       );
       return this.jsonResponse({ ok: false, message: 'Failed to attach email' }, 500, req);
     }
@@ -895,7 +916,7 @@ export class ServerAuthRouteHandlerService {
     if (!data.user) {
       // Defensive: Supabase returned success but no user object.
       this.loggerService.error(
-        `[auth route] POST /auth/email (supabase): admin.createUser returned ok but no user for '${username}'`,
+        `[auth route] POST /auth/email (supabase): signUp returned ok but no user for '${username}'`,
       );
       return this.jsonResponse({ ok: false, message: 'Failed to attach email' }, 500, req);
     }
