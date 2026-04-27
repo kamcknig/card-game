@@ -144,7 +144,7 @@ Deno.test('UserAccountAuthProvider: locks account after threshold failures', asy
     await provider.authenticate({ username: 'Alice', password: 'wrong' });
     await provider.authenticate({ username: 'Alice', password: 'wrong' });
 
-    const lockedUntil = userStore.getById(rec.id)!.lockedUntil;
+    const lockedUntil = (await userStore.getById(rec.id))!.lockedUntil;
     assertEquals(typeof lockedUntil, 'number');
     assertEquals(lockedUntil! > clock.now(), true);
 
@@ -189,7 +189,7 @@ Deno.test('UserAccountAuthProvider: rehashes bcrypt row to argon2id on successfu
     const res = await provider.authenticate({ username: 'Alice', password: 'strongpw-xyz' });
     assertEquals(res.ok, true);
     // The store should now hold an argon2id hash.
-    assertEquals(userStore.getById(rec.id)?.passwordAlgo, 'argon2id');
+    assertEquals((await userStore.getById(rec.id))?.passwordAlgo, 'argon2id');
   });
 });
 

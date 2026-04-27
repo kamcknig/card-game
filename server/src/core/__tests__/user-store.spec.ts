@@ -30,8 +30,8 @@ const runConformanceSuite = (name: string, factory: () => Promise<UserStore>) =>
       now: 1_000,
     });
     assertEquals(rec.username, 'Alice');
-    assertEquals(store.getByUsername('alice')?.id, rec.id);
-    assertEquals(store.getByUsername('ALICE')?.id, rec.id);
+    assertEquals((await store.getByUsername('alice'))?.id, rec.id);
+    assertEquals((await store.getByUsername('ALICE'))?.id, rec.id);
   });
 
   Deno.test(`${name}: create() refuses duplicate username (case-insensitive)`, testOpts, async () => {
@@ -49,18 +49,20 @@ const runConformanceSuite = (name: string, factory: () => Promise<UserStore>) =>
   Deno.test(`${name}: recordFailure() increments failedAttempts`, testOpts, async () => {
     const store = await factory();
     const rec = await store.create({ username: 'Alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: 1 });
-    const updated = store.recordFailure(rec.id, 2);
+    const updated = await store.recordFailure(rec.id, 2);
     assertEquals(updated.failedAttempts, 1);
-    assertEquals(store.recordFailure(rec.id, 3).failedAttempts, 2);
+    assertEquals((await store.recordFailure(rec.id, 3)).failedAttempts, 2);
   });
 
   Deno.test(`${name}: resetFailures() clears counters and lock`, testOpts, async () => {
     const store = await factory();
     const rec = await store.create({ username: 'Alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: 1 });
-    store.recordFailure(rec.id, 2);
+    await store.recordFailure(rec.id, 2);
     store.setLockedUntil(rec.id, 9_999);
     store.resetFailures(rec.id);
-    const after = store.getById(rec.id)!;
+    // Yield to allow fire-and-forget KV writes to complete before reading back.
+    await new Promise(r => setTimeout(r, 50));
+    const after = (await store.getById(rec.id))!;
     assertEquals(after.failedAttempts, 0);
     assertEquals(after.lockedUntil, null);
   });
@@ -69,7 +71,9 @@ const runConformanceSuite = (name: string, factory: () => Promise<UserStore>) =>
     const store = await factory();
     const rec = await store.create({ username: 'Alice', passwordHash: 'h1', passwordAlgo: 'argon2id', now: 1 });
     store.updatePassword(rec.id, 'h2', 'bcrypt', 100);
-    const after = store.getById(rec.id)!;
+    // Yield to allow fire-and-forget KV writes to complete before reading back.
+    await new Promise(r => setTimeout(r, 50));
+    const after = (await store.getById(rec.id))!;
     assertEquals(after.passwordHash, 'h2');
     assertEquals(after.passwordAlgo, 'bcrypt');
     assertEquals(after.passwordUpdatedAt, 100);
@@ -79,9 +83,12 @@ const runConformanceSuite = (name: string, factory: () => Promise<UserStore>) =>
     const store = await factory();
     const rec = await store.create({ username: 'Alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: 1 });
     store.setDisabled(rec.id, true);
-    assertEquals(store.getById(rec.id)?.disabled, true);
+    // Yield to allow fire-and-forget KV writes to complete before reading back.
+    await new Promise(r => setTimeout(r, 50));
+    assertEquals((await store.getById(rec.id))?.disabled, true);
     store.setDisabled(rec.id, false);
-    assertEquals(store.getById(rec.id)?.disabled, false);
+    await new Promise(r => setTimeout(r, 50));
+    assertEquals((await store.getById(rec.id))?.disabled, false);
   });
 };
 
