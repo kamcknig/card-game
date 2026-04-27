@@ -2,28 +2,28 @@ import { provideExperimentalZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 
-import { AuthService, pendingRegistrationCodeStore } from '../../core/auth/auth.service';
+import { AuthService } from '../../core/auth/auth.service';
 import { LoginComponent } from './login.component';
 
 /**
  * Stub AuthService that avoids real fetch calls during tests. The debounced
- * username-availability pipeline in LoginComponent invokes
- * `checkUsernameAvailability`; returning a resolved promise keeps it quiet.
+ * availability pipelines in LoginComponent invoke checkUsernameAvailability
+ * and checkEmailAvailability; returning resolved promises keeps them quiet.
  */
 class AuthServiceStub {
   loginResult: { ok: boolean; message?: string } = { ok: true };
   registerResult: { ok: boolean; message?: string } = { ok: true };
   usernameAvailable = true;
-  validateCodeResult: { ok: boolean; valid: boolean } = { ok: true, valid: true };
+  emailAvailable = true;
 
   login = jest.fn().mockImplementation(async () => this.loginResult);
   register = jest.fn().mockImplementation(async () => this.registerResult);
   checkUsernameAvailability = jest
     .fn()
     .mockImplementation(async () => this.usernameAvailable);
-  validateRegistrationCode = jest
+  checkEmailAvailability = jest
     .fn()
-    .mockImplementation(async () => this.validateCodeResult);
+    .mockImplementation(async () => this.emailAvailable);
 }
 
 /**
@@ -43,9 +43,6 @@ describe('LoginComponent', () => {
     authStub = new AuthServiceStub();
     routerStub = new RouterStub();
 
-    // Ensure no deep-link code is staged before the component is constructed.
-    pendingRegistrationCodeStore.set(undefined);
-
     await TestBed.configureTestingModule({
       imports: [LoginComponent],
       providers: [
@@ -61,11 +58,6 @@ describe('LoginComponent', () => {
     fixture.detectChanges();
   });
 
-  afterEach(() => {
-    // Guarantee the store is empty after each test regardless of what the test did.
-    pendingRegistrationCodeStore.set(undefined);
-  });
-
   it('should create', () => {
     expect(component).toBeTruthy();
   });
@@ -73,31 +65,31 @@ describe('LoginComponent', () => {
   it('starts in signin mode with empty fields', () => {
     expect(component.mode()).toBe('signin');
     expect(component.username()).toBe('');
+    expect(component.email()).toBe('');
     expect(component.password()).toBe('');
     expect(component.confirmPassword()).toBe('');
-    expect(component.registrationCode()).toBe('');
   });
 
   it('setMode clears every field and transient message', () => {
     // Populate some state as if the user was mid-flow.
     component.username.set('alice');
+    component.email.set('alice@example.com');
     component.password.set('pw');
     component.confirmPassword.set('pw2');
-    component.registrationCode.set('abcd');
     component.errorMessage.set('bad');
     component.successMessage.set('good');
-    component.usernameError.set('taken');
+    component.usernameStatus.set({ checking: false, error: 'taken' });
 
     component.setMode('register');
 
     expect(component.mode()).toBe('register');
     expect(component.username()).toBe('');
+    expect(component.email()).toBe('');
     expect(component.password()).toBe('');
     expect(component.confirmPassword()).toBe('');
-    expect(component.registrationCode()).toBe('');
     expect(component.errorMessage()).toBeUndefined();
     expect(component.successMessage()).toBeUndefined();
-    expect(component.usernameError()).toBeUndefined();
+    expect(component.usernameStatus().error).toBeUndefined();
   });
 
   it('toggleShowPassword flips the signin password visibility signal', () => {
@@ -132,13 +124,14 @@ describe('LoginComponent', () => {
   it('register: successful submit returns to signin with a success toast and prefilled username', async () => {
     component.setMode('register');
     component.username.set('alice');
+    component.email.set('alice@example.com');
     component.password.set('correcthorse');
     component.confirmPassword.set('correcthorse');
-    component.registrationCode.set('code123');
 
     await component.onSubmit();
 
-    expect(authStub.register).toHaveBeenCalledWith('alice', 'correcthorse', 'code123');
+    // register signature: (username, email, password)
+    expect(authStub.register).toHaveBeenCalledWith('alice', 'alice@example.com', 'correcthorse');
     expect(component.mode()).toBe('signin');
     expect(component.username()).toBe('alice');
     expect(component.successMessage()).toContain('Account created');
@@ -149,7 +142,6 @@ describe('LoginComponent', () => {
     component.username.set('alice');
     component.password.set('correcthorse');
     component.confirmPassword.set('WRONG');
-    component.registrationCode.set('code123');
 
     await component.onSubmit();
 
@@ -157,30 +149,17 @@ describe('LoginComponent', () => {
     expect(component.errorMessage()).toBe('Passwords do not match');
   });
 
-  it('register: missing registration code is reported before calling register', async () => {
-    component.setMode('register');
-    component.username.set('alice');
-    component.password.set('correcthorse');
-    component.confirmPassword.set('correcthorse');
-    component.registrationCode.set('');
-
-    await component.onSubmit();
-
-    expect(authStub.register).not.toHaveBeenCalled();
-    expect(component.errorMessage()).toBe('Registration code is required');
-  });
-
   it('register: server failure message is surfaced to the user', async () => {
-    authStub.registerResult = { ok: false, message: 'Invalid or expired registration code' };
+    authStub.registerResult = { ok: false, message: 'Registration failed' };
     component.setMode('register');
     component.username.set('alice');
+    component.email.set('alice@example.com');
     component.password.set('correcthorse');
     component.confirmPassword.set('correcthorse');
-    component.registrationCode.set('code123');
 
     await component.onSubmit();
 
-    expect(component.errorMessage()).toBe('Invalid or expired registration code');
+    expect(component.errorMessage()).toBe('Registration failed');
     expect(component.mode()).toBe('register');
   });
 
@@ -193,114 +172,50 @@ describe('LoginComponent', () => {
     expect(component.errorMessage()).toBe('Username and password are required');
   });
 
-  // --- Deep-link pre-fill and code validation ---
+  // --- onEmailBlur availability check ---
 
-  it('constructor: switches to register mode and pre-fills code from pendingRegistrationCodeStore', async () => {
-    pendingRegistrationCodeStore.set('DEEP-CODE-123');
+  it('onEmailBlur: empty email clears status without calling the server', async () => {
+    component.setMode('register');
+    component.email.set('');
+    await component.onEmailBlur();
 
-    await TestBed.resetTestingModule();
-    await TestBed.configureTestingModule({
-      imports: [LoginComponent],
-      providers: [
-        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
-        provideExperimentalZonelessChangeDetection(),
-        { provide: AuthService, useValue: authStub },
-        { provide: Router, useValue: routerStub },
-      ],
-    }).compileComponents();
-
-    const f = TestBed.createComponent(LoginComponent);
-    f.detectChanges();
-
-    expect(f.componentInstance.mode()).toBe('register');
-    expect(f.componentInstance.registrationCode()).toBe('DEEP-CODE-123');
+    expect(authStub.checkEmailAvailability).not.toHaveBeenCalled();
+    expect(component.emailStatus()).toEqual({ checking: false });
   });
 
-  it('constructor: clears pendingRegistrationCodeStore after reading it', async () => {
-    pendingRegistrationCodeStore.set('DEEP-CODE-123');
+  it('onEmailBlur: invalid email sets an error without calling the server', async () => {
+    component.setMode('register');
+    component.email.set('not-an-email');
+    await component.onEmailBlur();
 
-    await TestBed.resetTestingModule();
-    await TestBed.configureTestingModule({
-      imports: [LoginComponent],
-      providers: [
-        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
-        provideExperimentalZonelessChangeDetection(),
-        { provide: AuthService, useValue: authStub },
-        { provide: Router, useValue: routerStub },
-      ],
-    }).compileComponents();
-
-    TestBed.createComponent(LoginComponent);
-
-    expect(pendingRegistrationCodeStore.get()).toBeUndefined();
+    expect(authStub.checkEmailAvailability).not.toHaveBeenCalled();
+    expect(component.emailStatus().error).toBeTruthy();
   });
 
-  it('constructor: stays in signin mode when pendingRegistrationCodeStore is empty', () => {
-    // The beforeEach already creates the component with an empty store.
-    expect(component.mode()).toBe('signin');
-    expect(component.registrationCode()).toBe('');
+  it('onEmailBlur: available email clears status error', async () => {
+    authStub.emailAvailable = true;
+    component.setMode('register');
+    component.email.set('free@example.com');
+    await component.onEmailBlur();
+
+    expect(authStub.checkEmailAvailability).toHaveBeenCalledWith('free@example.com');
+    expect(component.emailStatus().error).toBeUndefined();
   });
 
-  it('ngOnInit: does not call validateRegistrationCode when no deep-link code was staged', () => {
-    // The component was created in beforeEach with an empty store, so no validation should occur.
-    expect(authStub.validateRegistrationCode).not.toHaveBeenCalled();
+  it('onEmailBlur: taken email sets inline error', async () => {
+    authStub.emailAvailable = false;
+    component.setMode('register');
+    component.email.set('taken@example.com');
+    await component.onEmailBlur();
+
+    expect(component.emailStatus().error).toBeTruthy();
   });
 
-  it('ngOnInit: does not show modal when the deep-link code is valid', async () => {
-    authStub.validateCodeResult = { ok: true, valid: true };
-    pendingRegistrationCodeStore.set('VALID-CODE');
+  it('onEmailBlur: no-ops when in signin mode', async () => {
+    // mode defaults to signin.
+    component.email.set('any@example.com');
+    await component.onEmailBlur();
 
-    await TestBed.resetTestingModule();
-    await TestBed.configureTestingModule({
-      imports: [LoginComponent],
-      providers: [
-        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
-        provideExperimentalZonelessChangeDetection(),
-        { provide: AuthService, useValue: authStub },
-        { provide: Router, useValue: routerStub },
-      ],
-    }).compileComponents();
-
-    const f = TestBed.createComponent(LoginComponent);
-    f.detectChanges();
-    // Flush the microtask queue so the validateRegistrationCode .then() callback runs.
-    await Promise.resolve();
-
-    expect(authStub.validateRegistrationCode).toHaveBeenCalledWith('VALID-CODE');
-    expect(f.componentInstance.showInvalidCodeModal()).toBe(false);
-    // Code should remain pre-filled.
-    expect(f.componentInstance.registrationCode()).toBe('VALID-CODE');
-  });
-
-  it('ngOnInit: shows invalid-code modal and clears code when deep-link code is invalid', async () => {
-    authStub.validateCodeResult = { ok: true, valid: false };
-    pendingRegistrationCodeStore.set('BAD-CODE');
-
-    await TestBed.resetTestingModule();
-    await TestBed.configureTestingModule({
-      imports: [LoginComponent],
-      providers: [
-        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
-        provideExperimentalZonelessChangeDetection(),
-        { provide: AuthService, useValue: authStub },
-        { provide: Router, useValue: routerStub },
-      ],
-    }).compileComponents();
-
-    const f = TestBed.createComponent(LoginComponent);
-    f.detectChanges();
-    // Flush the microtask queue so the .then() callback sets the modal signal.
-    await Promise.resolve();
-
-    expect(authStub.validateRegistrationCode).toHaveBeenCalledWith('BAD-CODE');
-    expect(f.componentInstance.showInvalidCodeModal()).toBe(true);
-    // Invalid code should be cleared so the field is ready for manual entry.
-    expect(f.componentInstance.registrationCode()).toBe('');
-  });
-
-  it('dismissInvalidCodeModal: sets showInvalidCodeModal to false', async () => {
-    component.showInvalidCodeModal.set(true);
-    component.dismissInvalidCodeModal();
-    expect(component.showInvalidCodeModal()).toBe(false);
+    expect(authStub.checkEmailAvailability).not.toHaveBeenCalled();
   });
 });

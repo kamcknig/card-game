@@ -1,9 +1,9 @@
 import { LoggerService } from '../logger-service.ts';
 import { ServerConfigService } from '../server-config-service.ts';
+import { SupabaseClientProvider } from '../storage/supabase-client-provider.ts';
 import { AuthSessionService } from './auth-session-service.ts';
 import { AuthRateLimiterService } from './auth-rate-limiter-service.ts';
 import type { UserStore } from './user-store.ts';
-import type { RegistrationCodeStore } from './registration-code-store.ts';
 import { Argon2idHasher } from './password-hasher.ts';
 import { UserAccountAuthProvider } from './user-account-auth-provider.ts';
 import { buildCorsHeaders } from '../cors-utils.ts';
@@ -15,6 +15,16 @@ import { buildCorsHeaders } from '../cors-utils.ts';
  * usernames are predictable in logs and URLs.
  */
 const USERNAME_REGEX = /^[A-Za-z0-9_]{3,32}$/;
+
+/**
+ * Intentionally permissive email format check.
+ *
+ * Requires a local-part, an `@`, a domain, a `.`, and a TLD with no
+ * whitespace anywhere. Supabase Auth will reject anything that is actually
+ * malformed when the supabase backend is active; the server-side check is
+ * a fast, cheap guard to avoid persisting obvious garbage.
+ */
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Validates a password against the configured minimum length and trivial
@@ -42,12 +52,17 @@ const validatePasswordStrength = (
  * Handles HTTP authentication endpoints for login, token validation, and logout.
  *
  * Routes:
- *   POST   /auth/login     — validates credentials via the selected provider
- *   GET    /auth/validate  — validates an existing session token
- *   DELETE /auth/logout    — invalidates the current session token
- *   GET    /auth/sessions  — lists active sessions for the authenticated user
- *   DELETE /auth/sessions  — revokes all sessions for the authenticated user
- *                           (pass `?keepCurrent=true` to preserve the caller's session)
+ *   POST   /auth/login           — validates credentials via the selected provider
+ *   GET    /auth/validate        — validates an existing session token
+ *   DELETE /auth/logout          — invalidates the current session token
+ *   GET    /auth/sessions        — lists active sessions for the authenticated user
+ *   DELETE /auth/sessions        — revokes all sessions for the authenticated user
+ *                                 (pass `?keepCurrent=true` to preserve the caller's session)
+ *   POST   /auth/register        — open self-service registration (email required)
+ *   POST   /auth/change-password — authenticated in-app password rotation
+ *   GET    /auth/check-username  — username availability check
+ *   GET    /auth/check-email     — email availability check
+ *   POST   /auth/email           — authenticated email attachment for legacy users
  *
  * Login requests accept an optional `provider` field to select the
  * authentication method. Defaults to 'password' for backwards compatibility.
@@ -63,9 +78,9 @@ export class ServerAuthRouteHandlerService {
     private readonly serverConfigService: ServerConfigService,
     private readonly authRateLimiterService: AuthRateLimiterService,
     private readonly userStore: UserStore,
-    private readonly registrationCodeStore: RegistrationCodeStore,
     private readonly argon2idHasher: Argon2idHasher,
     private readonly userAccountAuthProvider: UserAccountAuthProvider,
+    private readonly supabaseClientProvider: SupabaseClientProvider,
   ) {}
 
   /**
@@ -130,29 +145,19 @@ export class ServerAuthRouteHandlerService {
       return this.handleChangePassword(req);
     }
 
-    // POST /auth/registration-codes (authenticated): create code.
-    if (parts.length === 2 && parts[1] === 'registration-codes' && req.method === 'POST') {
-      return this.handleCreateRegistrationCode(req);
-    }
-
-    // GET /auth/registration-codes (authenticated): list codes.
-    if (parts.length === 2 && parts[1] === 'registration-codes' && req.method === 'GET') {
-      return this.handleListRegistrationCodes(req);
-    }
-
-    // GET /auth/registration-codes/validate?code=<value> (public): check code validity.
-    if (parts.length === 3 && parts[1] === 'registration-codes' && parts[2] === 'validate' && req.method === 'GET') {
-      return this.handleValidateRegistrationCode(req, url);
-    }
-
-    // DELETE /auth/registration-codes/:code (authenticated): disable code.
-    if (parts.length === 3 && parts[1] === 'registration-codes' && req.method === 'DELETE') {
-      return this.handleDisableRegistrationCode(req, parts[2]!);
-    }
-
     // GET /auth/check-username?username=<value> (public, informational).
     if (parts.length === 2 && parts[1] === 'check-username' && req.method === 'GET') {
       return this.handleCheckUsername(req, url);
+    }
+
+    // GET /auth/check-email?email=<value> (public, informational).
+    if (parts.length === 2 && parts[1] === 'check-email' && req.method === 'GET') {
+      return this.handleCheckEmail(req, url);
+    }
+
+    // POST /auth/email (authenticated) — attaches an email to a legacy account.
+    if (parts.length === 2 && parts[1] === 'email' && req.method === 'POST') {
+      return this.handleAttachEmail(req);
     }
 
     this.loggerService.debug(`[auth route] unmatched auth path: ${req.method} ${url.pathname}`);
@@ -225,14 +230,19 @@ export class ServerAuthRouteHandlerService {
 
     // Reset the rate-limiter counter on successful login.
     this.authRateLimiterService.reset(remoteIp);
-    // Look up the user record to include the admin flag in the response so the
-    // client can gate admin-only UI without a separate request.
-    const loggedInUser = this.userStore.getByUsername(result.username);
+    // Look up the user record to include the admin flag, needsEmail flag, and
+    // email in the response so the client can gate admin-only UI and render
+    // the email-onboarding flow without a separate request.
+    const loggedInUser = await this.userStore.getByUsername(result.username);
     const isAdmin = loggedInUser?.isAdmin ?? false;
+    // needsEmail is true for legacy users who have not yet attached an email.
+    const needsEmail = loggedInUser?.email == null;
+    // email may be null for legacy users; the client stores it for display.
+    const email = loggedInUser?.email ?? null;
     this.loggerService.info(
-      `[auth route] login succeeded from ${remoteIp} for '${result.username}' via '${providerName}'`,
+      `[auth route] login succeeded from ${remoteIp} for '${result.username}' via '${providerName}' (needsEmail=${needsEmail})`,
     );
-    return this.jsonResponse({ ok: true, token: result.token, username: result.username, isAdmin }, 200, req);
+    return this.jsonResponse({ ok: true, token: result.token, username: result.username, isAdmin, needsEmail, email }, 200, req);
   }
 
   /**
@@ -240,7 +250,7 @@ export class ServerAuthRouteHandlerService {
    *
    * Returns 401 when the header is missing or the token is not a known session.
    */
-  private handleValidate(req: Request): Response {
+  private async handleValidate(req: Request): Promise<Response> {
     const token = this.extractBearerToken(req);
     if (!token) {
       this.loggerService.debug('[auth route] validate request missing authorization header');
@@ -253,12 +263,75 @@ export class ServerAuthRouteHandlerService {
       return this.jsonResponse({ ok: false, message: 'invalid or expired token' }, 401, req);
     }
 
-    // Look up the user record to include the admin flag in the response so the
-    // client can gate admin-only UI without a separate validate call.
-    const validatedUser = this.userStore.getByUsername(username);
+    // Look up the user record to include the admin flag, needsEmail flag, and
+    // email in the response so the client can gate admin-only UI and keep
+    // the email display in sync across page refreshes.
+    const validatedUser = await this.userStore.getByUsername(username);
+
+    // No local user record means the account was deleted. Invalidate the session
+    // so the client is forced back to /login rather than stranded in the app.
+    if (!validatedUser) {
+      this.loggerService.info(`[auth route] validate: user '${username}' not found in local store — invalidating session`);
+      this.authSessionService.removeSession(token);
+      return this.jsonResponse({ ok: false, message: 'invalid or expired token' }, 401, req);
+    }
+
+    // Reject locally-disabled accounts so a disabled flag takes effect on
+    // the next page load without waiting for the session to expire.
+    if (validatedUser?.disabled) {
+      this.loggerService.info(`[auth route] validate: account '${username}' is disabled — invalidating session`);
+      this.authSessionService.removeSession(token);
+      return this.jsonResponse({ ok: false, message: 'Account disabled' }, 401, req);
+    }
+
+    // For Supabase-backed accounts verify the Auth user still exists and is not
+    // banned. This catches accounts deleted or suspended via the Supabase
+    // dashboard without waiting for the local session to expire naturally.
+    if (validatedUser?.supabaseAuthId && this.serverConfigService.getStorageBackend() === 'supabase') {
+      this.loggerService.debug(
+        `[auth route] validate: checking Supabase Auth status for '${username}' (id=${validatedUser.supabaseAuthId})`,
+      );
+
+      let supabaseClient;
+      try {
+        supabaseClient = this.supabaseClientProvider.get();
+      } catch (err) {
+        this.loggerService.error(`[auth route] validate: Supabase client unavailable: ${err}`);
+        return this.jsonResponse({ ok: false, message: 'Service unavailable' }, 503, req);
+      }
+
+      const { data: supabaseUserData, error: supabaseUserError } = await supabaseClient.auth.admin.getUserById(
+        validatedUser.supabaseAuthId,
+      );
+
+      this.loggerService.debug(
+        `[auth route] validate: admin.getUserById result — user=${JSON.stringify(supabaseUserData?.user?.id ?? null)} error=${supabaseUserError?.message ?? 'none'}`,
+      );
+
+      if (supabaseUserError || !supabaseUserData?.user) {
+        this.loggerService.info(
+          `[auth route] validate: Supabase Auth user not found for '${username}' — invalidating session`,
+        );
+        this.authSessionService.removeSession(token);
+        return this.jsonResponse({ ok: false, message: 'invalid or expired token' }, 401, req);
+      }
+
+      // Supabase represents bans via a future-dated `banned_until` timestamp.
+      const bannedUntil = supabaseUserData.user.banned_until;
+      if (bannedUntil && new Date(bannedUntil) > new Date()) {
+        this.loggerService.info(`[auth route] validate: Supabase Auth user '${username}' is banned — invalidating session`);
+        this.authSessionService.removeSession(token);
+        return this.jsonResponse({ ok: false, message: 'Account suspended' }, 401, req);
+      }
+    }
+
     const isAdmin = validatedUser?.isAdmin ?? false;
-    this.loggerService.debug(`[auth route] token validated for '${username}' (isAdmin=${isAdmin})`);
-    return this.jsonResponse({ ok: true, username, isAdmin }, 200, req);
+    // needsEmail stays in sync across page refreshes via the validate endpoint.
+    const needsEmail = validatedUser?.email == null;
+    // email may be null for legacy users; the client stores it for display.
+    const email = validatedUser?.email ?? null;
+    this.loggerService.debug(`[auth route] token validated for '${username}' (isAdmin=${isAdmin}, needsEmail=${needsEmail})`);
+    return this.jsonResponse({ ok: true, username, isAdmin, needsEmail, email }, 200, req);
   }
 
   /**
@@ -349,13 +422,20 @@ export class ServerAuthRouteHandlerService {
   }
 
   /**
-   * Handles POST /auth/register — public self-service registration.
+   * Handles POST /auth/register — open self-service registration.
    *
-   * Requires a valid registration code. Rate-limited against the same IP
-   * bucket as /auth/login so bad codes count toward the limit and
-   * brute-forcing codes is impractical. Validates username format, password
-   * strength, and registration-code state before creating the row. Does NOT
-   * return a session token — the client must log in separately.
+   * Validates username format, email format, and password strength before
+   * creating the user. No registration code is required. Rate-limited against
+   * the same IP bucket as /auth/login. Does NOT return a session token — the
+   * client must log in separately.
+   *
+   * When `STORAGE_BACKEND=supabase`, provisions a Supabase Auth user via
+   * `admin.createUser` so the confirmation email is sent automatically and
+   * subsequent logins go through Supabase Auth. The `auth_users` row is
+   * written with an empty password hash (unused for supabase logins) and the
+   * Supabase Auth user id stored in `supabase_auth_id`.
+   *
+   * When `STORAGE_BACKEND=kv`, the existing argon2id path is used unchanged.
    */
   private async handleRegister(req: Request, remoteIp: string): Promise<Response> {
     // Share the IP bucket with /auth/login so registration brute-force counts
@@ -393,7 +473,7 @@ export class ServerAuthRouteHandlerService {
 
     const username = typeof body['username'] === 'string' ? (body['username'] as string).trim() : '';
     const password = typeof body['password'] === 'string' ? (body['password'] as string) : '';
-    const code = typeof body['registrationCode'] === 'string' ? (body['registrationCode'] as string).trim() : '';
+    const email = typeof body['email'] === 'string' ? (body['email'] as string).trim() : '';
 
     // Username format check — narrow enough to keep logs predictable.
     if (!USERNAME_REGEX.test(username)) {
@@ -405,6 +485,18 @@ export class ServerAuthRouteHandlerService {
       );
     }
 
+    // Email is required from this phase forward. Validate format with the
+    // intentionally permissive EMAIL_REGEX; Supabase Auth will enforce stricter
+    // checks when the supabase backend is active.
+    if (!email) {
+      this.authRateLimiterService.recordFailure(remoteIp);
+      return this.jsonResponse({ ok: false, message: 'Email is required' }, 400, req);
+    }
+    if (!EMAIL_REGEX.test(email)) {
+      this.authRateLimiterService.recordFailure(remoteIp);
+      return this.jsonResponse({ ok: false, message: 'Invalid email address' }, 400, req);
+    }
+
     // Password strength per AUTH_MIN_PASSWORD_LENGTH and username-not-equal.
     const minLen = this.serverConfigService.getAuthMinPasswordLength();
     const pwError = validatePasswordStrength(password, username, minLen);
@@ -413,33 +505,40 @@ export class ServerAuthRouteHandlerService {
       return this.jsonResponse({ ok: false, message: pwError }, 400, req);
     }
 
-    // Validate + atomically consume the registration code. A bad or exhausted
-    // code records a failure against the IP bucket to throttle brute force.
     const now = Date.now();
-    const usedCode = this.registrationCodeStore.recordUse(code, now);
-    if (!usedCode) {
-      this.authRateLimiterService.recordFailure(remoteIp);
-      this.loggerService.warn(`[auth route] register: invalid or expired code from ${remoteIp}`);
-      return this.jsonResponse({ ok: false, message: 'Invalid or expired registration code' }, 400, req);
-    }
 
-    // Check for duplicate username (case-insensitive) AFTER consuming the
-    // code — a consumed code covers the intent and the user still needs to
-    // pick a free username. Tracking this as a failure keeps the limiter
-    // honest.
-    if (this.userStore.getByUsername(username)) {
+    // Check for duplicate username (case-insensitive).
+    if (await this.userStore.getByUsername(username)) {
       this.authRateLimiterService.recordFailure(remoteIp);
       this.loggerService.info(`[auth route] register: username '${username}' already taken`);
       return this.jsonResponse({ ok: false, message: 'Username already taken' }, 409, req);
     }
 
-    // Hash the new password with argon2id and create the user row. Uses the
-    // original-case username so the display name matches what the user typed.
+    // Check for duplicate email (case-insensitive). Reject before writing any
+    // state so the consumed code is the only cost of a duplicate-email attempt.
+    if (await this.userStore.getByEmail(email)) {
+      this.authRateLimiterService.recordFailure(remoteIp);
+      this.loggerService.info(`[auth route] register: email already registered from ${remoteIp}`);
+      return this.jsonResponse({ ok: false, message: 'Email already registered' }, 409, req);
+    }
+
+    // Branch on backend. When the supabase backend is active, provision a
+    // Supabase Auth user so the confirmation email goes out automatically and
+    // subsequent logins are authenticated by Supabase Auth. The kv backend
+    // uses the existing local argon2id path unchanged.
+    const backend = this.serverConfigService.getStorageBackend();
+    if (backend === 'supabase') {
+      return this.registerViaSupabase(req, remoteIp, username, email, password, now);
+    }
+
+    // kv backend (or undefined/in-memory fallback): hash with argon2id and
+    // create the user row directly. Uses the original-case username so the
+    // display name matches what the user typed.
     try {
       const hash = await this.argon2idHasher.hash(password);
-      await this.userStore.create({ username, passwordHash: hash, passwordAlgo: 'argon2id', now });
+      await this.userStore.create({ username, email, passwordHash: hash, passwordAlgo: 'argon2id', now });
       this.loggerService.info(
-        `[auth register] new account created for '${username}' using code ...${code.slice(-6)} from ${remoteIp}`,
+        `[auth register] new account created for '${username}' from ${remoteIp}`,
       );
       // Reset the limiter on the happy path so a legitimate registration does
       // not push the IP closer to a future lockout.
@@ -449,6 +548,128 @@ export class ServerAuthRouteHandlerService {
       this.loggerService.error(`[auth route] register: hashing or persist failed: ${err}`);
       return this.jsonResponse({ ok: false, message: 'Registration failed' }, 500, req);
     }
+  }
+
+  /**
+   * Supabase-backend registration path.
+   *
+   * Provisions a Supabase Auth user via `admin.createUser` (which triggers
+   * the project's confirmation email template) and then inserts the local
+   * `auth_users` row linked by `supabase_auth_id`. The password hash stored
+   * locally is an empty sentinel — supabase-backend logins authenticate via
+   * `signInWithPassword` and never touch the local hash.
+   *
+   * Error mapping:
+   * - `user_already_exists` from Supabase → 409 (same as a duplicate-email
+   *   detected before the Supabase call).
+   * - Any other Supabase error → 500.
+   * - Duplicate username / email in the local store → 409.
+   *
+   * @param req        Original HTTP request (for CORS headers).
+   * @param remoteIp   Client IP for rate-limiter bookkeeping.
+   * @param username   Validated, trimmed display username.
+   * @param email      Validated, trimmed email address.
+   * @param password   Plaintext password (passed to Supabase Auth only).
+   * @param now        Current epoch milliseconds.
+   */
+  private async registerViaSupabase(
+    req: Request,
+    remoteIp: string,
+    username: string,
+    email: string,
+    password: string,
+    now: number,
+  ): Promise<Response> {
+    let client;
+    try {
+      // Use an ephemeral client for signUp so the shared service-role client's
+      // in-memory session is never contaminated by the user's auth state.
+      client = this.supabaseClientProvider.createEphemeralClient();
+    } catch (err) {
+      this.loggerService.error(`[auth route] register (supabase): Supabase client unavailable: ${err}`);
+      return this.jsonResponse({ ok: false, message: 'Registration failed' }, 500, req);
+    }
+
+    // Provision the Supabase Auth user via signUp (not admin.createUser) so
+    // Supabase's built-in confirmation email is sent automatically. admin.createUser
+    // creates the user but never triggers the email flow.
+    const { data, error } = await client.auth.signUp({
+      email,
+      password,
+      options: { data: { username } },
+    });
+
+    if (error) {
+      // `user_already_exists` can surface if the email is already registered.
+      if (error.code === 'user_already_exists') {
+        this.authRateLimiterService.recordFailure(remoteIp);
+        this.loggerService.info(
+          `[auth route] register (supabase): email already exists in Supabase Auth from ${remoteIp}`,
+        );
+        return this.jsonResponse({ ok: false, message: 'Email already registered' }, 409, req);
+      }
+
+      // Supabase-specific error code returned when the project's outbound email
+      // quota is exhausted (free tier: 2 emails/hour). Surface a clear message
+      // so the user knows to wait rather than retrying immediately.
+      if (error.code === 'over_email_send_rate_limit') {
+        this.loggerService.warn(
+          `[auth route] register (supabase): email rate limit hit for '${username}' from ${remoteIp}`,
+        );
+        return this.jsonResponse(
+          { ok: false, message: 'Too many confirmation emails sent — please wait an hour and try again' },
+          429,
+          req,
+        );
+      }
+
+      this.loggerService.error(
+        `[auth route] register (supabase): signUp failed for '${username}': ${error.message} (code=${error.code})`,
+      );
+      return this.jsonResponse({ ok: false, message: 'Registration failed' }, 500, req);
+    }
+
+    if (!data.user) {
+      // Defensive: success response with no user object.
+      this.loggerService.error(`[auth route] register (supabase): signUp returned ok but no user for '${username}'`);
+      return this.jsonResponse({ ok: false, message: 'Registration failed' }, 500, req);
+    }
+
+    const supabaseAuthId = data.user.id;
+    this.loggerService.debug(
+      `[auth route] register (supabase): Supabase Auth user provisioned for '${username}' (id=${supabaseAuthId})`,
+    );
+
+    // Insert the local auth_users row. The password hash is an empty sentinel —
+    // logins for this user go through Supabase Auth (signInWithPassword) and
+    // never consult the local hash. Both email and supabaseAuthId are set
+    // atomically so the auth-provider branching condition holds.
+    try {
+      await this.userStore.create({
+        username,
+        email,
+        passwordHash: '',
+        passwordAlgo: 'argon2id',
+        now,
+        supabaseAuthId,
+      });
+    } catch (err) {
+      // The Supabase Auth user was created but the local row failed. Log the
+      // orphan supabaseAuthId so an operator can clean up manually. The user
+      // will see "Registration failed" and can retry.
+      this.loggerService.error(
+        `[auth route] register (supabase): local auth_users insert failed for '${username}' ` +
+        `(supabaseAuthId=${supabaseAuthId}): ${err}`,
+      );
+      return this.jsonResponse({ ok: false, message: 'Registration failed' }, 500, req);
+    }
+
+    this.loggerService.info(
+      `[auth register] new supabase account created for '${username}' from ${remoteIp}`,
+    );
+    // Reset the limiter on the happy path.
+    this.authRateLimiterService.reset(remoteIp);
+    return this.jsonResponse({ ok: true }, 201, req);
   }
 
   /**
@@ -498,7 +719,7 @@ export class ServerAuthRouteHandlerService {
       return this.jsonResponse({ ok: false, message: pwError }, 400, req);
     }
 
-    const user = this.userStore.getByUsername(username);
+    const user = await this.userStore.getByUsername(username);
     if (!user) {
       // Defensive: validateToken returned a username we can no longer find.
       this.loggerService.error(`[auth route] password change: user '${username}' missing from store`);
@@ -524,158 +745,6 @@ export class ServerAuthRouteHandlerService {
   }
 
   /**
-   * Handles POST /auth/registration-codes — create a new invite code.
-   *
-   * Only admin users may issue codes. Body: `{ expiresIn?: number (ms), maxUses?: number }`.
-   * expiresIn is relative to `now()`; omit it for no time limit. maxUses defaults to 1.
-   */
-  private async handleCreateRegistrationCode(req: Request): Promise<Response> {
-    const token = this.extractBearerToken(req);
-    const username = token ? this.authSessionService.validateToken(token) : undefined;
-    if (!username) {
-      return this.jsonResponse({ ok: false, message: 'unauthorized' }, 401, req);
-    }
-
-    // Restrict code creation to admin users only.
-    const requestingUser = this.userStore.getByUsername(username);
-    if (!requestingUser?.isAdmin) {
-      this.loggerService.warn(`[auth route] registration-codes: non-admin access denied for '${username}'`);
-      return this.jsonResponse({ ok: false, message: 'forbidden' }, 403, req);
-    }
-
-    const contentLength = Number(req.headers.get('content-length') ?? '0');
-    const maxBytes = this.serverConfigService.getAuthMaxBodyBytes();
-    if (contentLength > maxBytes) {
-      return new Response('payload too large', { status: 413, headers: this.corsHeaders(req) });
-    }
-
-    // Body is optional for this endpoint — default to 1-use, no expiry.
-    let body: Record<string, unknown> = {};
-    if (req.headers.get('content-type')?.includes('application/json')) {
-      try {
-        const parsed = await req.json();
-        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-          body = parsed as Record<string, unknown>;
-        }
-      } catch {
-        return new Response('invalid json', { status: 400, headers: this.corsHeaders(req) });
-      }
-    }
-
-    const now = Date.now();
-    const expiresIn = typeof body['expiresIn'] === 'number' ? (body['expiresIn'] as number) : undefined;
-    const expiresAt = expiresIn !== undefined && expiresIn > 0 ? now + expiresIn : null;
-    const maxUses = typeof body['maxUses'] === 'number' && body['maxUses']! > 0
-      ? Math.floor(body['maxUses'] as number)
-      : 1;
-
-    const rec = this.registrationCodeStore.create({
-      createdBy: username,
-      expiresAt,
-      maxUses,
-      now,
-    });
-
-    this.loggerService.info(
-      `[auth route] registration code created by '${username}' (expiresAt=${expiresAt}, maxUses=${maxUses})`,
-    );
-    return this.jsonResponse({ ok: true, code: rec.code, expiresAt: rec.expiresAt, maxUses: rec.maxUses }, 201, req);
-  }
-
-  /**
-   * Handles GET /auth/registration-codes — list active codes for operator use.
-   *
-   * Returns every non-disabled, non-expired code. Only admin users may access
-   * this endpoint.
-   */
-  private handleListRegistrationCodes(req: Request): Response {
-    const token = this.extractBearerToken(req);
-    const username = token ? this.authSessionService.validateToken(token) : undefined;
-    if (!username) {
-      return this.jsonResponse({ ok: false, message: 'unauthorized' }, 401, req);
-    }
-
-    // Restrict code listing to admin users only.
-    const requestingUser = this.userStore.getByUsername(username);
-    if (!requestingUser?.isAdmin) {
-      this.loggerService.warn(`[auth route] registration-codes: non-admin access denied for '${username}'`);
-      return this.jsonResponse({ ok: false, message: 'forbidden' }, 403, req);
-    }
-
-    const now = Date.now();
-    const visible = this.registrationCodeStore
-      .list()
-      .filter(c => !c.disabled && (c.expiresAt === null || c.expiresAt > now))
-      .map(c => ({
-        code: c.code,
-        createdAt: c.createdAt,
-        createdBy: c.createdBy,
-        expiresAt: c.expiresAt,
-        maxUses: c.maxUses,
-        usedCount: c.usedCount,
-      }));
-
-    return this.jsonResponse({ ok: true, codes: visible }, 200, req);
-  }
-
-  /**
-   * Handles DELETE /auth/registration-codes/:code — idempotent disable.
-   *
-   * Returns 200 whether the code existed, was already disabled, or is
-   * unknown; the endpoint's contract is "ensure this code cannot be used".
-   * Only admin users may disable codes.
-   */
-  private handleDisableRegistrationCode(req: Request, code: string): Response {
-    const token = this.extractBearerToken(req);
-    const username = token ? this.authSessionService.validateToken(token) : undefined;
-    if (!username) {
-      return this.jsonResponse({ ok: false, message: 'unauthorized' }, 401, req);
-    }
-
-    // Restrict code disabling to admin users only.
-    const requestingUser = this.userStore.getByUsername(username);
-    if (!requestingUser?.isAdmin) {
-      this.loggerService.warn(`[auth route] registration-codes: non-admin access denied for '${username}'`);
-      return this.jsonResponse({ ok: false, message: 'forbidden' }, 403, req);
-    }
-
-    this.registrationCodeStore.disable(code);
-    this.loggerService.info(`[auth route] registration code ...${code.slice(-6)} disabled by '${username}'`);
-    return this.jsonResponse({ ok: true }, 200, req);
-  }
-
-  /**
-   * Handles GET /auth/registration-codes/validate?code=<value>.
-   *
-   * Public, unauthenticated endpoint that reports whether a given registration
-   * code can currently be redeemed. A code is valid when it exists, is not
-   * disabled, has not expired, and has not reached its maximum use count.
-   *
-   * Returns `{ ok: true, valid: boolean }`. Always responds 200 so the client
-   * cannot distinguish "unknown code" from "exhausted code" — both return
-   * `{ valid: false }` without leaking which condition triggered.
-   */
-  private handleValidateRegistrationCode(req: Request, url: URL): Response {
-    const code = (url.searchParams.get('code') ?? '').trim();
-    if (!code) {
-      this.loggerService.debug('[auth route] validate-registration-code: empty code param');
-      return this.jsonResponse({ ok: true, valid: false }, 200, req);
-    }
-
-    const now = Date.now();
-    const rec = this.registrationCodeStore.get(code);
-    const valid = (
-      rec !== undefined &&
-      !rec.disabled &&
-      (rec.expiresAt === null || rec.expiresAt > now) &&
-      rec.usedCount < rec.maxUses
-    );
-
-    this.loggerService.debug(`[auth route] validate-registration-code: ...${code.slice(-6)} valid=${valid}`);
-    return this.jsonResponse({ ok: true, valid }, 200, req);
-  }
-
-  /**
    * Handles GET /auth/check-username?username=<value>.
    *
    * Public, unauthenticated endpoint that reports whether a given username is
@@ -689,17 +758,256 @@ export class ServerAuthRouteHandlerService {
    * registration with a format error; this endpoint's only concern is
    * uniqueness.
    */
-  private handleCheckUsername(req: Request, url: URL): Response {
+  private async handleCheckUsername(req: Request, url: URL): Promise<Response> {
     const username = (url.searchParams.get('username') ?? '').trim();
     if (!username) {
       this.loggerService.debug('[auth route] check-username: empty username query param');
       return this.jsonResponse({ available: true }, 200, req);
     }
 
-    const existing = this.userStore.getByUsername(username);
+    const existing = await this.userStore.getByUsername(username);
     const available = !existing;
     this.loggerService.debug(`[auth route] check-username: '${username}' available=${available}`);
     return this.jsonResponse({ available }, 200, req);
+  }
+
+  /**
+   * Handles GET /auth/check-email?email=<value>.
+   *
+   * Public, unauthenticated endpoint that reports whether a given email address
+   * is already registered. Used by the registration form to give real-time
+   * feedback before the user submits. The lookup is case-insensitive, matching
+   * the normalisation applied during registration.
+   *
+   * Returns `{ available: true }` when no account has that email, or
+   * `{ available: false }` when one does. Emails that fail format validation
+   * are reported as available because the server will reject them on
+   * registration with a format error; this endpoint's only concern is
+   * uniqueness.
+   */
+  private async handleCheckEmail(req: Request, url: URL): Promise<Response> {
+    const email = (url.searchParams.get('email') ?? '').trim();
+    if (!email) {
+      this.loggerService.debug('[auth route] check-email: empty email query param');
+      return this.jsonResponse({ available: true }, 200, req);
+    }
+
+    const existing = await this.userStore.getByEmail(email);
+    const available = !existing;
+    this.loggerService.debug(`[auth route] check-email: available=${available}`);
+    return this.jsonResponse({ available }, 200, req);
+  }
+
+  /**
+   * Handles POST /auth/email — attaches an email address to an existing account.
+   *
+   * This endpoint is for legacy users whose account predates email registration
+   * (i.e. `user.email === null`). It requires a valid Bearer token and the
+   * caller's current password to guard against casual session hijacking.
+   *
+   * Behaviour:
+   * 1. Resolves the authenticated user via Bearer token; returns 401 if missing.
+   * 2. Returns 409 with `'Email already attached'` when `user.email !== null`
+   *    — editing an existing email is out of scope for this plan.
+   * 3. Validates the email format (same permissive regex as registration).
+   * 4. Returns 409 with `'Email is already registered'` when the email is
+   *    taken by a different user.
+   * 5. Re-authenticates via `UserAccountAuthProvider.authenticate` so the same
+   *    lockout rules apply as a normal login.
+   * 6. For the kv backend: calls `userStore.setEmail` and returns `{ ok: true }`.
+   * 7. For the supabase backend: provisions a Supabase Auth user via
+   *    `admin.createUser`, then calls `userStore.setEmail` and
+   *    `userStore.setSupabaseAuthId`. Returns `{ ok: true }`. The Supabase
+   *    confirmation email is sent automatically.
+   */
+  private async handleAttachEmail(req: Request): Promise<Response> {
+    const token = this.extractBearerToken(req);
+    const username = token ? this.authSessionService.validateToken(token) : undefined;
+    if (!token || !username) {
+      this.loggerService.debug('[auth route] POST /auth/email: unauthorized');
+      return this.jsonResponse({ ok: false, message: 'unauthorized' }, 401, req);
+    }
+
+    const contentLength = Number(req.headers.get('content-length') ?? '0');
+    const maxBytes = this.serverConfigService.getAuthMaxBodyBytes();
+    if (contentLength > maxBytes) {
+      return new Response('payload too large', { status: 413, headers: this.corsHeaders(req) });
+    }
+
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response('invalid json', { status: 400, headers: this.corsHeaders(req) });
+    }
+
+    const email = typeof body['email'] === 'string' ? (body['email'] as string).trim() : '';
+    const password = typeof body['password'] === 'string' ? (body['password'] as string) : '';
+
+    // Resolve the full user record — required to check email and for re-auth.
+    const user = await this.userStore.getByUsername(username);
+    if (!user) {
+      // Defensive: validateToken returned a username not found in the store.
+      this.loggerService.error(`[auth route] POST /auth/email: user '${username}' missing from store`);
+      return this.jsonResponse({ ok: false, message: 'user not found' }, 404, req);
+    }
+
+    // Guard: this endpoint only exists for accounts that have not yet attached
+    // an email. Editing an existing email is out of scope for this plan.
+    if (user.email !== null) {
+      this.loggerService.info(`[auth route] POST /auth/email: email already attached for '${username}'`);
+      return this.jsonResponse({ ok: false, message: 'Email already attached' }, 409, req);
+    }
+
+    // Validate email format (permissive; Supabase Auth will enforce strictly).
+    if (!email) {
+      return this.jsonResponse({ ok: false, message: 'Email is required' }, 400, req);
+    }
+    if (!EMAIL_REGEX.test(email)) {
+      return this.jsonResponse({ ok: false, message: 'Invalid email address' }, 400, req);
+    }
+
+    // Reject if the email is already taken by another account.
+    const existingByEmail = await this.userStore.getByEmail(email);
+    if (existingByEmail && existingByEmail.id !== user.id) {
+      this.loggerService.info(`[auth route] POST /auth/email: email already registered for '${username}'`);
+      return this.jsonResponse({ ok: false, message: 'Email is already registered' }, 409, req);
+    }
+
+    // Re-authenticate with the caller's current password so a session hijacker
+    // cannot silently attach an email. The auth provider applies lockout rules.
+    const reauth = await this.userAccountAuthProvider.authenticate({ username, password });
+    if (!reauth.ok) {
+      this.loggerService.warn(`[auth route] POST /auth/email: re-auth failed for '${username}'`);
+      return this.jsonResponse({ ok: false, message: reauth.message ?? 'Current password incorrect' }, 401, req);
+    }
+
+    const now = Date.now();
+    const backend = this.serverConfigService.getStorageBackend();
+
+    if (backend === 'supabase') {
+      return this.attachEmailViaSupabase(req, username, user.id, email, password, now);
+    }
+
+    // kv backend (or undefined/in-memory fallback): persist the email directly.
+    try {
+      this.userStore.setEmail(user.id, email, now);
+    } catch (err) {
+      this.loggerService.error(`[auth route] POST /auth/email: setEmail failed for '${username}': ${err}`);
+      return this.jsonResponse({ ok: false, message: 'Failed to attach email' }, 500, req);
+    }
+
+    this.loggerService.info(`[auth route] POST /auth/email: email attached for '${username}'`);
+    return this.jsonResponse({ ok: true }, 200, req);
+  }
+
+  /**
+   * Supabase-backend email-attachment path.
+   *
+   * Provisions a Supabase Auth user for an existing local account that
+   * predates email registration. Saves both the email and the new Supabase
+   * Auth user id atomically so the auth-provider branching condition holds:
+   * subsequent logins for this user go through Supabase Auth.
+   *
+   * The Supabase confirmation email is sent automatically because
+   * `email_confirm: false` instructs Supabase to require confirmation before
+   * allowing the user to sign in.
+   *
+   * @param req        Original HTTP request (for CORS headers).
+   * @param username   Authenticated display username.
+   * @param userId     Numeric id of the user record.
+   * @param email      Validated, trimmed email address.
+   * @param password   Plaintext password (passed to Supabase Auth only).
+   * @param now        Current epoch milliseconds.
+   */
+  private async attachEmailViaSupabase(
+    req: Request,
+    username: string,
+    userId: number,
+    email: string,
+    password: string,
+    now: number,
+  ): Promise<Response> {
+    let client;
+    try {
+      // Use an ephemeral client for signUp so the shared service-role client's
+      // in-memory session is never contaminated by the user's auth state.
+      client = this.supabaseClientProvider.createEphemeralClient();
+    } catch (err) {
+      this.loggerService.error(`[auth route] POST /auth/email (supabase): Supabase client unavailable: ${err}`);
+      return this.jsonResponse({ ok: false, message: 'Failed to attach email' }, 500, req);
+    }
+
+    // Provision a Supabase Auth user for this existing local account via signUp
+    // (not admin.createUser) so the confirmation email is sent automatically.
+    const { data, error } = await client.auth.signUp({
+      email,
+      password,
+      options: { data: { username } },
+    });
+
+    if (error) {
+      // `user_already_exists` can surface if the email is already in Supabase Auth.
+      if (error.code === 'user_already_exists') {
+        this.loggerService.info(
+          `[auth route] POST /auth/email (supabase): email already exists in Supabase Auth for '${username}'`,
+        );
+        return this.jsonResponse({ ok: false, message: 'Email is already registered' }, 409, req);
+      }
+
+      // Supabase-specific error code returned when the project's outbound email
+      // quota is exhausted (free tier: 2 emails/hour). Surface a clear message
+      // so the user knows to wait rather than retrying immediately.
+      if (error.code === 'over_email_send_rate_limit') {
+        this.loggerService.warn(
+          `[auth route] POST /auth/email (supabase): email rate limit hit for '${username}'`,
+        );
+        return this.jsonResponse(
+          { ok: false, message: 'Too many confirmation emails sent — please wait an hour and try again' },
+          429,
+          req,
+        );
+      }
+
+      this.loggerService.error(
+        `[auth route] POST /auth/email (supabase): signUp failed for '${username}': ${error.message} (code=${error.code})`,
+      );
+      return this.jsonResponse({ ok: false, message: 'Failed to attach email' }, 500, req);
+    }
+
+    if (!data.user) {
+      // Defensive: Supabase returned success but no user object.
+      this.loggerService.error(
+        `[auth route] POST /auth/email (supabase): signUp returned ok but no user for '${username}'`,
+      );
+      return this.jsonResponse({ ok: false, message: 'Failed to attach email' }, 500, req);
+    }
+
+    const supabaseAuthId = data.user.id;
+    this.loggerService.debug(
+      `[auth route] POST /auth/email (supabase): Supabase Auth user provisioned for '${username}' (id=${supabaseAuthId})`,
+    );
+
+    // Persist both email and supabaseAuthId atomically (store operations are
+    // synchronous writes; the order is deterministic and the pair is always
+    // written together so the branching invariant holds).
+    try {
+      this.userStore.setEmail(userId, email, now);
+      this.userStore.setSupabaseAuthId(userId, supabaseAuthId);
+    } catch (err) {
+      // The Supabase Auth user was created but the local row update failed.
+      // Log the orphan supabaseAuthId so an operator can reconcile manually.
+      this.loggerService.error(
+        `[auth route] POST /auth/email (supabase): local update failed for '${username}' ` +
+        `(supabaseAuthId=${supabaseAuthId}): ${err}`,
+      );
+      return this.jsonResponse({ ok: false, message: 'Failed to attach email' }, 500, req);
+    }
+
+    this.loggerService.info(
+      `[auth route] POST /auth/email: email attached and Supabase Auth user provisioned for '${username}'`,
+    );
+    return this.jsonResponse({ ok: true }, 200, req);
   }
 
   /**

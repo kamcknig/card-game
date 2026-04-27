@@ -39,7 +39,7 @@ cp .env-example .env
 
 ### Storage Backend Variables
 
-A single `STORAGE_BACKEND` env var selects the persistence layer for **both** auth (sessions, users, registration codes) and game data (match-configuration saves). When the value is missing or unrecognized the process still starts so `/status` can surface the misconfiguration to the frontend (see _Health endpoint_ below) — the server intentionally does not crash on storage misconfiguration so operators can diagnose it through the UI rather than the container logs.
+A single `STORAGE_BACKEND` env var selects the persistence layer for **both** auth (sessions, users) and game data (match-configuration saves). When the value is missing or unrecognized the process still starts so `/status` can surface the misconfiguration to the frontend (see _Health endpoint_ below) — the server intentionally does not crash on storage misconfiguration so operators can diagnose it through the UI rather than the container logs.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
@@ -74,43 +74,52 @@ Issue codes the storage layer can register:
 
 ## Authentication Usage
 
-Accounts are created via HTTP registration (`POST /auth/register`) using a
-registration code. Registration codes are issued by any authenticated user via
-HTTP (`POST /auth/registration-codes`) or by CLI scripts for bootstrapping.
+New accounts are created via open email-based registration at
+`POST /auth/register` — no invite code is required. When `STORAGE_BACKEND=supabase`,
+Supabase Auth is the identity authority: registration provisions a Supabase Auth
+user and sends a confirmation email; login is resolved via
+`supabase.auth.signInWithPassword` after the server looks up the email for the
+supplied username. When `STORAGE_BACKEND=kv`, argon2id handles password
+verification locally and no email is sent.
+
+**Legacy users** (rows with `email = null`, predating this feature) continue to
+log in using the local argon2id fallback. On their next login the server includes
+`needsEmail: true` in the response and the UI guides them to `/profile/security`
+to attach an email. Once an email is attached, subsequent logins go through
+Supabase Auth. There is no batch migration script — the transition happens
+automatically per user at login.
 
 ### HTTP endpoints
 
 | Method | Path | Auth | Purpose |
 |--------|------|------|---------|
-| `POST` | `/auth/login` | public | Exchange username + password for a session token |
-| `POST` | `/auth/register` | public (rate-limited) | Create an account using a valid registration code |
+| `POST` | `/auth/login` | public | Exchange username + password for a session token. Response includes `needsEmail: boolean` |
+| `POST` | `/auth/register` | public (rate-limited) | Create an account. Body: `{ username, email, password }` |
+| `POST` | `/auth/email` | bearer | Attach an email to a legacy account. Body: `{ email, password }` |
 | `POST` | `/auth/change-password` | bearer | Rotate the caller's password |
-| `GET` | `/auth/validate` | bearer | Validate an existing token |
+| `GET` | `/auth/validate` | bearer | Validate an existing token and refresh user state. Returns 401 and invalidates the session if: the local user record no longer exists, the account's `disabled` flag is set, or (supabase backend) the Supabase Auth user has been deleted or banned. Response includes `needsEmail: boolean` |
 | `DELETE` | `/auth/logout` | bearer | Invalidate the caller's token |
 | `GET` | `/auth/sessions` | bearer | List the caller's active sessions |
 | `DELETE` | `/auth/sessions[?keepCurrent=true]` | bearer | Revoke the caller's sessions |
-| `POST` | `/auth/registration-codes` | bearer | Create a new registration code |
-| `GET` | `/auth/registration-codes` | bearer | List active registration codes |
-| `DELETE` | `/auth/registration-codes/:code` | bearer | Disable a registration code |
 | `GET` | `/auth/check-username?username=<value>` | public | Report whether a username is already taken |
+| `GET` | `/auth/check-email?email=<value>` | public | Report whether an email is already registered |
 
 ### Bootstrap workflow
 
-Before any users exist, both `/auth/login` and `/auth/registration-codes`
-reject every request, so the very first account must be provisioned directly
-against the configured backend. The CLI script honours `STORAGE_BACKEND` and
-opens either the Deno KV file or the Supabase project accordingly.
+Before any users exist, `/auth/login` rejects every request, so the very first
+account must be provisioned directly against the configured backend. The CLI
+script honours `STORAGE_BACKEND` and opens either the Deno KV file or the
+Supabase project accordingly.
 
-When `STORAGE_BACKEND=kv`, the running server keeps an in-memory cache of the
-KV state primed at startup, so **CLI writes while the server is running are
-invisible to the running process and risk SQLite lock contention on the shared
-`auth.kv` file**. Stop the server before running the CLI scripts below, then
-restart. The Supabase backend has no such constraint — DB writes are visible
-to the running server on its next read.
+When `STORAGE_BACKEND=kv`, the running server reads the KV store directly on
+every call, but the underlying SQLite file can still experience lock contention
+if the CLI and server both hold it simultaneously. Stop the server before running
+the CLI scripts below for the KV backend, then restart. The Supabase backend has
+no such constraint — DB writes are visible to the running server on its next read.
 
 ```bash
-# 1. Stop the server (so the CLI and server do not both hold auth.kv).
-# 2. Create the first user directly in the KV store.
+# 1. Stop the server (kv backend only — to avoid SQLite lock contention).
+# 2. Create the first user directly in the store.
 deno task auth:users create --username <name> --password <pw> [--kv <path>]
 
 # 3. Restart the server.
@@ -119,35 +128,23 @@ deno task auth:users create --username <name> --password <pw> [--kv <path>]
 curl -sSX POST http://localhost:3001/auth/login \
   -H 'content-type: application/json' \
   -d '{"username":"<name>","password":"<pw>"}'
-
-# 5. Use the returned token to issue registration codes for everyone else.
-curl -sSX POST http://localhost:3001/auth/registration-codes \
-  -H "authorization: Bearer <token>" \
-  -H 'content-type: application/json' \
-  -d '{"maxUses":1,"expiresIn":3600000}'
 ```
 
-Once at least one account exists, prefer the HTTP endpoints for day-to-day
-user and code management — they go through the same in-memory store the
-registration handler reads from, so new codes are visible immediately.
+Additional accounts are created by registering through the UI or `POST /auth/register`
+directly — no registration code is needed.
 
 ### CLI scripts
 
-Both scripts use the backend selected by `STORAGE_BACKEND`. When that value is
-`kv`, they write to the Deno KV store directly and **must be run with the
-server stopped** to avoid stale caches and SQLite lock contention. When it is
-`supabase`, the scripts talk to the Supabase project via the service-role key
-and may run while the server is up. Intended for bootstrapping and operator
-maintenance only.
+The user management script uses the backend selected by `STORAGE_BACKEND`. When
+that value is `kv`, it writes to the Deno KV store directly and should be run
+with the server stopped to avoid SQLite lock contention. When it is `supabase`,
+the script talks to the Supabase project via the service-role key and may run
+while the server is up. Intended for bootstrapping and operator maintenance only.
 
 ```bash
-# User management: create | delete | set-password | clear
+# User management: create | delete | set-password | set-email | list | clear
 # Run a subcommand with --help for its options.
 deno task auth:users <command> [options]
-
-# Create a registration code (accepts --expires-in, --max-uses, --created-by, --kv).
-deno task auth:create-reg-code [--expires-in <duration>] [--max-uses N] [--created-by <user>] [--kv <path>]
-# Duration strings: 30s, 10m, 24h, 7d
 ```
 
 ### Migrating from KV to Supabase

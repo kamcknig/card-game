@@ -47,11 +47,72 @@ The Angular dev server proxies `/socket.io` and `/debug` requests to the game se
 
 ## Authentication
 
-The server ships with no default accounts and no open self-registration —
-every account is created via `POST /auth/register` using a registration code
-issued by an authenticated user. Bootstrap the first user via the CLI scripts
-with the server stopped; see [server/README.md](../server/README.md#authentication-usage)
-for the full workflow and HTTP endpoint reference.
+The server ships with no default accounts. New accounts are created via open
+email-based registration at `POST /auth/register` — no invite code is required.
+Bootstrap the first user via the CLI scripts with the server stopped; see
+[server/README.md](../server/README.md#authentication-usage) for the full
+workflow and HTTP endpoint reference.
+
+### Email confirmation in local development
+
+When `STORAGE_BACKEND=supabase` and the local Supabase CLI stack is running
+(`supabase start`), outbound email is not delivered to real inboxes. Instead,
+the Supabase CLI starts an **Inbucket**-based email capture server. All emails
+sent by Supabase Auth (confirmation links, password resets, etc.) are
+intercepted and available at:
+
+```
+http://localhost:54324
+```
+
+Open that URL in a browser after registering a new account to retrieve the
+confirmation link and click through it — no real mail server or SMTP
+credentials are needed for local development.
+
+The `[auth.email]` section of `supabase/config.toml` has
+`enable_confirmations = true`, which is the setting that gates first login
+behind email verification. The Inbucket server is configured in the
+`[inbucket]` section of the same file (port `54324`).
+
+When `STORAGE_BACKEND=kv`, no email is sent at registration and no
+confirmation step exists.
+
+### Supabase SMTP (hosted project)
+
+When targeting a hosted Supabase project (not the local CLI stack), Supabase's
+free tier allows only 2 outbound auth emails per hour. For any real usage,
+configure a custom SMTP provider in the Supabase dashboard under
+**Authentication → SMTP Settings**. The project uses [Resend](https://resend.com)
+as its SMTP provider:
+
+| Field | Value |
+|-------|-------|
+| Host | `smtp.resend.com` |
+| Port | `465` |
+| Username | `resend` |
+| Password | your Resend API key (`re_...`) |
+| Sender email | a verified address on your Resend domain |
+
+A verified sending domain must be configured in Resend before outbound email
+works. The confirmation email link uses the **Site URL** configured in
+**Authentication → URL Configuration** — set this to the frontend URL
+(e.g. `http://localhost:51455` for local dev or the production FQDN).
+
+### Applying Supabase migrations
+
+SQL migrations live in `supabase/migrations/`. To apply them to a hosted
+Supabase project:
+
+```bash
+# Link to the project once (project-ref is the ID in the dashboard URL)
+supabase link --project-ref <project-ref>
+
+# Push pending migrations
+supabase db push
+```
+
+`supabase db push` is idempotent — it only applies migrations that have not
+been recorded in the project's migration history table.
 
 ## Docker
 

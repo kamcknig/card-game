@@ -3,9 +3,9 @@ import { ServerAuthRouteHandlerService } from '../auth/server-auth-route-handler
 import { AuthSessionService, SessionRecord } from '../auth/auth-session-service.ts';
 import { AuthRateLimiterService, Clock } from '../auth/auth-rate-limiter-service.ts';
 import { ServerConfigService } from '../server-config-service.ts';
+import { SupabaseClientProvider } from '../storage/supabase-client-provider.ts';
 import { LoggerService } from '../logger-service.ts';
 import { InMemoryUserStore } from '../auth/in-memory-user-store.ts';
-import { InMemoryRegistrationCodeStore } from '../auth/in-memory-registration-code-store.ts';
 import { Argon2idHasher, BcryptHasher } from '../auth/password-hasher.ts';
 import { UserAccountAuthProvider } from '../auth/user-account-auth-provider.ts';
 
@@ -97,6 +97,15 @@ const makeSessionServiceStub = (
   } as unknown as AuthSessionService;
 };
 
+// Minimal SupabaseClientProvider stub that always throws — kv-backend tests
+// never reach the Supabase path so this is never called.
+const makeSupabaseClientProviderStub = (): SupabaseClientProvider =>
+  ({
+    get: () => {
+      throw new Error('SupabaseClientProvider stub: not available in kv tests');
+    },
+  }) as unknown as SupabaseClientProvider;
+
 // Builds the service under test with all dependencies wired.
 // Uses concrete in-memory implementations so integration-style tests can opt
 // into register / password-change flows without further stubbing.
@@ -108,7 +117,6 @@ const makeService = (opts: {
   windowMs?: string;
   maxBodyBytes?: string;
   userStore?: InMemoryUserStore;
-  regCodeStore?: InMemoryRegistrationCodeStore;
 }) => {
   const config = new ServerConfigService();
   const logger = makeLoggerStub();
@@ -119,10 +127,10 @@ const makeService = (opts: {
     makeSessionServiceStub({ ok: true, token: 'tok-abc', username: 'testuser' });
 
   const userStore = opts.userStore ?? new InMemoryUserStore();
-  const regCodeStore = opts.regCodeStore ?? new InMemoryRegistrationCodeStore();
   const argon2id = new Argon2idHasher();
   const bcrypt = new BcryptHasher();
-  const userProvider = new UserAccountAuthProvider(logger, userStore, argon2id, bcrypt, config, clock);
+  const supabaseClientProvider = makeSupabaseClientProviderStub();
+  const userProvider = new UserAccountAuthProvider(logger, userStore, argon2id, bcrypt, config, supabaseClientProvider, clock);
 
   return {
     service: new ServerAuthRouteHandlerService(
@@ -131,13 +139,12 @@ const makeService = (opts: {
       config,
       rateLimiter,
       userStore,
-      regCodeStore,
       argon2id,
       userProvider,
+      supabaseClientProvider,
     ),
     rateLimiter,
     userStore,
-    regCodeStore,
     argon2id,
     userProvider,
   };
@@ -307,8 +314,12 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/login body size > cap → 4
 
 Deno.test('ServerAuthRouteHandlerService: GET /auth/validate with valid token → 200', async () => {
   await withIsolatedEnv({}, async () => {
+    const userStore = new InMemoryUserStore();
+    await userStore.create({ username: 'alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: 1 });
+
     const { service } = makeService({
       sessionServiceStub: makeSessionServiceStub({ ok: true, token: 'tok', username: 'alice' }, 'alice'),
+      userStore,
     });
 
     const res = await dispatch(
@@ -355,6 +366,57 @@ Deno.test('ServerAuthRouteHandlerService: GET /auth/validate invalid token → 4
     );
 
     assertEquals(res.status, 401);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: GET /auth/validate deleted local user → 401', async () => {
+  // When the user record is missing from the local store the session must be
+  // invalidated — this covers accounts deleted via the dashboard.
+  await withIsolatedEnv({}, async () => {
+    const userStore = new InMemoryUserStore();
+    // No user seeded — token is valid but the local record is gone.
+
+    const { service } = makeService({
+      sessionServiceStub: makeSessionServiceStub({ ok: true, token: 'tok', username: 'alice' }, 'alice'),
+      userStore,
+    });
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/validate', {
+        method: 'GET',
+        headers: { Authorization: 'Bearer tok' },
+      }),
+    );
+
+    assertEquals(res.status, 401);
+    const body = await res.json();
+    assertEquals(body.ok, false);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: GET /auth/validate disabled account → 401', async () => {
+  await withIsolatedEnv({}, async () => {
+    const userStore = new InMemoryUserStore();
+    const rec = await userStore.create({ username: 'alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: 1 });
+    userStore.setDisabled(rec.id, true);
+
+    const { service } = makeService({
+      sessionServiceStub: makeSessionServiceStub({ ok: true, token: 'tok', username: 'alice' }, 'alice'),
+      userStore,
+    });
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/validate', {
+        method: 'GET',
+        headers: { Authorization: 'Bearer tok' },
+      }),
+    );
+
+    assertEquals(res.status, 401);
+    const body = await res.json();
+    assertEquals(body.ok, false);
   });
 });
 
@@ -452,19 +514,19 @@ Deno.test('ServerAuthRouteHandlerService: non-/auth path → handler returns und
     const rateLimiter = new AuthRateLimiterService(logger, config, clock);
     const sessionService = makeSessionServiceStub({ ok: true, token: 'tok', username: 'alice' });
     const userStore = new InMemoryUserStore();
-    const regCodeStore = new InMemoryRegistrationCodeStore();
     const argon2id = new Argon2idHasher();
     const bcrypt = new BcryptHasher();
-    const userProvider = new UserAccountAuthProvider(logger, userStore, argon2id, bcrypt, config, clock);
+    const supabaseClientProvider = makeSupabaseClientProviderStub();
+    const userProvider = new UserAccountAuthProvider(logger, userStore, argon2id, bcrypt, config, supabaseClientProvider, clock);
     const service = new ServerAuthRouteHandlerService(
       sessionService,
       logger,
       config,
       rateLimiter,
       userStore,
-      regCodeStore,
       argon2id,
       userProvider,
+      supabaseClientProvider,
     );
 
     const req = new Request('http://localhost/debug/state', { method: 'GET' });
@@ -625,10 +687,9 @@ Deno.test('ServerAuthRouteHandlerService: DELETE /auth/sessions unauthenticated 
 
 // ── POST /auth/register ──────────────────────────────────────────────────────
 
-Deno.test('ServerAuthRouteHandlerService: POST /auth/register with valid code → 201', async () => {
+Deno.test('ServerAuthRouteHandlerService: POST /auth/register with valid data → 201', async () => {
   await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '8' }, async () => {
-    const { service, userStore, regCodeStore } = makeService({});
-    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 1, now: Date.now() });
+    const { service, userStore } = makeService({});
 
     const res = await dispatch(
       service,
@@ -637,8 +698,8 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register with valid code �
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: 'alice123',
+          email: 'alice@example.com',
           password: 'correcthorsebattery',
-          registrationCode: rec.code,
         }),
       }),
     );
@@ -646,52 +707,19 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register with valid code �
     assertEquals(res.status, 201);
     const body = await res.json();
     assertEquals(body.ok, true);
-    assertEquals(userStore.getByUsername('alice123')?.username, 'alice123');
-    // Code should be consumed and auto-disabled (maxUses=1).
-    const after = regCodeStore.get(rec.code);
-    assertEquals(after?.usedCount, 1);
-    assertEquals(after?.disabled, true);
-  });
-});
-
-Deno.test('ServerAuthRouteHandlerService: POST /auth/register invalid code → 400 and records failure', async () => {
-  await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '8' }, async () => {
-    const { service, rateLimiter } = makeService({});
-
-    const res = await dispatch(
-      service,
-      new Request('http://localhost/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: 'alice123',
-          password: 'correcthorsebattery',
-          registrationCode: 'nonexistent',
-        }),
-      }),
-    );
-
-    assertEquals(res.status, 400);
-    const body = await res.json();
-    assertEquals(body.ok, false);
-    // Verify the failure was recorded in the rate limiter.
-    for (let i = 0; i < 9; i++) rateLimiter.recordFailure('1.2.3.4');
-    assertEquals(rateLimiter.isLimited('1.2.3.4'), true);
+    assertEquals((await userStore.getByUsername('alice123'))?.username, 'alice123');
   });
 });
 
 Deno.test('ServerAuthRouteHandlerService: POST /auth/register duplicate username → 409', async () => {
   await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '8' }, async () => {
-    const { service, userStore, regCodeStore } = makeService({});
-    userStore.create({
+    const { service, userStore } = makeService({});
+    await userStore.create({
       username: 'alice123',
       passwordHash: 'existing-hash',
       passwordAlgo: 'argon2id',
       now: Date.now(),
     });
-    // A code is still consumed before the dup check — allow two uses so this
-    // test does not depend on the order of validations.
-    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 5, now: Date.now() });
 
     const res = await dispatch(
       service,
@@ -700,8 +728,8 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register duplicate username
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: 'alice123',
+          email: 'alice@example.com',
           password: 'correcthorsebattery',
-          registrationCode: rec.code,
         }),
       }),
     );
@@ -710,11 +738,16 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register duplicate username
   });
 });
 
-Deno.test('ServerAuthRouteHandlerService: POST /auth/register expired code → 400', async () => {
+Deno.test('ServerAuthRouteHandlerService: POST /auth/register duplicate email → 409', async () => {
   await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '8' }, async () => {
-    const { service, regCodeStore } = makeService({});
-    const past = Date.now() - 1_000;
-    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: past, maxUses: 1, now: past - 1_000 });
+    const { service, userStore } = makeService({});
+    await userStore.create({
+      username: 'existing',
+      email: 'alice@example.com',
+      passwordHash: 'existing-hash',
+      passwordAlgo: 'argon2id',
+      now: Date.now(),
+    });
 
     const res = await dispatch(
       service,
@@ -723,43 +756,19 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register expired code → 4
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: 'alice123',
+          email: 'alice@example.com',
           password: 'correcthorsebattery',
-          registrationCode: rec.code,
         }),
       }),
     );
 
-    assertEquals(res.status, 400);
-  });
-});
-
-Deno.test('ServerAuthRouteHandlerService: POST /auth/register exhausted code → 400', async () => {
-  await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '8' }, async () => {
-    const { service, regCodeStore } = makeService({});
-    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 1, now: Date.now() });
-    regCodeStore.recordUse(rec.code, Date.now());
-
-    const res = await dispatch(
-      service,
-      new Request('http://localhost/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: 'alice123',
-          password: 'correcthorsebattery',
-          registrationCode: rec.code,
-        }),
-      }),
-    );
-
-    assertEquals(res.status, 400);
+    assertEquals(res.status, 409);
   });
 });
 
 Deno.test('ServerAuthRouteHandlerService: POST /auth/register rejects short password', async () => {
   await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '10' }, async () => {
-    const { service, regCodeStore } = makeService({});
-    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 1, now: Date.now() });
+    const { service } = makeService({});
 
     const res = await dispatch(
       service,
@@ -768,8 +777,8 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register rejects short pass
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: 'alice123',
+          email: 'alice@example.com',
           password: 'short',
-          registrationCode: rec.code,
         }),
       }),
     );
@@ -780,8 +789,7 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register rejects short pass
 
 Deno.test('ServerAuthRouteHandlerService: POST /auth/register rejects invalid username', async () => {
   await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '8' }, async () => {
-    const { service, regCodeStore } = makeService({});
-    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 1, now: Date.now() });
+    const { service } = makeService({});
 
     const res = await dispatch(
       service,
@@ -790,8 +798,8 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register rejects invalid us
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: 'has-dash',
+          email: 'alice@example.com',
           password: 'correcthorsebattery',
-          registrationCode: rec.code,
         }),
       }),
     );
@@ -800,109 +808,39 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register rejects invalid us
   });
 });
 
-// ── registration-codes endpoints ─────────────────────────────────────────────
-
-Deno.test('ServerAuthRouteHandlerService: POST /auth/registration-codes authenticated → 201', async () => {
-  await withIsolatedEnv({}, async () => {
-    const { service, regCodeStore, userStore } = makeService({
-      sessionServiceStub: makeSessionServiceStub({ ok: true, token: 'tok', username: 'alice' }, 'alice'),
-    });
-    const alice = await userStore.create({ username: 'alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: Date.now() });
-    userStore.setAdmin(alice.id, true);
+Deno.test('ServerAuthRouteHandlerService: POST /auth/register rejects missing email', async () => {
+  await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '8' }, async () => {
+    const { service } = makeService({});
 
     const res = await dispatch(
       service,
-      new Request('http://localhost/auth/registration-codes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer tok' },
-        body: JSON.stringify({ maxUses: 3 }),
-      }),
-    );
-
-    assertEquals(res.status, 201);
-    const body = await res.json();
-    assertEquals(body.ok, true);
-    assertEquals(typeof body.code, 'string');
-    assertEquals(body.maxUses, 3);
-    // And it should be persisted.
-    assertEquals(regCodeStore.get(body.code)?.createdBy, 'alice');
-  });
-});
-
-Deno.test('ServerAuthRouteHandlerService: POST /auth/registration-codes unauthenticated → 401', async () => {
-  await withIsolatedEnv({}, async () => {
-    const { service } = makeService({
-      sessionServiceStub: makeSessionServiceStub({ ok: true, token: 'tok', username: 'alice' }, null),
-    });
-
-    const res = await dispatch(
-      service,
-      new Request('http://localhost/auth/registration-codes', {
+      new Request('http://localhost/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ username: 'alice123', password: 'correcthorsebattery' }),
       }),
     );
 
-    assertEquals(res.status, 401);
-  });
-});
-
-Deno.test('ServerAuthRouteHandlerService: DELETE /auth/registration-codes/:code → 200 disables code', async () => {
-  await withIsolatedEnv({}, async () => {
-    const { service, regCodeStore, userStore } = makeService({
-      sessionServiceStub: makeSessionServiceStub({ ok: true, token: 'tok', username: 'alice' }, 'alice'),
-    });
-    const alice = await userStore.create({ username: 'alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: Date.now() });
-    userStore.setAdmin(alice.id, true);
-    const rec = regCodeStore.create({ createdBy: 'alice', expiresAt: null, maxUses: 5, now: Date.now() });
-
-    const res = await dispatch(
-      service,
-      new Request(`http://localhost/auth/registration-codes/${rec.code}`, {
-        method: 'DELETE',
-        headers: { Authorization: 'Bearer tok' },
-      }),
-    );
-
-    assertEquals(res.status, 200);
-    assertEquals(regCodeStore.get(rec.code)?.disabled, true);
-  });
-});
-
-Deno.test('ServerAuthRouteHandlerService: GET /auth/registration-codes returns active codes only', async () => {
-  await withIsolatedEnv({}, async () => {
-    const { service, regCodeStore, userStore } = makeService({
-      sessionServiceStub: makeSessionServiceStub({ ok: true, token: 'tok', username: 'alice' }, 'alice'),
-    });
-    const alice = await userStore.create({ username: 'alice', passwordHash: 'h', passwordAlgo: 'argon2id', now: Date.now() });
-    userStore.setAdmin(alice.id, true);
-    regCodeStore.create({ createdBy: 'alice', expiresAt: null, maxUses: 1, now: Date.now() });
-    const expired = regCodeStore.create({
-      createdBy: 'alice',
-      expiresAt: Date.now() - 1_000,
-      maxUses: 1,
-      now: Date.now() - 2_000,
-    });
-    regCodeStore.disable(
-      regCodeStore.create({ createdBy: 'alice', expiresAt: null, maxUses: 1, now: Date.now() }).code,
-    );
-
-    const res = await dispatch(
-      service,
-      new Request('http://localhost/auth/registration-codes', {
-        method: 'GET',
-        headers: { Authorization: 'Bearer tok' },
-      }),
-    );
-
-    assertEquals(res.status, 200);
+    assertEquals(res.status, 400);
     const body = await res.json();
-    assertEquals(Array.isArray(body.codes), true);
-    // Exactly one active (non-expired, non-disabled) code should remain.
-    assertEquals(body.codes.length, 1);
-    // The active code must not be the expired one.
-    assertEquals(body.codes[0].code !== expired.code, true);
+    assertEquals(body.ok, false);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: POST /auth/register rejects invalid email', async () => {
+  await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '8' }, async () => {
+    const { service } = makeService({});
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: 'alice123', email: 'not-an-email', password: 'correcthorsebattery' }),
+      }),
+    );
+
+    assertEquals(res.status, 400);
   });
 });
 
@@ -943,7 +881,7 @@ Deno.test('ServerAuthRouteHandlerService: GET /auth/check-username for unknown u
 Deno.test('ServerAuthRouteHandlerService: GET /auth/check-username for existing user → available:false', async () => {
   await withIsolatedEnv({}, async () => {
     const { service, userStore } = makeService({});
-    userStore.create({
+    await userStore.create({
       username: 'alice',
       passwordHash: 'hash',
       passwordAlgo: 'argon2id',
@@ -966,7 +904,7 @@ Deno.test('ServerAuthRouteHandlerService: GET /auth/check-username is case-insen
   // endpoint — registering 'Alice' should mark 'alice' / 'ALICE' as taken.
   await withIsolatedEnv({}, async () => {
     const { service, userStore } = makeService({});
-    userStore.create({
+    await userStore.create({
       username: 'Alice',
       passwordHash: 'hash',
       passwordAlgo: 'argon2id',
@@ -989,135 +927,7 @@ Deno.test('ServerAuthRouteHandlerService: GET /auth/check-username is case-insen
   });
 });
 
-// ── GET /auth/registration-codes/validate ────────────────────────────────────
-
-Deno.test('ServerAuthRouteHandlerService: GET /auth/registration-codes/validate missing code → 200 valid:false', async () => {
-  await withIsolatedEnv({}, async () => {
-    const { service } = makeService({});
-
-    const res = await dispatch(
-      service,
-      new Request('http://localhost/auth/registration-codes/validate', { method: 'GET' }),
-    );
-
-    assertEquals(res.status, 200);
-    const body = await res.json();
-    assertEquals(body.ok, true);
-    assertEquals(body.valid, false);
-  });
-});
-
-Deno.test('ServerAuthRouteHandlerService: GET /auth/registration-codes/validate unknown code → 200 valid:false', async () => {
-  await withIsolatedEnv({}, async () => {
-    const { service } = makeService({});
-
-    const res = await dispatch(
-      service,
-      new Request('http://localhost/auth/registration-codes/validate?code=DOESNOTEXIST', { method: 'GET' }),
-    );
-
-    assertEquals(res.status, 200);
-    const body = await res.json();
-    assertEquals(body.ok, true);
-    assertEquals(body.valid, false);
-  });
-});
-
-Deno.test('ServerAuthRouteHandlerService: GET /auth/registration-codes/validate active code → 200 valid:true', async () => {
-  await withIsolatedEnv({}, async () => {
-    const { service, regCodeStore } = makeService({});
-    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 5, now: Date.now() });
-
-    const res = await dispatch(
-      service,
-      new Request(`http://localhost/auth/registration-codes/validate?code=${rec.code}`, { method: 'GET' }),
-    );
-
-    assertEquals(res.status, 200);
-    const body = await res.json();
-    assertEquals(body.ok, true);
-    assertEquals(body.valid, true);
-  });
-});
-
-Deno.test('ServerAuthRouteHandlerService: GET /auth/registration-codes/validate disabled code → 200 valid:false', async () => {
-  await withIsolatedEnv({}, async () => {
-    const { service, regCodeStore } = makeService({});
-    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 5, now: Date.now() });
-    regCodeStore.disable(rec.code);
-
-    const res = await dispatch(
-      service,
-      new Request(`http://localhost/auth/registration-codes/validate?code=${rec.code}`, { method: 'GET' }),
-    );
-
-    assertEquals(res.status, 200);
-    const body = await res.json();
-    assertEquals(body.ok, true);
-    assertEquals(body.valid, false);
-  });
-});
-
-Deno.test('ServerAuthRouteHandlerService: GET /auth/registration-codes/validate expired code → 200 valid:false', async () => {
-  await withIsolatedEnv({}, async () => {
-    const { service, regCodeStore } = makeService({});
-    const past = Date.now() - 1_000;
-    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: past, maxUses: 5, now: past - 1_000 });
-
-    const res = await dispatch(
-      service,
-      new Request(`http://localhost/auth/registration-codes/validate?code=${rec.code}`, { method: 'GET' }),
-    );
-
-    assertEquals(res.status, 200);
-    const body = await res.json();
-    assertEquals(body.ok, true);
-    assertEquals(body.valid, false);
-  });
-});
-
-Deno.test('ServerAuthRouteHandlerService: GET /auth/registration-codes/validate exhausted code → 200 valid:false', async () => {
-  await withIsolatedEnv({}, async () => {
-    const { service, regCodeStore } = makeService({});
-    const now = Date.now();
-    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 1, now });
-    // Consume the single allowed use.
-    regCodeStore.recordUse(rec.code, now);
-
-    const res = await dispatch(
-      service,
-      new Request(`http://localhost/auth/registration-codes/validate?code=${rec.code}`, { method: 'GET' }),
-    );
-
-    assertEquals(res.status, 200);
-    const body = await res.json();
-    assertEquals(body.ok, true);
-    assertEquals(body.valid, false);
-  });
-});
-
-Deno.test('ServerAuthRouteHandlerService: GET /auth/registration-codes/validate requires no auth token', async () => {
-  // Public endpoint — no Authorization header should be needed even for a valid code.
-  await withIsolatedEnv({}, async () => {
-    const { service, regCodeStore } = makeService({
-      // validateToken returns undefined (no valid session), but the endpoint is public.
-      sessionServiceStub: makeSessionServiceStub({ ok: true, token: 'tok', username: 'alice' }, null),
-    });
-    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 5, now: Date.now() });
-
-    const res = await dispatch(
-      service,
-      // No Authorization header.
-      new Request(`http://localhost/auth/registration-codes/validate?code=${rec.code}`, { method: 'GET' }),
-    );
-
-    assertEquals(res.status, 200);
-    const body = await res.json();
-    assertEquals(body.valid, true);
-  });
-});
-
-// ── GET /auth/check-username trims whitespace (existing) ──────────────────────
+// ── GET /auth/check-username trims whitespace ──────────────────────────────────
 
 Deno.test('ServerAuthRouteHandlerService: GET /auth/check-username trims whitespace', async () => {
   // The form passes the username verbatim; the endpoint should treat
@@ -1125,7 +935,7 @@ Deno.test('ServerAuthRouteHandlerService: GET /auth/check-username trims whitesp
   // a single space doesn't masquerade as an unknown user.
   await withIsolatedEnv({}, async () => {
     const { service, userStore } = makeService({});
-    userStore.create({
+    await userStore.create({
       username: 'alice',
       passwordHash: 'hash',
       passwordAlgo: 'argon2id',
@@ -1147,8 +957,7 @@ Deno.test('ServerAuthRouteHandlerService: GET /auth/check-username trims whitesp
 Deno.test('ServerAuthRouteHandlerService: POST /auth/register accepts minimum-length username', async () => {
   // Min length is 3 characters (USERNAME_REGEX = /^[A-Za-z0-9_]{3,32}$/).
   await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '8' }, async () => {
-    const { service, regCodeStore } = makeService({});
-    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 1, now: Date.now() });
+    const { service } = makeService({});
 
     const res = await dispatch(
       service,
@@ -1157,8 +966,8 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register accepts minimum-le
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: 'abc',
+          email: 'abc@example.com',
           password: 'correcthorsebattery',
-          registrationCode: rec.code,
         }),
       }),
     );
@@ -1169,8 +978,7 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register accepts minimum-le
 
 Deno.test('ServerAuthRouteHandlerService: POST /auth/register rejects 2-character username', async () => {
   await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '8' }, async () => {
-    const { service, regCodeStore } = makeService({});
-    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 1, now: Date.now() });
+    const { service } = makeService({});
 
     const res = await dispatch(
       service,
@@ -1179,8 +987,8 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register rejects 2-characte
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: 'ab',
+          email: 'ab@example.com',
           password: 'correcthorsebattery',
-          registrationCode: rec.code,
         }),
       }),
     );
@@ -1192,8 +1000,7 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register rejects 2-characte
 Deno.test('ServerAuthRouteHandlerService: POST /auth/register accepts 32-character username', async () => {
   // Max length is 32. Character 32 should pass; 33 should not.
   await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '8' }, async () => {
-    const { service, regCodeStore } = makeService({});
-    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 1, now: Date.now() });
+    const { service } = makeService({});
 
     const res = await dispatch(
       service,
@@ -1202,8 +1009,8 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register accepts 32-charact
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: 'a'.repeat(32),
+          email: 'long@example.com',
           password: 'correcthorsebattery',
-          registrationCode: rec.code,
         }),
       }),
     );
@@ -1214,8 +1021,7 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register accepts 32-charact
 
 Deno.test('ServerAuthRouteHandlerService: POST /auth/register rejects 33-character username', async () => {
   await withIsolatedEnv({ AUTH_MIN_PASSWORD_LENGTH: '8' }, async () => {
-    const { service, regCodeStore } = makeService({});
-    const rec = regCodeStore.create({ createdBy: 'system', expiresAt: null, maxUses: 1, now: Date.now() });
+    const { service } = makeService({});
 
     const res = await dispatch(
       service,
@@ -1224,8 +1030,8 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register rejects 33-charact
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           username: 'a'.repeat(33),
+          email: 'tolong@example.com',
           password: 'correcthorsebattery',
-          registrationCode: rec.code,
         }),
       }),
     );

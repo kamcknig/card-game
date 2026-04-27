@@ -1,9 +1,10 @@
 import { LoggerService } from '../logger-service.ts';
 import { ServerConfigService } from '../server-config-service.ts';
+import { SupabaseClientProvider } from '../storage/supabase-client-provider.ts';
 import { AuthProvider, AuthResult } from './auth-provider.ts';
 import { Argon2idHasher, BcryptHasher } from './password-hasher.ts';
 import { Clock, systemClock } from './auth-rate-limiter-service.ts';
-import type { UserStore } from './user-store.ts';
+import type { UserRecord, UserStore } from './user-store.ts';
 
 /**
  * Static argon2id hash of a throwaway value, used by
@@ -33,9 +34,17 @@ let DUMMY_HASH: string | undefined;
  *   the account is locked for `AUTH_LOCKOUT_DURATION_MS`. Successful logins
  *   clear both counters.
  * - Disabled accounts are always refused.
+ * - When `STORAGE_BACKEND=supabase` and the user's `supabaseAuthId` is set,
+ *   authentication is delegated to Supabase Auth (`signInWithPassword`).
+ *   Legacy rows (no `supabaseAuthId`) fall back to local argon2id even on
+ *   the supabase backend until the user attaches an email.
+ * - The kv backend always uses local argon2id.
  *
  * Lifetime: Root singleton; registered with AuthSessionService as the sole
  * auth provider.
+ *
+ * Defined in: server/src/core/auth/user-account-auth-provider.ts
+ * Consumers: Registered as `userAccountAuthProvider` in register-root-services.ts.
  */
 export class UserAccountAuthProvider implements AuthProvider {
   readonly name = 'user';
@@ -46,6 +55,7 @@ export class UserAccountAuthProvider implements AuthProvider {
     private readonly argon2idHasher: Argon2idHasher,
     private readonly bcryptHasher: BcryptHasher,
     private readonly serverConfigService: ServerConfigService,
+    private readonly supabaseClientProvider: SupabaseClientProvider,
     private readonly clock: Clock = systemClock,
   ) {}
 
@@ -80,7 +90,7 @@ export class UserAccountAuthProvider implements AuthProvider {
       return { ok: false, message: 'Username/password does not match' };
     }
 
-    const user = this.userStore.getByUsername(username);
+    const user = await this.userStore.getByUsername(username);
 
     // Run a dummy verify even when the user is missing to avoid leaking
     // existence via timing. Also matches the disabled-account case.
@@ -101,12 +111,121 @@ export class UserAccountAuthProvider implements AuthProvider {
       return { ok: false, message: 'Account temporarily locked' };
     }
 
+    // Branch on backend and supabaseAuthId. When the supabase backend is active
+    // and the user has a Supabase Auth account (supabaseAuthId !== null), delegate
+    // to Supabase Auth. The local argon2id path is used for:
+    //   - kv backend: always
+    //   - supabase backend with a legacy row (no supabaseAuthId): fallback until
+    //     the user attaches an email and the Supabase Auth user is provisioned.
+    const backend = this.serverConfigService.getStorageBackend();
+    if (backend === 'supabase' && user.supabaseAuthId !== null) {
+      return this.authenticateViaSupabase(user, password, now);
+    }
+
+    return this.authenticateViaArgon2(user, password, now);
+  }
+
+  /**
+   * Authenticates the user via Supabase Auth's signInWithPassword.
+   *
+   * Safe to call only when `user.supabaseAuthId !== null` (which implies
+   * `user.email !== null` — both are set atomically during registration or
+   * the add-email flow). Per-account lockout counters are still applied
+   * locally so the existing brute-force protection is not lost.
+   *
+   * Returns a clear message when the email has not yet been confirmed so the
+   * user knows they need to click the confirmation link.
+   *
+   * @param user  The resolved UserRecord (supabaseAuthId guaranteed non-null).
+   * @param password  The plaintext password from the login request.
+   * @param now  Current epoch milliseconds.
+   */
+  private async authenticateViaSupabase(user: UserRecord, password: string, now: number): Promise<AuthResult> {
+    this.loggerService.debug(`[auth:user] authenticating '${user.username}' via Supabase Auth`);
+
+    let client;
+    try {
+      client = this.supabaseClientProvider.get();
+    } catch (err) {
+      this.loggerService.error(`[auth:user] Supabase client not available for login: ${err}`);
+      return { ok: false, message: 'Authentication service unavailable' };
+    }
+
+    // Use an ephemeral client so signInWithPassword does not set a session on
+    // the shared client. The shared client must always use the service-role key
+    // for data operations; letting it accumulate user sessions from concurrent
+    // logins would cause PostgREST permission errors.
+    const ephemeral = this.supabaseClientProvider.createEphemeralClient();
+    const { data, error } = await ephemeral.auth.signInWithPassword({
+      // Non-null assertion is safe: supabaseAuthId !== null implies email !== null
+      // because both are set atomically in handleRegister / attachEmail flow.
+      email: user.email!,
+      password,
+    });
+
+    if (error) {
+      // Email not confirmed yet — surface a clear message so the user knows
+      // to check their inbox rather than seeing a generic "wrong password".
+      if (error.code === 'email_not_confirmed') {
+        this.loggerService.info(`[auth:user] login rejected for '${user.username}': email not confirmed`);
+        return { ok: false, message: 'Please confirm your email before signing in' };
+      }
+
+      // Any other Supabase error is treated as a credential failure. Increment
+      // the local failure counter and apply lockout if the threshold is crossed.
+      const updated = await this.userStore.recordFailure(user.id, now);
+      this.loggerService.debug(
+        `[auth:user] Supabase Auth rejected '${user.username}': ${error.message} (failures=${updated.failedAttempts})`,
+      );
+
+      const threshold = this.serverConfigService.getAuthLockoutThreshold();
+      if (updated.failedAttempts >= threshold) {
+        const durationMs = this.serverConfigService.getAuthLockoutDurationMs();
+        this.userStore.setLockedUntil(user.id, now + durationMs);
+        this.loggerService.warn(
+          `[auth:user] account '${user.username}' locked for ${durationMs}ms after Supabase Auth failure (failures=${updated.failedAttempts})`,
+        );
+      }
+
+      return { ok: false, message: 'Username/password does not match' };
+    }
+
+    if (!data.user) {
+      // Defensive: success response with no user object — should never happen.
+      this.loggerService.error(`[auth:user] Supabase Auth returned ok but no user for '${user.username}'`);
+      return { ok: false, message: 'Authentication failed' };
+    }
+
+    // Successful Supabase Auth login — reset local failure counters.
+    this.userStore.resetFailures(user.id);
+    this.loggerService.info(`[auth:user] Supabase Auth login succeeded for '${user.username}'`);
+    return { ok: true, username: user.username };
+  }
+
+  /**
+   * Authenticates the user via the local argon2id (or legacy bcrypt) hash.
+   *
+   * Used by:
+   * - kv backend (always)
+   * - supabase backend with legacy rows (supabaseAuthId === null) until the
+   *   user attaches an email via the add-email flow.
+   *
+   * Successful bcrypt logins trigger an opportunistic rehash to argon2id so
+   * stored hashes migrate forward without operator intervention.
+   *
+   * @param user  The resolved UserRecord.
+   * @param password  The plaintext password from the login request.
+   * @param now  Current epoch milliseconds.
+   */
+  private async authenticateViaArgon2(user: UserRecord, password: string, now: number): Promise<AuthResult> {
+    this.loggerService.debug(`[auth:user] authenticating '${user.username}' via local argon2id`);
+
     // Select the verifier based on the algorithm recorded at hash time.
     const verifier = user.passwordAlgo === 'argon2id' ? this.argon2idHasher : this.bcryptHasher;
     const valid = await verifier.verify(password, user.passwordHash);
 
     if (!valid) {
-      const updated = this.userStore.recordFailure(user.id, now);
+      const updated = await this.userStore.recordFailure(user.id, now);
       this.loggerService.debug(
         `[auth:user] rejected: wrong password for '${user.username}' (failures=${updated.failedAttempts})`,
       );
@@ -126,7 +245,10 @@ export class UserAccountAuthProvider implements AuthProvider {
 
     // Successful login — rehash bcrypt→argon2id opportunistically so stored
     // hashes migrate forward without operator intervention.
-    if (user.passwordAlgo === 'bcrypt') {
+    // Gate rehash behind kv backend or legacy supabase rows so we don't
+    // pointlessly rehash a supabase-auth user's empty sentinel hash.
+    const backend = this.serverConfigService.getStorageBackend();
+    if (user.passwordAlgo === 'bcrypt' && (backend === 'kv' || user.supabaseAuthId === null)) {
       try {
         const newHash = await this.argon2idHasher.hash(password);
         this.userStore.updatePassword(user.id, newHash, 'argon2id', now);

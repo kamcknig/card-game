@@ -1,22 +1,21 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal, viewChild } from '@angular/core';
-import { toObservable, takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { debounceTime, distinctUntilChanged, switchMap, tap } from 'rxjs/operators';
+import { ChangeDetectionStrategy, Component, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Eye, EyeOff, LucideAngularModule } from 'lucide-angular';
 import { SceneContentComponent } from '../scene-content/scene-content.component';
 import { NewPasswordFieldsComponent } from '../ui/new-password-fields/new-password-fields.component';
-import { UiDialogComponent } from '../ui/dialog/ui-dialog.component';
-import { AuthService, pendingRegistrationCodeStore } from '../../core/auth/auth.service';
+import { AuthService } from '../../core/auth/auth.service';
+
+/** Intentionally permissive — the server performs the authoritative check. */
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Login scene component that gates access to the lobby.
  *
  * Displays a username/password form with a mode toggle between Sign In and
- * Register. Register mode asks for an additional registration code issued by
- * an existing user (or via CLI) and calls POST /auth/register. On successful
- * registration the component flips back to Sign In mode with a success
- * message — server does not automatically create a session.
+ * Register. Register mode requires an email address and calls POST /auth/register.
+ * On successful registration the component flips back to Sign In mode with a
+ * success message — server does not automatically create a session.
  *
  * Sign In uses the 'user' provider. The legacy 'password' provider is kept
  * available on the server for operators who want to run the shared-password
@@ -25,12 +24,12 @@ import { AuthService, pendingRegistrationCodeStore } from '../../core/auth/auth.
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [SceneContentComponent, FormsModule, NewPasswordFieldsComponent, LucideAngularModule, UiDialogComponent],
+  imports: [SceneContentComponent, FormsModule, NewPasswordFieldsComponent, LucideAngularModule],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class LoginComponent implements OnInit {
+export class LoginComponent {
   private readonly _authService = inject(AuthService);
   private readonly _router = inject(Router);
 
@@ -43,23 +42,23 @@ export class LoginComponent implements OnInit {
   readonly mode = signal<'signin' | 'register'>('signin');
 
   readonly username = signal('');
+  /** Email address — only used when mode() === 'register'. */
+  readonly email = signal('');
   readonly password = signal('');
   /** Confirmation of {@link password} — only used when mode() === 'register'. */
   readonly confirmPassword = signal('');
-  /** Registration code — only used when mode() === 'register'. */
-  readonly registrationCode = signal('');
   readonly errorMessage = signal<string | undefined>(undefined);
   readonly successMessage = signal<string | undefined>(undefined);
   readonly isSubmitting = signal(false);
   /** Controls whether the sign-in password field renders as plain text. */
   readonly showPassword = signal(false);
-  /** Username availability error shown inline below the username field in register mode. */
-  readonly usernameError = signal<string | undefined>(undefined);
-  /** True while the invalid-code modal is visible after a failed deep-link code validation. */
-  readonly showInvalidCodeModal = signal(false);
-
-  /** Tracks whether the registration code was pre-filled from a URL deep link. */
-  private _codeFromDeepLink = false;
+  /**
+   * Per-field availability status for the register form.
+   * `checking` is true while the server request is in flight.
+   * `error` is set when the value is already taken.
+   */
+  readonly emailStatus = signal<{ checking: boolean; error?: string }>({ checking: false });
+  readonly usernameStatus = signal<{ checking: boolean; error?: string }>({ checking: false });
 
   /**
    * Reference to the shared primary/confirm password component rendered in
@@ -67,67 +66,6 @@ export class LoginComponent implements OnInit {
    * button — undefined in signin mode (component is not rendered).
    */
   readonly newPasswordFields = viewChild(NewPasswordFieldsComponent);
-
-  constructor() {
-    // Pre-fill registration code from URL deep-link if one was staged on startup.
-    // We set mode() directly (not via setMode()) to avoid clearing registrationCode,
-    // then set registrationCode separately. The store is cleared after reading so
-    // subsequent LoginComponent instantiations do not re-apply a stale value.
-    const pending = pendingRegistrationCodeStore.get();
-    if (pending) {
-      this.mode.set('register');
-      this.registrationCode.set(pending);
-      pendingRegistrationCodeStore.set(undefined);
-      // Flag so ngOnInit can validate the code asynchronously.
-      this._codeFromDeepLink = true;
-    }
-
-    // Debounced username availability check — fires only in register mode.
-    toObservable(this.username)
-      .pipe(
-        // Clear any previous error immediately so stale text doesn't linger while typing.
-        tap(() => this.usernameError.set(undefined)),
-        debounceTime(400),
-        distinctUntilChanged(),
-        switchMap(async (username) => {
-          if (this.mode() !== 'register' || !username.trim()) {
-            return undefined;
-          }
-          const available = await this._authService.checkUsernameAvailability(username.trim());
-          return available ? undefined : 'Username is already taken';
-        }),
-        takeUntilDestroyed(),
-      )
-      .subscribe((error) => this.usernameError.set(error));
-  }
-
-  /**
-   * Validates the deep-link registration code, if any, after the component
-   * initialises. Shows the invalid-code modal and clears the code field when
-   * the server reports the code is not redeemable.
-   */
-  ngOnInit(): void {
-    if (!this._codeFromDeepLink) {
-      return;
-    }
-
-    const code = this.registrationCode();
-    if (!code) {
-      return;
-    }
-
-    void this._authService.validateRegistrationCode(code).then(result => {
-      if (!result.valid) {
-        this.registrationCode.set('');
-        this.showInvalidCodeModal.set(true);
-      }
-    });
-  }
-
-  /** Dismisses the invalid-code modal; the register form remains visible. */
-  dismissInvalidCodeModal(): void {
-    this.showInvalidCodeModal.set(false);
-  }
 
   /** Toggles the password visibility state. */
   toggleShowPassword(): void {
@@ -146,11 +84,59 @@ export class LoginComponent implements OnInit {
     this.mode.set(next);
     this.errorMessage.set(undefined);
     this.successMessage.set(undefined);
-    this.usernameError.set(undefined);
+    // Reset per-field availability status so stale errors don't carry across modes.
+    this.usernameStatus.set({ checking: false });
+    this.emailStatus.set({ checking: false });
     this.username.set('');
+    this.email.set('');
     this.password.set('');
     this.confirmPassword.set('');
-    this.registrationCode.set('');
+  }
+
+  /**
+   * Fires when the email input loses focus in register mode.
+   *
+   * Checks email availability against the server and updates `emailStatus`
+   * with the result. No-ops when in sign-in mode or when the field is empty.
+   */
+  async onEmailBlur(): Promise<void> {
+    if (this.mode() !== 'register') return;
+    const email = this.email().trim();
+    if (!email) {
+      this.emailStatus.set({ checking: false });
+      return;
+    }
+    if (!EMAIL_REGEX.test(email)) {
+      this.emailStatus.set({ checking: false, error: 'Enter a valid email address' });
+      return;
+    }
+    this.emailStatus.set({ checking: true });
+    const available = await this._authService.checkEmailAvailability(email);
+    this.emailStatus.set({
+      checking: false,
+      error: available ? undefined : 'Email is already registered',
+    });
+  }
+
+  /**
+   * Fires when the username input loses focus in register mode.
+   *
+   * Checks username availability against the server and updates `usernameStatus`
+   * with the result. No-ops when in sign-in mode or when the field is empty.
+   */
+  async onUsernameBlur(): Promise<void> {
+    if (this.mode() !== 'register') return;
+    const username = this.username().trim();
+    if (!username) {
+      this.usernameStatus.set({ checking: false });
+      return;
+    }
+    this.usernameStatus.set({ checking: true });
+    const available = await this._authService.checkUsernameAvailability(username);
+    this.usernameStatus.set({
+      checking: false,
+      error: available ? undefined : 'Username is already taken',
+    });
   }
 
   /**
@@ -199,13 +185,7 @@ export class LoginComponent implements OnInit {
           return;
         }
 
-        const code = this.registrationCode().trim();
-        if (!code) {
-          this.errorMessage.set('Registration code is required');
-          return;
-        }
-
-        const result = await this._authService.register(username, password, code);
+        const result = await this._authService.register(username, this.email().trim(), password);
         if (result.ok) {
           // setMode clears all fields and messages; set the success toast and
           // restore the username AFTER calling setMode so they survive the clear.

@@ -21,6 +21,11 @@ import type { LoggerService } from '../logger-service.ts';
 export class SupabaseClientProvider {
   // Shared Supabase client; undefined until open() completes.
   private client: SupabaseClient | undefined;
+  // Stored so createEphemeralClient() can mint isolated clients for one-off
+  // auth operations (e.g. signInWithPassword) that must not touch the shared
+  // client's in-memory session.
+  private url: string | undefined;
+  private key: string | undefined;
 
   constructor(private readonly loggerService: LoggerService) {}
 
@@ -37,6 +42,8 @@ export class SupabaseClientProvider {
   public open(url: string, key: string): void {
     if (this.client) return;
 
+    this.url = url;
+    this.key = key;
     this.loggerService.info(`[supabase] opening client for project: ${url}`);
     this.client = createClient(url, key, {
       auth: {
@@ -47,6 +54,25 @@ export class SupabaseClientProvider {
       },
     });
     this.loggerService.log('[supabase] client ready');
+  }
+
+  /**
+   * Creates and returns a fresh, isolated Supabase client instance.
+   *
+   * Use this for one-off auth operations such as signInWithPassword that would
+   * otherwise contaminate the shared client's in-memory session and break
+   * concurrent data operations. The returned client is not cached and is
+   * discarded by the caller after use.
+   *
+   * Throws when called before {@link open}.
+   */
+  public createEphemeralClient(): SupabaseClient {
+    if (!this.url || !this.key) {
+      throw new Error('[supabase] client not opened — call open(url, key) first');
+    }
+    return createClient(this.url, this.key, {
+      auth: { persistSession: false },
+    });
   }
 
   /**
