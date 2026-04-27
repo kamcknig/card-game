@@ -169,68 +169,13 @@
   gap: 8px;
 }
 
-// Base action button (Mark Ready, Edit Match)
+// Post-game action buttons (Return to Lobby, Mark Ready, Edit Match,
+// Restart Match). Visual identity comes from `.btn` plus a variant class
+// (`.btn-primary`, `.btn-secondary`, `.btn-danger`) in styles.scss. Local
+// rule keeps only the icon-text alignment that the global classes don't
+// enforce.
 .action-btn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 8px 18px;
-  border-radius: 6px;
-  border: 1px solid var(--theme-border-medium);
-  background: transparent;
-  color: var(--theme-text-tertiary);
-  font-family: var(--theme-font-body);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 150ms, border-color 120ms, color 120ms;
-
-  &:hover:not(:disabled) {
-    color: var(--theme-text-primary);
-    border-color: var(--theme-border-action);
-  }
-
-  // Toggled state for the Ready button
-  &.action-btn--active {
-    background: var(--theme-action-primary-bg);
-    border-color: var(--theme-border-action);
-    color: var(--theme-text-primary);
-  }
-
-  // Danger variant — Return to Lobby (destructive / exit action)
-  &.action-btn--danger {
-    color: var(--theme-border-danger);
-    border-color: var(--theme-border-danger);
-
-    &:hover:not(:disabled) {
-      background: var(--theme-action-danger-soft-bg);
-      border-color: var(--theme-border-danger);
-      color: var(--theme-border-danger);
-    }
-  }
-
-  // Primary variant — Restart Match
-  &.action-btn--primary {
-    background: var(--theme-action-primary-bg);
-    border-color: var(--theme-border-action);
-    color: var(--theme-text-primary);
-    font-family: var(--theme-font-display);
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    padding: 8px 24px;
-
-    &:hover:not(:disabled) {
-      border-color: var(--theme-border-strong);
-    }
-
-    &:disabled {
-      background: var(--theme-action-disabled-bg);
-      opacity: var(--theme-action-disabled-opacity);
-      filter: saturate(0.45);
-      cursor: not-allowed;
-      border-color: var(--theme-border-disabled);
-      color: var(--theme-text-disabled);
-    }
-  }
 }
