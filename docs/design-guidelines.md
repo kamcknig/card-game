@@ -168,9 +168,11 @@ Stronger fade (`saturate(0.45)`) is reserved for in-game interactive buttons
 that need to look noticeably "off" mid-flow — keep the simpler form recipe
 unless there's a reason.
 
-Dialog footer buttons use a different, tighter scale documented in the
-[Dialogs / Modals](#dialogs--modals) section below — those have their own
-component-local classes for now.
+**Dialog footer buttons** also use these classes — Cancel as `.btn
+.btn-secondary`, Confirm as `.btn .btn-primary`, and destructive Confirm
+(e.g. Resign) as `.btn .btn-danger`. They no longer have their own scale
+or recipes; see [Dialogs / Modals](#dialogs--modals) for layout
+specifics.
 
 ### Inputs
 - `background: var(--theme-surface-panel)`, `border: 1px solid var(--theme-border-action)`, `border-radius: 6px`.
@@ -229,8 +231,8 @@ Dialogs are centered overlay panels used for card selection, confirmation prompt
 **Footer:**
 - `padding: 12px 20px; border-top: 1px solid var(--theme-border-subtle)`
 - `display: flex; align-items: center; justify-content: flex-end; gap: 8px`
-- Cancel button: secondary style — `background: transparent; border: 1px solid var(--theme-border-subtle); color: var(--theme-text-tertiary); border-radius: 6px; padding: 8px 18px; font-size: 13px`
-- Confirm button: primary style — `background: var(--theme-action-primary-bg); border: 1px solid var(--theme-border-strong); color: var(--theme-text-primary); border-radius: 6px; padding: 8px 24px; font-family: var(--theme-font-display); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; font-size: 13px`
+- Cancel button: `class="btn btn-secondary"` — see [Buttons](#buttons) above.
+- Confirm button: `class="btn btn-primary"` for normal confirms, or `class="btn btn-danger"` for destructive confirms (Resign, Delete, Ban) so the footer reads the action's risk level at a glance.
 - Optional left-aligned metadata (e.g. count): `font-size: 12px; color: var(--theme-text-tertiary)` — use `justify-content: space-between` when present
 
 **Search input (when applicable):**

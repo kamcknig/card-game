@@ -403,40 +403,5 @@
   }
 }
 
-.btn-cancel {
-  padding: 8px 18px;
-  border-radius: 6px;
-  border: 1px solid var(--theme-border-subtle);
-  background: transparent;
-  color: var(--theme-text-tertiary);
-  font-family: var(--theme-font-body);
-  font-size: 13px;
-  cursor: pointer;
-  transition: background 120ms, color 120ms, border-color 120ms;
-
-  &:hover {
-    background: var(--theme-action-secondary-bg);
-    color: var(--theme-text-secondary);
-    border-color: var(--theme-border-medium);
-  }
-}
-
-.btn-confirm {
-  padding: 8px 24px;
-  border-radius: 6px;
-  border: 1px solid var(--theme-border-strong);
-  background: var(--theme-action-primary-bg);
-  color: var(--theme-text-primary);
-  font-family: var(--theme-font-display);
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  font-size: 13px;
-  cursor: pointer;
-  transition: background 120ms, border-color 120ms;
-
-  &:hover {
-    background: var(--theme-action-primary-muted-bg);
-    border-color: var(--theme-border-action);
-  }
-}
+// Cancel / Confirm Selection use the shared `.btn .btn-secondary` and
+// `.btn .btn-primary` classes from styles.scss. No local rules needed.
