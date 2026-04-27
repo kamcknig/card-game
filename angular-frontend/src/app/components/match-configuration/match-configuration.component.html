@@ -2,7 +2,7 @@
   <!-- Left side of action bar: leave game -->
   <div sceneNavActions>
     @if (activeLobbyGameId(); as activeGameId) {
-      <button class="leave-game-button" (click)="leaveGame(activeGameId)">
+      <button class="btn btn-danger leave-game-button" (click)="leaveGame(activeGameId)">
         <lucide-icon [img]="LeaveIcon" [size]="16" />
         Leave Game
       </button>

@@ -15,20 +15,14 @@ $match-config-single-column-breakpoint: 940px;
 }
 
 
+// Visual identity comes from `.btn .btn-danger` in styles.scss. Local rule
+// only adds the inline-flex + gap so the icon and label stay aligned —
+// .btn defaults to a plain block button and doesn't enforce a display
+// mode that survives icon-with-text content.
 .leave-game-button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid var(--theme-border-danger);
-  background: var(--theme-action-danger-soft-bg);
-  border-radius: 6px;
-  padding: 5px 12px;
-  color: var(--theme-text-primary);
-  font-family: var(--theme-font-body);
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 150ms, border-color 120ms;
 }
 
 .header-actions {

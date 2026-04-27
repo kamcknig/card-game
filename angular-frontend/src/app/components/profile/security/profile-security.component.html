@@ -65,7 +65,7 @@
         <div class="form-actions">
           <button
             type="submit"
-            class="panel-button"
+            class="btn btn-primary"
             [disabled]="attachEmailSubmitting() || !!attachEmailStatus().checking || !!attachEmailStatus().error || !attachEmailValue().trim() || !attachEmailPassword()"
           >
             Add email
@@ -111,7 +111,7 @@
       <div class="form-actions">
         <button
           type="submit"
-          class="panel-button"
+          class="btn btn-primary"
           [disabled]="changePasswordSubmitting() || !!newPasswordFields()?.mismatch() || confirmNewPassword().length === 0"
         >
           Update password

@@ -271,17 +271,8 @@ app-game-log {
   margin-top: 4px;
 }
 
-.disconnect-button {
-  border: none;
-  border-radius: 6px;
-  padding: 8px 12px;
-  background: var(--theme-action-danger-soft-bg);
-  color: var(--theme-text-primary);
-  font-family: var(--theme-font-body);
-  font-size: 0.875rem;
-  font-weight: 600;
-  cursor: pointer;
-}
+// Visual identity comes from `.btn .btn-danger` in styles.scss. No local
+// rule needed.
 
 .resign-dialog-card {
   background: var(--theme-surface-panel);
