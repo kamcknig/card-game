@@ -56,8 +56,6 @@ services:
       # ./.env automatically when running from the repo root.
       SUPABASE_URL: "${SUPABASE_URL}"
       SUPABASE_SERVICE_ROLE_KEY: "${SUPABASE_SERVICE_ROLE_KEY}"
-      AUTH_KV_PATH: "./game-data/auth.kv"
-      GAME_DATA_KV_PATH: "./game-data/game-data.kv"
       AUTH_MIN_PASSWORD_LENGTH: "10"
       AUTH_LOCKOUT_THRESHOLD: "10"
       AUTH_LOCKOUT_DURATION_MS: "600000"

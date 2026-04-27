@@ -1,77 +1,96 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  OnInit,
   inject,
   signal,
   viewChild,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
-import { Copy, LucideAngularModule } from 'lucide-angular';
-import { AuthService, authIsAdminStore } from '../../../core/auth/auth.service';
+import { AuthService, authEmailStore, authIsAdminStore, authNeedsEmailStore, authUsernameStore } from '../../../core/auth/auth.service';
 import { NewPasswordFieldsComponent } from '../../ui/new-password-fields/new-password-fields.component';
+
+/** Intentionally permissive — the server performs the authoritative check. */
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Security settings pane routed at /profile/security.
  *
- * Handles change-password form and, for admin users, registration code
- * creation and management.
+ * Handles the following sections:
+ * - **Account** (top) — displays the username (always read-only) and the
+ *   user's email address. When the user has no email attached (legacy account),
+ *   the section renders an email-attachment form so the user can add one.
+ *   On success the email is shown read-only and a confirmation notice is
+ *   displayed. Once set, the email is never editable here (out of scope).
+ * - **Change password** — existing in-app password rotation form.
  */
 @Component({
   selector: 'app-profile-security',
   standalone: true,
-  imports: [FormsModule, NewPasswordFieldsComponent, DatePipe, LucideAngularModule],
+  imports: [FormsModule, NewPasswordFieldsComponent],
   templateUrl: './profile-security.component.html',
   styleUrl: './profile-security.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ProfileSecurityComponent implements OnInit {
+export class ProfileSecurityComponent {
   private readonly _authService = inject(AuthService);
   private readonly _nanoService = inject(NanostoresService);
-
-  /** Lucide icon reference for the copy-to-clipboard button. */
-  readonly CopyIcon = Copy;
 
   /** True when the logged-in user has admin privileges. */
   readonly isAdmin = toSignal(this._nanoService.useStore(authIsAdminStore), {
     initialValue: authIsAdminStore.get(),
   });
 
-  // --- Registration code form state ---
-
-  /** Number of registrations the new code may be used for. */
-  readonly regCodeMaxUses = signal(1);
+  /**
+   * The currently authenticated username, shown read-only in the Account card.
+   * Sourced from the auth store so it stays in sync with the current session.
+   */
+  readonly username = toSignal(this._nanoService.useStore(authUsernameStore), {
+    initialValue: authUsernameStore.get(),
+  });
 
   /**
-   * Expiry for the new code in days from now, or null for no expiry.
-   * The user enters a number in the form; null means the field is empty.
+   * True when the user has no email address attached to their account.
+   * Controls which sub-view the Account card renders: the add-email form
+   * (true) or the read-only email display (false).
    */
-  readonly regCodeExpiresInDays = signal<number | null>(null);
+  readonly needsEmail = toSignal(this._nanoService.useStore(authNeedsEmailStore), {
+    initialValue: authNeedsEmailStore.get(),
+  });
 
-  /** The full registration URL built from window.location.origin after a successful creation. */
-  readonly regCodeUrl = signal<string | undefined>(undefined);
+  /**
+   * The email address attached to this account (null when not yet set).
+   * Sourced from the auth store so it reflects the latest server response.
+   * Displayed read-only in the Account card when `needsEmail` is false.
+   */
+  readonly authEmail = toSignal(this._nanoService.useStore(authEmailStore), {
+    initialValue: authEmailStore.get(),
+  });
 
-  /** The raw code string returned after a successful creation. */
-  readonly regCodeResult = signal<string | undefined>(undefined);
+  // --- Add-email form state ---
 
-  /** Error message from the last create-code attempt, if any. */
-  readonly regCodeError = signal<string | undefined>(undefined);
-
-  /** True while a create-code request is in-flight. */
-  readonly regCodeSubmitting = signal(false);
-
-  /** Snapshot of active registration codes fetched from the server. */
-  readonly regCodes = signal<Array<{
-    code: string;
-    createdAt: number;
-    createdBy: string;
-    expiresAt: number | null;
-    maxUses: number;
-    usedCount: number;
-  }>>([]);
+  /** Email address entered in the add-email form. */
+  readonly attachEmailValue = signal('');
+  /** Current password entered for re-authentication in the add-email form. */
+  readonly attachEmailPassword = signal('');
+  /**
+   * Availability-check state for the email field.
+   * `checking` is true while the async check is in flight.
+   * `error` carries a user-facing message when the email is unavailable.
+   */
+  readonly attachEmailStatus = signal<{ checking: boolean; error?: string }>({ checking: false });
+  /** Inline error message from the add-email form submission. */
+  readonly attachEmailError = signal<string | undefined>(undefined);
+  /** Success message shown after a successful email attachment. */
+  readonly attachEmailSuccess = signal<string | undefined>(undefined);
+  /** True while the add-email form submission is in flight. */
+  readonly attachEmailSubmitting = signal(false);
+  /**
+   * The email value that was successfully attached, used to render it
+   * read-only with a "Pending confirmation" badge after form submission.
+   */
+  readonly attachedEmail = signal<string | undefined>(undefined);
 
   // --- Change-password form state ---
 
@@ -89,81 +108,75 @@ export class ProfileSecurityComponent implements OnInit {
    */
   readonly newPasswordFields = viewChild(NewPasswordFieldsComponent);
 
-  ngOnInit(): void {
-    // Pre-populate the registration codes list for admin users.
-    if (this.isAdmin()) {
-      void this._loadRegistrationCodes();
+  /**
+   * Checks whether the email entered in the add-email form is already
+   * registered, firing on `blur` of the email input.
+   *
+   * Updates `attachEmailStatus` with a checking spinner while the request is
+   * in flight, then settles to either cleared (available) or an inline error
+   * (taken). Empty values clear the status without making a request.
+   */
+  async onAttachEmailBlur(): Promise<void> {
+    const email = this.attachEmailValue().trim();
+    if (!email) {
+      this.attachEmailStatus.set({ checking: false });
+      return;
     }
+    if (!EMAIL_REGEX.test(email)) {
+      this.attachEmailStatus.set({ checking: false, error: 'Enter a valid email address' });
+      return;
+    }
+    this.attachEmailStatus.set({ checking: true });
+    const available = await this._authService.checkEmailAvailability(email);
+    this.attachEmailStatus.set({
+      checking: false,
+      error: available ? undefined : 'Email is already registered',
+    });
   }
 
   /**
-   * Loads the current list of active registration codes from the server and
-   * updates regCodes. Silently ignores errors — the UI shows an empty list.
+   * Submits the add-email form.
+   *
+   * Re-authenticates on the server via the current password, then calls
+   * `AuthService.attachEmail`. On success, transitions the Account card from
+   * the add-email form to the read-only email view and shows a confirmation
+   * message. Inline errors are shown for validation or server failures.
    */
-  private async _loadRegistrationCodes(): Promise<void> {
-    const result = await this._authService.listRegistrationCodes();
-    if (result.ok && result.codes) {
-      this.regCodes.set(result.codes);
+  async submitAttachEmail(): Promise<void> {
+    this.attachEmailError.set(undefined);
+    this.attachEmailSuccess.set(undefined);
+
+    const email = this.attachEmailValue().trim();
+    const password = this.attachEmailPassword();
+    if (!email || !password) {
+      this.attachEmailError.set('Both email and password are required');
+      return;
     }
-  }
 
-  /**
-   * Submits a create-registration-code request using the current form state.
-   * On success, updates regCodeResult and refreshes the code list.
-   */
-  async submitCreateRegistrationCode(): Promise<void> {
-    this.regCodeResult.set(undefined);
-    this.regCodeError.set(undefined);
-    this.regCodeUrl.set(undefined);
-    this.regCodeSubmitting.set(true);
+    // Do not submit when the blur check has already reported the email taken.
+    if (this.attachEmailStatus().error) {
+      this.attachEmailError.set(this.attachEmailStatus().error);
+      return;
+    }
 
+    this.attachEmailSubmitting.set(true);
     try {
-      const expiresInDays = this.regCodeExpiresInDays();
-      const expiresIn = expiresInDays !== null && expiresInDays > 0
-        ? expiresInDays * 24 * 60 * 60 * 1000
-        : undefined;
-
-      const result = await this._authService.createRegistrationCode({
-        maxUses: this.regCodeMaxUses(),
-        expiresIn,
-      });
-
-      if (result.ok && result.code) {
-        // Build the full registration URL so the admin can share a direct link.
-        const url = `${window.location.origin}?registrationCode=${encodeURIComponent(result.code)}`;
-        this.regCodeResult.set(result.code);
-        this.regCodeUrl.set(url);
-        await this._loadRegistrationCodes();
+      const result = await this._authService.attachEmail(email, password);
+      if (result.ok) {
+        // Record the attached email so the success view can display it.
+        this.attachedEmail.set(email);
+        this.attachEmailSuccess.set(
+          'Confirmation email sent — check your inbox.',
+        );
+        // Clear the form inputs; the success view replaces the form.
+        this.attachEmailValue.set('');
+        this.attachEmailPassword.set('');
       } else {
-        this.regCodeError.set(result.message ?? 'Failed to create code');
+        this.attachEmailError.set(result.message ?? 'Failed to attach email');
       }
     } finally {
-      this.regCodeSubmitting.set(false);
+      this.attachEmailSubmitting.set(false);
     }
-  }
-
-  /**
-   * Disables the given registration code and refreshes the list.
-   */
-  async disableRegistrationCode(code: string): Promise<void> {
-    await this._authService.disableRegistrationCode(code);
-    await this._loadRegistrationCodes();
-  }
-
-  /**
-   * Builds a full registration URL for the given code using the current window origin.
-   * Used both for the post-creation result area and for per-row copy buttons.
-   */
-  buildRegCodeUrl(code: string): string {
-    return `${window.location.origin}?registrationCode=${encodeURIComponent(code)}`;
-  }
-
-  /**
-   * Copies the given registration URL to the clipboard.
-   * Falls back silently when the Clipboard API is unavailable.
-   */
-  copyRegCodeUrl(url: string): void {
-    navigator.clipboard.writeText(url).catch(() => undefined);
   }
 
   /**

@@ -157,3 +157,66 @@
     border-bottom: 1px solid var(--theme-border-subtle);
   }
 }
+
+// Email-required dialog panel: shown when a legacy user tries to create or
+// join a game without an email address attached to their account.
+.email-required-dialog {
+  padding: 28px 24px 20px;
+  max-width: 460px;
+  background: var(--theme-surface-card);
+  border: 1px solid var(--theme-border-subtle);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.email-required-dialog__title {
+  margin: 0;
+  font-family: var(--theme-font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--theme-text-primary);
+}
+
+.email-required-dialog__body {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--theme-text-secondary);
+  line-height: 1.5;
+}
+
+.email-required-dialog__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+// Primary action: navigates to /profile/security styled as a button-link.
+.email-required-dialog__link-button {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  border: 1px solid var(--theme-border-action);
+  background: var(--theme-action-primary-bg);
+  color: var(--theme-text-primary);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-family: var(--theme-font-display);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
+
+// .email-required-dialog__dismiss is defined globally in styles.scss because
+// CDK overlay teleportation breaks emulated view-encapsulation scoping.

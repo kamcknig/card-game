@@ -3,6 +3,94 @@
   font-size: 1.2rem;
 }
 
+// Account card: shows username (always read-only) and email (read-only when
+// set, or an add-email form when not yet attached).
+.account-section {
+  max-width: 420px;
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--theme-border-subtle);
+
+  h3 {
+    margin: 0 0 12px;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+}
+
+// Read-only identity field row (Username, Email).
+.account-field {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.account-field__label {
+  min-width: 80px;
+  color: var(--theme-text-secondary);
+  font-weight: 500;
+}
+
+.account-field__value {
+  color: var(--theme-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+// "Pending confirmation" badge shown after email is attached but not yet
+// confirmed via the link sent by the server.
+.account-field__badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid var(--theme-border-subtle);
+  color: var(--theme-text-secondary);
+  background: var(--theme-surface-app-start);
+}
+
+// Notice above the add-email form explaining why an email is needed.
+.account-email-notice {
+  margin: 0 0 12px;
+  font-size: 0.875rem;
+  color: var(--theme-text-secondary);
+  line-height: 1.4;
+}
+
+// Add-email form layout mirrors the change-password form.
+.add-email-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+// CSS-only spinning availability indicator positioned to the right of
+// the email input. Matches the login form's spinner styling. The wrapper
+// (.form-input-wrapper) is defined in global styles.scss.
+.form-input-spinner {
+  position: absolute;
+  right: 10px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--theme-border-subtle);
+  border-top-color: var(--theme-text-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .change-password-section {
   max-width: 420px;
 
@@ -63,114 +151,5 @@
 .form-success {
   margin: 0;
   color: var(--theme-text-primary);
-  font-size: 0.875rem;
-}
-
-.reg-codes-section {
-  margin-top: 2rem;
-
-  h3 {
-    margin-bottom: 1rem;
-  }
-}
-
-.reg-code-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  max-width: 400px;
-  margin-bottom: 1.5rem;
-}
-
-// Displays the registration URL with a copy button after creation.
-.reg-code-result {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin-top: 0.5rem;
-
-  &__label {
-    font-weight: 600;
-    white-space: nowrap;
-  }
-
-  &__url {
-    font-family: monospace;
-    font-size: 0.85em;
-    word-break: break-all;
-    flex: 1;
-  }
-
-  &__copy {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0.25rem;
-    color: inherit;
-    flex-shrink: 0;
-
-    &:hover {
-      opacity: 0.7;
-    }
-  }
-}
-
-// Action cell in the codes table — copy and disable buttons sit side by side.
-.reg-code-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  white-space: nowrap;
-
-  &__copy {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.25rem;
-    background: none;
-    border: 1px solid var(--theme-border-action);
-    border-radius: 6px;
-    padding: 6px 10px;
-    font-family: var(--theme-font-body);
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: inherit;
-    cursor: pointer;
-
-    &:hover {
-      opacity: 0.7;
-    }
-  }
-}
-
-.reg-codes-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.875rem;
-
-  th,
-  td {
-    padding: 0.5rem 0.75rem;
-    text-align: left;
-    border-bottom: 1px solid var(--color-border, #333);
-  }
-
-  th {
-    font-weight: 600;
-    color: var(--color-text-secondary, #aaa);
-  }
-}
-
-// Code cell uses monospace so random code strings are easy to read and copy.
-.reg-code-value {
-  font-family: monospace;
-  word-break: break-all;
-}
-
-.reg-codes-empty {
-  color: var(--color-text-secondary, #aaa);
   font-size: 0.875rem;
 }

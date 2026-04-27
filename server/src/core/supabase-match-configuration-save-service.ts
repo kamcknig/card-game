@@ -32,14 +32,13 @@ type CachedSave = {
 /**
  * Supabase-backed implementation of {@link MatchConfigurationSaveStore}.
  *
- * Uses the same write-through cache pattern as {@link DenoKvMatchConfigurationSaveService}:
- * reads are served from a synchronous in-memory `Map`; mutations update the
- * cache immediately and fire async Supabase writes in the background.
+ * Uses a write-through cache pattern: reads are served from a synchronous
+ * in-memory `Map`; mutations update the cache immediately and fire async
+ * Supabase writes in the background.
  *
  * All saves are namespaced under the authenticated username so users never see
  * each other's saves. The cache key format is `'${usernameLower}::${saveKey}'`
- * (identical to the KV implementation) so callers do not need to know the
- * backing store.
+ * so callers do not need to know the backing store.
  *
  * Table: `match_configuration_saves`; composite PK `(username_lower, save_key)`.
  * The `data` column holds the full `MatchConfiguration` object as JSONB.

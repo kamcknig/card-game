@@ -3,13 +3,13 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NanostoresService } from '@nanostores/angular';
 import { of } from 'rxjs';
 
-import { AuthService, authIsAdminStore } from '../../../core/auth/auth.service';
+import { AuthService, authIsAdminStore, authNeedsEmailStore, authEmailStore } from '../../../core/auth/auth.service';
 import { ProfileSecurityComponent } from './profile-security.component';
 
 /**
- * Stub NanostoresService — ProfileSecurityComponent subscribes to
- * authIsAdminStore via useStore. Returning the store's current value at
- * subscription time keeps toSignal() initial values accurate.
+ * Stub NanostoresService — ProfileSecurityComponent subscribes to several
+ * auth stores via useStore. Returning the store's current value at subscription
+ * time keeps toSignal() initial values accurate.
  */
 class NanostoresServiceStub {
   useStore = jest.fn().mockImplementation((store: { get(): unknown }) => of(store.get()));
@@ -26,20 +26,15 @@ class AuthServiceStub {
     .fn()
     .mockImplementation(async () => this.changePasswordResult);
 
-  listCodesResult: { ok: boolean; codes?: any[]; message?: string } = { ok: true, codes: [] };
-  listRegistrationCodes = jest
+  attachEmailResult: { ok: boolean; message?: string } = { ok: true };
+  attachEmail = jest
     .fn()
-    .mockImplementation(async () => this.listCodesResult);
+    .mockImplementation(async () => this.attachEmailResult);
 
-  createCodeResult: { ok: boolean; code?: string; message?: string } = { ok: true, code: 'TEST-CODE' };
-  createRegistrationCode = jest
+  checkEmailAvailabilityResult = true;
+  checkEmailAvailability = jest
     .fn()
-    .mockImplementation(async () => this.createCodeResult);
-
-  disableCodeResult: { ok: boolean; message?: string } = { ok: true };
-  disableRegistrationCode = jest
-    .fn()
-    .mockImplementation(async () => this.disableCodeResult);
+    .mockImplementation(async () => this.checkEmailAvailabilityResult);
 }
 
 describe('ProfileSecurityComponent', () => {
@@ -62,6 +57,8 @@ describe('ProfileSecurityComponent', () => {
 
     // Reset shared atoms so state from one test does not leak into the next.
     authIsAdminStore.set(false);
+    authNeedsEmailStore.set(false);
+    authEmailStore.set(null);
 
     fixture = TestBed.createComponent(ProfileSecurityComponent);
     component = fixture.componentInstance;
@@ -71,6 +68,8 @@ describe('ProfileSecurityComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  // --- Change password form ---
 
   it('change-password form starts empty with no messages', () => {
     expect(component.currentPassword()).toBe('');
@@ -150,7 +149,7 @@ describe('ProfileSecurityComponent', () => {
     expect(component.changePasswordSubmitting()).toBe(false);
   });
 
-  // --- Admin / registration code tests ---
+  // --- Admin gate ---
 
   it('isAdmin() reflects authIsAdminStore at construction time (non-admin)', () => {
     // authIsAdminStore was reset to false in beforeEach.
@@ -176,130 +175,95 @@ describe('ProfileSecurityComponent', () => {
     expect(f.componentInstance.isAdmin()).toBe(true);
   });
 
-  it('ngOnInit: does not load registration codes when non-admin', () => {
-    // authIsAdminStore is false; the stub should not have been called.
-    expect(authStub.listRegistrationCodes).not.toHaveBeenCalled();
+  // --- Add-email form ---
+
+  it('add-email form starts empty with no messages', () => {
+    expect(component.attachEmailValue()).toBe('');
+    expect(component.attachEmailPassword()).toBe('');
+    expect(component.attachEmailError()).toBeUndefined();
+    expect(component.attachEmailSuccess()).toBeUndefined();
+    expect(component.attachEmailSubmitting()).toBe(false);
   });
 
-  it('ngOnInit: loads registration codes when admin', async () => {
-    authIsAdminStore.set(true);
-    authStub.listCodesResult = {
-      ok: true,
-      codes: [
-        { code: 'ABC', createdAt: 0, createdBy: 'alice', expiresAt: null, maxUses: 1, usedCount: 0 },
-      ],
-    };
+  it('submitAttachEmail: missing fields reports required-field error without calling the server', async () => {
+    await component.submitAttachEmail();
 
-    await TestBed.resetTestingModule();
-    await TestBed.configureTestingModule({
-      imports: [ProfileSecurityComponent],
-      providers: [
-        provideExperimentalZonelessChangeDetection(),
-        { provide: NanostoresService, useClass: NanostoresServiceStub },
-        { provide: AuthService, useValue: authStub },
-      ],
-    }).compileComponents();
-
-    const f = TestBed.createComponent(ProfileSecurityComponent);
-    f.detectChanges();
-    // Allow the async _loadRegistrationCodes to complete.
-    await Promise.resolve();
-
-    expect(authStub.listRegistrationCodes).toHaveBeenCalled();
-    expect(f.componentInstance.regCodes().length).toBe(1);
+    expect(authStub.attachEmail).not.toHaveBeenCalled();
+    expect(component.attachEmailError()).toBe('Both email and password are required');
   });
 
-  it('submitCreateRegistrationCode: success sets regCodeResult and refreshes list', async () => {
-    authStub.createCodeResult = { ok: true, code: 'NEW-CODE' };
-    authStub.listCodesResult = { ok: true, codes: [] };
+  it('submitAttachEmail: happy path shows confirmation message and clears form', async () => {
+    authStub.attachEmailResult = { ok: true };
+    component.attachEmailValue.set('user@example.com');
+    component.attachEmailPassword.set('currentpw');
 
-    await component.submitCreateRegistrationCode();
+    await component.submitAttachEmail();
 
-    expect(authStub.createRegistrationCode).toHaveBeenCalled();
-    expect(component.regCodeResult()).toBe('NEW-CODE');
-    expect(component.regCodeError()).toBeUndefined();
-    expect(authStub.listRegistrationCodes).toHaveBeenCalled();
+    expect(authStub.attachEmail).toHaveBeenCalledWith('user@example.com', 'currentpw');
+    expect(component.attachEmailSuccess()).toContain('Confirmation email sent');
+    expect(component.attachEmailValue()).toBe('');
+    expect(component.attachEmailPassword()).toBe('');
+    expect(component.attachEmailError()).toBeUndefined();
   });
 
-  it('submitCreateRegistrationCode: success sets regCodeUrl containing the code and current origin', async () => {
-    authStub.createCodeResult = { ok: true, code: 'NEW-CODE' };
-    authStub.listCodesResult = { ok: true, codes: [] };
+  it('submitAttachEmail: server failure surfaces error message', async () => {
+    authStub.attachEmailResult = { ok: false, message: 'Email already registered' };
+    component.attachEmailValue.set('taken@example.com');
+    component.attachEmailPassword.set('currentpw');
 
-    await component.submitCreateRegistrationCode();
+    await component.submitAttachEmail();
 
-    const url = component.regCodeUrl();
-    expect(url).toBeDefined();
-    expect(url).toContain('?registrationCode=NEW-CODE');
-    expect(url).toContain(window.location.origin);
+    expect(component.attachEmailError()).toBe('Email already registered');
+    expect(component.attachEmailSuccess()).toBeUndefined();
   });
 
-  it('submitCreateRegistrationCode: clears regCodeUrl at the start of a new submission', async () => {
-    // Prime with a previous URL.
-    authStub.createCodeResult = { ok: true, code: 'FIRST-CODE' };
-    authStub.listCodesResult = { ok: true, codes: [] };
-    await component.submitCreateRegistrationCode();
-    expect(component.regCodeUrl()).toBeDefined();
+  it('submitAttachEmail: submitting flag is cleared after success and failure', async () => {
+    authStub.attachEmailResult = { ok: true };
+    component.attachEmailValue.set('user@example.com');
+    component.attachEmailPassword.set('currentpw');
 
-    // Second submission that fails — regCodeUrl must be cleared immediately.
-    authStub.createCodeResult = { ok: false, message: 'forbidden' };
-    await component.submitCreateRegistrationCode();
+    await component.submitAttachEmail();
+    expect(component.attachEmailSubmitting()).toBe(false);
 
-    expect(component.regCodeUrl()).toBeUndefined();
+    authStub.attachEmailResult = { ok: false, message: 'err' };
+    component.attachEmailValue.set('user2@example.com');
+    component.attachEmailPassword.set('currentpw');
+    await component.submitAttachEmail();
+    expect(component.attachEmailSubmitting()).toBe(false);
   });
 
-  it('submitCreateRegistrationCode: server failure sets regCodeError', async () => {
-    authStub.createCodeResult = { ok: false, message: 'forbidden' };
+  // --- onAttachEmailBlur ---
 
-    await component.submitCreateRegistrationCode();
+  it('onAttachEmailBlur: empty value clears the status without making a request', async () => {
+    component.attachEmailValue.set('');
+    await component.onAttachEmailBlur();
 
-    expect(component.regCodeError()).toBe('forbidden');
-    expect(component.regCodeResult()).toBeUndefined();
+    expect(authStub.checkEmailAvailability).not.toHaveBeenCalled();
+    expect(component.attachEmailStatus()).toEqual({ checking: false });
   });
 
-  it('submitCreateRegistrationCode: submitting flag is cleared after success and failure', async () => {
-    authStub.createCodeResult = { ok: true, code: 'X' };
-    authStub.listCodesResult = { ok: true, codes: [] };
+  it('onAttachEmailBlur: invalid email sets an error without making a request', async () => {
+    component.attachEmailValue.set('not-an-email');
+    await component.onAttachEmailBlur();
 
-    await component.submitCreateRegistrationCode();
-    expect(component.regCodeSubmitting()).toBe(false);
-
-    authStub.createCodeResult = { ok: false, message: 'err' };
-    await component.submitCreateRegistrationCode();
-    expect(component.regCodeSubmitting()).toBe(false);
+    expect(authStub.checkEmailAvailability).not.toHaveBeenCalled();
+    expect(component.attachEmailStatus().error).toBeTruthy();
   });
 
-  it('disableRegistrationCode: calls service then refreshes list', async () => {
-    authStub.listCodesResult = { ok: true, codes: [] };
+  it('onAttachEmailBlur: available email clears the error status', async () => {
+    authStub.checkEmailAvailabilityResult = true;
+    component.attachEmailValue.set('free@example.com');
+    await component.onAttachEmailBlur();
 
-    await component.disableRegistrationCode('SOME-CODE');
-
-    expect(authStub.disableRegistrationCode).toHaveBeenCalledWith('SOME-CODE');
-    expect(authStub.listRegistrationCodes).toHaveBeenCalled();
+    expect(authStub.checkEmailAvailability).toHaveBeenCalledWith('free@example.com');
+    expect(component.attachEmailStatus().error).toBeUndefined();
   });
 
-  // --- URL builder and clipboard helpers ---
+  it('onAttachEmailBlur: taken email sets an inline error', async () => {
+    authStub.checkEmailAvailabilityResult = false;
+    component.attachEmailValue.set('taken@example.com');
+    await component.onAttachEmailBlur();
 
-  it('buildRegCodeUrl: returns a URL containing the code as a query param', () => {
-    const url = component.buildRegCodeUrl('ABC-123');
-    expect(url).toContain('?registrationCode=ABC-123');
-    expect(url).toContain(window.location.origin);
-  });
-
-  it('buildRegCodeUrl: URL-encodes special characters in the code', () => {
-    const url = component.buildRegCodeUrl('code with spaces');
-    expect(url).toContain('registrationCode=code%20with%20spaces');
-  });
-
-  it('copyRegCodeUrl: calls navigator.clipboard.writeText with the provided URL', () => {
-    // Define a clipboard stub on navigator for the test environment.
-    const writeTextSpy = jest.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, 'clipboard', {
-      value: { writeText: writeTextSpy },
-      configurable: true,
-    });
-
-    component.copyRegCodeUrl('http://localhost?registrationCode=TEST');
-
-    expect(writeTextSpy).toHaveBeenCalledWith('http://localhost?registrationCode=TEST');
+    expect(component.attachEmailStatus().error).toBeTruthy();
   });
 });

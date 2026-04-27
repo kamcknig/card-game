@@ -42,3 +42,36 @@
     </main>
   </section>
 </app-scene-content>
+
+@if (showEmailRequiredDialog()) {
+  <!-- Email-required modal: shown when a legacy user tries to create or join a
+       game without an email address attached to their account. Links them to
+       /profile/security where they can complete the email-attachment flow. -->
+  <app-ui-dialog
+    [backdropVariant]="'soft'"
+    (close)="dismissEmailRequiredDialog()"
+  >
+    <div class="email-required-dialog">
+      <h3 class="email-required-dialog__title">Email required</h3>
+      <p class="email-required-dialog__body">
+        Add an email to your account before creating or joining a game.
+      </p>
+      <div class="email-required-dialog__actions">
+        <a
+          class="email-required-dialog__link-button"
+          routerLink="/profile/security"
+          (click)="dismissEmailRequiredDialog()"
+        >
+          Open Account settings &rarr;
+        </a>
+        <button
+          type="button"
+          class="email-required-dialog__dismiss"
+          (click)="dismissEmailRequiredDialog()"
+        >
+          Dismiss
+        </button>
+      </div>
+    </div>
+  </app-ui-dialog>
+}

@@ -6,21 +6,10 @@ import {
   authIsAdminStore,
   authTokenStore,
   authUsernameStore,
-  pendingRegistrationCodeStore,
 } from './app/core/auth/auth.service';
 import { SocketEventMapService } from './app/core/socket-service/socket-event-map.service';
 import { ServerStatusService, serverStatusStore } from './app/core/server-status/server-status.service';
 import { Router } from '@angular/router';
-
-// Stage any registration code from the URL before the app bootstraps so that
-// LoginComponent can read pendingRegistrationCodeStore in its constructor.
-// If the user has a valid session this value is ignored — validateStoredToken
-// below will navigate to the lobby before the login scene is ever shown.
-const _startupParams = new URLSearchParams(window.location.search);
-const _startupRegCode = _startupParams.get('registrationCode');
-if (_startupRegCode) {
-  pendingRegistrationCodeStore.set(_startupRegCode.trim());
-}
 
 bootstrapApplication(AppComponent, appConfig)
   .then(async appRef => {
@@ -51,9 +40,6 @@ bootstrapApplication(AppComponent, appConfig)
     await router.initialNavigation();
     if (hasValidToken) {
       socketEventMapService.connect();
-      // A valid session means the user goes to the lobby; discard any staged
-      // registration code so it is not consumed on a future logout/revisit.
-      pendingRegistrationCodeStore.set(undefined);
     }
 
     // Subscribe to auth token changes so the socket lifecycle follows session
@@ -86,19 +72,25 @@ bootstrapApplication(AppComponent, appConfig)
       }
       const externalToken = event.newValue ?? undefined;
       const currentToken = authTokenStore.get();
-      // Mirror the cleared-or-rotated token from the other tab into our
-      // atoms. When the new value differs from what we hold, the server has
-      // rotated the session out from under us; treat that as a logout in
-      // this tab.
-      if (externalToken !== currentToken) {
-        authTokenStore.set(externalToken);
-        if (!externalToken) {
-          authUsernameStore.set(undefined);
-          authIsAdminStore.set(false);
-          // Send the user back to /login so they don't sit in a route that
-          // requires auth with a now-invalid socket and a stale UI.
-          void router.navigate(['/login']);
-        }
+      if (externalToken === currentToken) return;
+
+      if (!externalToken) {
+        // Another tab logged out — mirror the logout into this tab.
+        authTokenStore.set(undefined);
+        authUsernameStore.set(undefined);
+        authIsAdminStore.set(false);
+        void router.navigate(['/login']);
+      } else {
+        // Another tab logged in with a new token. Do NOT mirror the token into
+        // authTokenStore — that would trigger the authTokenStore subscriber to
+        // call connect(), causing this tab's socket to compete with the new tab
+        // and kick it. Instead, disconnect this tab's socket permanently and
+        // clear local auth state so this tab yields the session to the new tab.
+        socketEventMapService.disconnect();
+        authTokenStore.set(undefined);
+        authUsernameStore.set(undefined);
+        authIsAdminStore.set(false);
+        void router.navigate(['/login']);
       }
     });
   })

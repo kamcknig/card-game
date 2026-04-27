@@ -9,8 +9,6 @@ All resources live in the `turkeysunite` resource group in the East US region.
 | Resource | Name | Purpose |
 |----------|------|---------|
 | Container Registry (ACR) | `turkeysunite` | Stores Docker images (`turkeysunite.azurecr.io`) |
-| Storage Account | `turkeysunite` | Azure Files share for persistent game data |
-| Azure Files Share | `dominion-game-data` | Mounted into server container at `/app/server/game-data` |
 | Container Apps Environment | `dominion-clone-env` | Shared networking layer |
 | Container App | `dominion-clone-server` | Deno game server (port 3000) |
 | Container App | `dominion-clone-frontend` | nginx + Angular SPA (port 80) |
@@ -171,9 +169,7 @@ az containerapp secret remove \
 | `AUTH_RATE_LIMIT_WINDOW_MS` | Duration (milliseconds) of the sliding window used by the login rate limiter. Default: `60000` (1 minute). |
 | `AUTH_MAX_BODY_BYTES` | Maximum request body size (bytes) accepted on `/auth/login`. Requests exceeding this are rejected with 413. Default: `4096`. |
 | `AUTH_SESSION_TTL_MS` | Session time-to-live in milliseconds (sliding window). Each validated token has its expiry extended by this amount. Default: `604800000` (7 days). |
-| `STORAGE_BACKEND` | Unified storage backend — drives both auth (sessions, users, registration codes) and game data (match-configuration saves). Allowed values: `kv` (Deno KV with a write-through cache, backed by Azure Files) or `supabase` (Postgres tables in a Supabase project). When unset or invalid the server still boots and `/status` reports a `STORAGE_BACKEND_INVALID` error issue (the frontend shows this on `/server-status`) — set this var on every revision. |
-| `AUTH_KV_PATH` | Filesystem path to the Deno KV auth store file used when `STORAGE_BACKEND=kv`. Set to `/app/server/game-data/auth.kv` in production (matches the Azure Files mount path). |
-| `GAME_DATA_KV_PATH` | Filesystem path to the Deno KV game-data store file used when `STORAGE_BACKEND=kv`. Set to `/app/server/game-data/game-data.kv` in production. |
+| `STORAGE_BACKEND` | Unified storage backend — drives both auth (sessions, users) and game data (match-configuration saves). Allowed values: `in-memory` (no persistence, dev/test only) or `supabase` (Postgres tables in a Supabase project). When unset or invalid the server still boots and `/status` reports a `STORAGE_BACKEND_INVALID` error issue (the frontend shows this on `/server-status`) — set this var on every revision. |
 | `SUPABASE_URL` | Supabase project URL. Required when `STORAGE_BACKEND=supabase`. Stored as a plain env var (it is not secret). |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role key. Required when `STORAGE_BACKEND=supabase`. **Always** set this as a Container Apps secret (`secretref:supabase-service-role-key`), never a plain env var — it bypasses RLS and grants full DB access. |
 | `AUTH_LOCKOUT_THRESHOLD` | Consecutive failed logins before a user account is locked (per-account, independent of the IP rate limiter). Default: `5`. |
@@ -189,182 +185,76 @@ az containerapp secret remove \
 
 ## Initial Account Bootstrap
 
-The server requires at least one user account to exist before players can log in. Since the KV store is backed by Azure Files, the bootstrap process creates the `auth.kv` file locally and uploads it to the share before the server starts.
+The server requires at least one user account to exist before players can log in. With `STORAGE_BACKEND=supabase`, use the CLI management script to create the first user directly in the Supabase project. The server does not need to be stopped — Supabase writes are immediately visible to the running server.
 
-**Important:** stop the running server before invoking either script. The server primes an in-memory cache of the KV state at startup, so writes made while the server is running will not be visible to the running process and can also cause SQLite lock contention on the shared `auth.kv` file. See [server/README.md](../server/README.md#authentication-usage) for the full HTTP endpoint reference and bootstrap workflow.
+See [server/README.md](../server/README.md#authentication-usage) for the full HTTP endpoint reference and bootstrap workflow.
 
 ### Creating the first user
 
-Run locally to create the KV file, then upload it to Azure Files:
-
-```bash
-# Create the KV file locally
-cd server
-deno task auth:users create --username <name> --password <pw> --kv ./game-data/auth.kv
-
-# Get the storage key
-STORAGE_KEY=$(az storage account keys list \
-  --account-name turkeysunite \
-  --resource-group turkeysunite \
-  --query "[0].value" -o tsv)
-
-# Upload auth.kv to the Azure Files share
-az storage file upload \
-  --account-name turkeysunite \
-  --share-name dominion-game-data \
-  --source ./game-data/auth.kv \
-  --path auth.kv \
-  --account-key "$STORAGE_KEY"
-```
-
-Restart the server container so it picks up the file on startup. Usernames must be 3–32 characters, alphanumeric or underscore. The `create` subcommand refuses to overwrite an existing username. Other `auth:users` subcommands: `delete`, `set-password`, `clear` (run any subcommand with `--help` for its options).
-
-### Creating registration codes for additional users
-
-Once a user exists and can log in, they can create registration codes via the API (`POST /auth/registration-codes`) — this is the preferred path because the running server's in-memory cache picks them up immediately. For offline/operator use with the server stopped:
-
 ```bash
 cd server
-deno task auth:create-reg-code --expires-in 24h --max-uses 1 --created-by <your-username> --kv /path/to/auth.kv
-# Duration strings: 30s, 10m, 24h, 7d
+SUPABASE_URL=https://<project>.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key> \
+STORAGE_BACKEND=supabase \
+deno task auth:users create --username <name> --password <pw>
 ```
 
-The script prints the generated code to stdout. Share it securely; anyone with the code can register an account at `POST /auth/register`.
+Usernames must be 3–32 characters, alphanumeric or underscore. The `create` subcommand refuses to overwrite an existing username. Other `auth:users` subcommands: `delete`, `set-password`, `set-email`, `clear` (run any subcommand with `--help` for its options).
 
-## Game Data KV Bootstrap
-
-The server opens a separate `game-data.kv` Deno KV store (independent from `auth.kv`) for game-data persistence such as per-user match configuration saves. Like the auth store, it lives on the Azure Files share at `dominion-game-data/game-data.kv`, mounted into the container at `/app/server/game-data/game-data.kv`.
-
-**Important:** this file must be bootstrapped locally and uploaded before the server can start in any environment that does not already have it on the share. `Deno.openKv()` cannot reliably *create* a new SQLite database on Azure Files SMB — the byte-range locks SQLite uses during header initialization don't behave correctly on SMB, producing `Error: database is locked` at startup. Opening an *existing* valid SQLite file works fine, so this bootstrap is a one-time-per-environment task. (This is the same reason `auth.kv` is bootstrapped via local create + upload.)
-
-### Bootstrapping the file
-
-```bash
-# Create an initialized empty Deno KV file locally
-deno eval --unstable-kv "const kv = await Deno.openKv('/tmp/game-data.kv'); kv.close();"
-
-# Verify it has a real SQLite header (~36 KB, starting with "SQLite format 3")
-head -c 16 /tmp/game-data.kv | xxd
-
-# Get the storage key
-STORAGE_KEY=$(az storage account keys list \
-  --account-name turkeysunite \
-  --resource-group turkeysunite \
-  --query "[0].value" -o tsv)
-
-# Upload to the Azure Files share
-az storage file upload \
-  --account-name turkeysunite \
-  --share-name dominion-game-data \
-  --source /tmp/game-data.kv \
-  --path game-data.kv \
-  --account-key "$STORAGE_KEY"
-```
-
-Restart the server container after upload (`az containerapp revision restart ...`) so the next startup attempt picks up the file. See [Server fails to start with `Error: database is locked`](#server-fails-to-start-with-error-database-is-locked) under Troubleshooting if a previous startup left behind a 0-byte stub.
+Additional accounts are created via open email-based registration at `POST /auth/register`. Registration codes are no longer required or supported.
 
 ## Storage Persistence
 
-The server supports two persistent storage backends, selected via `STORAGE_BACKEND`. Both drive auth (sessions, users, registration codes) and game data (match-configuration saves) together — splitting them is not supported.
+The server supports two storage backends, selected via `STORAGE_BACKEND`. Both drive auth (sessions, users) and game data (match-configuration saves) together — splitting them is not supported.
 
-### Deno KV (`STORAGE_BACKEND=kv`)
+### In-memory (`STORAGE_BACKEND=in-memory`)
 
-When `STORAGE_BACKEND=kv`, all state is written to two Deno KV files at `AUTH_KV_PATH` and `GAME_DATA_KV_PATH`. Each store uses a write-through in-memory cache so reads are always synchronous and fast. The backing files must survive container restarts for sessions and saved configurations to persist — on Azure Container Apps this requires a mounted Azure Files volume (see _Azure Files Setup_ below). The bootstrap workflow for the KV files is documented in [_Initial Account Bootstrap_](#initial-account-bootstrap) and [_Game Data KV Bootstrap_](#game-data-kv-bootstrap) above.
+When `STORAGE_BACKEND=in-memory`, all state is stored in process memory only. No files are written and no external services are required. All sessions, users, and saved configurations are lost when the process exits. Intended for local development and automated testing only — do not use in production.
 
 ### Supabase (`STORAGE_BACKEND=supabase`)
 
-When `STORAGE_BACKEND=supabase`, the server reads and writes Postgres tables in a Supabase project (`auth_users`, `auth_sessions`, `auth_registration_codes`, `match_configuration_saves`). The same write-through cache pattern is used — only the persistence layer changes. No volume mount is required because state lives in Supabase. Required env vars: `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (the service-role key must be a Container Apps secret).
+When `STORAGE_BACKEND=supabase`, the server reads and writes Postgres tables in a Supabase project (`auth_users`, `auth_sessions`, `match_configuration_saves`). All user-store reads go directly to the database — there is no in-memory cache. No volume mount is required because state lives in Supabase. Required env vars: `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (the service-role key must be a Container Apps secret).
 
-Apply the schema once with `supabase db push` against the migration file in `supabase/migrations/`. To migrate an existing KV deployment to Supabase, run `deno task migrate-kv-to-supabase` from a host that can reach both the KV files and the Supabase project — see [server/README.md § Migrating from KV to Supabase](../server/README.md#migrating-from-kv-to-supabase).
+Apply the schema once with `supabase db push` against the migration files in `supabase/migrations/`.
 
 If the Supabase project is unreachable at startup, the server still boots and the `/status` endpoint reports an `error`-level `SUPABASE_OPEN_FAILED` issue; the frontend redirects to `/server-status` so users see the failure rather than a blank screen.
 
-### Azure Files Setup (one-time)
+### Email confirmation (Supabase backend)
 
-The Azure Files share is already provisioned. These steps are for reference if it ever needs to be recreated.
+Email confirmation is required for new accounts registered with `STORAGE_BACKEND=supabase`. When a user registers or attaches an email to a legacy account, Supabase automatically sends a "Confirm signup" email. The following dashboard settings must be correct for confirmation emails to work in production.
 
-```bash
-# Get the storage key
-STORAGE_KEY=$(az storage account keys list \
-  --account-name turkeysunite \
-  --resource-group turkeysunite \
-  --query "[0].value" -o tsv)
+**Email template**
 
-# Create the file share
-az storage share create \
-  --account-name turkeysunite \
-  --name dominion-game-data \
-  --account-key "$STORAGE_KEY"
+The confirmation email template lives in the Supabase dashboard under **Authentication → Email Templates → Confirm signup**. Set the subject to `Confirm your email for Dominion` and include a call-to-action link using `{{ .ConfirmationURL }}` in the HTML body. The template is configured per-project in the dashboard; it is not stored in the repository.
 
-# Register the share with the Container Apps Environment
-az containerapp env storage set \
-  --name dominion-clone-env \
-  --resource-group turkeysunite \
-  --storage-name dominion-game-data \
-  --azure-file-account-name turkeysunite \
-  --azure-file-account-key "$STORAGE_KEY" \
-  --azure-file-share-name dominion-game-data \
-  --access-mode ReadWrite
+**URL configuration**
 
-# Store the key as a container app secret
-az containerapp secret set \
-  --name dominion-clone-server \
-  --resource-group turkeysunite \
-  --secrets storage-key="$STORAGE_KEY"
-```
+In the dashboard under **Authentication → URL Configuration**:
 
-### Mounting the volume
+- **Site URL**: `https://dominion.turkeysunite.com` — used to construct the confirmation link that is included in the email.
+- **Redirect URLs**: add both `https://dominion.turkeysunite.com/login` and `https://dominion.turkeysunite.com/profile/security` so post-confirmation redirects are permitted by Supabase.
 
-Azure Container Apps has no direct CLI flag for volume mounts. Use the Portal or the YAML approach.
+**Debugging undelivered confirmation emails**
 
-#### Portal
+When a user reports that a confirmation email never arrived, check the following in the Supabase dashboard:
 
-1. **Container Apps** → `dominion-clone-server` → **Application** → **Containers**
-2. Click **Edit and deploy**
-3. Select the container → **Volume mounts** tab
-4. Add a mount: volume `dominion-game-data`, mount path `/app/server/game-data`
-5. Click **Save** and then **Create** to deploy a new revision
+1. **Authentication → Users** — confirm the user row exists and that `email_confirmed_at` is `null`. If the row is missing, the registration call failed before creating the Supabase Auth user.
+2. **Authentication → Logs** (or the project's log explorer) — filter for `email` or the user's address to see whether Supabase attempted delivery and what SMTP response it received.
+3. If using a custom SMTP provider (**Authentication → Settings → SMTP**), verify the provider credentials and check that the sending domain has valid SPF/DKIM records. Without a custom SMTP provider, Supabase uses its shared sending infrastructure with strict daily limits — switch to a dedicated provider for production workloads with more than a handful of sign-ups per day.
 
-#### CLI (YAML)
+**Legacy user migration**
 
-```bash
-# Export current config
-az containerapp show \
-  --name dominion-clone-server \
-  --resource-group turkeysunite \
-  -o yaml > /tmp/server-app.yaml
+Existing users (rows with `email = null`) are migrated lazily — they complete an add-email flow at their next login. There is no batch script; the server handles the transition automatically on a per-user basis.
 
-# Patch volumes and volumeMounts into the YAML
-python3 patch-volume.py
+### Azure Files
 
-# Apply
-az containerapp update \
-  --name dominion-clone-server \
-  --resource-group turkeysunite \
-  --yaml /tmp/server-app-updated.yaml
-```
-
-Where `patch-volume.py` adds the following to the exported YAML:
-
-```python
-app['properties']['template']['volumes'] = [{
-    'name': 'game-data-volume',
-    'storageName': 'dominion-game-data',
-    'storageType': 'AzureFile'
-}]
-app['properties']['template']['containers'][0]['volumeMounts'] = [{
-    'volumeName': 'game-data-volume',
-    'mountPath': '/app/server/game-data'
-}]
-```
-
-See [Microsoft docs](https://learn.microsoft.com/en-us/azure/container-apps/storage-mounts-azure-files) for the full reference.
+The `STORAGE_BACKEND=supabase` backend stores all state in the Supabase project — no Azure Files volume mount is required for persistence. The Azure Files share (`dominion-game-data`) was used by the removed `kv` backend and is no longer needed for storage. The server writes logs to `./game-data/logs` inside the container, but these are ephemeral and not mounted.
 
 ### Backup Considerations
 
-- The KV store file (`auth.kv`) is self-contained — copy it to back up all sessions and user accounts.
-- To rotate the auth store (force all users to re-login), delete the store file and restart.
-- Sessions only contain auth metadata (token, username, IP, timestamps). No game state is stored here.
+- With `STORAGE_BACKEND=supabase`, all auth and game data lives in the Supabase project — use Supabase backups or `pg_dump` to back up user accounts and saved configurations.
+- To force all users to re-login, delete rows from `auth_sessions` in the Supabase project and restart the server.
+- Sessions only contain auth metadata (token, username, IP, timestamps). No game state is stored in the session tables.
 
 ## Backend Proxying
 
@@ -378,7 +268,7 @@ Forwarded paths:
 
 | Path | Notes |
 |------|-------|
-| `/auth/` | Login, register, logout, sessions, registration codes, change-password. |
+| `/auth/` | Login, register, logout, sessions, change-password, email attachment, availability checks. |
 | `/socket.io/` | Socket.IO traffic. nginx is configured with `Upgrade`/`Connection: upgrade` and an extended `proxy_read_timeout` so long-lived WebSocket frames are not dropped. |
 | `/debug/` | Server-side debug routes (admin-gated by the backend). |
 | `/status` | Server health endpoint. Exact-match so it never collides with the SPA fallback. |
@@ -577,41 +467,31 @@ az containerapp update \
 
 After the revision restarts, `proxy-locations.conf` is regenerated with the new upstream and nginx picks it up immediately.
 
+### Login fails with "Unable to reach server"
+
+The frontend container is missing the `WS_HOST` environment variable, so `env.js` defaults to `wsHost: 'http://localhost:3000'` which does not exist in production. All auth HTTP calls (`/auth/login`, `/auth/register`, etc.) use this value as the base URL — nginx does **not** proxy them to the server.
+
+```bash
+# Set WS_HOST on the frontend container (creates a new revision)
+az containerapp update \
+  --name dominion-clone-frontend \
+  --resource-group turkeysunite \
+  --set-env-vars WS_HOST=https://dominion-clone-server.happyglacier-53482b33.eastus.azurecontainerapps.io
+```
+
+After the revision restarts, `env.js` is regenerated with the correct `wsHost` and the CSP `connect-src` directive is updated to include both the HTTPS and WSS forms of the server URL.
+
 ### Login rejected with "unknown provider"
 
 The frontend JS cached in the browser is an old version using the removed preset-password auth. Hard refresh (`Ctrl+Shift+R`) or open an incognito window to force the new app to load.
 
-### Server fails to start with `Error: database is locked`
+### Server fails to start with Supabase connection error
 
-`Deno.openKv()` cannot create a new SQLite database on Azure Files SMB. If startup logs show:
+If startup logs show a Supabase connection failure, verify:
 
-```
-[ERROR] [SERVER] startup failed
-[ERROR] Error: database is locked
-[ERROR]     at async Object.openKv (ext:deno_kv/01_db.ts:9:15)
-[ERROR]     at async GameDataKvProvider.open (...)
-```
+1. `STORAGE_BACKEND=supabase` is set on the container revision.
+2. `SUPABASE_URL` is set to the correct project URL.
+3. `SUPABASE_SERVICE_ROLE_KEY` is set (as a Container Apps secret) and matches the key in the Supabase dashboard.
+4. The Supabase project is online and reachable from the container (check the Supabase status page and project health).
 
-the share is missing a properly initialized `game-data.kv` (or a previous startup attempt left a 0-byte stub there). Diagnose and recover:
-
-```bash
-STORAGE_KEY=$(az storage account keys list \
-  --account-name turkeysunite --resource-group turkeysunite \
-  --query "[0].value" -o tsv)
-
-# Inspect the share — a valid file is ~36 KB; 0 bytes is the broken state
-az storage file list \
-  --account-name turkeysunite \
-  --share-name dominion-game-data \
-  --account-key "$STORAGE_KEY" \
-  --query "[].{name:name,size:properties.contentLength}" -o table
-
-# If a corrupt 0-byte game-data.kv exists, delete it
-az storage file delete \
-  --account-name turkeysunite \
-  --share-name dominion-game-data \
-  --path game-data.kv \
-  --account-key "$STORAGE_KEY"
-```
-
-Then bootstrap a fresh file following [Game Data KV Bootstrap](#game-data-kv-bootstrap) and restart the failing revision (`az containerapp revision restart ...`).
+The server still boots when Supabase is unreachable and reports a `SUPABASE_OPEN_FAILED` issue at `/status`. Check the container logs and the `/status` response body for the specific error message.

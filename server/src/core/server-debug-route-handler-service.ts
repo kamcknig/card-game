@@ -67,13 +67,13 @@ export class ServerDebugRouteHandlerService {
   }
 
   // Dispatches debug requests to specific sub-handlers after confirming the API is enabled.
-  private routeDebugRequest(req: Request, url: URL): Response | Promise<Response> {
+  private async routeDebugRequest(req: Request, url: URL): Promise<Response> {
     if (!this.serverConfigService.isMatchStateExportEnabled()) {
       return new Response('debug API disabled', { status: 403 });
     }
 
     // Require a valid admin session token for all debug endpoints.
-    const authDenied = this.requireAdminToken(req);
+    const authDenied = await this.requireAdminToken(req);
     if (authDenied) {
       return authDenied;
     }
@@ -599,9 +599,10 @@ export class ServerDebugRouteHandlerService {
    *
    * Returns a 401 Response when no Bearer token is present, a 403 Response when
    * the token is invalid/expired or the user is not an admin, and undefined when
-   * access is granted.
+   * access is granted. Async because `userStore.getByUsername` performs a live
+   * backing-store read.
    */
-  private requireAdminToken(req: Request): Response | undefined {
+  private async requireAdminToken(req: Request): Promise<Response | undefined> {
     const authHeader = req.headers.get('authorization');
     const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7).trim() || undefined : undefined;
 
@@ -614,7 +615,7 @@ export class ServerDebugRouteHandlerService {
       return new Response('invalid or expired token', { status: 401 });
     }
 
-    const user = this.userStore.getByUsername(username);
+    const user = await this.userStore.getByUsername(username);
     if (!user?.isAdmin) {
       return new Response('admin access required', { status: 403 });
     }

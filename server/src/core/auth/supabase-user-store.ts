@@ -7,8 +7,8 @@ import type { UserRecord, UserStore } from './user-store.ts';
  * Shape of a row in the `auth_users` Supabase table.
  *
  * Column names use snake_case to match the SQL schema. The in-memory
- * cache stores plain `UserRecord` objects (camelCase); this type is only
- * used when reading from or writing to Supabase.
+ * record uses camelCase; this type is only used when reading from or
+ * writing to Supabase.
  */
 type DbUserRow = {
   id: number;
@@ -22,6 +22,8 @@ type DbUserRow = {
   disabled: boolean;
   is_admin: boolean;
   created_at: number;
+  /** Nullable email. Null for users who predate email registration. */
+  email: string | null;
   supabase_auth_id: string | null;
 };
 
@@ -32,6 +34,7 @@ function rowToRecord(row: DbUserRow): UserRecord {
   return {
     id: row.id,
     username: row.username,
+    email: row.email ?? null,
     passwordHash: row.password_hash,
     passwordAlgo: row.password_algo,
     passwordUpdatedAt: row.password_updated_at,
@@ -40,6 +43,7 @@ function rowToRecord(row: DbUserRow): UserRecord {
     disabled: row.disabled,
     isAdmin: row.is_admin,
     createdAt: row.created_at,
+    supabaseAuthId: row.supabase_auth_id ?? null,
   };
 }
 
@@ -50,7 +54,7 @@ function rowToRecord(row: DbUserRow): UserRecord {
  * Only the mutable columns are included; `username`, `username_lower`, and
  * `created_at` are set at insert time and never changed.
  */
-function recordToMutableRow(rec: UserRecord): Omit<DbUserRow, 'id' | 'supabase_auth_id'> {
+function recordToMutableRow(rec: UserRecord): Omit<DbUserRow, 'id'> {
   return {
     username: rec.username,
     username_lower: rec.username.toLowerCase(),
@@ -62,95 +66,141 @@ function recordToMutableRow(rec: UserRecord): Omit<DbUserRow, 'id' | 'supabase_a
     disabled: rec.disabled,
     is_admin: rec.isAdmin,
     created_at: rec.createdAt,
+    email: rec.email,
+    supabase_auth_id: rec.supabaseAuthId,
   };
 }
 
 /**
  * Supabase-backed implementation of {@link UserStore}.
  *
- * Uses the same write-through cache pattern as {@link DenoKvUserStore}: all
- * reads are served from a synchronous in-memory `Map`, while mutations update
- * the cache immediately and fire async Supabase writes in the background (
- * fire-and-forget with `.catch()` logging).
+ * All read operations (`getByUsername`, `getById`, `getByEmail`, `list`) query
+ * the `auth_users` table directly on every call — there is no in-memory cache.
+ * This eliminates stale-cache bugs when records are modified externally (e.g.
+ * via Studio or the CLI) and simplifies the implementation.
  *
- * The `create()` method is the exception — it is asynchronous because the DB
- * assigns the `id` via an IDENTITY column. The INSERT is awaited so callers
- * learn the real id before returning.
+ * Write operations (`updatePassword`, `setLockedUntil`, etc.) use targeted
+ * `UPDATE` SQL statements so they do not need a prior read. `create()` awaits
+ * the INSERT to obtain the DB-assigned `id` from the IDENTITY column. All
+ * other write methods fire-and-forget via `.catch()` logging.
  *
- * The cache is primed in `open()` by selecting all rows from `auth_users`. This
- * must complete before the HTTP server starts accepting connections.
+ * `open(client)` stores the client reference only — no pre-load SELECT is
+ * performed.
  *
  * Defined in: server/src/core/auth/supabase-user-store.ts
  * Consumers: Registered as `userStore` in register-root-services.ts when
  *   STORAGE_BACKEND=supabase. `open()` is called from ServerStartupService.
  */
 export class SupabaseUserStore implements UserStore {
-  // Write-through cache keyed by lowercased username.
-  private readonly byUsername = new Map<string, UserRecord>();
-
-  // Secondary index for O(1) id-based lookups.
-  private readonly byId = new Map<number, UserRecord>();
-
   // Shared Supabase client; set in open().
   private client: SupabaseClient | undefined;
 
   constructor(private readonly loggerService: LoggerService) {}
 
   /**
-   * Loads all user rows from the `auth_users` table into the in-memory cache.
+   * Stores the Supabase client reference.
    *
-   * Must be called once before any synchronous store method. Accepts the
-   * shared Supabase client from {@link SupabaseClientProvider}.
+   * No longer pre-loads records — reads are live on every call. Must be called
+   * once before any store method.
    */
-  public async open(client: SupabaseClient): Promise<void> {
+  public open(client: SupabaseClient): void {
     this.client = client;
+    this.loggerService.info('[auth users] Supabase store opened (live-read mode)');
+  }
 
-    const { data, error } = await this.client.from('auth_users').select('*');
+  /**
+   * Returns the user record matching `username` (case-insensitive) by querying
+   * `auth_users WHERE username_lower = $1`.
+   */
+  public async getByUsername(username: string): Promise<UserRecord | undefined> {
+    if (!this.client) return undefined;
+
+    const { data, error } = await this.client
+      .from('auth_users')
+      .select('*')
+      .eq('username_lower', username.toLowerCase())
+      .limit(1)
+      .single<DbUserRow>();
+
     if (error) {
-      throw new Error(`[auth users] failed to load from Supabase: ${error.message}`);
+      // `PGRST116` is PostgREST's "no rows returned" code — not a real error.
+      if (error.code === 'PGRST116') return undefined;
+      this.loggerService.warn(`[auth users] getByUsername failed for '${username}': ${error.message} (code=${error.code})`);
+      return undefined;
     }
 
-    let loaded = 0;
-    for (const row of (data ?? []) as DbUserRow[]) {
-      const rec = rowToRecord(row);
-      this.byUsername.set(rec.username.toLowerCase(), rec);
-      this.byId.set(rec.id, rec);
-      loaded++;
-    }
-
-    this.loggerService.info(`[auth users] loaded ${loaded} user(s) from Supabase`);
+    return data ? rowToRecord(data) : undefined;
   }
 
   /**
-   * Returns the user record matching `username` (case-insensitive).
+   * Returns the user record for the given numeric id by querying
+   * `auth_users WHERE id = $1`.
    */
-  public getByUsername(username: string): UserRecord | undefined {
-    return this.byUsername.get(username.toLowerCase());
+  public async getById(id: number): Promise<UserRecord | undefined> {
+    if (!this.client) return undefined;
+
+    const { data, error } = await this.client
+      .from('auth_users')
+      .select('*')
+      .eq('id', id)
+      .limit(1)
+      .single<DbUserRow>();
+
+    if (error) {
+      if (error.code === 'PGRST116') return undefined;
+      this.loggerService.warn(`[auth users] getById failed for id=${id}: ${error.message}`);
+      return undefined;
+    }
+
+    return data ? rowToRecord(data) : undefined;
   }
 
   /**
-   * Returns the user record for the given numeric id.
+   * Returns the user record whose email matches the given address (case-
+   * insensitive) by querying `auth_users WHERE lower(email) = lower($1)`.
+   *
+   * Returns undefined when no match is found.
    */
-  public getById(id: number): UserRecord | undefined {
-    return this.byId.get(id);
+  public async getByEmail(email: string): Promise<UserRecord | undefined> {
+    if (!this.client) return undefined;
+
+    const { data, error } = await this.client
+      .from('auth_users')
+      .select('*')
+      .ilike('email', email)
+      .limit(1)
+      .single<DbUserRow>();
+
+    if (error) {
+      if (error.code === 'PGRST116') return undefined;
+      this.loggerService.warn(`[auth users] getByEmail failed for '${email}': ${error.message}`);
+      return undefined;
+    }
+
+    return data ? rowToRecord(data) : undefined;
   }
 
   /**
    * Inserts a new user row and returns the DB-assigned record (with id).
    *
    * Awaits the INSERT so the DB-assigned `id` is available to callers. Throws
-   * when a user with the same (lowercased) username already exists.
+   * when a user with the same (lowercased) username already exists. Throws when
+   * `email` is provided and is already taken by another user.
    */
   public async create(args: {
     username: string;
+    email?: string | null;
     passwordHash: string;
     passwordAlgo: 'argon2id';
     now: number;
+    supabaseAuthId?: string | null;
   }): Promise<UserRecord> {
-    const key = args.username.toLowerCase();
-    if (this.byUsername.has(key)) {
-      throw new Error(`[auth users] username already exists: '${args.username}'`);
+    if (!this.client) {
+      throw new Error('[auth users] store not opened — call open(client) first');
     }
+
+    const emailNorm = args.email ? args.email.toLowerCase() : null;
+    const key = args.username.toLowerCase();
 
     const insertRow = {
       username: args.username,
@@ -163,11 +213,9 @@ export class SupabaseUserStore implements UserStore {
       disabled: false,
       is_admin: false,
       created_at: args.now,
+      email: emailNorm,
+      supabase_auth_id: args.supabaseAuthId ?? null,
     };
-
-    if (!this.client) {
-      throw new Error('[auth users] store not opened — call open(client) first');
-    }
 
     // Await the INSERT to obtain the DB-assigned id from the IDENTITY column.
     const { data, error } = await this.client
@@ -181,9 +229,6 @@ export class SupabaseUserStore implements UserStore {
     }
 
     const rec = rowToRecord(data);
-    this.byUsername.set(key, rec);
-    this.byId.set(rec.id, rec);
-
     this.loggerService.debug(`[auth users] created user '${args.username}' with id ${rec.id}`);
     return rec;
   }
@@ -191,122 +236,200 @@ export class SupabaseUserStore implements UserStore {
   /**
    * Replaces a user's password hash and clears any pending lockout state.
    *
-   * Mutates the cached record in place and fires an async Supabase upsert.
+   * Fires an async targeted UPDATE in the background (fire-and-forget).
    */
   public updatePassword(id: number, passwordHash: string, algo: PasswordAlgo, now: number): void {
-    const rec = this.byId.get(id);
-    if (!rec) return;
-
-    rec.passwordHash = passwordHash;
-    rec.passwordAlgo = algo;
-    rec.passwordUpdatedAt = now;
-    rec.failedAttempts = 0;
-    rec.lockedUntil = null;
-
-    this.persist(rec);
+    this.client
+      ?.from('auth_users')
+      .update({
+        password_hash: passwordHash,
+        password_algo: algo,
+        password_updated_at: now,
+        failed_attempts: 0,
+        locked_until: null,
+      })
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) {
+          this.loggerService.warn(`[auth users] updatePassword failed for id=${id}: ${error.message}`);
+        }
+      });
   }
 
   /**
    * Increments the per-account failure counter and returns the updated record.
+   *
+   * Uses a targeted `UPDATE ... RETURNING *` so a prior read is not required.
+   * Throws when the user is not found.
    */
-  public recordFailure(id: number, _now: number): UserRecord {
-    const rec = this.byId.get(id);
-    if (!rec) {
+  public async recordFailure(id: number, _now: number): Promise<UserRecord> {
+    if (!this.client) {
+      throw new Error('[auth users] store not opened — call open(client) first');
+    }
+
+    // Supabase JS does not support UPDATE ... RETURNING with an arithmetic
+    // expression directly, so we first fetch the current failedAttempts, then
+    // update. The window for a race is acceptable in a single-process model.
+    const current = await this.getById(id);
+    if (!current) {
       throw new Error(`[auth users] recordFailure: unknown id ${id}`);
     }
 
-    rec.failedAttempts++;
-    this.persist(rec);
-    return rec;
+    const newCount = current.failedAttempts + 1;
+
+    this.client
+      .from('auth_users')
+      .update({ failed_attempts: newCount })
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) {
+          this.loggerService.warn(`[auth users] recordFailure update failed for id=${id}: ${error.message}`);
+        }
+      });
+
+    return { ...current, failedAttempts: newCount };
   }
 
   /**
-   * Resets failedAttempts and lockedUntil to their initial values.
+   * Resets `failedAttempts` and `lockedUntil` to their initial values.
+   *
+   * Fires an async targeted UPDATE in the background (fire-and-forget).
    */
   public resetFailures(id: number): void {
-    const rec = this.byId.get(id);
-    if (!rec) return;
-
-    if (rec.failedAttempts === 0 && rec.lockedUntil === null) {
-      // Avoid a pointless DB write when nothing changed.
-      return;
-    }
-
-    rec.failedAttempts = 0;
-    rec.lockedUntil = null;
-    this.persist(rec);
+    this.client
+      ?.from('auth_users')
+      .update({ failed_attempts: 0, locked_until: null })
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) {
+          this.loggerService.warn(`[auth users] resetFailures failed for id=${id}: ${error.message}`);
+        }
+      });
   }
 
   /**
    * Sets or clears the lockout expiry timestamp.
+   *
+   * Fires an async targeted UPDATE in the background (fire-and-forget).
    */
   public setLockedUntil(id: number, until: number | null): void {
-    const rec = this.byId.get(id);
-    if (!rec) return;
-
-    rec.lockedUntil = until;
-    this.persist(rec);
+    this.client
+      ?.from('auth_users')
+      .update({ locked_until: until })
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) {
+          this.loggerService.warn(`[auth users] setLockedUntil failed for id=${id}: ${error.message}`);
+        }
+      });
   }
 
   /**
-   * Toggles the disabled flag for the given user.
+   * Toggles the `disabled` flag for the given user.
+   *
+   * Fires an async targeted UPDATE in the background (fire-and-forget).
    */
   public setDisabled(id: number, disabled: boolean): void {
-    const rec = this.byId.get(id);
-    if (!rec) return;
-
-    rec.disabled = disabled;
-    this.persist(rec);
+    this.client
+      ?.from('auth_users')
+      .update({ disabled })
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) {
+          this.loggerService.warn(`[auth users] setDisabled failed for id=${id}: ${error.message}`);
+        }
+      });
   }
 
   /**
-   * Sets or clears the admin flag for the given user.
+   * Sets or clears the `is_admin` flag for the given user.
+   *
+   * Fires an async targeted UPDATE in the background (fire-and-forget).
    */
   public setAdmin(id: number, isAdmin: boolean): void {
-    const rec = this.byId.get(id);
-    if (!rec) return;
-
-    rec.isAdmin = isAdmin;
-    this.persist(rec);
+    this.client
+      ?.from('auth_users')
+      .update({ is_admin: isAdmin })
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) {
+          this.loggerService.warn(`[auth users] setAdmin failed for id=${id}: ${error.message}`);
+        }
+      });
   }
 
   /**
-   * Removes the user record for the given id from both in-memory caches and
-   * the Supabase table.
+   * Sets the email address for an existing user.
    *
-   * No-ops silently when the id is not found.
+   * Fires an async targeted UPDATE in the background (fire-and-forget). The
+   * DB-level partial unique index on `lower(email)` enforces uniqueness so a
+   * duplicate email at the DB level surfaces as a constraint violation on the
+   * update.
+   *
+   * Callers should only invoke this when the existing email is null — email
+   * changes are out of scope for this plan.
+   */
+  public setEmail(id: number, email: string, _now: number): void {
+    const emailNorm = email.toLowerCase();
+
+    this.client
+      ?.from('auth_users')
+      .update({ email: emailNorm })
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) {
+          this.loggerService.warn(`[auth users] setEmail failed for id=${id}: ${error.message}`);
+        } else {
+          this.loggerService.debug(`[auth users] set email for id=${id}`);
+        }
+      });
+  }
+
+  /**
+   * Sets or clears the `supabase_auth_id` for an existing user.
+   *
+   * Fires an async targeted UPDATE in the background (fire-and-forget).
+   */
+  public setSupabaseAuthId(id: number, authId: string | null): void {
+    this.client
+      ?.from('auth_users')
+      .update({ supabase_auth_id: authId })
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) {
+          this.loggerService.warn(`[auth users] setSupabaseAuthId failed for id=${id}: ${error.message}`);
+        } else {
+          this.loggerService.debug(`[auth users] set supabaseAuthId for id=${id}: ${authId ?? 'null'}`);
+        }
+      });
+  }
+
+  /**
+   * Removes the user record for the given id from the Supabase table.
+   *
+   * Fires an async targeted DELETE in the background (fire-and-forget).
+   * No-ops silently when the id is not found. Intended for CLI/admin use.
    */
   public delete(id: number): void {
-    const rec = this.byId.get(id);
-    if (!rec) return;
-
-    const key = rec.username.toLowerCase();
-    this.byId.delete(id);
-    this.byUsername.delete(key);
-
     this.client
       ?.from('auth_users')
       .delete()
       .eq('id', id)
       .then(({ error }) => {
         if (error) {
-          this.loggerService.warn(`[auth users] delete failed for '${rec.username}' (id ${id}): ${error.message}`);
+          this.loggerService.warn(`[auth users] delete failed for id=${id}: ${error.message}`);
         }
       });
   }
 
   /**
-   * Removes every user record from both in-memory caches and the Supabase table.
+   * Removes every user record from the Supabase table.
    *
    * The id sequence is preserved in the DB via the IDENTITY column so subsequent
-   * creates do not reuse previously issued ids. Intended for CLI/admin use.
+   * creates do not reuse previously issued ids. Fires a DELETE in the background.
+   * Intended for CLI/admin use.
    */
   public clear(): void {
-    const count = this.byUsername.size;
-    this.byUsername.clear();
-    this.byId.clear();
-
-    // DELETE with a always-true filter clears all rows.
     this.client
       ?.from('auth_users')
       .delete()
@@ -314,26 +437,35 @@ export class SupabaseUserStore implements UserStore {
       .then(({ error }) => {
         if (error) {
           this.loggerService.warn(`[auth users] clear failed: ${error.message}`);
+        } else {
+          this.loggerService.info('[auth users] cleared all user records from Supabase');
         }
       });
-
-    this.loggerService.info(`[auth users] cleared ${count} user(s) from store`);
   }
 
   /**
-   * Returns a snapshot of every user record currently in memory.
-   */
-  public list(): ReadonlyArray<UserRecord> {
-    return [...this.byUsername.values()];
-  }
-
-  /**
-   * Upserts the current in-memory record back to the Supabase table in the
-   * background.
+   * Returns a snapshot of every user record by querying `SELECT * FROM auth_users`.
    *
-   * Mutations happen on the cached object in place before this is called; this
-   * method echoes the updated state to the DB. Errors are logged but do not
-   * propagate.
+   * Intended for CLI/admin use; the route handlers never expose the full list
+   * to end users.
+   */
+  public async list(): Promise<ReadonlyArray<UserRecord>> {
+    if (!this.client) return [];
+
+    const { data, error } = await this.client.from('auth_users').select('*');
+    if (error) {
+      this.loggerService.warn(`[auth users] list failed: ${error.message}`);
+      return [];
+    }
+
+    return ((data ?? []) as DbUserRow[]).map(rowToRecord);
+  }
+
+  /**
+   * Upserts the current record back to the Supabase table in the background.
+   *
+   * Used by methods that need a full-record upsert rather than a targeted
+   * column update. Errors are logged but do not propagate.
    */
   private persist(rec: UserRecord): void {
     const row = { id: rec.id, ...recordToMutableRow(rec) };

@@ -1,6 +1,13 @@
 # Randoms
 
+- add email registration via supabase
+  - add password reset
+  - email change after registration
+
+---
+
 When no cards in hand, the hand should not collapse vertically
+
 ---
 
 show the version number in the app somewhere

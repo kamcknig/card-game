@@ -39,13 +39,11 @@ cp .env-example .env
 
 ### Storage Backend Variables
 
-A single `STORAGE_BACKEND` env var selects the persistence layer for **both** auth (sessions, users, registration codes) and game data (match-configuration saves). When the value is missing or unrecognized the process still starts so `/status` can surface the misconfiguration to the frontend (see _Health endpoint_ below) — the server intentionally does not crash on storage misconfiguration so operators can diagnose it through the UI rather than the container logs.
+A single `STORAGE_BACKEND` env var selects the persistence layer for **both** auth (sessions, users) and game data (match-configuration saves). When the value is missing or unrecognized the process still starts so `/status` can surface the misconfiguration to the frontend (see _Health endpoint_ below) — the server intentionally does not crash on storage misconfiguration so operators can diagnose it through the UI rather than the container logs.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `STORAGE_BACKEND` | _(required for normal operation)_ | Selects the storage backend. Allowed values: `kv` (Deno KV) or `supabase`. Unset/invalid values produce a `STORAGE_BACKEND_INVALID` health issue and the in-memory fallback stores are used (no persistence) |
-| `AUTH_KV_PATH` | `./game-data/auth.kv` | Filesystem path to the Deno KV auth store. Used when `STORAGE_BACKEND=kv`. Use `':memory:'` for dev/tests |
-| `GAME_DATA_KV_PATH` | `./game-data/game-data.kv` | Filesystem path to the Deno KV game-data store. Used when `STORAGE_BACKEND=kv` |
+| `STORAGE_BACKEND` | _(required for normal operation)_ | Selects the storage backend. Allowed values: `in-memory` (no persistence, dev/test only) or `supabase`. Unset/invalid values produce a `STORAGE_BACKEND_INVALID` health issue and the in-memory fallback stores are used (no persistence) |
 | `SUPABASE_URL` | _(required for `supabase`)_ | Supabase project URL. Required when `STORAGE_BACKEND=supabase` |
 | `SUPABASE_SERVICE_ROLE_KEY` | _(required for `supabase`)_ | Supabase service-role key. Server-side only — bypasses RLS. NEVER commit to git or expose to a browser |
 
@@ -55,7 +53,7 @@ Issue codes the storage layer can register:
 
 | Code | Level | Cause |
 |------|-------|-------|
-| `STORAGE_BACKEND_INVALID` | error | `STORAGE_BACKEND` env var is unset or not one of `kv`/`supabase` |
+| `STORAGE_BACKEND_INVALID` | error | `STORAGE_BACKEND` env var is unset or not one of `in-memory`/`supabase` |
 | `SUPABASE_CONFIG_MISSING` | error | `STORAGE_BACKEND=supabase` but `SUPABASE_URL` and/or `SUPABASE_SERVICE_ROLE_KEY` are unset |
 | `SUPABASE_OPEN_FAILED` | error | Connection to Supabase or initial table reads failed at startup |
 
@@ -74,100 +72,76 @@ Issue codes the storage layer can register:
 
 ## Authentication Usage
 
-Accounts are created via HTTP registration (`POST /auth/register`) using a
-registration code. Registration codes are issued by any authenticated user via
-HTTP (`POST /auth/registration-codes`) or by CLI scripts for bootstrapping.
+New accounts are created via open email-based registration at
+`POST /auth/register` — no invite code is required. When `STORAGE_BACKEND=supabase`,
+Supabase Auth is the identity authority: registration provisions a Supabase Auth
+user and sends a confirmation email; login is resolved via
+`supabase.auth.signInWithPassword` after the server looks up the email for the
+supplied username. When `STORAGE_BACKEND=in-memory`, argon2id handles password
+verification locally, no email is sent, and all data is lost when the process
+exits.
+
+**Legacy users** (rows with `email = null`, predating this feature) continue to
+log in using the local argon2id fallback. On their next login the server includes
+`needsEmail: true` in the response and the UI guides them to `/profile/security`
+to attach an email. Once an email is attached, subsequent logins go through
+Supabase Auth. There is no batch migration script — the transition happens
+automatically per user at login.
 
 ### HTTP endpoints
 
 | Method | Path | Auth | Purpose |
 |--------|------|------|---------|
-| `POST` | `/auth/login` | public | Exchange username + password for a session token |
-| `POST` | `/auth/register` | public (rate-limited) | Create an account using a valid registration code |
+| `POST` | `/auth/login` | public | Exchange username + password for a session token. Response includes `needsEmail: boolean` |
+| `POST` | `/auth/register` | public (rate-limited) | Create an account. Body: `{ username, email, password }` |
+| `POST` | `/auth/email` | bearer | Attach an email to a legacy account. Body: `{ email, password }` |
 | `POST` | `/auth/change-password` | bearer | Rotate the caller's password |
-| `GET` | `/auth/validate` | bearer | Validate an existing token |
+| `GET` | `/auth/validate` | bearer | Validate an existing token and refresh user state. Returns 401 and invalidates the session if: the local user record no longer exists, the account's `disabled` flag is set, or (supabase backend) the Supabase Auth user has been deleted or banned. Response includes `needsEmail: boolean` |
 | `DELETE` | `/auth/logout` | bearer | Invalidate the caller's token |
 | `GET` | `/auth/sessions` | bearer | List the caller's active sessions |
 | `DELETE` | `/auth/sessions[?keepCurrent=true]` | bearer | Revoke the caller's sessions |
-| `POST` | `/auth/registration-codes` | bearer | Create a new registration code |
-| `GET` | `/auth/registration-codes` | bearer | List active registration codes |
-| `DELETE` | `/auth/registration-codes/:code` | bearer | Disable a registration code |
 | `GET` | `/auth/check-username?username=<value>` | public | Report whether a username is already taken |
+| `GET` | `/auth/check-email?email=<value>` | public | Report whether an email is already registered |
 
 ### Bootstrap workflow
 
-Before any users exist, both `/auth/login` and `/auth/registration-codes`
-reject every request, so the very first account must be provisioned directly
-against the configured backend. The CLI script honours `STORAGE_BACKEND` and
-opens either the Deno KV file or the Supabase project accordingly.
+Before any users exist, `/auth/login` rejects every request, so the very first
+account must be provisioned directly against the configured backend. The CLI
+script honours `STORAGE_BACKEND` and targets the appropriate backend.
 
-When `STORAGE_BACKEND=kv`, the running server keeps an in-memory cache of the
-KV state primed at startup, so **CLI writes while the server is running are
-invisible to the running process and risk SQLite lock contention on the shared
-`auth.kv` file**. Stop the server before running the CLI scripts below, then
-restart. The Supabase backend has no such constraint — DB writes are visible
-to the running server on its next read.
+When `STORAGE_BACKEND=supabase`, the script talks to the Supabase project via the
+service-role key and may run while the server is up — DB writes are visible to
+the running server on its next read. When `STORAGE_BACKEND=in-memory`, all state
+lives only in the running process and cannot be bootstrapped via CLI before
+startup; use open registration at `POST /auth/register` to create the first
+account once the server is running.
 
 ```bash
-# 1. Stop the server (so the CLI and server do not both hold auth.kv).
-# 2. Create the first user directly in the KV store.
-deno task auth:users create --username <name> --password <pw> [--kv <path>]
+# 1. Create the first user directly in the store (supabase backend).
+deno task auth:users create --username <name> --password <pw>
 
-# 3. Restart the server.
-
-# 4. Log in to mint a session token.
+# 2. Log in to mint a session token.
 curl -sSX POST http://localhost:3001/auth/login \
   -H 'content-type: application/json' \
   -d '{"username":"<name>","password":"<pw>"}'
-
-# 5. Use the returned token to issue registration codes for everyone else.
-curl -sSX POST http://localhost:3001/auth/registration-codes \
-  -H "authorization: Bearer <token>" \
-  -H 'content-type: application/json' \
-  -d '{"maxUses":1,"expiresIn":3600000}'
 ```
 
-Once at least one account exists, prefer the HTTP endpoints for day-to-day
-user and code management — they go through the same in-memory store the
-registration handler reads from, so new codes are visible immediately.
+Additional accounts are created by registering through the UI or `POST /auth/register`
+directly — no registration code is needed.
 
 ### CLI scripts
 
-Both scripts use the backend selected by `STORAGE_BACKEND`. When that value is
-`kv`, they write to the Deno KV store directly and **must be run with the
-server stopped** to avoid stale caches and SQLite lock contention. When it is
-`supabase`, the scripts talk to the Supabase project via the service-role key
-and may run while the server is up. Intended for bootstrapping and operator
-maintenance only.
+The user management script uses the backend selected by `STORAGE_BACKEND`. When
+that value is `supabase`, the script talks to the Supabase project via the
+service-role key and may run while the server is up. The `in-memory` backend
+does not support CLI user management — all state is transient. Intended for
+bootstrapping and operator maintenance only.
 
 ```bash
-# User management: create | delete | set-password | clear
+# User management: create | delete | set-password | set-email | list | clear
 # Run a subcommand with --help for its options.
 deno task auth:users <command> [options]
-
-# Create a registration code (accepts --expires-in, --max-uses, --created-by, --kv).
-deno task auth:create-reg-code [--expires-in <duration>] [--max-uses N] [--created-by <user>] [--kv <path>]
-# Duration strings: 30s, 10m, 24h, 7d
 ```
-
-### Migrating from KV to Supabase
-
-When switching from `STORAGE_BACKEND=kv` to `STORAGE_BACKEND=supabase`, the
-`migrate-kv-to-supabase` task lifts every row from both KV files into the
-corresponding Supabase tables. Run it once after applying the SQL migration in
-`supabase/migrations/` to your Supabase project. Re-runs are idempotent.
-
-```bash
-AUTH_KV_PATH=./game-data/auth.kv \
-GAME_DATA_KV_PATH=./game-data/game-data.kv \
-SUPABASE_URL=https://<project>.supabase.co \
-SUPABASE_SERVICE_ROLE_KEY=<service-role-key> \
-deno task migrate-kv-to-supabase
-```
-
-The script prints per-table insert counts and a `setval` SQL statement for the
-`auth_users` identity sequence — run that statement in Supabase Studio so
-subsequent inserts do not collide with migrated ids.
 
 ## Other Commands
 

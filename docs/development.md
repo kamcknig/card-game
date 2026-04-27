@@ -47,11 +47,72 @@ The Angular dev server proxies `/socket.io` and `/debug` requests to the game se
 
 ## Authentication
 
-The server ships with no default accounts and no open self-registration —
-every account is created via `POST /auth/register` using a registration code
-issued by an authenticated user. Bootstrap the first user via the CLI scripts
-with the server stopped; see [server/README.md](../server/README.md#authentication-usage)
-for the full workflow and HTTP endpoint reference.
+The server ships with no default accounts. New accounts are created via open
+email-based registration at `POST /auth/register` — no invite code is required.
+Bootstrap the first user via the CLI scripts with the server stopped; see
+[server/README.md](../server/README.md#authentication-usage) for the full
+workflow and HTTP endpoint reference.
+
+### Email confirmation in local development
+
+When `STORAGE_BACKEND=supabase` and the local Supabase CLI stack is running
+(`supabase start`), outbound email is not delivered to real inboxes. Instead,
+the Supabase CLI starts an **Inbucket**-based email capture server. All emails
+sent by Supabase Auth (confirmation links, password resets, etc.) are
+intercepted and available at:
+
+```
+http://localhost:54324
+```
+
+Open that URL in a browser after registering a new account to retrieve the
+confirmation link and click through it — no real mail server or SMTP
+credentials are needed for local development.
+
+The `[auth.email]` section of `supabase/config.toml` has
+`enable_confirmations = true`, which is the setting that gates first login
+behind email verification. The Inbucket server is configured in the
+`[inbucket]` section of the same file (port `54324`).
+
+When `STORAGE_BACKEND=in-memory`, no email is sent at registration and no
+confirmation step exists. All data is lost when the server process exits.
+
+### Supabase SMTP (hosted project)
+
+When targeting a hosted Supabase project (not the local CLI stack), Supabase's
+free tier allows only 2 outbound auth emails per hour. For any real usage,
+configure a custom SMTP provider in the Supabase dashboard under
+**Authentication → SMTP Settings**. The project uses [Resend](https://resend.com)
+as its SMTP provider:
+
+| Field | Value |
+|-------|-------|
+| Host | `smtp.resend.com` |
+| Port | `465` |
+| Username | `resend` |
+| Password | your Resend API key (`re_...`) |
+| Sender email | a verified address on your Resend domain |
+
+A verified sending domain must be configured in Resend before outbound email
+works. The confirmation email link uses the **Site URL** configured in
+**Authentication → URL Configuration** — set this to the frontend URL
+(e.g. `http://localhost:51455` for local dev or the production FQDN).
+
+### Applying Supabase migrations
+
+SQL migrations live in `supabase/migrations/`. To apply them to a hosted
+Supabase project:
+
+```bash
+# Link to the project once (project-ref is the ID in the dashboard URL)
+supabase link --project-ref <project-ref>
+
+# Push pending migrations
+supabase db push
+```
+
+`supabase db push` is idempotent — it only applies migrations that have not
+been recorded in the project's migration history table.
 
 ## Docker
 
@@ -140,7 +201,7 @@ This starts the game server on port 3001 and the Angular dev server on port 5145
 | `SUPABASE_URL` | `STORAGE_BACKEND=supabase` | Project URL — not secret but kept alongside the key for symmetry |
 | `SUPABASE_SERVICE_ROLE_KEY` | `STORAGE_BACKEND=supabase` | Service-role key. Bypasses RLS — never commit. The repo's `.gitignore` rule `**/.env` keeps the file out of version control |
 
-If you switch the dev stack to `STORAGE_BACKEND=kv`, neither variable needs to be set; Compose will pass empty strings through and the kv branch ignores them.
+If you switch the dev stack to `STORAGE_BACKEND=in-memory`, neither variable needs to be set; Compose will pass empty strings through and the in-memory branch ignores them.
 
 **Important — rebuild when dependencies change**: The dev frontend image installs `node_modules` at build time (inside the container) so the correct musl-compatible binaries are used on Alpine Linux. When `angular-frontend/package.json` or `shared/package.json` changes, the image must be rebuilt:
 
@@ -233,9 +294,7 @@ Both apps have external ingress and are accessible via their `.azurecontainerapp
 | `END_MATCH_ON_NO_HUMANS` | `true` | End matches when all humans leave |
 | `MATCH_STATE_MERGE_ENABLED` | `true` | Enable match state merging |
 | `AUTH_ALLOWED_ORIGINS` | _(required)_ | Comma-separated CORS origin allowlist for `/auth/*` (e.g. the frontend FQDN) |
-| `STORAGE_BACKEND` | `kv` | Unified storage backend — drives both auth and game data. Allowed values: `kv` or `supabase`. When unset/invalid the server still starts and `/status` reports a `STORAGE_BACKEND_INVALID` error so the frontend can render `/server-status` instead of crashing — production revisions should always set it explicitly |
-| `AUTH_KV_PATH` | `./game-data/auth.kv` | Path to the Deno KV auth store. Used when `STORAGE_BACKEND=kv` (mount Azure Files at the containing directory for durability) |
-| `GAME_DATA_KV_PATH` | `./game-data/game-data.kv` | Path to the Deno KV game-data store. Used when `STORAGE_BACKEND=kv` |
+| `STORAGE_BACKEND` | `supabase` | Unified storage backend — drives both auth and game data. Allowed values: `in-memory` (no persistence, dev/test only) or `supabase`. When unset/invalid the server still starts and `/status` reports a `STORAGE_BACKEND_INVALID` error so the frontend can render `/server-status` instead of crashing — production revisions should always set it explicitly |
 | `SUPABASE_URL` | _(required for `supabase`)_ | Supabase project URL. Required when `STORAGE_BACKEND=supabase` |
 | `SUPABASE_SERVICE_ROLE_KEY` | _(required for `supabase`)_ | Supabase service-role key. Required when `STORAGE_BACKEND=supabase` — store as a Container Apps secret, never as a plain env var |
 | `AUTH_LOCKOUT_THRESHOLD` | `5` | Failed logins before per-account lockout |

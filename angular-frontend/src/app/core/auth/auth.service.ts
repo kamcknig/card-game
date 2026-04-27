@@ -17,15 +17,26 @@ export const authIsAdminStore = atom<boolean>(
   localStorage.getItem('authIsAdmin') === 'true',
 );
 
-// Holds a registration code parsed from the URL query string on startup.
-// Consumed (cleared) once LoginComponent reads it during initialization.
-// Not localStorage-backed — only valid for the current page load.
-export const pendingRegistrationCodeStore = atom<string | undefined>(undefined);
+// Tracks whether the logged-in user still needs to attach an email address.
+// true for legacy users who pre-date email registration, false once an email
+// is set. localStorage-backed so the flag survives a page refresh.
+// Login, validate, and attachEmail write to this; logout clears it.
+export const authNeedsEmailStore = atom<boolean>(
+  localStorage.getItem('authNeedsEmail') === 'true',
+);
+
+// Stores the authenticated user's email address (null when not set).
+// localStorage-backed so the value survives a page refresh.
+// Login, validate, and attachEmail write to this; logout clears it.
+export const authEmailStore = atom<string | null>(
+  localStorage.getItem('authEmail') ?? null,
+);
 
 (globalThis as any).authUsernameStore = authUsernameStore;
 (globalThis as any).authTokenStore = authTokenStore;
 (globalThis as any).authIsAdminStore = authIsAdminStore;
-(globalThis as any).pendingRegistrationCodeStore = pendingRegistrationCodeStore;
+(globalThis as any).authNeedsEmailStore = authNeedsEmailStore;
+(globalThis as any).authEmailStore = authEmailStore;
 
 /**
  * Manages client-side authentication state and server login requests.
@@ -58,12 +69,22 @@ export class AuthService {
         return { ok: false, message: body.message ?? 'Login failed' };
       }
 
+      const needsEmail = body.needsEmail === true;
+      const email: string | null = typeof body.email === 'string' ? body.email : null;
       localStorage.setItem('authToken', body.token);
       localStorage.setItem('authUsername', body.username);
       localStorage.setItem('authIsAdmin', body.isAdmin ? 'true' : 'false');
+      localStorage.setItem('authNeedsEmail', needsEmail ? 'true' : 'false');
+      if (email !== null) {
+        localStorage.setItem('authEmail', email);
+      } else {
+        localStorage.removeItem('authEmail');
+      }
       authTokenStore.set(body.token);
       authUsernameStore.set(body.username);
       authIsAdminStore.set(body.isAdmin ?? false);
+      authNeedsEmailStore.set(needsEmail);
+      authEmailStore.set(email);
       return { ok: true };
     } catch {
       return { ok: false, message: 'Unable to reach server' };
@@ -89,9 +110,21 @@ export class AuthService {
 
       const body = await response.json();
       if (body.ok) {
+        const needsEmail = body.needsEmail === true;
+        const email: string | null = typeof body.email === 'string' ? body.email : null;
         authUsernameStore.set(body.username);
         localStorage.setItem('authIsAdmin', body.isAdmin ? 'true' : 'false');
         authIsAdminStore.set(body.isAdmin ?? false);
+        // Keep the needsEmail flag in sync across page refreshes via validate.
+        localStorage.setItem('authNeedsEmail', needsEmail ? 'true' : 'false');
+        authNeedsEmailStore.set(needsEmail);
+        // Keep the email in sync across page refreshes via validate.
+        if (email !== null) {
+          localStorage.setItem('authEmail', email);
+        } else {
+          localStorage.removeItem('authEmail');
+        }
+        authEmailStore.set(email);
         return true;
       }
 
@@ -110,14 +143,21 @@ export class AuthService {
 
   /**
    * Clears all auth state from localStorage and stores.
+   *
+   * Clears the needsEmail flag and cached email as well so the email-onboarding
+   * gate is reset and stale email values are not shown on the next login.
    */
   clearAuth(): void {
     localStorage.removeItem('authToken');
     localStorage.removeItem('authUsername');
     localStorage.removeItem('authIsAdmin');
+    localStorage.removeItem('authNeedsEmail');
+    localStorage.removeItem('authEmail');
     authTokenStore.set(undefined);
     authUsernameStore.set(undefined);
     authIsAdminStore.set(false);
+    authNeedsEmailStore.set(false);
+    authEmailStore.set(null);
   }
 
   /**
@@ -163,21 +203,21 @@ export class AuthService {
   /**
    * Creates a new account via POST /auth/register.
    *
-   * Requires a registration code issued out-of-band by an existing user or
-   * the CLI (see server/scripts/auth-create-reg-code.ts). On success the
-   * user must still log in separately — registration does not automatically
-   * establish a session.
+   * Open self-service registration — no registration code required. The `email`
+   * parameter is required; the server rejects registrations without an email
+   * with HTTP 400. On success the user must still log in separately —
+   * registration does not automatically establish a session.
    */
   async register(
     username: string,
+    email: string,
     password: string,
-    registrationCode: string,
   ): Promise<{ ok: boolean; message?: string }> {
     try {
       const response = await fetch(`${environment.wsHost}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, registrationCode }),
+        body: JSON.stringify({ username, email, password }),
       });
 
       const body = await response.json().catch(() => ({}));
@@ -187,124 +227,6 @@ export class AuthService {
       return { ok: true };
     } catch {
       return { ok: false, message: 'Unable to reach server' };
-    }
-  }
-
-  /**
-   * Creates a new registration code via POST /auth/registration-codes.
-   *
-   * Only succeeds when the authenticated user is an admin. Returns the
-   * generated code string on success. `expiresIn` is relative milliseconds
-   * from now; omit for no time limit. `maxUses` defaults to 1 on the server.
-   */
-  async createRegistrationCode(options?: {
-    expiresIn?: number;
-    maxUses?: number;
-  }): Promise<{ ok: boolean; code?: string; expiresAt?: number | null; maxUses?: number; message?: string }> {
-    const token = authTokenStore.get();
-    if (!token) return { ok: false, message: 'Not signed in' };
-
-    try {
-      const response = await fetch(`${environment.wsHost}/auth/registration-codes`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(options ?? {}),
-      });
-
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok || !body.ok) {
-        return { ok: false, message: body.message ?? 'Failed to create code' };
-      }
-      return { ok: true, code: body.code, expiresAt: body.expiresAt, maxUses: body.maxUses };
-    } catch {
-      return { ok: false, message: 'Unable to reach server' };
-    }
-  }
-
-  /**
-   * Lists active registration codes via GET /auth/registration-codes.
-   *
-   * Only succeeds when the authenticated user is an admin. Returns non-disabled,
-   * non-expired codes in server-defined order.
-   */
-  async listRegistrationCodes(): Promise<{
-    ok: boolean;
-    codes?: Array<{
-      code: string;
-      createdAt: number;
-      createdBy: string;
-      expiresAt: number | null;
-      maxUses: number;
-      usedCount: number;
-    }>;
-    message?: string;
-  }> {
-    const token = authTokenStore.get();
-    if (!token) return { ok: false, message: 'Not signed in' };
-
-    try {
-      const response = await fetch(`${environment.wsHost}/auth/registration-codes`, {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok || !body.ok) {
-        return { ok: false, message: body.message ?? 'Failed to list codes' };
-      }
-      return { ok: true, codes: body.codes };
-    } catch {
-      return { ok: false, message: 'Unable to reach server' };
-    }
-  }
-
-  /**
-   * Disables a registration code via DELETE /auth/registration-codes/:code.
-   *
-   * Idempotent — returns ok even when the code was already disabled or unknown.
-   */
-  async disableRegistrationCode(code: string): Promise<{ ok: boolean; message?: string }> {
-    const token = authTokenStore.get();
-    if (!token) return { ok: false, message: 'Not signed in' };
-
-    try {
-      const response = await fetch(
-        `${environment.wsHost}/auth/registration-codes/${encodeURIComponent(code)}`,
-        {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` },
-        },
-      );
-
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok || !body.ok) {
-        return { ok: false, message: body.message ?? 'Failed to disable code' };
-      }
-      return { ok: true };
-    } catch {
-      return { ok: false, message: 'Unable to reach server' };
-    }
-  }
-
-  /**
-   * Checks whether a registration code is currently redeemable.
-   *
-   * Public endpoint — no auth token required. Returns `{ ok, valid }` where
-   * `valid` is false when the code is unknown, disabled, expired, or exhausted.
-   * Network errors resolve to `{ ok: false, valid: false }` so the caller can
-   * treat connectivity failures the same as an invalid code.
-   */
-  async validateRegistrationCode(code: string): Promise<{ ok: boolean; valid: boolean }> {
-    try {
-      const response = await fetch(
-        `${environment.wsHost}/auth/registration-codes/validate?code=${encodeURIComponent(code)}`,
-      );
-      const body = await response.json().catch(() => ({ ok: false, valid: false }));
-      return { ok: body.ok ?? false, valid: body.valid ?? false };
-    } catch {
-      return { ok: false, valid: false };
     }
   }
 
@@ -325,6 +247,74 @@ export class AuthService {
       return body.available ?? true;
     } catch {
       return true;
+    }
+  }
+
+  /**
+   * Checks whether an email address is already registered.
+   *
+   * Returns true when the email is available, false when it is taken.
+   * Network errors resolve to true (available) so a transient failure does
+   * not block the registration form — the server will give the definitive
+   * answer on submit.
+   */
+  async checkEmailAvailability(email: string): Promise<boolean> {
+    try {
+      const response = await fetch(
+        `${environment.wsHost}/auth/check-email?email=${encodeURIComponent(email)}`,
+      );
+      const body = await response.json().catch(() => ({ available: true }));
+      return body.available ?? true;
+    } catch {
+      return true;
+    }
+  }
+
+  /**
+   * Attaches an email address to the authenticated user's account via POST /auth/email.
+   *
+   * Intended for legacy users whose accounts predate email registration
+   * (i.e. `authNeedsEmailStore` is true). On success the server either writes
+   * the email directly (kv backend) or provisions a Supabase Auth user and
+   * sends a confirmation email (supabase backend). On success, clears the
+   * `authNeedsEmailStore` flag so the lobby gate is lifted immediately.
+   *
+   * @param email     The email address to attach.
+   * @param password  The user's current password (required for re-auth).
+   */
+  async attachEmail(
+    email: string,
+    password: string,
+  ): Promise<{ ok: boolean; message?: string }> {
+    const token = authTokenStore.get();
+    if (!token) {
+      return { ok: false, message: 'Not signed in' };
+    }
+
+    try {
+      const response = await fetch(`${environment.wsHost}/auth/email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.ok) {
+        return { ok: false, message: body.message ?? 'Failed to attach email' };
+      }
+
+      // Clear the email-onboarding gate so the lobby allows create/join, and
+      // persist the attached email address so it displays in the Account card.
+      localStorage.setItem('authNeedsEmail', 'false');
+      localStorage.setItem('authEmail', email);
+      authNeedsEmailStore.set(false);
+      authEmailStore.set(email);
+      return { ok: true };
+    } catch {
+      return { ok: false, message: 'Unable to reach server' };
     }
   }
 
