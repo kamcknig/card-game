@@ -38,7 +38,7 @@ let DUMMY_HASH: string | undefined;
  *   authentication is delegated to Supabase Auth (`signInWithPassword`).
  *   Legacy rows (no `supabaseAuthId`) fall back to local argon2id even on
  *   the supabase backend until the user attaches an email.
- * - The kv backend always uses local argon2id.
+ * - The in-memory backend always uses local argon2id.
  *
  * Lifetime: Root singleton; registered with AuthSessionService as the sole
  * auth provider.
@@ -114,7 +114,7 @@ export class UserAccountAuthProvider implements AuthProvider {
     // Branch on backend and supabaseAuthId. When the supabase backend is active
     // and the user has a Supabase Auth account (supabaseAuthId !== null), delegate
     // to Supabase Auth. The local argon2id path is used for:
-    //   - kv backend: always
+    //   - in-memory backend: always
     //   - supabase backend with a legacy row (no supabaseAuthId): fallback until
     //     the user attaches an email and the Supabase Auth user is provisioned.
     const backend = this.serverConfigService.getStorageBackend();
@@ -206,7 +206,7 @@ export class UserAccountAuthProvider implements AuthProvider {
    * Authenticates the user via the local argon2id (or legacy bcrypt) hash.
    *
    * Used by:
-   * - kv backend (always)
+   * - in-memory backend (always)
    * - supabase backend with legacy rows (supabaseAuthId === null) until the
    *   user attaches an email via the add-email flow.
    *
@@ -245,8 +245,8 @@ export class UserAccountAuthProvider implements AuthProvider {
 
     // Successful login — rehash bcrypt→argon2id opportunistically so stored
     // hashes migrate forward without operator intervention.
-    // Gate rehash behind kv backend or legacy supabase rows so we don't
-    // pointlessly rehash a supabase-auth user's empty sentinel hash.
+    // Gate rehash behind non-supabase backends or legacy supabase rows so we
+    // don't pointlessly rehash a supabase-auth user's empty sentinel hash.
     const backend = this.serverConfigService.getStorageBackend();
     if (user.passwordAlgo === 'bcrypt' && (backend !== 'supabase' || user.supabaseAuthId === null)) {
       try {
