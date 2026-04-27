@@ -54,9 +54,9 @@ function recordToRow(rec: SessionRecord): DbSessionRow {
 /**
  * Supabase-backed implementation of {@link SessionStore}.
  *
- * Uses the same write-through cache pattern as {@link DenoKvSessionStore}: all
- * reads are served from a synchronous in-memory `Map`; mutations update the
- * cache immediately and fire async Supabase writes in the background.
+ * Uses a write-through cache pattern: all reads are served from a synchronous
+ * in-memory `Map`; mutations update the cache immediately and fire async
+ * Supabase writes in the background.
  *
  * `open()` loads only non-expired sessions (`expires_at > nowMs`) so the cache
  * starts clean without stale rows. `purgeExpired()` deletes rows from both the

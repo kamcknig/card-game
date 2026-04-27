@@ -73,29 +73,28 @@ export class ServerConfigService {
   /**
    * Returns the unified storage backend to use for all persistence.
    *
-   * Reads from STORAGE_BACKEND. Allowed values are 'kv' and 'supabase'.
+   * Reads from STORAGE_BACKEND. Allowed values are 'in-memory' and 'supabase'.
    * Returns `undefined` when the env var is unset, empty, or unrecognized so
    * the server can still start and surface the problem via the /status
    * endpoint. Use `getRawStorageBackend()` to inspect the original input
    * (e.g. for diagnostic messages distinguishing unset from invalid).
-   * Drives BOTH auth (sessions, users, registration codes) and game data
-   * (match-config saves).
+   * Drives BOTH auth (sessions, users) and game data (match-config saves).
    */
-  public getStorageBackend(): 'kv' | 'supabase' | undefined {
+  public getStorageBackend(): 'in-memory' | 'supabase' | undefined {
     const raw = Deno.env.get('STORAGE_BACKEND');
     if (!raw || !raw.trim()) {
       return undefined;
     }
     const trimmed = raw.trim().toLowerCase();
-    if (trimmed === 'kv' || trimmed === 'supabase') {
-      return trimmed as 'kv' | 'supabase';
+    if (trimmed === 'in-memory' || trimmed === 'supabase') {
+      return trimmed as 'in-memory' | 'supabase';
     }
     return undefined;
   }
 
   // Returns the raw STORAGE_BACKEND env value verbatim so callers can
-  // distinguish "unset" from "set to an invalid value" when reporting
-  // configuration health issues.
+  // distinguish "unset" from "set to an invalid value" ('in-memory' or
+  // 'supabase') when reporting configuration health issues.
   public getRawStorageBackend(): string | undefined {
     return Deno.env.get('STORAGE_BACKEND');
   }

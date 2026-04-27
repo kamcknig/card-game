@@ -54,12 +54,12 @@ const makeFakeClock = (initialMs = 0): Clock & { advance(ms: number): void } => 
   };
 };
 
-// Minimal SupabaseClientProvider stub that always throws — the kv-backend
-// tests never reach the Supabase path so this is never called.
+// Minimal SupabaseClientProvider stub that always throws — the in-memory
+// backend tests never reach the Supabase path so this is never called.
 const makeSupabaseClientProviderStub = (): SupabaseClientProvider =>
   ({
     get: () => {
-      throw new Error('SupabaseClientProvider stub: not available in kv tests');
+      throw new Error('SupabaseClientProvider stub: not available in in-memory tests');
     },
   }) as unknown as SupabaseClientProvider;
 

@@ -13,7 +13,8 @@ import type {
  * without a username) are used only by debug/admin routes.
  *
  * Defined in: server/src/core/match-configuration-save-store.ts
- * Implementations: MatchConfigurationSaveService (file), DenoKvMatchConfigurationSaveService (KV).
+ * Implementations: InMemoryMatchConfigurationSaveService (STORAGE_BACKEND=in-memory),
+ *   SupabaseMatchConfigurationSaveService (STORAGE_BACKEND=supabase).
  * Consumers: Game (socket handlers), ServerDebugRouteHandlerService (HTTP debug API).
  */
 export interface MatchConfigurationSaveStore {

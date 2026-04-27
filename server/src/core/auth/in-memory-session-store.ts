@@ -14,9 +14,8 @@ import type { SessionStore } from './session-store.ts';
  * `purgeExpired`, which are O(n) in the number of stored sessions.
  *
  * Defined in: server/src/core/auth/in-memory-session-store.ts
- * Consumers: Test fixtures only — no longer registered as a runtime backend.
- *   Production composition (register-root-services.ts) selects between
- *   DenoKvSessionStore and SupabaseSessionStore via STORAGE_BACKEND.
+ * Consumers: register-root-services.ts (selected when STORAGE_BACKEND=in-memory
+ *   or when STORAGE_BACKEND is unset/invalid); also used directly by test fixtures.
  */
 export class InMemorySessionStore implements SessionStore {
   // Maps auth tokens to their full session records.

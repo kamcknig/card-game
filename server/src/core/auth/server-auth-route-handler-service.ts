@@ -435,7 +435,8 @@ export class ServerAuthRouteHandlerService {
    * written with an empty password hash (unused for supabase logins) and the
    * Supabase Auth user id stored in `supabase_auth_id`.
    *
-   * When `STORAGE_BACKEND=kv`, the existing argon2id path is used unchanged.
+   * When `STORAGE_BACKEND=in-memory` (or unset/error state), the existing
+   * argon2id path is used unchanged.
    */
   private async handleRegister(req: Request, remoteIp: string): Promise<Response> {
     // Share the IP bucket with /auth/login so registration brute-force counts
@@ -524,14 +525,14 @@ export class ServerAuthRouteHandlerService {
 
     // Branch on backend. When the supabase backend is active, provision a
     // Supabase Auth user so the confirmation email goes out automatically and
-    // subsequent logins are authenticated by Supabase Auth. The kv backend
-    // uses the existing local argon2id path unchanged.
+    // subsequent logins are authenticated by Supabase Auth. The in-memory
+    // backend uses the existing local argon2id path unchanged.
     const backend = this.serverConfigService.getStorageBackend();
     if (backend === 'supabase') {
       return this.registerViaSupabase(req, remoteIp, username, email, password, now);
     }
 
-    // kv backend (or undefined/in-memory fallback): hash with argon2id and
+    // in-memory backend (or undefined/error state): hash with argon2id and
     // create the user row directly. Uses the original-case username so the
     // display name matches what the user typed.
     try {
@@ -814,7 +815,7 @@ export class ServerAuthRouteHandlerService {
    *    taken by a different user.
    * 5. Re-authenticates via `UserAccountAuthProvider.authenticate` so the same
    *    lockout rules apply as a normal login.
-   * 6. For the kv backend: calls `userStore.setEmail` and returns `{ ok: true }`.
+   * 6. For the in-memory backend (or unset/error state): calls `userStore.setEmail` and returns `{ ok: true }`.
    * 7. For the supabase backend: provisions a Supabase Auth user via
    *    `admin.createUser`, then calls `userStore.setEmail` and
    *    `userStore.setSupabaseAuthId`. Returns `{ ok: true }`. The Supabase
@@ -889,7 +890,7 @@ export class ServerAuthRouteHandlerService {
       return this.attachEmailViaSupabase(req, username, user.id, email, password, now);
     }
 
-    // kv backend (or undefined/in-memory fallback): persist the email directly.
+    // in-memory backend (or undefined/error state): persist the email directly.
     try {
       this.userStore.setEmail(user.id, email, now);
     } catch (err) {
