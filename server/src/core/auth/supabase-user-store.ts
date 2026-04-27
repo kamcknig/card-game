@@ -125,7 +125,7 @@ export class SupabaseUserStore implements UserStore {
     if (error) {
       // `PGRST116` is PostgREST's "no rows returned" code — not a real error.
       if (error.code === 'PGRST116') return undefined;
-      this.loggerService.warn(`[auth users] getByUsername failed for '${username}': ${error.message}`);
+      this.loggerService.warn(`[auth users] getByUsername failed for '${username}': ${error.message} (code=${error.code})`);
       return undefined;
     }
 

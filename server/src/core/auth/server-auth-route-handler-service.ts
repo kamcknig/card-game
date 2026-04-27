@@ -267,6 +267,64 @@ export class ServerAuthRouteHandlerService {
     // email in the response so the client can gate admin-only UI and keep
     // the email display in sync across page refreshes.
     const validatedUser = await this.userStore.getByUsername(username);
+
+    // No local user record means the account was deleted. Invalidate the session
+    // so the client is forced back to /login rather than stranded in the app.
+    if (!validatedUser) {
+      this.loggerService.info(`[auth route] validate: user '${username}' not found in local store — invalidating session`);
+      this.authSessionService.removeSession(token);
+      return this.jsonResponse({ ok: false, message: 'invalid or expired token' }, 401, req);
+    }
+
+    // Reject locally-disabled accounts so a disabled flag takes effect on
+    // the next page load without waiting for the session to expire.
+    if (validatedUser?.disabled) {
+      this.loggerService.info(`[auth route] validate: account '${username}' is disabled — invalidating session`);
+      this.authSessionService.removeSession(token);
+      return this.jsonResponse({ ok: false, message: 'Account disabled' }, 401, req);
+    }
+
+    // For Supabase-backed accounts verify the Auth user still exists and is not
+    // banned. This catches accounts deleted or suspended via the Supabase
+    // dashboard without waiting for the local session to expire naturally.
+    if (validatedUser?.supabaseAuthId && this.serverConfigService.getStorageBackend() === 'supabase') {
+      this.loggerService.debug(
+        `[auth route] validate: checking Supabase Auth status for '${username}' (id=${validatedUser.supabaseAuthId})`,
+      );
+
+      let supabaseClient;
+      try {
+        supabaseClient = this.supabaseClientProvider.get();
+      } catch (err) {
+        this.loggerService.error(`[auth route] validate: Supabase client unavailable: ${err}`);
+        return this.jsonResponse({ ok: false, message: 'Service unavailable' }, 503, req);
+      }
+
+      const { data: supabaseUserData, error: supabaseUserError } = await supabaseClient.auth.admin.getUserById(
+        validatedUser.supabaseAuthId,
+      );
+
+      this.loggerService.debug(
+        `[auth route] validate: admin.getUserById result — user=${JSON.stringify(supabaseUserData?.user?.id ?? null)} error=${supabaseUserError?.message ?? 'none'}`,
+      );
+
+      if (supabaseUserError || !supabaseUserData?.user) {
+        this.loggerService.info(
+          `[auth route] validate: Supabase Auth user not found for '${username}' — invalidating session`,
+        );
+        this.authSessionService.removeSession(token);
+        return this.jsonResponse({ ok: false, message: 'invalid or expired token' }, 401, req);
+      }
+
+      // Supabase represents bans via a future-dated `banned_until` timestamp.
+      const bannedUntil = supabaseUserData.user.banned_until;
+      if (bannedUntil && new Date(bannedUntil) > new Date()) {
+        this.loggerService.info(`[auth route] validate: Supabase Auth user '${username}' is banned — invalidating session`);
+        this.authSessionService.removeSession(token);
+        return this.jsonResponse({ ok: false, message: 'Account suspended' }, 401, req);
+      }
+    }
+
     const isAdmin = validatedUser?.isAdmin ?? false;
     // needsEmail stays in sync across page refreshes via the validate endpoint.
     const needsEmail = validatedUser?.email == null;
