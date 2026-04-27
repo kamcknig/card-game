@@ -2,19 +2,21 @@ import type { UserRecord, UserStore } from './user-store.ts';
 import type { PasswordAlgo } from './password-hasher.ts';
 
 /**
- * In-memory implementation of {@link UserStore} used primarily by tests and
- * for the `memory` session-store mode (which implies no persistence).
+ * In-memory implementation of {@link UserStore} used when
+ * `STORAGE_BACKEND=in-memory` and by test fixtures.
  *
  * All operations are backed by plain `Map<string, UserRecord>` instances.
- * Identical semantics to {@link DenoKvUserStore} except that records do not
- * survive process restart. Username lookups are case-insensitive; the record
- * preserves the original casing supplied to `create()`.
+ * Records do not survive process restart. Username lookups are
+ * case-insensitive; the record preserves the original casing supplied to
+ * `create()`.
  *
  * Read methods return `Promise.resolve(...)` to satisfy the async
  * {@link UserStore} interface without introducing async overhead on the
- * synchronous in-memory path. This store is not changed by Phase 3.5 —
- * it is inherently in-memory and only used when no persistent backend is
- * configured.
+ * synchronous in-memory path.
+ *
+ * Defined in: server/src/core/auth/in-memory-user-store.ts
+ * Consumers: register-root-services.ts (selected when STORAGE_BACKEND=in-memory
+ *   or when STORAGE_BACKEND is unset/invalid); also used directly by test fixtures.
  */
 export class InMemoryUserStore implements UserStore {
   // Cache keyed by lowercased username for fast getByUsername.

@@ -10,14 +10,15 @@ import type { SessionRecord } from './auth-session-service.ts';
  *
  * The interface is intentionally synchronous so that the hot-path
  * `validateToken` call (invoked on every socket event) does not need to
- * await a Promise. The Deno KV implementation achieves synchronous reads via
- * a write-through in-memory cache loaded at startup by
- * `DenoKvSessionStore.open()`.
+ * await a Promise. The `in-memory` implementation (`InMemorySessionStore`)
+ * satisfies this contract natively; the Supabase implementation uses a
+ * write-through in-memory cache to achieve synchronous reads.
  *
  * Defined in: server/src/core/auth/session-store.ts
  * Consumers: AuthSessionService (injected via constructor, resolved by
  *   register-root-services.ts based on STORAGE_BACKEND env var).
- *   Implementations: DenoKvSessionStore, SupabaseSessionStore, InMemorySessionStore (tests only).
+ *   Implementations: InMemorySessionStore (STORAGE_BACKEND=in-memory),
+ *   SupabaseSessionStore (STORAGE_BACKEND=supabase).
  */
 export interface SessionStore {
   /**
