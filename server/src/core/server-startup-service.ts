@@ -5,19 +5,14 @@ import { ExpansionLoaderService } from './expansion-loader-service.ts';
 import { AuthSessionService } from './auth/auth-session-service.ts';
 import { UserAccountAuthProvider } from './auth/user-account-auth-provider.ts';
 import { AuthSessionCleanupService } from './auth/auth-session-cleanup-service.ts';
-import { DenoKvSessionStore } from './auth/deno-kv-session-store.ts';
-import { DenoKvUserStore } from './auth/deno-kv-user-store.ts';
 import { SupabaseSessionStore } from './auth/supabase-session-store.ts';
 import { SupabaseUserStore } from './auth/supabase-user-store.ts';
 import { SupabaseMatchConfigurationSaveService } from './supabase-match-configuration-save-service.ts';
-import { AuthKvProvider } from './auth/auth-kv-provider.ts';
 import { SupabaseClientProvider } from './storage/supabase-client-provider.ts';
 import { ServerConfigService } from './server-config-service.ts';
 import { ServerHealthService } from './server-health-service.ts';
 import type { SessionStore } from './auth/session-store.ts';
 import type { UserStore } from './auth/user-store.ts';
-import { GameDataKvProvider } from './game-data-kv-provider.ts';
-import { DenoKvMatchConfigurationSaveService } from './deno-kv-match-configuration-save-service.ts';
 import type { MatchConfigurationSaveStore } from './match-configuration-save-store.ts';
 
 /**
@@ -41,8 +36,6 @@ export class ServerStartupService {
     private readonly serverConfigService: ServerConfigService,
     private readonly sessionStore: SessionStore,
     private readonly userStore: UserStore,
-    private readonly authKvProvider: AuthKvProvider,
-    private readonly gameDataKvProvider: GameDataKvProvider,
     private readonly matchConfigurationSaveService: MatchConfigurationSaveStore,
     private readonly supabaseClientProvider: SupabaseClientProvider,
     private readonly serverHealthService: ServerHealthService,
@@ -52,10 +45,11 @@ export class ServerStartupService {
    * Loads expansion data/effects and notifies the lobby directory for game
    * propagation.
    *
-   * Opens the configured storage backend (supabase or kv) before the HTTP
+   * Opens the configured storage backend (supabase or in-memory) before the HTTP
    * server begins accepting connections. For the 'supabase' backend, a
    * connection failure is caught and registered as a health issue rather than
    * crashing the process — the /status endpoint will then report the error.
+   * The 'in-memory' backend requires no startup open() call.
    */
   public async start(): Promise<void> {
     const backend = this.serverConfigService.getStorageBackend();
@@ -67,13 +61,13 @@ export class ServerStartupService {
     if (backend === undefined) {
       // STORAGE_BACKEND is unset or set to an unrecognized value. Surface the
       // problem via /status instead of crashing the process — the in-memory
-      // fallback stores were already wired into DI so the rest of startup
+      // stores were already wired into DI so the rest of startup
       // (auth provider init, expansion loading) can complete and the health
       // route can serve the error to the frontend.
       const raw = this.serverConfigService.getRawStorageBackend();
       const message = raw === undefined || raw.trim() === ''
-        ? `STORAGE_BACKEND must be 'kv' or 'supabase'; it is currently unset`
-        : `STORAGE_BACKEND must be 'kv' or 'supabase', received '${raw}'`;
+        ? `STORAGE_BACKEND must be 'in-memory' or 'supabase'; it is currently unset`
+        : `STORAGE_BACKEND must be 'in-memory' or 'supabase', received '${raw}'`;
       this.loggerService.error(`[server startup] ${message}`);
       this.serverHealthService.register({
         level: 'error',
@@ -122,35 +116,8 @@ export class ServerStartupService {
           });
         }
       }
-    } else {
-      // When using the Deno KV stores, open a single shared KV handle
-      // and hand it to every KV-backed store so only one handle exists per
-      // Deno.Kv file (Deno forbids multiple concurrent handles to the same
-      // file-backed database in one process). All three stores load their
-      // caches from the shared handle before the HTTP server accepts
-      // connections.
-      const kvPath = Deno.env.get('AUTH_KV_PATH') ?? './game-data/auth.kv';
-      this.loggerService.info(`[server startup] opening shared Deno KV auth store at '${kvPath}'`);
-      const kv = await this.authKvProvider.open(kvPath);
-      await (this.sessionStore as DenoKvSessionStore).open(kv, Date.now());
-
-      // The user store shares the same KV handle as the session store
-      // (see register-root-services.ts selection logic).
-      if (this.userStore instanceof DenoKvUserStore) {
-        await this.userStore.open(kv);
-      }
-
-      // When using the Deno KV game-data store, open a single shared KV handle
-      // via GameDataKvProvider and hand it to the match-configuration save service
-      // so that all game-data consumers share a single handle (separate from
-      // the auth KV file).
-      if (this.matchConfigurationSaveService instanceof DenoKvMatchConfigurationSaveService) {
-        const gameDataKvPath = Deno.env.get('GAME_DATA_KV_PATH') ?? './game-data/game-data.kv';
-        this.loggerService.info(`[server startup] opening game-data KV store at '${gameDataKvPath}'`);
-        const gameDataKv = await this.gameDataKvProvider.open(gameDataKvPath);
-        await this.matchConfigurationSaveService.open(gameDataKv);
-      }
     }
+    // No 'else' needed: in-memory stores require no startup open() call.
 
     // Register the user-account provider for per-user credential management.
     this.authSessionService.registerProvider(this.userAccountAuthProvider);
