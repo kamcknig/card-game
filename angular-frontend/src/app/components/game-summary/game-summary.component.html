@@ -70,16 +70,19 @@
 
   <!-- Post-game actions -->
   <div class="action-buttons">
-    <button type="button" class="action-btn action-btn--danger" (click)="returnToLobby()">
+    <button type="button" class="btn btn-danger action-btn" (click)="returnToLobby()">
       <lucide-icon [img]="ReturnIcon" [size]="16" />
       Return to Lobby
     </button>
 
     @if (!isOwner()) {
+      <!-- Mark Ready toggles between secondary (not-ready) and primary
+           (ready) by swapping the variant class on the same element. -->
       <button
         type="button"
-        class="action-btn"
-        [class.action-btn--active]="isSelfReady()"
+        class="btn action-btn"
+        [class.btn-secondary]="!isSelfReady()"
+        [class.btn-primary]="isSelfReady()"
         (click)="toggleReady()"
       >
         <lucide-icon [img]="isSelfReady() ? CheckIcon : ClockIcon" [size]="16" />
@@ -88,14 +91,14 @@
     }
 
     @if (isOwner()) {
-      <button type="button" class="action-btn action-btn--primary" (click)="editMatch()">
+      <button type="button" class="btn btn-primary action-btn" (click)="editMatch()">
         <lucide-icon [img]="EditIcon" [size]="16" />
         Edit Match
       </button>
 
       <button
         type="button"
-        class="action-btn action-btn--primary"
+        class="btn btn-primary action-btn"
         [disabled]="!canRestart()"
         (click)="restartMatch()"
       >

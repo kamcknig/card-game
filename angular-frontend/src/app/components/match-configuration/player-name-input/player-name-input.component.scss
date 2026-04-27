@@ -65,18 +65,20 @@ input[type='checkbox'] {
   margin-left: auto;
 }
 
+// Inline moderation actions (Kick / Ban) sit next to a player name in
+// the lobby roster. The visual identity comes from `.btn .btn-secondary`
+// or `.btn .btn-danger` in styles.scss. Local rule keeps the compact
+// inline scale (smaller padding / font / radius) and the body-font
+// sentence-case typography — these read as quiet inline affordances
+// rather than form-action CTAs, so the .btn defaults (display font,
+// uppercase, 0.06em letter-spacing, weight 600) are deliberately
+// overridden here.
 .moderation-button {
-  border: 1px solid var(--theme-border-action);
   border-radius: 4px;
-  background: var(--theme-action-secondary-bg);
   padding: 4px 8px;
   font-family: var(--theme-font-body);
   font-size: 0.75rem;
   font-weight: 500;
-  color: var(--theme-text-primary);
-}
-
-.moderation-button.ban {
-  border-color: var(--theme-border-danger);
-  background: var(--theme-action-danger-soft-bg);
+  letter-spacing: normal;
+  text-transform: none;
 }

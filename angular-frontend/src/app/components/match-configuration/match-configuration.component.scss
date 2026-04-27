@@ -15,20 +15,14 @@ $match-config-single-column-breakpoint: 940px;
 }
 
 
+// Visual identity comes from `.btn .btn-danger` in styles.scss. Local rule
+// only adds the inline-flex + gap so the icon and label stay aligned —
+// .btn defaults to a plain block button and doesn't enforce a display
+// mode that survives icon-with-text content.
 .leave-game-button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid var(--theme-border-danger);
-  background: var(--theme-action-danger-soft-bg);
-  border-radius: 6px;
-  padding: 5px 12px;
-  color: var(--theme-text-primary);
-  font-family: var(--theme-font-body);
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 150ms, border-color 120ms;
 }
 
 .header-actions {
@@ -37,61 +31,25 @@ $match-config-single-column-breakpoint: 940px;
   gap: 6px;
 }
 
-/* Secondary action buttons: expansion None/All, banned Select/Clear, Add Bot. */
-.secondary-action-button {
-  background: var(--theme-action-secondary-bg);
-  border: 1px solid var(--theme-border-action);
-  border-radius: 6px;
-  padding: 6px 14px;
-  color: var(--theme-text-primary);
-  font-family: var(--theme-font-body);
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 150ms, border-color 120ms, color 120ms;
+// Secondary action buttons (expansion None/All, banned Select/Clear, Add Bot)
+// use `.btn .btn-secondary` from styles.scss. No local rule needed.
 
-  &:hover:not(:disabled) {
-    border-color: var(--theme-border-strong);
-  }
-
-  &:disabled {
-    background: var(--theme-action-disabled-bg);
-    opacity: var(--theme-action-disabled-opacity);
-    filter: saturate(0.45);
-    cursor: not-allowed;
-    border-color: var(--theme-border-disabled);
-    color: var(--theme-text-disabled);
-  }
-}
-// Text+icon buttons for Save/Load/Clear in the action bar.
+// Text+icon buttons for Save/Load/Clear in the action bar. Visual identity
+// (transparent fill, border-subtle, text-secondary) comes from `.btn
+// .btn-secondary`. Local rule narrows the size and softens the typography
+// for this specific row — these sit alongside the section title in a dense
+// header so they need to read as low-emphasis affordances rather than
+// uppercase CTAs.
 .config-action-button {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  border: 1px solid var(--theme-border-action);
-  background: var(--theme-action-secondary-bg);
-  border-radius: 6px;
   padding: 5px 10px;
-  color: var(--theme-text-secondary);
   font-family: var(--theme-font-body);
   font-size: 0.8rem;
   font-weight: 500;
-  cursor: pointer;
-  transition: background 150ms, border-color 120ms, color 120ms;
-
-  &:hover {
-    color: var(--theme-text-primary);
-    border-color: var(--theme-border-strong);
-  }
-
-  &:disabled {
-    opacity: var(--theme-action-disabled-opacity);
-    filter: saturate(0.45);
-    cursor: not-allowed;
-    background: var(--theme-action-disabled-bg);
-    border-color: var(--theme-border-disabled);
-    color: var(--theme-text-disabled);
-  }
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 .section-title {
@@ -634,48 +592,5 @@ $match-config-single-column-breakpoint: 940px;
   gap: 8px;
 }
 
-// Cancel button for save/load dialogs — secondary style per design guidelines.
-.config-dialog-cancel {
-  border: 1px solid var(--theme-border-subtle);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--theme-text-tertiary);
-  padding: 8px 18px;
-  font-family: var(--theme-font-body);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-
-  &:hover {
-    border-color: var(--theme-border-medium);
-    color: var(--theme-text-primary);
-  }
-}
-
-// Confirm/Save button for dialogs — primary style per design guidelines.
-.config-dialog-confirm {
-  border: 1px solid var(--theme-border-strong);
-  border-radius: 6px;
-  background: var(--theme-action-primary-bg);
-  color: var(--theme-text-primary);
-  padding: 8px 24px;
-  font-family: var(--theme-font-display);
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  cursor: pointer;
-
-  &:hover:not(:disabled) {
-    border-color: var(--theme-border-action);
-  }
-
-  &:disabled {
-    background: var(--theme-action-disabled-bg);
-    opacity: var(--theme-action-disabled-opacity);
-    filter: saturate(0.45);
-    cursor: not-allowed;
-    border-color: var(--theme-border-disabled);
-    color: var(--theme-text-disabled);
-  }
-}
+// Save / Cancel dialog buttons use the shared `.btn .btn-primary` and
+// `.btn .btn-secondary` classes from styles.scss. No local rules needed.

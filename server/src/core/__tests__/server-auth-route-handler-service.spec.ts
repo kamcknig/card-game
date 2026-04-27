@@ -1114,3 +1114,153 @@ Deno.test('ServerAuthRouteHandlerService: resolveEmailRedirectOrigin returns und
     );
   });
 });
+
+// ── POST /auth/resend-confirmation ─────────────────────────────────────────
+//
+// Tests the resend-confirmation endpoint exercised by the login screen so
+// users who never received (or lost) their signup confirmation email can
+// request a new one. The default tests run against the in-memory backend,
+// which short-circuits to a generic success without any Supabase work — so
+// they cover routing, validation, and rate limiting end-to-end without
+// needing a Supabase client mock. Email-enumeration protection is the load-
+// bearing security property here: a successful response shape is identical
+// regardless of whether the email exists.
+
+Deno.test('ServerAuthRouteHandlerService: POST /auth/resend-confirmation with valid email → 200 generic success', async () => {
+  await withIsolatedEnv({}, async () => {
+    const { service } = makeService({});
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/resend-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'someone@example.com' }),
+      }),
+    );
+
+    assertEquals(res.status, 200);
+    const body = await res.json();
+    assertEquals(body.ok, true);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: POST /auth/resend-confirmation rejects missing email → 400', async () => {
+  await withIsolatedEnv({}, async () => {
+    const { service } = makeService({});
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/resend-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      }),
+    );
+
+    assertEquals(res.status, 400);
+    const body = await res.json();
+    assertEquals(body.ok, false);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: POST /auth/resend-confirmation rejects invalid email → 400', async () => {
+  await withIsolatedEnv({}, async () => {
+    const { service } = makeService({});
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/resend-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: 'not-an-email' }),
+      }),
+    );
+
+    assertEquals(res.status, 400);
+    const body = await res.json();
+    assertEquals(body.ok, false);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: POST /auth/resend-confirmation rejects malformed JSON → 400', async () => {
+  await withIsolatedEnv({}, async () => {
+    const { service } = makeService({});
+
+    const res = await dispatch(
+      service,
+      new Request('http://localhost/auth/resend-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{not json}',
+      }),
+    );
+
+    assertEquals(res.status, 400);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: POST /auth/resend-confirmation when rate-limited → 429', async () => {
+  // Set the threshold low so the test can reach it without spamming dispatch.
+  await withIsolatedEnv(
+    { AUTH_RATE_LIMIT_MAX_ATTEMPTS: '2', AUTH_RATE_LIMIT_WINDOW_MS: '60000' },
+    async () => {
+      const { service, rateLimiter } = makeService({});
+
+      // Saturate the limiter for this IP. Two failures match the threshold,
+      // so the third call lands on isLimited=true.
+      rateLimiter.recordFailure('1.2.3.4');
+      rateLimiter.recordFailure('1.2.3.4');
+
+      const res = await dispatch(
+        service,
+        new Request('http://localhost/auth/resend-confirmation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'someone@example.com' }),
+        }),
+      );
+
+      assertEquals(res.status, 429);
+      // retry-after must be present so the client knows when to retry.
+      assertEquals(typeof res.headers.get('retry-after'), 'string');
+    },
+  );
+});
+
+Deno.test('ServerAuthRouteHandlerService: POST /auth/resend-confirmation consumes a limiter slot per call', async () => {
+  // With threshold=3, two successful calls should leave the IP one call away
+  // from being limited. Verifies that legitimate resend traffic counts toward
+  // the per-IP cap so the endpoint cannot be hammered indefinitely even with
+  // perfectly-shaped bodies.
+  await withIsolatedEnv(
+    { AUTH_RATE_LIMIT_MAX_ATTEMPTS: '3', AUTH_RATE_LIMIT_WINDOW_MS: '60000' },
+    async () => {
+      const { service, rateLimiter } = makeService({});
+
+      const makeRequest = () =>
+        new Request('http://localhost/auth/resend-confirmation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'someone@example.com' }),
+        });
+
+      const first = await dispatch(service, makeRequest());
+      assertEquals(first.status, 200);
+      assertEquals(rateLimiter.isLimited('1.2.3.4'), false);
+
+      const second = await dispatch(service, makeRequest());
+      assertEquals(second.status, 200);
+      assertEquals(rateLimiter.isLimited('1.2.3.4'), false);
+
+      // Third call hits the threshold — limiter flips to limited after this.
+      const third = await dispatch(service, makeRequest());
+      assertEquals(third.status, 200);
+      assertEquals(rateLimiter.isLimited('1.2.3.4'), true);
+
+      // Fourth call is rejected with 429.
+      const fourth = await dispatch(service, makeRequest());
+      assertEquals(fourth.status, 429);
+    },
+  );
+});

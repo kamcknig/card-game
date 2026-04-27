@@ -129,13 +129,50 @@ All tokens are defined in `src/app/theme/app-theme.scss` on `:root` (light) with
 Always use the gradient: `background: linear-gradient(150deg, var(--theme-surface-app-start) 0%, var(--theme-surface-app-end) 100%)`.
 
 ### Buttons
-- **Primary:** `background: var(--theme-action-primary-bg)`, `color: var(--theme-text-primary)`, `border: 1px solid var(--theme-border-action)`, `border-radius: 6px`.
-- **Primary muted:** `background: var(--theme-action-primary-muted-bg)` — for join/secondary-primary actions.
-- **Secondary:** `background: var(--theme-action-secondary-bg)`, `border: 1px solid var(--theme-border-action)`.
-- **Danger:** `background: var(--theme-action-danger-soft-bg)`, `border: 1px solid var(--theme-border-danger)`.
-- Primary button labels use `font-family: var(--theme-font-display); letter-spacing: 0.05–0.08em; text-transform: uppercase`.
-- All buttons: `transition: background 150ms, border-color 120ms, color 120ms`.
-- Disabled state: `background: var(--theme-action-disabled-bg); opacity: var(--theme-action-disabled-opacity); filter: saturate(0.45); cursor: not-allowed; border-color: var(--theme-border-disabled); color: var(--theme-text-disabled)`.
+
+Form-screen buttons (login, lobby, profile, etc.) use the four shared classes
+defined globally in `angular-frontend/src/styles.scss`. Apply `.btn` plus one
+variant; do **not** re-implement the recipe in component SCSS. Layout-only
+properties (margin, width, parent flex gap) stay local.
+
+| Class | Use when |
+|---|---|
+| `.btn .btn-primary` | The main submit on a screen — Login, Create account, Save, Confirm. One per visual group. |
+| `.btn .btn-primary-muted` | A secondary primary action paired with a primary one (e.g. lobby Join row), or a single primary on a low-emphasis surface. Same visual weight as Primary, less saturated. |
+| `.btn .btn-secondary` | The non-primary submit on a form (e.g. Cancel paired with Save). Transparent fill — recedes against the surface so the primary leads the eye. |
+| `.btn .btn-danger` | A destructive confirmation that needs to read as risky (delete, ban, resign). |
+
+The `.btn` base class supplies the shared shape (radius, padding, display
+font, uppercase, letter-spacing, transition, focus-visible, disabled). The
+variant class supplies the visual identity (border color, background, text
+color). Hover states are encoded on the variant where it matters (`.btn-secondary`
+darkens on hover; the others rely on background change via override).
+
+**Sizes:**
+
+- **Default** (`.btn`) is the compact form-action scale: `padding: 8px 14px`,
+  `font-size: 0.85rem`, `font-weight: 600`, `letter-spacing: 0.06em`. Use
+  this for lobby, profile, match-configuration, and HUD action buttons —
+  i.e. the dense parts of the app where buttons sit alongside other UI.
+- **Large** (`.btn--lg`) is the screen-CTA scale: `padding: 12px 16px`,
+  `font-size: 0.95rem`, `font-weight: 700`, `letter-spacing: 0.08em`. Use
+  this for prominent submits on focused screens (Login, Create account)
+  where the button is the primary affordance and should read large.
+
+**Do not** use `--theme-action-secondary-bg` directly for form submit buttons —
+it is a hover/nav fill, not a button variant. The historical "Secondary"
+recipe that used it has been replaced by `.btn-secondary` above.
+
+**Disabled state** (built into `.btn`): `opacity: 0.6; cursor: not-allowed`.
+Stronger fade (`saturate(0.45)`) is reserved for in-game interactive buttons
+that need to look noticeably "off" mid-flow — keep the simpler form recipe
+unless there's a reason.
+
+**Dialog footer buttons** also use these classes — Cancel as `.btn
+.btn-secondary`, Confirm as `.btn .btn-primary`, and destructive Confirm
+(e.g. Resign) as `.btn .btn-danger`. They no longer have their own scale
+or recipes; see [Dialogs / Modals](#dialogs--modals) for layout
+specifics.
 
 ### Inputs
 - `background: var(--theme-surface-panel)`, `border: 1px solid var(--theme-border-action)`, `border-radius: 6px`.
@@ -194,8 +231,8 @@ Dialogs are centered overlay panels used for card selection, confirmation prompt
 **Footer:**
 - `padding: 12px 20px; border-top: 1px solid var(--theme-border-subtle)`
 - `display: flex; align-items: center; justify-content: flex-end; gap: 8px`
-- Cancel button: secondary style — `background: transparent; border: 1px solid var(--theme-border-subtle); color: var(--theme-text-tertiary); border-radius: 6px; padding: 8px 18px; font-size: 13px`
-- Confirm button: primary style — `background: var(--theme-action-primary-bg); border: 1px solid var(--theme-border-strong); color: var(--theme-text-primary); border-radius: 6px; padding: 8px 24px; font-family: var(--theme-font-display); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; font-size: 13px`
+- Cancel button: `class="btn btn-secondary"` — see [Buttons](#buttons) above.
+- Confirm button: `class="btn btn-primary"` for normal confirms, or `class="btn btn-danger"` for destructive confirms (Resign, Delete, Ban) so the footer reads the action's risk level at a glance.
 - Optional left-aligned metadata (e.g. count): `font-size: 12px; color: var(--theme-text-tertiary)` — use `justify-content: space-between` when present
 
 **Search input (when applicable):**

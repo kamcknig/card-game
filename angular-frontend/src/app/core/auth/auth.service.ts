@@ -251,6 +251,48 @@ export class AuthService {
   }
 
   /**
+   * Requests that the server resend the signup confirmation email for the
+   * given address via POST /auth/resend-confirmation.
+   *
+   * Used by the login screen so a user who never received (or lost) their
+   * confirmation email can request a new one without re-registering, and so
+   * a returning user who closed the tab can come back later and trigger a
+   * new email by entering their address.
+   *
+   * The server intentionally responds with the same generic success shape
+   * regardless of whether the email exists, whether the user is already
+   * confirmed, or whether Supabase returned an error — preventing this
+   * endpoint from being used as an oracle to discover registered emails.
+   * The UI surfaces the same neutral message in every case.
+   *
+   * Errors that DO surface to the caller:
+   *   - 429 (Too many attempts) — the per-IP rate limit was hit. The UI can
+   *     show this message verbatim so users know to wait before retrying.
+   *   - Network/JSON failures — generic "Unable to reach server" so the
+   *     form does not appear to silently succeed when the request never
+   *     left the client.
+   *
+   * @param email  The email address whose confirmation should be resent.
+   */
+  async resendConfirmation(email: string): Promise<{ ok: boolean; message?: string }> {
+    try {
+      const response = await fetch(`${environment.wsHost}/auth/resend-confirmation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || !body.ok) {
+        return { ok: false, message: body.message ?? 'Could not resend confirmation email' };
+      }
+      return { ok: true };
+    } catch {
+      return { ok: false, message: 'Unable to reach server' };
+    }
+  }
+
+  /**
    * Checks whether an email address is already registered.
    *
    * Returns true when the email is available, false when it is taken.

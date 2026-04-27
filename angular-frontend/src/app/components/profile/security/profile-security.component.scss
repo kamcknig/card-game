@@ -113,24 +113,8 @@
   margin-top: 4px;
 }
 
-.panel-button {
-  border: 1px solid var(--theme-border-action);
-  background: var(--theme-action-primary-bg);
-  color: var(--theme-text-primary);
-  border-radius: 6px;
-  padding: 8px 14px;
-  font-family: var(--theme-font-display);
-  font-size: 0.875rem;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  cursor: pointer;
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-}
+// Visual identity for the primary panel actions (Save Email, Save Password)
+// comes from `.btn .btn-primary` in styles.scss. No local rule needed.
 
 // Danger variant for the Disable button — outlined red, fills on hover.
 // Overrides to body font since danger actions use secondary styling.
