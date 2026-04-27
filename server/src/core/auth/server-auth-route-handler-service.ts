@@ -601,6 +601,13 @@ export class ServerAuthRouteHandlerService {
     // would substitute the dashboard Site URL into every confirmation email,
     // which means a single hard-coded environment.
     const emailRedirectOrigin = this.resolveEmailRedirectOrigin(req);
+    // Diagnostic: log what we're about to send to Supabase so production
+    // misconfigurations (origin missing, env mismatch) can be diagnosed
+    // without re-enabling debug-level logs. Falls back to '<dashboard fallback>'
+    // when no value is being passed (Supabase will use Site URL).
+    this.loggerService.info(
+      `[auth route] register (supabase): signUp emailRedirectTo='${emailRedirectOrigin ?? '<dashboard fallback>'}' for '${username}'`,
+    );
     const { data, error } = await client.auth.signUp({
       email,
       password,
@@ -957,6 +964,10 @@ export class ServerAuthRouteHandlerService {
     // mirroring the registration path. See resolveEmailRedirectOrigin for the
     // allowlist-based validation that prevents redirect-url injection.
     const emailRedirectOrigin = this.resolveEmailRedirectOrigin(req);
+    // Diagnostic: see registerViaSupabase for rationale.
+    this.loggerService.info(
+      `[auth route] POST /auth/email (supabase): signUp emailRedirectTo='${emailRedirectOrigin ?? '<dashboard fallback>'}' for '${username}'`,
+    );
     const { data, error } = await client.auth.signUp({
       email,
       password,
@@ -1086,13 +1097,25 @@ export class ServerAuthRouteHandlerService {
    */
   private resolveEmailRedirectOrigin(req: Request): string | undefined {
     const requestOrigin = req.headers.get('origin');
+    const allowed = this.serverConfigService.getAuthAllowedOrigins();
+    // Diagnostic log so production deployments can confirm whether the
+    // expected Origin reaches the server and whether the allowlist matches.
+    // Logs the raw Origin (or '<missing>') and the configured allowlist.
     if (!requestOrigin) {
+      this.loggerService.info(
+        `[auth route] resolveEmailRedirectOrigin: no Origin header on request — allowlist=${JSON.stringify(allowed)}`,
+      );
       return undefined;
     }
-    const allowed = this.serverConfigService.getAuthAllowedOrigins();
     if (allowed.includes('*') || allowed.includes(requestOrigin)) {
+      this.loggerService.info(
+        `[auth route] resolveEmailRedirectOrigin: accepted origin='${requestOrigin}' (allowlist=${JSON.stringify(allowed)})`,
+      );
       return requestOrigin;
     }
+    this.loggerService.warn(
+      `[auth route] resolveEmailRedirectOrigin: rejected origin='${requestOrigin}' — not in allowlist=${JSON.stringify(allowed)}`,
+    );
     return undefined;
   }
 }
