@@ -1039,3 +1039,78 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/register rejects 33-charact
     assertEquals(res.status, 400);
   });
 });
+
+// ── resolveEmailRedirectOrigin ──────────────────────────────────────────────
+//
+// These tests cover the helper that decides what `emailRedirectTo` value is
+// passed to Supabase signUp. The security claim — that a forged Origin from
+// a non-allowlisted domain cannot redirect Supabase confirmation emails to
+// an attacker-controlled URL — relies on this helper rejecting unlisted
+// origins, so we lock those branches in directly. The method is private;
+// bracket access is used so the test reaches it without widening the public
+// surface for tests alone.
+
+// Helper: invokes the private resolveEmailRedirectOrigin via bracket access.
+const callResolveEmailRedirectOrigin = (
+  service: ServerAuthRouteHandlerService,
+  origin: string | null,
+): string | undefined => {
+  const headers: Record<string, string> = {};
+  if (origin !== null) headers['origin'] = origin;
+  const req = new Request('http://localhost/auth/register', { method: 'POST', headers });
+  return (service as unknown as { resolveEmailRedirectOrigin(req: Request): string | undefined })
+    .resolveEmailRedirectOrigin(req);
+};
+
+Deno.test('ServerAuthRouteHandlerService: resolveEmailRedirectOrigin returns undefined when Origin header is missing', async () => {
+  await withIsolatedEnv({ AUTH_ALLOWED_ORIGINS: 'https://dominion.turkeysunite.com' }, async () => {
+    const { service } = makeService({});
+    assertEquals(callResolveEmailRedirectOrigin(service, null), undefined);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: resolveEmailRedirectOrigin echoes the request origin when allowlisted', async () => {
+  await withIsolatedEnv(
+    { AUTH_ALLOWED_ORIGINS: 'http://localhost:51455,https://dominion.turkeysunite.com' },
+    async () => {
+      const { service } = makeService({});
+      assertEquals(
+        callResolveEmailRedirectOrigin(service, 'https://dominion.turkeysunite.com'),
+        'https://dominion.turkeysunite.com',
+      );
+      assertEquals(
+        callResolveEmailRedirectOrigin(service, 'http://localhost:51455'),
+        'http://localhost:51455',
+      );
+    },
+  );
+});
+
+Deno.test('ServerAuthRouteHandlerService: resolveEmailRedirectOrigin trusts any origin when allowlist is wildcard', async () => {
+  await withIsolatedEnv({ AUTH_ALLOWED_ORIGINS: '*' }, async () => {
+    const { service } = makeService({});
+    assertEquals(
+      callResolveEmailRedirectOrigin(service, 'http://localhost:51455'),
+      'http://localhost:51455',
+    );
+    assertEquals(
+      callResolveEmailRedirectOrigin(service, 'https://anywhere.example'),
+      'https://anywhere.example',
+    );
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: resolveEmailRedirectOrigin returns undefined when origin is not allowlisted', async () => {
+  await withIsolatedEnv({ AUTH_ALLOWED_ORIGINS: 'https://dominion.turkeysunite.com' }, async () => {
+    const { service } = makeService({});
+    // Forged origin pointing at an attacker-controlled domain must NOT be
+    // echoed back — otherwise Supabase would email confirmation links there.
+    assertEquals(callResolveEmailRedirectOrigin(service, 'https://evil.example'), undefined);
+    // Subtle near-miss: a different scheme on an otherwise-allowed host is
+    // still a different origin and must be rejected.
+    assertEquals(
+      callResolveEmailRedirectOrigin(service, 'http://dominion.turkeysunite.com'),
+      undefined,
+    );
+  });
+});
