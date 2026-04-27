@@ -99,12 +99,7 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
           // before the HTTP server begins accepting connections.
           return new SupabaseMatchConfigurationSaveService(loggerService);
         }
-        if (backend === 'kv') {
-          loggerService.log('[game data] match config save store: deno kv (per-user, persistent)');
-          // open() is called asynchronously during ServerStartupService.start()
-          // before the HTTP server begins accepting connections.
-          return new DenoKvMatchConfigurationSaveService(loggerService);
-        }
+        // 'in-memory' or undefined (error state — health service will surface the issue).
         loggerService.warn('[game data] match config save store: unconfigured (no STORAGE_BACKEND); using empty in-memory cache');
         return new DenoKvMatchConfigurationSaveService(loggerService);
       },
@@ -151,12 +146,7 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
           // before the HTTP server begins accepting connections.
           return new SupabaseSessionStore(loggerService);
         }
-        if (backend === 'kv') {
-          loggerService.log('[auth] session store: deno kv (persistent across restarts)');
-          // open() is called asynchronously during ServerStartupService.start()
-          // before the HTTP server begins accepting connections.
-          return new DenoKvSessionStore(loggerService);
-        }
+        // 'in-memory' or undefined (error state — health service will surface the issue).
         loggerService.warn('[auth] session store: in-memory fallback (no STORAGE_BACKEND configured)');
         return new InMemorySessionStore();
       },
@@ -192,10 +182,7 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
           loggerService.log('[auth] user store: supabase (persistent)');
           return new SupabaseUserStore(loggerService);
         }
-        if (backend === 'kv') {
-          loggerService.log('[auth] user store: deno kv (persistent)');
-          return new DenoKvUserStore(loggerService);
-        }
+        // 'in-memory' or undefined (error state — health service will surface the issue).
         loggerService.warn('[auth] user store: in-memory fallback (no STORAGE_BACKEND configured)');
         return new InMemoryUserStore();
       },

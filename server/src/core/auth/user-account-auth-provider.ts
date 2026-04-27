@@ -248,7 +248,7 @@ export class UserAccountAuthProvider implements AuthProvider {
     // Gate rehash behind kv backend or legacy supabase rows so we don't
     // pointlessly rehash a supabase-auth user's empty sentinel hash.
     const backend = this.serverConfigService.getStorageBackend();
-    if (user.passwordAlgo === 'bcrypt' && (backend === 'kv' || user.supabaseAuthId === null)) {
+    if (user.passwordAlgo === 'bcrypt' && (backend !== 'supabase' || user.supabaseAuthId === null)) {
       try {
         const newHash = await this.argon2idHasher.hash(password);
         this.userStore.updatePassword(user.id, newHash, 'argon2id', now);
