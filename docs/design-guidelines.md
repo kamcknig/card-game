@@ -129,13 +129,37 @@ All tokens are defined in `src/app/theme/app-theme.scss` on `:root` (light) with
 Always use the gradient: `background: linear-gradient(150deg, var(--theme-surface-app-start) 0%, var(--theme-surface-app-end) 100%)`.
 
 ### Buttons
-- **Primary:** `background: var(--theme-action-primary-bg)`, `color: var(--theme-text-primary)`, `border: 1px solid var(--theme-border-action)`, `border-radius: 6px`.
-- **Primary muted:** `background: var(--theme-action-primary-muted-bg)` — for join/secondary-primary actions.
-- **Secondary:** `background: var(--theme-action-secondary-bg)`, `border: 1px solid var(--theme-border-action)`.
-- **Danger:** `background: var(--theme-action-danger-soft-bg)`, `border: 1px solid var(--theme-border-danger)`.
-- Primary button labels use `font-family: var(--theme-font-display); letter-spacing: 0.05–0.08em; text-transform: uppercase`.
-- All buttons: `transition: background 150ms, border-color 120ms, color 120ms`.
-- Disabled state: `background: var(--theme-action-disabled-bg); opacity: var(--theme-action-disabled-opacity); filter: saturate(0.45); cursor: not-allowed; border-color: var(--theme-border-disabled); color: var(--theme-text-disabled)`.
+
+Form-screen buttons (login, lobby, profile, etc.) use the four shared classes
+defined globally in `angular-frontend/src/styles.scss`. Apply `.btn` plus one
+variant; do **not** re-implement the recipe in component SCSS. Layout-only
+properties (margin, width, parent flex gap) stay local.
+
+| Class | Use when |
+|---|---|
+| `.btn .btn-primary` | The main submit on a screen — Login, Create account, Save, Confirm. One per visual group. |
+| `.btn .btn-primary-muted` | A secondary primary action paired with a primary one (e.g. lobby Join row), or a single primary on a low-emphasis surface. Same visual weight as Primary, less saturated. |
+| `.btn .btn-secondary` | The non-primary submit on a form (e.g. Cancel paired with Save). Transparent fill — recedes against the surface so the primary leads the eye. |
+| `.btn .btn-danger` | A destructive confirmation that needs to read as risky (delete, ban, resign). |
+
+The `.btn` base class supplies the shared shape (radius, padding, display
+font, uppercase, letter-spacing, transition, focus-visible, disabled). The
+variant class supplies the visual identity (border color, background, text
+color). Hover states are encoded on the variant where it matters (`.btn-secondary`
+darkens on hover; the others rely on background change via override).
+
+**Do not** use `--theme-action-secondary-bg` directly for form submit buttons —
+it is a hover/nav fill, not a button variant. The historical "Secondary"
+recipe that used it has been replaced by `.btn-secondary` above.
+
+**Disabled state** (built into `.btn`): `opacity: 0.6; cursor: not-allowed`.
+Stronger fade (`saturate(0.45)`) is reserved for in-game interactive buttons
+that need to look noticeably "off" mid-flow — keep the simpler form recipe
+unless there's a reason.
+
+Dialog footer buttons use a different, tighter scale documented in the
+[Dialogs / Modals](#dialogs--modals) section below — those have their own
+component-local classes for now.
 
 ### Inputs
 - `background: var(--theme-surface-panel)`, `border: 1px solid var(--theme-border-action)`, `border-radius: 6px`.

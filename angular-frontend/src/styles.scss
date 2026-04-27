@@ -152,6 +152,83 @@ hr {
   font-weight: 500;
 }
 
+// ── Shared button classes ─────────────────────────────────────────────────
+//
+// One base class plus four variants matching the Buttons section of
+// docs/design-guidelines.md. Components apply these globally instead of
+// re-implementing the recipe per file. Layout (margins, widths, parent
+// flex gaps) stays in component SCSS — only the visual identity (fill,
+// border, typography, focus/disabled behavior) lives here.
+//
+// Migration is opt-in: components that still define their own button
+// styles continue to work; touch a component → migrate it. The legacy
+// `.email-required-dialog__dismiss` below is kept until that dialog is
+// touched.
+//
+// Variants:
+//   .btn              — base shape (always pair with one variant class)
+//   .btn-primary      — main action submit (Login, Create account, etc.)
+//   .btn-primary-muted— alternative primary fill for paired secondary primaries
+//                       (e.g. lobby Join). Same visual weight as primary, less saturated.
+//   .btn-secondary    — non-primary submit on a form (paired with btn-primary)
+//   .btn-danger       — destructive confirmation (delete, ban, resign)
+//
+// The dialog Cancel / Confirm pair (used in modal footers) intentionally
+// uses a different, smaller scale documented in design-guidelines.md
+// § Dialogs / Modals — those keep their local component classes for now.
+
+.btn {
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 12px 16px;
+  font-family: var(--theme-font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 150ms, border-color 120ms, color 120ms;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--theme-border-strong);
+    outline-offset: 2px;
+  }
+}
+
+.btn-primary {
+  border-color: var(--theme-border-action);
+  background: var(--theme-action-primary-bg);
+  color: var(--theme-text-primary);
+}
+
+.btn-primary-muted {
+  border-color: var(--theme-border-action);
+  background: var(--theme-action-primary-muted-bg);
+  color: var(--theme-text-primary);
+}
+
+.btn-secondary {
+  border-color: var(--theme-border-subtle);
+  background: transparent;
+  color: var(--theme-text-secondary);
+
+  &:hover:not(:disabled) {
+    color: var(--theme-text-primary);
+    background: var(--theme-action-secondary-bg);
+  }
+}
+
+.btn-danger {
+  border-color: var(--theme-border-danger);
+  background: var(--theme-action-danger-soft-bg);
+  color: var(--theme-text-primary);
+}
+
 // CDK overlay content: dismiss button used inside email-required dialog.
 // Defined globally because the dialog is teleported into the CDK overlay
 // container, which breaks Angular's emulated view-encapsulation scoping.
