@@ -151,7 +151,12 @@ export class UserAccountAuthProvider implements AuthProvider {
       return { ok: false, message: 'Authentication service unavailable' };
     }
 
-    const { data, error } = await client.auth.signInWithPassword({
+    // Use an ephemeral client so signInWithPassword does not set a session on
+    // the shared client. The shared client must always use the service-role key
+    // for data operations; letting it accumulate user sessions from concurrent
+    // logins would cause PostgREST permission errors.
+    const ephemeral = this.supabaseClientProvider.createEphemeralClient();
+    const { data, error } = await ephemeral.auth.signInWithPassword({
       // Non-null assertion is safe: supabaseAuthId !== null implies email !== null
       // because both are set atomically in handleRegister / attachEmail flow.
       email: user.email!,

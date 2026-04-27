@@ -524,7 +524,9 @@ export class ServerAuthRouteHandlerService {
   ): Promise<Response> {
     let client;
     try {
-      client = this.supabaseClientProvider.get();
+      // Use an ephemeral client for signUp so the shared service-role client's
+      // in-memory session is never contaminated by the user's auth state.
+      client = this.supabaseClientProvider.createEphemeralClient();
     } catch (err) {
       this.loggerService.error(`[auth route] register (supabase): Supabase client unavailable: ${err}`);
       return this.jsonResponse({ ok: false, message: 'Registration failed' }, 500, req);
@@ -870,7 +872,9 @@ export class ServerAuthRouteHandlerService {
   ): Promise<Response> {
     let client;
     try {
-      client = this.supabaseClientProvider.get();
+      // Use an ephemeral client for signUp so the shared service-role client's
+      // in-memory session is never contaminated by the user's auth state.
+      client = this.supabaseClientProvider.createEphemeralClient();
     } catch (err) {
       this.loggerService.error(`[auth route] POST /auth/email (supabase): Supabase client unavailable: ${err}`);
       return this.jsonResponse({ ok: false, message: 'Failed to attach email' }, 500, req);
