@@ -85,6 +85,63 @@ New revisions typically take 30-60 seconds to start serving traffic.
 
 **Important:** Do not deploy with the `:latest` tag. Azure Container Apps only creates a new revision when the image reference string changes. Since `:latest` is always the same string, Azure skips the update. Always use a specific tag (e.g., a short SHA).
 
+### Manual Build and Push (skipping CI)
+
+For fast iteration on changes that need a real container build (code path, Dockerfile, dependency change) without waiting for a `master` merge to round-trip through GitHub Actions. Typical end-to-end time is ~2 minutes vs. ~5-10 minutes for the full pipeline.
+
+This bypasses the `Build and Push` workflow but still goes through ACR — Azure Container Apps pulls from ACR regardless of how the image got there.
+
+**Prerequisites** (one-time setup):
+
+```bash
+# Authenticate Docker to ACR. Uses your Azure CLI login; no separate creds needed.
+az acr login --name turkeysunite
+```
+
+**Build, push, and deploy (server):**
+
+```bash
+# Build context is the repo root — both Dockerfiles copy from shared/, server/, and angular-frontend/.
+# Tag with a recognizable prefix so you can spot manual builds in `az acr repository show-tags`.
+TAG=hotfix-$(git rev-parse --short HEAD)
+
+docker build \
+  -f docker/DockerFile_server \
+  -t turkeysunite.azurecr.io/dominion-clone-server:$TAG \
+  .
+
+docker push turkeysunite.azurecr.io/dominion-clone-server:$TAG
+
+az containerapp update \
+  --name dominion-clone-server \
+  --resource-group turkeysunite \
+  --image turkeysunite.azurecr.io/dominion-clone-server:$TAG
+```
+
+**Build, push, and deploy (frontend):**
+
+```bash
+TAG=hotfix-$(git rev-parse --short HEAD)
+
+docker build \
+  -f docker/DockerFile_web_app \
+  -t turkeysunite.azurecr.io/dominion-clone-frontend:$TAG \
+  .
+
+docker push turkeysunite.azurecr.io/dominion-clone-frontend:$TAG
+
+az containerapp update \
+  --name dominion-clone-frontend \
+  --resource-group turkeysunite \
+  --image turkeysunite.azurecr.io/dominion-clone-frontend:$TAG
+```
+
+If the frontend deploy clears the custom domain binding, see [Custom Domain](#custom-domain) for the rebind command.
+
+**Rolling back a manual deploy:** point the container app at any prior tag (e.g. the last release SHA) using the `Manual Update` commands above. Tags from manual builds remain in ACR until pruned — see [ACR Image Management](#acr-image-management) for cleanup.
+
+**When to use the full pipeline instead:** any change you want versioned in `master` and reflected on a tagged release. Manual pushes are for diagnosis and short-lived hotfixes; commit and ship via CI/CD once the change is verified.
+
 ## Custom Domain
 
 The frontend is accessible at `https://dominion.turkeysunite.com` via a DNS CNAME pointing to `dominion-clone-frontend.happyglacier-53482b33.eastus.azurecontainerapps.io`.

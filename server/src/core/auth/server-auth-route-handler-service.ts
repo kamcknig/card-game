@@ -601,19 +601,28 @@ export class ServerAuthRouteHandlerService {
     // would substitute the dashboard Site URL into every confirmation email,
     // which means a single hard-coded environment.
     const emailRedirectOrigin = this.resolveEmailRedirectOrigin(req);
+    // Append a trailing slash so the URL has at least an empty path component.
+    // Supabase's Redirect URLs allowlist uses Netlify-style globs: a `/**`
+    // pattern matches `https://example.com/...` reliably but matching a bare
+    // origin (`https://example.com` with no path) is ambiguous and silently
+    // fails on some configurations, causing Supabase to fall back to the
+    // dashboard Site URL without surfacing an error. The trailing slash makes
+    // the URL match `<origin>/**` deterministically regardless of dashboard
+    // wildcard semantics.
+    const emailRedirectUrl = emailRedirectOrigin ? `${emailRedirectOrigin}/` : undefined;
     // Diagnostic: log what we're about to send to Supabase so production
     // misconfigurations (origin missing, env mismatch) can be diagnosed
     // without re-enabling debug-level logs. Falls back to '<dashboard fallback>'
     // when no value is being passed (Supabase will use Site URL).
     this.loggerService.info(
-      `[auth route] register (supabase): signUp emailRedirectTo='${emailRedirectOrigin ?? '<dashboard fallback>'}' for '${username}'`,
+      `[auth route] register (supabase): signUp emailRedirectTo='${emailRedirectUrl ?? '<dashboard fallback>'}' for '${username}'`,
     );
     const { data, error } = await client.auth.signUp({
       email,
       password,
       options: {
         data: { username },
-        ...(emailRedirectOrigin ? { emailRedirectTo: emailRedirectOrigin } : {}),
+        ...(emailRedirectUrl ? { emailRedirectTo: emailRedirectUrl } : {}),
       },
     });
 
@@ -964,16 +973,19 @@ export class ServerAuthRouteHandlerService {
     // mirroring the registration path. See resolveEmailRedirectOrigin for the
     // allowlist-based validation that prevents redirect-url injection.
     const emailRedirectOrigin = this.resolveEmailRedirectOrigin(req);
+    // See registerViaSupabase for the trailing-slash rationale — keeps both
+    // signUp call sites consistent against Supabase's wildcard matcher.
+    const emailRedirectUrl = emailRedirectOrigin ? `${emailRedirectOrigin}/` : undefined;
     // Diagnostic: see registerViaSupabase for rationale.
     this.loggerService.info(
-      `[auth route] POST /auth/email (supabase): signUp emailRedirectTo='${emailRedirectOrigin ?? '<dashboard fallback>'}' for '${username}'`,
+      `[auth route] POST /auth/email (supabase): signUp emailRedirectTo='${emailRedirectUrl ?? '<dashboard fallback>'}' for '${username}'`,
     );
     const { data, error } = await client.auth.signUp({
       email,
       password,
       options: {
         data: { username },
-        ...(emailRedirectOrigin ? { emailRedirectTo: emailRedirectOrigin } : {}),
+        ...(emailRedirectUrl ? { emailRedirectTo: emailRedirectUrl } : {}),
       },
     });
 
