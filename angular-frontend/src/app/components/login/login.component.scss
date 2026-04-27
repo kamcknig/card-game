@@ -109,3 +109,80 @@
     cursor: not-allowed;
   }
 }
+
+// Resend-confirmation panel sits below the login form card. The toggle is
+// styled as a low-emphasis link so it does not compete with the primary
+// Login button. When expanded, the inline form mirrors the login card's
+// width and surface so the layout stays cohesive.
+.login-resend {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  width: min(360px, 90vw);
+}
+
+.login-resend-toggle {
+  align-self: center;
+  background: transparent;
+  border: none;
+  color: var(--theme-text-secondary);
+  font-size: 0.85rem;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px 8px;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--theme-text-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--theme-border-strong);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+.login-resend-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid var(--theme-border-subtle);
+  border-radius: 12px;
+  background: var(--theme-surface-card);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+// Secondary action — same shape as .login-button but with the panel-style
+// surface so it reads as a less-prominent submit. Kept separate rather than
+// reusing .login-button so future tweaks to the primary action don't
+// accidentally restyle this one.
+.login-resend-submit {
+  border: 1px solid var(--theme-border-subtle);
+  background: var(--theme-surface-panel);
+  color: var(--theme-text-primary);
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-family: var(--theme-font-display);
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &:hover:not(:disabled) {
+    background: var(--theme-action-primary-bg);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--theme-border-strong);
+    outline-offset: 2px;
+  }
+}

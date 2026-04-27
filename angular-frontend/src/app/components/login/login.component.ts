@@ -52,6 +52,21 @@ export class LoginComponent {
   readonly isSubmitting = signal(false);
   /** Controls whether the sign-in password field renders as plain text. */
   readonly showPassword = signal(false);
+
+  /**
+   * Resend-confirmation panel state. The panel is collapsed by default and
+   * expands when the user clicks "Resend confirmation email" so it does not
+   * compete visually with the primary login form.
+   *
+   * `prefilledEmail` is populated immediately after a successful registration
+   * so the user can click Resend without retyping the email they just used.
+   * It is cleared on mode switches and on a successful resend.
+   */
+  readonly resendOpen = signal(false);
+  readonly resendEmail = signal('');
+  readonly resendIsSubmitting = signal(false);
+  readonly resendMessage = signal<string | undefined>(undefined);
+  readonly resendError = signal<string | undefined>(undefined);
   /**
    * Per-field availability status for the register form.
    * `checking` is true while the server request is in flight.
@@ -91,6 +106,72 @@ export class LoginComponent {
     this.email.set('');
     this.password.set('');
     this.confirmPassword.set('');
+    // Collapse and clear the resend panel so its state does not bleed
+    // across mode switches. The prefilled email is intentionally dropped
+    // here because the user is starting a fresh form.
+    this.resendOpen.set(false);
+    this.resendEmail.set('');
+    this.resendMessage.set(undefined);
+    this.resendError.set(undefined);
+  }
+
+  /**
+   * Toggles the resend-confirmation panel below the login form.
+   *
+   * Opening the panel clears any previous transient feedback so a stale
+   * success/error message from an earlier attempt is not visible when the
+   * user starts a new resend cycle. Closing the panel preserves the email
+   * input so reopening continues from where the user left off.
+   */
+  toggleResend(): void {
+    const willOpen = !this.resendOpen();
+    this.resendOpen.set(willOpen);
+    if (willOpen) {
+      this.resendMessage.set(undefined);
+      this.resendError.set(undefined);
+    }
+  }
+
+  /**
+   * Submits the resend-confirmation request to the server.
+   *
+   * The server intentionally responds with the same generic success
+   * regardless of whether the email exists, is already confirmed, or
+   * triggered a Supabase error — this UI mirrors that with a single neutral
+   * message. The only error message surfaced verbatim is the per-IP rate-
+   * limit response (HTTP 429) so the user knows to wait before retrying.
+   */
+  async onResend(): Promise<void> {
+    this.resendError.set(undefined);
+    this.resendMessage.set(undefined);
+
+    const email = this.resendEmail().trim();
+    if (!email) {
+      this.resendError.set('Email is required');
+      return;
+    }
+    if (!EMAIL_REGEX.test(email)) {
+      this.resendError.set('Enter a valid email address');
+      return;
+    }
+
+    this.resendIsSubmitting.set(true);
+    try {
+      const result = await this._authService.resendConfirmation(email);
+      if (result.ok) {
+        // Neutral message: do not reveal whether the email exists or was
+        // already confirmed — preserves the server's no-enumeration guarantee.
+        this.resendMessage.set(
+          'If your email is registered and unconfirmed, a new link is on its way. Already confirmed? Just sign in.',
+        );
+      } else {
+        // Surface server messages verbatim so 'Too many attempts' reaches
+        // the user. Other shapes fall back to a neutral failure copy.
+        this.resendError.set(result.message ?? 'Could not resend confirmation email');
+      }
+    } finally {
+      this.resendIsSubmitting.set(false);
+    }
   }
 
   /**
@@ -185,15 +266,23 @@ export class LoginComponent {
           return;
         }
 
-        const result = await this._authService.register(username, this.email().trim(), password);
+        const registerEmail = this.email().trim();
+        const result = await this._authService.register(username, registerEmail, password);
         if (result.ok) {
           // setMode clears all fields and messages; set the success toast and
           // restore the username AFTER calling setMode so they survive the clear.
           this.setMode('signin');
-          this.successMessage.set('Account created — please sign in.');
+          this.successMessage.set(
+            'Account created — check your email to confirm. You can resend the confirmation if it does not arrive.',
+          );
           // Keep the username prefilled so the new user only has to type the
           // password they just entered.
           this.username.set(username);
+          // Prefill the resend-confirmation email with the address just used,
+          // so the user can click Resend without retyping it. The panel stays
+          // collapsed until they click the toggle — the success banner
+          // already tells them where to confirm and where to resend if needed.
+          this.resendEmail.set(registerEmail);
         } else {
           this.errorMessage.set(result.message ?? 'Registration failed');
         }
