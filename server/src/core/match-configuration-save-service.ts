@@ -22,7 +22,7 @@ type PersistedMatchConfigurationSave = {
  *
  * Defined in: server/src/core/match-configuration-save-service.ts
  * Status: legacy file-backed implementation. No longer registered — production
- * composition (register-root-services.ts) selects DenoKvMatchConfigurationSaveService
+ * composition (register-root-services.ts) selects InMemoryMatchConfigurationSaveService
  * or SupabaseMatchConfigurationSaveService via STORAGE_BACKEND. Retained for
  * historical reference and any out-of-tree tooling that imports it.
  */
