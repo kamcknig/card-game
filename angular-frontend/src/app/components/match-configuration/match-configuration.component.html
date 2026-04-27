@@ -13,19 +13,19 @@
   <div sceneHeaderActions class="header-actions">
     @if (isGameOwner()) {
       <button
-        class="config-action-button"
+        class="btn btn-secondary config-action-button"
         (click)="openSaveDialog()"
         [disabled]="!hasConfigurationChanges()"
       >
         <lucide-icon [img]="SaveIcon" [size]="16" />
         Save
       </button>
-      <button class="config-action-button" (click)="openLoadDialog()">
+      <button class="btn btn-secondary config-action-button" (click)="openLoadDialog()">
         <lucide-icon [img]="LoadIcon" [size]="16" />
         Load
       </button>
       <button
-        class="config-action-button"
+        class="btn btn-secondary config-action-button"
         (click)="clearConfiguration()"
         [disabled]="!canClearConfiguration()"
       >
@@ -50,7 +50,7 @@
 
         @if (isOwner) {
           <button
-            class="secondary-action-button"
+            class="btn btn-secondary"
             (click)="addComputerPlayer()"
             [disabled]="playerCount() >= 6"
           >
@@ -66,12 +66,12 @@
           @if (isOwner) {
             <div class="section-header-actions">
               <button
-                class="secondary-action-button section-inline-action-button"
+                class="btn btn-secondary section-inline-action-button"
                 (click)="onSelectNoExpansions()"
                 [disabled]="!canSelectNoExpansions()"
               >None</button>
               <button
-                class="secondary-action-button section-inline-action-button"
+                class="btn btn-secondary section-inline-action-button"
                 (click)="onSelectAllExpansions()"
                 [disabled]="!canSelectAllExpansions()"
               >All</button>
@@ -108,9 +108,9 @@
           <h2 class="section-title">Banned cards ({{ bannedCards.length }})</h2>
           @if (isOwner) {
             <div class="section-header-actions">
-              <button class="secondary-action-button section-inline-action-button" (click)="openSelectionModal('bannedKingdom')">Select</button>
+              <button class="btn btn-secondary section-inline-action-button" (click)="openSelectionModal('bannedKingdom')">Select</button>
               <button
-                class="secondary-action-button section-inline-action-button"
+                class="btn btn-secondary section-inline-action-button"
                 (click)="clearBannedKingdoms()"
                 [disabled]="bannedCards.length < 1"
               >Clear</button>
