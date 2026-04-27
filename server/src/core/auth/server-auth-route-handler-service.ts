@@ -160,6 +160,12 @@ export class ServerAuthRouteHandlerService {
       return this.handleAttachEmail(req);
     }
 
+    // POST /auth/resend-confirmation (public, rate-limited) — resends the
+    // signup confirmation email for an unconfirmed Supabase Auth user.
+    if (parts.length === 2 && parts[1] === 'resend-confirmation' && req.method === 'POST') {
+      return this.handleResendConfirmation(req, remoteIp);
+    }
+
     this.loggerService.debug(`[auth route] unmatched auth path: ${req.method} ${url.pathname}`);
     return new Response('auth resource not found', { status: 404, headers: this.corsHeaders(req) });
   }
@@ -1038,6 +1044,142 @@ export class ServerAuthRouteHandlerService {
     this.loggerService.info(
       `[auth route] POST /auth/email: email attached and Supabase Auth user provisioned for '${username}'`,
     );
+    return this.jsonResponse({ ok: true }, 200, req);
+  }
+
+  /**
+   * Handles POST /auth/resend-confirmation — public, rate-limited.
+   *
+   * Resends the Supabase signup confirmation email for an unconfirmed user.
+   * Used by the login screen so a user who never received (or lost) their
+   * confirmation email can request a new one without re-registering, and so
+   * a returning user who closed the tab can come back later and trigger a
+   * new email by entering their address.
+   *
+   * Email-enumeration protection:
+   *   The response is always a generic 200 `{ ok: true }` once the request
+   *   passes input validation, regardless of whether the email exists,
+   *   whether the user is already confirmed, or whether Supabase returned
+   *   an error. This prevents the endpoint from being used as an oracle to
+   *   discover registered emails. Server-side logs record the actual
+   *   outcome for operators.
+   *
+   * Rate limiting:
+   *   Every well-formed call records one failure against the shared per-IP
+   *   limiter (same bucket as /auth/login and /auth/register), so a single
+   *   IP cannot spam confirmation emails beyond the configured threshold.
+   *   Supabase enforces its own 2-email-per-hour quota per address; that
+   *   error is logged but still surfaces as the generic success to the
+   *   client.
+   *
+   * Backend behavior:
+   *   This endpoint is only meaningful when the supabase backend is active
+   *   (the in-memory backend has no email-confirmation flow). For the
+   *   in-memory backend, the call short-circuits to the same generic
+   *   success without any side effects.
+   *
+   * @param req       Original HTTP request (for CORS headers and Origin).
+   * @param remoteIp  Client IP for rate-limiter bookkeeping.
+   */
+  private async handleResendConfirmation(req: Request, remoteIp: string): Promise<Response> {
+    // Share the IP bucket with /auth/login and /auth/register so resend
+    // spam counts against the same per-IP cap.
+    if (this.authRateLimiterService.isLimited(remoteIp)) {
+      const retryAfterSec = Math.ceil(this.authRateLimiterService.retryAfterMs(remoteIp) / 1000);
+      this.loggerService.warn(`[auth route] rate-limited resend-confirmation attempt from ${remoteIp}`);
+      return this.jsonResponse({ ok: false, message: 'Too many attempts' }, 429, req, {
+        'retry-after': String(retryAfterSec),
+      });
+    }
+
+    // Apply the same body-size cap used elsewhere in this module.
+    const contentLength = Number(req.headers.get('content-length') ?? '0');
+    const maxBytes = this.serverConfigService.getAuthMaxBodyBytes();
+    if (contentLength > maxBytes) {
+      this.loggerService.warn(
+        `[auth route] resend-confirmation body too large from ${remoteIp}: ${contentLength} > ${maxBytes}`,
+      );
+      return new Response('payload too large', { status: 413, headers: this.corsHeaders(req) });
+    }
+
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      this.authRateLimiterService.recordFailure(remoteIp);
+      return new Response('invalid json', { status: 400, headers: this.corsHeaders(req) });
+    }
+
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      this.authRateLimiterService.recordFailure(remoteIp);
+      return this.jsonResponse({ ok: false, message: 'invalid request body' }, 400, req);
+    }
+
+    const email = typeof body['email'] === 'string' ? (body['email'] as string).trim() : '';
+    if (!email) {
+      this.authRateLimiterService.recordFailure(remoteIp);
+      return this.jsonResponse({ ok: false, message: 'Email is required' }, 400, req);
+    }
+    if (!EMAIL_REGEX.test(email)) {
+      this.authRateLimiterService.recordFailure(remoteIp);
+      return this.jsonResponse({ ok: false, message: 'Invalid email address' }, 400, req);
+    }
+
+    // Every well-formed call costs one slot in the limiter — caps abuse
+    // even when the caller cycles through a list of valid-shaped emails.
+    this.authRateLimiterService.recordFailure(remoteIp);
+
+    // Only the Supabase backend has a confirmation-email flow. For in-memory
+    // backends, return the generic success without doing any work — keeps
+    // the response shape identical so client code is backend-agnostic.
+    const backend = this.serverConfigService.getStorageBackend();
+    if (backend !== 'supabase') {
+      this.loggerService.info(
+        `[auth route] resend-confirmation: in-memory backend has no confirmation flow — ` +
+        `responding with generic success for ${remoteIp}`,
+      );
+      return this.jsonResponse({ ok: true }, 200, req);
+    }
+
+    let client;
+    try {
+      client = this.supabaseClientProvider.createEphemeralClient();
+    } catch (err) {
+      this.loggerService.error(`[auth route] resend-confirmation: Supabase client unavailable: ${err}`);
+      // Still return generic success to preserve the no-enumeration guarantee.
+      return this.jsonResponse({ ok: true }, 200, req);
+    }
+
+    // Mirror the registration flow: derive emailRedirectTo from the request
+    // Origin so the resent email's confirmation link points back at whichever
+    // frontend issued the resend. Append a trailing slash so the URL matches
+    // a `<origin>/**` Redirect URLs entry deterministically — see the
+    // emailRedirectTo handling in registerViaSupabase for the full rationale.
+    const emailRedirectOrigin = this.resolveEmailRedirectOrigin(req);
+    const emailRedirectUrl = emailRedirectOrigin ? `${emailRedirectOrigin}/` : undefined;
+    this.loggerService.info(
+      `[auth route] resend-confirmation: resend type=signup emailRedirectTo='${emailRedirectUrl ?? '<dashboard fallback>'}' from ${remoteIp}`,
+    );
+
+    const { error } = await client.auth.resend({
+      type: 'signup',
+      email,
+      ...(emailRedirectUrl ? { options: { emailRedirectTo: emailRedirectUrl } } : {}),
+    });
+
+    if (error) {
+      // Log the underlying outcome but do NOT surface it to the client —
+      // any error message would leak whether the address is registered,
+      // already confirmed, or in an over-quota state. Operators can read
+      // the server log to diagnose user reports.
+      this.loggerService.warn(
+        `[auth route] resend-confirmation: Supabase resend returned error for ${remoteIp}: ` +
+        `${error.message} (code=${error.code})`,
+      );
+    } else {
+      this.loggerService.info(`[auth route] resend-confirmation: Supabase resend accepted for ${remoteIp}`);
+    }
+
     return this.jsonResponse({ ok: true }, 200, req);
   }
 
