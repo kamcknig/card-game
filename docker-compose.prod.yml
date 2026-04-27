@@ -24,10 +24,6 @@ services:
       dockerfile: docker/DockerFile_server
     ports:
       - "3000:3000"
-    volumes:
-      # Persistent volume for the Deno KV auth store and other game data.
-      # Ensures sessions survive container restarts in local production testing.
-      - server-data:/app/server/game-data
     environment:
       PORT: 3000
       LOG_TO_FILE: "true"
@@ -38,12 +34,8 @@ services:
       AUTH_ALLOWED_ORIGINS: "http://localhost"
       AUTH_RATE_LIMIT_MAX_ATTEMPTS: "10"
       AUTH_RATE_LIMIT_WINDOW_MS: "60000"
-      STORAGE_BACKEND: "kv"
-      AUTH_KV_PATH: "/app/server/game-data/auth.kv"
-      GAME_DATA_KV_PATH: "/app/server/game-data/game-data.kv"
+      STORAGE_BACKEND: "supabase"
+      # Required for Supabase backend. Set these in your production environment.
+      # SUPABASE_URL: ""
+      # SUPABASE_SERVICE_ROLE_KEY: ""
     restart: unless-stopped
-
-volumes:
-  # Named volume for persistent server data (Deno KV auth store, game data).
-  # In production on Azure, use an Azure Files share mounted at this path instead.
-  server-data:
