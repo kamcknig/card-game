@@ -110,7 +110,7 @@
 
       <button
         type="submit"
-        class="login-button"
+        class="btn btn-primary btn--lg"
         [disabled]="isSubmitting() || (mode() === 'register' && (!!usernameStatus().error || !!emailStatus().error || !!newPasswordFields()?.mismatch() || confirmPassword().length === 0))"
       >
         @if (mode() === 'signin') {
@@ -120,5 +120,68 @@
         }
       </button>
     </form>
+
+    <!--
+      Resend-confirmation panel. Rendered only in sign-in mode so a user
+      who registered (and was redirected to sign-in) or returned later can
+      request a fresh confirmation email without re-registering. The panel
+      starts collapsed; clicking the toggle expands it. The email input is
+      prefilled when the user has just registered.
+    -->
+    @if (mode() === 'signin') {
+      <div class="login-resend">
+        <button
+          type="button"
+          class="login-resend-toggle"
+          (click)="toggleResend()"
+          [attr.aria-expanded]="resendOpen()"
+          aria-controls="login-resend-form"
+        >
+          @if (resendOpen()) {
+            Hide resend confirmation email
+          } @else {
+            Resend confirmation email
+          }
+        </button>
+
+        @if (resendOpen()) {
+          <form id="login-resend-form" class="login-resend-form" (ngSubmit)="onResend()">
+            <label class="form-field">
+              <span class="form-label">Email</span>
+              <div class="form-input-wrapper">
+                <input
+                  type="email"
+                  class="form-input"
+                  [value]="resendEmail()"
+                  (input)="onResendEmailInput($any($event.target).value)"
+                  (blur)="onResendEmailBlur()"
+                  autocomplete="email"
+                />
+              </div>
+            </label>
+
+            @if (resendError(); as rError) {
+              <p class="form-field-error">{{ rError }}</p>
+            }
+
+            @if (resendMessage(); as rMessage) {
+              <p class="login-success">{{ rMessage }}</p>
+            }
+
+            <button
+              type="submit"
+              class="btn btn-primary btn--lg"
+              [disabled]="resendIsSubmitting() || resendEmail().trim().length === 0"
+            >
+              @if (resendIsSubmitting()) {
+                Sending…
+              } @else {
+                Send confirmation email
+              }
+            </button>
+          </form>
+        }
+      </div>
+    }
   </div>
 </app-scene-content>

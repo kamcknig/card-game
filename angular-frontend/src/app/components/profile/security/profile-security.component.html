@@ -63,9 +63,18 @@
           <p class="form-field-error">{{ err }}</p>
         }
         <div class="form-actions">
+          <!--
+            `disabled` set as a static boolean attribute (in addition to the
+            [disabled] binding) so the button is disabled in the initial DOM.
+            Without it, the browser paints the element before Angular's
+            binding evaluates and the button briefly flashes enabled — more
+            noticeable now that .btn-primary uses the saturated primary fill.
+            The binding takes over on the next change detection tick.
+          -->
           <button
             type="submit"
-            class="panel-button"
+            class="btn btn-primary"
+            disabled
             [disabled]="attachEmailSubmitting() || !!attachEmailStatus().checking || !!attachEmailStatus().error || !attachEmailValue().trim() || !attachEmailPassword()"
           >
             Add email
@@ -109,9 +118,11 @@
         <p class="form-success">{{ msg }}</p>
       }
       <div class="form-actions">
+        <!-- See sibling Add-email button for the static-disabled-attribute rationale. -->
         <button
           type="submit"
-          class="panel-button"
+          class="btn btn-primary"
+          disabled
           [disabled]="changePasswordSubmitting() || !!newPasswordFields()?.mismatch() || confirmNewPassword().length === 0"
         >
           Update password

@@ -25,8 +25,8 @@
 
   @if (canModeratePlayer()) {
     @if (!player.isComputer) {
-      <button type="button" class="moderation-button ban" (click)="onBanPlayer()">Ban</button>
+      <button type="button" class="btn btn-danger moderation-button" (click)="onBanPlayer()">Ban</button>
     }
-    <button type="button" class="moderation-button" (click)="onKickPlayer()">Kick</button>
+    <button type="button" class="btn btn-secondary moderation-button" (click)="onKickPlayer()">Kick</button>
   }
 </div>

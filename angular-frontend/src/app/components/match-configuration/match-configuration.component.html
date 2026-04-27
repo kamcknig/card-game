@@ -2,7 +2,7 @@
   <!-- Left side of action bar: leave game -->
   <div sceneNavActions>
     @if (activeLobbyGameId(); as activeGameId) {
-      <button class="leave-game-button" (click)="leaveGame(activeGameId)">
+      <button class="btn btn-danger leave-game-button" (click)="leaveGame(activeGameId)">
         <lucide-icon [img]="LeaveIcon" [size]="16" />
         Leave Game
       </button>
@@ -13,19 +13,19 @@
   <div sceneHeaderActions class="header-actions">
     @if (isGameOwner()) {
       <button
-        class="config-action-button"
+        class="btn btn-secondary config-action-button"
         (click)="openSaveDialog()"
         [disabled]="!hasConfigurationChanges()"
       >
         <lucide-icon [img]="SaveIcon" [size]="16" />
         Save
       </button>
-      <button class="config-action-button" (click)="openLoadDialog()">
+      <button class="btn btn-secondary config-action-button" (click)="openLoadDialog()">
         <lucide-icon [img]="LoadIcon" [size]="16" />
         Load
       </button>
       <button
-        class="config-action-button"
+        class="btn btn-secondary config-action-button"
         (click)="clearConfiguration()"
         [disabled]="!canClearConfiguration()"
       >
@@ -50,7 +50,7 @@
 
         @if (isOwner) {
           <button
-            class="secondary-action-button"
+            class="btn btn-secondary"
             (click)="addComputerPlayer()"
             [disabled]="playerCount() >= 6"
           >
@@ -66,12 +66,12 @@
           @if (isOwner) {
             <div class="section-header-actions">
               <button
-                class="secondary-action-button section-inline-action-button"
+                class="btn btn-secondary section-inline-action-button"
                 (click)="onSelectNoExpansions()"
                 [disabled]="!canSelectNoExpansions()"
               >None</button>
               <button
-                class="secondary-action-button section-inline-action-button"
+                class="btn btn-secondary section-inline-action-button"
                 (click)="onSelectAllExpansions()"
                 [disabled]="!canSelectAllExpansions()"
               >All</button>
@@ -108,9 +108,9 @@
           <h2 class="section-title">Banned cards ({{ bannedCards.length }})</h2>
           @if (isOwner) {
             <div class="section-header-actions">
-              <button class="secondary-action-button section-inline-action-button" (click)="openSelectionModal('bannedKingdom')">Select</button>
+              <button class="btn btn-secondary section-inline-action-button" (click)="openSelectionModal('bannedKingdom')">Select</button>
               <button
-                class="secondary-action-button section-inline-action-button"
+                class="btn btn-secondary section-inline-action-button"
                 (click)="clearBannedKingdoms()"
                 [disabled]="bannedCards.length < 1"
               >Clear</button>
@@ -466,8 +466,8 @@
         <div class="config-dialog-meta">No configuration changes to save.</div>
       }
       <div class="config-dialog-actions">
-        <button class="config-dialog-cancel" (click)="closeSaveDialog()">Cancel</button>
-        <button class="config-dialog-confirm" (click)="submitSaveDialog()" [disabled]="!canSubmitSaveDialog()">Save</button>
+        <button class="btn btn-secondary" (click)="closeSaveDialog()">Cancel</button>
+        <button class="btn btn-primary" (click)="submitSaveDialog()" [disabled]="!canSubmitSaveDialog()">Save</button>
       </div>
     </section>
   </app-ui-dialog>
@@ -504,7 +504,7 @@
         <div class="config-dialog-error">{{ statusMessage }}</div>
       }
       <div class="config-dialog-actions">
-        <button class="config-dialog-cancel" (click)="closeLoadDialog()">Cancel</button>
+        <button class="btn btn-secondary" (click)="closeLoadDialog()">Cancel</button>
       </div>
     </section>
   </app-ui-dialog>

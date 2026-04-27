@@ -1,6 +1,6 @@
 <app-scene-content>
   <div sceneHeaderActions>
-    <button type="button" class="create-button" (click)="createGame()">Create Game</button>
+    <button type="button" class="btn btn-primary" (click)="createGame()">Create Game</button>
   </div>
 
   <section class="lobby-shell">
@@ -28,7 +28,7 @@
             <li class="game-row">
               <button
                 type="button"
-                class="join-button"
+                class="btn btn-primary-muted"
                 [disabled]="!game.isJoinable || game.playerCount >= game.maxPlayers"
                 (click)="joinGame(game.gameId)">
                 Join
@@ -58,7 +58,7 @@
       </p>
       <div class="email-required-dialog__actions">
         <a
-          class="email-required-dialog__link-button"
+          class="btn btn-primary email-required-dialog__link-button"
           routerLink="/profile/security"
           (click)="dismissEmailRequiredDialog()"
         >

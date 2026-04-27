@@ -62,18 +62,6 @@
   }
 }
 
-.create-button {
-  border: 1px solid var(--theme-border-action);
-  background: var(--theme-action-primary-bg);
-  color: var(--theme-text-primary);
-  border-radius: 6px;
-  padding: 8px 14px;
-  font-family: var(--theme-font-display);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-size: 0.82rem;
-}
 
 .status-message {
   margin: 14px 0;
@@ -120,18 +108,6 @@
   }
 }
 
-.join-button {
-  border: 1px solid var(--theme-border-action);
-  border-radius: 6px;
-  background: var(--theme-action-primary-muted-bg);
-  color: var(--theme-text-primary);
-  padding: 6px 12px;
-  font-family: var(--theme-font-display);
-  font-weight: 600;
-  font-size: 0.85rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
 
 .game-name {
   white-space: nowrap;
@@ -196,26 +172,15 @@
 }
 
 // Primary action: navigates to /profile/security styled as a button-link.
+// Visual identity comes from `.btn .btn-primary` in styles.scss; this rule
+// only handles the anchor-specific tweaks the global .btn class doesn't
+// cover (default anchor display is inline, default text-decoration is
+// underline — both need overriding so the <a> visually matches a <button>).
 .email-required-dialog__link-button {
   display: inline-flex;
   align-items: center;
   white-space: nowrap;
-  border: 1px solid var(--theme-border-action);
-  background: var(--theme-action-primary-bg);
-  color: var(--theme-text-primary);
-  border-radius: 6px;
-  padding: 8px 14px;
-  font-family: var(--theme-font-display);
-  font-size: 0.82rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   text-decoration: none;
-  cursor: pointer;
-
-  &:hover {
-    opacity: 0.85;
-  }
 }
 
 // .email-required-dialog__dismiss is defined globally in styles.scss because
