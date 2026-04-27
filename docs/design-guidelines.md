@@ -148,6 +148,17 @@ variant class supplies the visual identity (border color, background, text
 color). Hover states are encoded on the variant where it matters (`.btn-secondary`
 darkens on hover; the others rely on background change via override).
 
+**Sizes:**
+
+- **Default** (`.btn`) is the compact form-action scale: `padding: 8px 14px`,
+  `font-size: 0.85rem`, `font-weight: 600`, `letter-spacing: 0.06em`. Use
+  this for lobby, profile, match-configuration, and HUD action buttons —
+  i.e. the dense parts of the app where buttons sit alongside other UI.
+- **Large** (`.btn--lg`) is the screen-CTA scale: `padding: 12px 16px`,
+  `font-size: 0.95rem`, `font-weight: 700`, `letter-spacing: 0.08em`. Use
+  this for prominent submits on focused screens (Login, Create account)
+  where the button is the primary affordance and should read large.
+
 **Do not** use `--theme-action-secondary-bg` directly for form submit buttons —
 it is a hover/nav fill, not a button variant. The historical "Secondary"
 recipe that used it has been replaced by `.btn-secondary` above.

@@ -110,7 +110,7 @@
 
       <button
         type="submit"
-        class="btn btn-primary"
+        class="btn btn-primary btn--lg"
         [disabled]="isSubmitting() || (mode() === 'register' && (!!usernameStatus().error || !!emailStatus().error || !!newPasswordFields()?.mismatch() || confirmPassword().length === 0))"
       >
         @if (mode() === 'signin') {
@@ -169,7 +169,7 @@
 
             <button
               type="submit"
-              class="btn btn-primary"
+              class="btn btn-primary btn--lg"
               [disabled]="resendIsSubmitting() || resendEmail().trim().length === 0"
             >
               @if (resendIsSubmitting()) {
