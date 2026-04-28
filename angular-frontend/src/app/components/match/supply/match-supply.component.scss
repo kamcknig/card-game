@@ -38,12 +38,14 @@
 }
 
 // Kingdom cards flow left-to-right, top-to-bottom, wrapping to fit the column's
-// available width. flex-wrap rather than a fixed grid lets the kingdom reflow at
-// any viewport size.
+// available width. max-width caps the grid at 5 cards (5 × card width +
+// 4 × gap) so the layout stays at most 5 columns wide on any viewport;
+// narrower columns still wrap naturally via flex-wrap.
 .kingdom-grid {
   display: flex;
   flex-wrap: wrap;
   gap: var(--theme-space-md);
+  max-width: calc(5 * var(--card-width) + 4 * var(--theme-space-md));
 }
 
 .supply-pile {
