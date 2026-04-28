@@ -9,6 +9,9 @@ import { AuthService } from '../../core/auth/auth.service';
 /** Intentionally permissive — the server performs the authoritative check. */
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Mirrors the server-side USERNAME_REGEX so format errors surface before the network round-trip. */
+const USERNAME_REGEX = /^[A-Za-z0-9_]{3,32}$/;
+
 /**
  * Login scene component that gates access to the lobby.
  *
@@ -241,8 +244,9 @@ export class LoginComponent {
   /**
    * Fires when the username input loses focus in register mode.
    *
-   * Checks username availability against the server and updates `usernameStatus`
-   * with the result. No-ops when in sign-in mode or when the field is empty.
+   * Validates the username format against USERNAME_REGEX first, then checks
+   * availability against the server. No-ops when in sign-in mode or when
+   * the field is empty.
    */
   async onUsernameBlur(): Promise<void> {
     if (this.mode() !== 'register') return;
@@ -251,12 +255,27 @@ export class LoginComponent {
       this.usernameStatus.set({ checking: false });
       return;
     }
+    if (!USERNAME_REGEX.test(username)) {
+      this.usernameStatus.set({ checking: false, error: 'Username must be 3–32 characters, letters, numbers, or underscores only' });
+      return;
+    }
     this.usernameStatus.set({ checking: true });
     const available = await this._authService.checkUsernameAvailability(username);
     this.usernameStatus.set({
       checking: false,
       error: available ? undefined : 'Username is already taken',
     });
+  }
+
+  /**
+   * Updates the username signal and clears any standing format/availability
+   * error so stale feedback does not persist while the user types a fix.
+   */
+  onUsernameInput(value: string): void {
+    this.username.set(value);
+    if (this.usernameStatus().error) {
+      this.usernameStatus.set({ checking: false });
+    }
   }
 
   /**

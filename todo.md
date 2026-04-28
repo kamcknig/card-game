@@ -6,6 +6,30 @@
 
 ---
 
+add settings to the match screen
+- toggle light/dark mode
+- toggle timestamps on ui log
+
+---
+
+ui log
+- add optional timestamps
+- card names should be pressable to show the card
+
+---
+
+Send configuration to front-end include things like
+
+- regex for email
+- regex for username
+
+---
+
+Knights appear in search for kingdoms when adding cards - only randomizers
+should appear
+
+---
+
 When no cards in hand, the hand should not collapse vertically
 
 ---

@@ -50,17 +50,47 @@ hr {
   all: unset;
 }
 
+// Hover-revealed remove affordance shown over chosen cards in the match
+// configuration screen (kingdom, banned, events, landmarks, projects,
+// ways, traits, allies, prophecies). Renders a circular dark badge with
+// a centered lucide icon child; brightens to the danger color on hover
+// so the destructive action reads on intent without dominating the card.
 .close-button {
   position: absolute;
-  top: 2px;
-  right: 2px;
+  top: 4px;
+  right: 4px;
   z-index: 1;
-  font-size: 24px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  // line-height: 1 removes the inline leading that would otherwise push
+  // the lucide-icon SVG off the badge's vertical center.
+  line-height: 1;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.75);
   color: var(--theme-text-on-dark);
-  background: var(--theme-border-danger);
-  padding: 2px 4px;
+  // Danger-colored border signals the destructive intent of the badge
+  // even before hover, while the dark fill keeps it visually quiet.
+  border: 1px solid var(--theme-border-danger);
   cursor: pointer;
   pointer-events: auto;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+// Force the lucide-icon host to flex-center its inner SVG so the glyph
+// sits on the badge's geometric center regardless of the icon's intrinsic
+// line-box metrics.
+.close-button lucide-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-button:hover {
+  background: var(--theme-border-danger);
 }
 
 // Shared form-field primitives. Used across the login, register, and
@@ -187,13 +217,17 @@ hr {
   border: 1px solid transparent;
   border-radius: 6px;
   padding: 8px 14px;
-  font-family: var(--theme-font-display);
+  font-family: var(--theme-font-body);
   font-weight: 600;
   font-size: 0.85rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
   transition: background 150ms, border-color 120ms, color 120ms;
+  // Tight line-height so a button containing both an icon and a text label
+  // (e.g. .leave-game-button: lucide icon + LEAVE GAME) aligns the glyphs
+  // by their actual em-box rather than the inherited 1.5 leading.
+  line-height: 1;
 
   &:disabled {
     opacity: 0.6;
@@ -243,26 +277,4 @@ hr {
   border-color: var(--theme-border-danger);
   background: var(--theme-action-danger-soft-bg);
   color: var(--theme-text-primary);
-}
-
-// CDK overlay content: dismiss button used inside email-required dialog.
-// Defined globally because the dialog is teleported into the CDK overlay
-// container, which breaks Angular's emulated view-encapsulation scoping.
-.email-required-dialog__dismiss {
-  border: 1px solid var(--theme-border-action);
-  background: var(--theme-action-primary-muted-bg);
-  color: var(--theme-text-primary);
-  border-radius: 6px;
-  padding: 8px 14px;
-  font-family: var(--theme-font-display);
-  font-weight: 600;
-  font-size: 0.82rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  cursor: pointer;
-
-  &:hover {
-    opacity: 0.85;
-  }
 }

@@ -2,22 +2,14 @@
   display: block;
   width: 100%;
   height: 100%;
-  // Let pointer events pass through by default.
+  // Let pointer events pass through — dialogs inside re-enable as needed.
   pointer-events: none;
-}
-
-app-score {
-  position: fixed;
-  top: 10px;
-  left: 10px;
-  // HUD widgets remain interactive while host is click-through.
-  pointer-events: auto;
 }
 
 .pause-dialog-card {
   border: 1px solid var(--theme-border-strong);
-  border-radius: 8px;
-  padding: 14px 18px;
+  border-radius: var(--theme-radius-lg);
+  padding: var(--theme-space-lg) var(--theme-space-xl);
   color: var(--theme-text-on-dark);
   font-size: 36px;
   font-weight: 700;
@@ -27,230 +19,20 @@ app-score {
 
 .waiting-dialog-card {
   border: 1px solid var(--theme-border-strong);
-  border-radius: 8px;
-  padding: 14px 18px;
+  border-radius: var(--theme-radius-lg);
+  padding: var(--theme-space-lg) var(--theme-space-xl);
   color: var(--theme-text-on-dark);
   font-size: 28px;
   line-height: 1.2;
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
 }
 
-.mat-tab-content {
-  position: fixed;
-  right: 0;
-  top: 60%;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 6px;
-  overflow: visible;
-  pointer-events: auto;
-}
-
-
-.mat-modal-content {
-  color: var(--theme-text-on-dark);
-  position: relative;
-  background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
-  border: 1px solid var(--theme-border-strong);
-  pointer-events: auto;
-  padding: 10px 10px 120px 10px;
-}
-
-.mat-modal-title {
-  color: var(--theme-text-on-dark);
-  margin-bottom: 20px;
-  font-size: 24px;
-}
-
-.player-flex-container {
-  display: flex;
-  justify-content: start;
-  min-width: 600px;
-  gap: 20px;
-}
-
-.player-item {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.card-flex-container {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  position: relative;
-  padding-bottom: 50px;
-}
-
-.card-item {
-  margin-bottom: calc(-1 * var(--card-small-height));
-}
-
-.hud-log-stack {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  display: flex;
-  flex-direction: column;
-  // Keep stacked HUD items pinned to the right edge as log width changes.
-  align-items: flex-end;
-  gap: 8px;
-  pointer-events: auto;
-}
-
-app-game-log {
-  position: relative;
-  pointer-events: auto;
-}
-
-.hud-menu {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-  width: 300px;
-  padding: 4px;
-  box-sizing: border-box;
-  border-radius: 5px;
-  background-color: rgba(0, 0, 0, 0.6);
-  pointer-events: auto;
-}
-
-.hud-menu-icon {
-  // Keep icon controls at fixed intrinsic widths; do not stretch to fill the menu row.
-  width: 34px;
-  height: 34px;
-  // Flex-center the Lucide icon; absolutely positioned children inside
-  // (.debug-icon-question, .debug-icon-state) bypass flex and stay pinned to
-  // the button corners regardless.
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--theme-border-strong);
-  background: var(--theme-surface-panel);
-  color: var(--theme-text-primary);
-  border-radius: 4px;
-  cursor: pointer;
-  font-family: var(--theme-font-body);
-  font-weight: 600;
-  font-size: 10px;
-  letter-spacing: 0.2px;
-  padding: 0;
-  position: relative;
-}
-
-.debug-toggle {
-  width: 44px;
-}
-
-.debug-toggle.active {
-  border-color: var(--theme-border-action);
-  background: var(--theme-action-primary-bg);
-  color: var(--theme-text-primary);
-}
-
-.resign-button {
-  font-size: 16px;
-}
-
-// Gear / question now wrap Lucide <lucide-icon [size]="..." /> — sizing is
-// owned by the icon component, not font-size. These wrappers only carry the
-// layout positioning for the badge-style question overlay.
-.debug-icon-gear {
-  display: inline-flex;
-  align-items: center;
-  line-height: 1;
-}
-
-.debug-icon-question {
-  position: absolute;
-  top: 4px;
-  right: 5px;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-}
-
-.debug-icon-state {
-  position: absolute;
-  left: 4px;
-  bottom: 2px;
-  font-size: 8px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0.2px;
-  color: var(--theme-text-secondary);
-}
-
-.debug-toggle.active .debug-icon-state {
-  color: var(--theme-text-primary);
-}
-
-.debug-runtime-overlay {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  min-width: 210px;
-  max-width: 360px;
-  padding: 8px 10px;
-  border: 1px solid var(--theme-border-strong);
-  border-radius: 6px;
-  background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
-  color: var(--theme-text-on-dark);
-  font-size: 12px;
-  line-height: 1.35;
-  // Keep runtime ids copyable when the debug overlay is visible.
-  pointer-events: auto;
-  user-select: text;
-}
-
-.debug-runtime-title {
-  font-weight: 700;
-  margin-bottom: 4px;
-}
-
-.debug-runtime-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-// Container for debug action buttons rendered below the runtime ID rows.
-.debug-runtime-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 8px;
-  border-top: 1px solid var(--theme-border-strong);
-  padding-top: 8px;
-}
-
-// Compact button for debug actions inside the runtime overlay.
-.debug-action-btn {
-  display: block;
-  width: 100%;
-  padding: 3px 8px;
-  background: transparent;
-  border: 1px solid var(--theme-border-strong);
-  border-radius: 3px;
-  color: var(--theme-text-on-dark);
-  font-family: var(--theme-font-body);
-  font-size: 11px;
-  cursor: pointer;
-  text-align: left;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.08);
-  }
-}
-
 .disconnect-card {
   background: var(--theme-surface-panel);
   color: var(--theme-text-primary);
   border: 1px solid var(--theme-border-strong);
-  padding: 18px 22px;
-  border-radius: 10px;
+  padding: var(--theme-space-xl) var(--theme-space-2xl);
+  border-radius: var(--theme-radius-pill);
   min-width: 280px;
   text-align: center;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
@@ -259,16 +41,16 @@ app-game-log {
 .disconnect-title {
   font-size: 16px;
   font-weight: 600;
-  margin-bottom: 8px;
+  margin-bottom: var(--theme-space-sm);
 }
 
 .disconnect-names {
-  margin-bottom: 12px;
+  margin-bottom: var(--theme-space-md);
 }
 
 .disconnect-name {
   font-size: 14px;
-  margin-top: 4px;
+  margin-top: var(--theme-space-xs);
 }
 
 // Visual identity comes from `.btn .btn-danger` in styles.scss. No local
@@ -278,8 +60,8 @@ app-game-log {
   background: var(--theme-surface-panel);
   color: var(--theme-text-primary);
   border: 1px solid var(--theme-border-strong);
-  padding: 20px 24px;
-  border-radius: 10px;
+  padding: var(--theme-space-xl) var(--theme-space-2xl);
+  border-radius: var(--theme-radius-pill);
   min-width: 300px;
   max-width: 400px;
   text-align: center;
@@ -290,20 +72,20 @@ app-game-log {
 .resign-dialog-title {
   font-size: 18px;
   font-weight: 700;
-  margin-bottom: 10px;
+  margin-bottom: var(--theme-space-md);
 }
 
 .resign-dialog-body {
   font-size: 14px;
   color: var(--theme-text-secondary);
-  margin-bottom: 18px;
+  margin-bottom: var(--theme-space-xl);
   line-height: 1.4;
 }
 
 .resign-dialog-actions {
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: var(--theme-space-md);
 }
 
 // Cancel/Resign buttons in this dialog use the shared `.btn .btn-secondary`

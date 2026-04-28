@@ -1,5 +1,5 @@
 .section-title {
-  margin: 0 0 16px;
+  margin: 0 0 var(--theme-space-lg);
   font-size: 1.2rem;
 }
 
@@ -7,12 +7,12 @@
 // set, or an add-email form when not yet attached).
 .account-section {
   max-width: 420px;
-  margin-bottom: 28px;
-  padding-bottom: 24px;
+  margin-bottom: var(--theme-space-3xl);
+  padding-bottom: var(--theme-space-2xl);
   border-bottom: 1px solid var(--theme-border-subtle);
 
   h3 {
-    margin: 0 0 12px;
+    margin: 0 0 var(--theme-space-md);
     font-size: 1rem;
     font-weight: 600;
   }
@@ -22,8 +22,8 @@
 .account-field {
   display: flex;
   align-items: baseline;
-  gap: 10px;
-  margin-bottom: 8px;
+  gap: var(--theme-space-md);
+  margin-bottom: var(--theme-space-sm);
   font-size: 0.9rem;
 }
 
@@ -37,7 +37,7 @@
   color: var(--theme-text-primary);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--theme-space-sm);
 }
 
 // "Pending confirmation" badge shown after email is attached but not yet
@@ -48,8 +48,8 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  padding: 2px 7px;
-  border-radius: 4px;
+  padding: var(--theme-space-2xs) var(--theme-space-sm);
+  border-radius: var(--theme-radius-sm);
   border: 1px solid var(--theme-border-subtle);
   color: var(--theme-text-secondary);
   background: var(--theme-surface-app-start);
@@ -57,7 +57,7 @@
 
 // Notice above the add-email form explaining why an email is needed.
 .account-email-notice {
-  margin: 0 0 12px;
+  margin: 0 0 var(--theme-space-md);
   font-size: 0.875rem;
   color: var(--theme-text-secondary);
   line-height: 1.4;
@@ -67,7 +67,7 @@
 .add-email-form {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--theme-space-md);
 }
 
 // CSS-only spinning availability indicator positioned to the right of
@@ -95,7 +95,7 @@
   max-width: 420px;
 
   h3 {
-    margin: 0 0 12px;
+    margin: 0 0 var(--theme-space-md);
     font-size: 1rem;
     font-weight: 600;
   }
@@ -104,13 +104,13 @@
 .change-password-form {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--theme-space-md);
 }
 
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 4px;
+  margin-top: var(--theme-space-xs);
 }
 
 // Visual identity for the primary panel actions (Save Email, Save Password)
@@ -120,15 +120,15 @@
 // Overrides to body font since danger actions use secondary styling.
 .panel-button--danger {
   background: transparent;
-  color: var(--color-error, #e05252);
-  border-color: var(--color-error, #e05252);
+  color: var(--theme-border-danger);
+  border-color: var(--theme-border-danger);
   font-family: var(--theme-font-body);
   letter-spacing: 0;
   text-transform: none;
 
   &:hover {
-    background: var(--color-error, #e05252);
-    color: #fff;
+    background: var(--theme-border-danger);
+    color: var(--theme-text-on-dark);
   }
 }
 

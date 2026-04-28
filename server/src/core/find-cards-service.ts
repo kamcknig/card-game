@@ -15,6 +15,7 @@ import { FindCardService, FindCardsFn } from '@server-types/index.ts';
 import { CardPriceRulesController } from './card-price-rules-controller.ts';
 import { CardSourceController } from './card-source-controller.ts';
 import { MatchCardLibrary } from './match-card-library.ts';
+import { LoggerService } from './logger-service.ts';
 import { getCardPileKey } from '../utils/get-card-pile-key.ts';
 
 type SourceSnapshot = {
@@ -36,6 +37,7 @@ export class FindCardsService implements FindCardService {
     private readonly cardSourceController: CardSourceController,
     private readonly cardPriceController: CardPriceRulesController,
     private readonly cardLibrary: MatchCardLibrary,
+    private readonly loggerService: LoggerService,
   ) {}
 
   /**
@@ -173,13 +175,29 @@ export class FindCardsService implements FindCardService {
   }
 
   // Resolves card IDs from source locations with optional player-scoped zones.
+  // Treats unregistered zones as empty so optional zones (e.g., the tavern mat when no card
+  // requires it) yield no results rather than throwing during a query. Logs a warning when a
+  // queried zone is missing so the underlying configuration bug is still surfaced.
   private findCardsByLocation(locations: CardLocation[], playerId?: PlayerId): CardId[] {
     let cardIds: CardId[] = [];
 
     for (const location of locations) {
-      let source = this.cardSourceController.getSource(location, playerId);
-      if (!source) {
+      let source: CardId[] | undefined;
+      const hasPlayerZone = playerId !== undefined && this.cardSourceController.hasSource(location, playerId);
+      const hasGlobalZone = this.cardSourceController.hasSource(location);
+
+      // Prefer the player-scoped zone, then fall back to the global zone if registered.
+      if (hasPlayerZone) {
+        source = this.cardSourceController.getSource(location, playerId);
+      } else if (hasGlobalZone) {
         source = this.cardSourceController.getSource(location);
+      } else {
+        // Surface configuration bugs (e.g., a card querying a mat that was never registered)
+        // without crashing the match.
+        const playerSuffix = playerId !== undefined ? ` for playerId=${playerId}` : '';
+        this.loggerService.warn(
+          `[find cards] requested zone '${location}'${playerSuffix} is not registered; treating as empty`,
+        );
       }
 
       if (source) {

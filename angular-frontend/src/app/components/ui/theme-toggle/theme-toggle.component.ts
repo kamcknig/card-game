@@ -34,15 +34,15 @@ import { ThemeService, ThemeMode } from '../../../core/theme.service';
       background: var(--theme-surface-panel);
       border: 1px solid var(--theme-border-subtle);
       border-radius: 999px;
-      padding: 3px;
-      gap: 2px;
+      padding: var(--theme-space-xs);
+      gap: var(--theme-space-2xs);
     }
 
     .theme-opt {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      padding: 4px 10px;
+      gap: var(--theme-space-xs);
+      padding: var(--theme-space-xs) 10px;
       background: transparent;
       border: none;
       border-radius: 999px;

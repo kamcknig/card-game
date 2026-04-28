@@ -1,7 +1,7 @@
 .card-detail-panel {
   position: relative;
   display: flex;
-  gap: 16px;
+  gap: var(--theme-space-lg);
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
@@ -16,7 +16,7 @@
   max-height: calc(100vh - 64px);
   width: auto;
   height: auto;
-  border-radius: 8px;
+  border-radius: var(--theme-radius-lg);
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.6);
   user-select: none;
   pointer-events: none;

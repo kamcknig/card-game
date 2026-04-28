@@ -1,7 +1,13 @@
 .content {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--theme-space-md);
+}
+
+// Player name text in the roster — slightly larger than the default body
+// size so the name stands out as the primary content of each row.
+.player-name {
+  font-size: 1.125rem;
 }
 
 /* Fixed-width icon slot keeps checkboxes and names aligned across all player rows. */
@@ -23,7 +29,7 @@ input[type='checkbox'] {
   flex-shrink: 0;
   position: relative;
   border: 1.5px solid var(--theme-border-action);
-  border-radius: 3px;
+  border-radius: var(--theme-radius-sm);
   background: var(--theme-surface-panel);
   cursor: pointer;
   transition: background 150ms ease, border-color 120ms ease;
@@ -33,6 +39,9 @@ input[type='checkbox'] {
     background: var(--theme-color-ready);
     border-color: var(--theme-color-ready);
 
+    // White checkmark drawn over the green --theme-color-ready fill;
+    // fixed colour because it reads as the visual "ready" check on the
+    // game-state pill, not theme chrome.
     &::after {
       content: '';
       position: absolute;
@@ -68,14 +77,13 @@ input[type='checkbox'] {
 // Inline moderation actions (Kick / Ban) sit next to a player name in
 // the lobby roster. The visual identity comes from `.btn .btn-secondary`
 // or `.btn .btn-danger` in styles.scss. Local rule keeps the compact
-// inline scale (smaller padding / font / radius) and the body-font
-// sentence-case typography — these read as quiet inline affordances
-// rather than form-action CTAs, so the .btn defaults (display font,
-// uppercase, 0.06em letter-spacing, weight 600) are deliberately
-// overridden here.
+// inline scale (smaller padding / font / radius) and sentence-case
+// typography — these read as quiet inline affordances rather than
+// form-action CTAs, so the .btn defaults (uppercase, 0.06em
+// letter-spacing, weight 600) are deliberately overridden here.
 .moderation-button {
-  border-radius: 4px;
-  padding: 4px 8px;
+  border-radius: var(--theme-radius-sm);
+  padding: var(--theme-space-xs) var(--theme-space-sm);
   font-family: var(--theme-font-body);
   font-size: 0.75rem;
   font-weight: 500;

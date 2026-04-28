@@ -169,7 +169,13 @@ export const logManager = {
         return `<span style="color: ${p?.color || 'white'}">${p?.name || 'Player'}</span>`;
       });
 
-    msg = `${'&nbsp;'.repeat((logEntry.depth ?? 0) * 3)}${msg}`;
+    // Server emits root entries (turn headers) at depth 0 and the chain's main
+    // actions at depth 1 (rootLog calls enter() after sending). Subtracting 1
+    // before computing indent collapses depth 0 and depth 1 to the same column,
+    // so a turn header and the main actions of that turn share an indent and
+    // sub-actions step in by one level.
+    const indentLevels = Math.max(0, (logEntry.depth ?? 0) - 1);
+    msg = `${'&nbsp;'.repeat(indentLevels * 3)}${msg}`;
 
     if (logEntry.source) {
       const sourceCard = cardsById[logEntry.source];

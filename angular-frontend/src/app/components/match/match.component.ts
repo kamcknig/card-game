@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ViewChild,
   effect,
   inject,
   OnDestroy,
@@ -19,6 +20,8 @@ import { MatchPlayerAreaComponent } from './player-area/match-player-area.compon
 import { MatchNonSupplyComponent } from './non-supply/match-non-supply.component';
 import { PileSelectionActionComponent } from './pile-selection/pile-selection-action.component';
 import { MatchHudComponent } from './match-hud/match-hud.component';
+import { MatchScorePanelComponent } from './match-hud/match-score-panel.component';
+import { MatchHudAsideComponent } from './match-hud/match-hud-aside.component';
 import { matchStartedStore } from '../../state/match-state';
 import { selfPlayerIdStore } from '../../state/player-state';
 import { CardImagePreloadService } from '../../core/card-image-preload.service';
@@ -35,8 +38,11 @@ import { CardImagePreloadService } from '../../core/card-image-preload.service';
     MatchNonSupplyComponent,
     PileSelectionActionComponent,
     MatchHudComponent,
+    MatchScorePanelComponent,
+    MatchHudAsideComponent,
   ],
   templateUrl: './match.component.html',
+  styleUrl: './match.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MatchComponent implements OnDestroy {
@@ -46,11 +52,11 @@ export class MatchComponent implements OnDestroy {
   private readonly _nanoStores = inject(NanostoresService);
   private readonly _imagePreload = inject(CardImagePreloadService);
 
+  /** Reference to the HUD component so resign requests from the aside can open its dialog. */
+  @ViewChild(MatchHudComponent) private readonly _hud?: MatchHudComponent;
+
   /** Non-Angular controller managing game interaction and socket coordination. */
   readonly matchScene = signal<MatchScene | undefined>(undefined);
-
-  /** Passed to match sub-components for layout-aware score view positioning. */
-  readonly scoreViewRect = signal<{ x: number; y: number; width: number; height: number } | null>(null);
 
   readonly matchStarted = toSignal(this._nanoStores.useStore(matchStartedStore), { initialValue: false });
 
@@ -97,10 +103,15 @@ export class MatchComponent implements OnDestroy {
     this.matchScene.set(scene);
   }
 
-  /** Relays score view resize events to sub-components and the match controller. */
-  onScoreViewResize(rect: { x: number; y: number; width: number; height: number }): void {
-    this.scoreViewRect.set(rect);
-    this.matchScene()?.setScoreViewRect(rect);
+  /**
+   * Relays resign requests from MatchHudAsideComponent to MatchHudComponent.
+   *
+   * The aside emits `resignRequested` when the user clicks the resign button.
+   * MatchHudComponent owns the resign confirmation dialog and remains the
+   * authoritative handler for the resign flow.
+   */
+  onResignRequested(): void {
+    this._hud?.requestResign();
   }
 
   /** Relays HUD next-phase actions to the active match controller. */

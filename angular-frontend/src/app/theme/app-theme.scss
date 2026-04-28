@@ -6,9 +6,11 @@
 
 :root {
   /* ─── Typography ─── */
-  --theme-font-display: 'Cinzel', Georgia, serif;
+  // App-wide sans-serif. The display token aliases body so legacy usages
+  // resolve to the same family; new code can use either token.
   --theme-font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --theme-font-accent: 'Lora', Georgia, serif;
+  --theme-font-display: var(--theme-font-body);
+  --theme-font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
   /* Text roles */
   --theme-text-primary: #2a241a;
@@ -24,11 +26,23 @@
   --theme-color-source-default: #ffffff;
   --theme-color-source-treasure: #fdda56;
   --theme-color-source-victory: #8efb49;
-  --theme-color-source-curse: #d45ffb;
+  --theme-color-source-curse: #8c45c0;
   --theme-color-source-duration: #ff8d34;
-  --theme-color-source-event: #ffe0a8;
-  --theme-color-source-landmark: #ffd09d;
-  --theme-color-source-project: #b6f1ad;
+  --theme-color-source-night: #5a5a5a;
+  --theme-color-source-attack: #c47a7a;
+  --theme-color-source-reaction: #6a8ac4;
+  --theme-color-source-potion: #5fb8c7;
+  --theme-color-source-event: #b8b8b8;
+
+  /* Status bar — aliases the semantic source colors so the stat chips can
+     evolve independently of card-type theming if needed. */
+  --theme-color-stat-actions: var(--theme-color-source-attack);
+  --theme-color-stat-treasure: var(--theme-color-source-treasure);
+  --theme-color-stat-buys: var(--theme-color-source-reaction);
+  /* Phase header accent — cyan, distinct from any stat color */
+  --theme-color-phase: #5fc7d4;
+  --theme-color-source-landmark: #4a7c4a;
+  --theme-color-source-project: #d4839f;
   --theme-color-way: #9fc6ff;
   --theme-color-source-boon: #a4f0ff;
   --theme-color-source-hex: #f2a9ff;
@@ -67,6 +81,15 @@
 
   /* Accent roles */
   --theme-accent-gold: #8b6f47;
+  /* Soft tint of accent-gold used for active filter-chip backgrounds. */
+  --theme-accent-gold-soft: rgba(139, 111, 71, 0.15);
+
+  /* Game state interaction colors. Drawn over card art, so values stay
+     constant across themes — they communicate selection state, not chrome. */
+  --theme-color-selectable: #eed598;
+  --theme-color-selected: #6dff8c;
+  --theme-color-way-selectable: rgba(0, 213, 255, 0.9);
+  --theme-color-selected-glow: rgba(0, 213, 255, 0.35);
 
   /* Status roles */
   --theme-color-ready: #2e7d32;
@@ -84,6 +107,31 @@
   --card-small-height: 150px;
   --card-landscape-width: 280px;
   --card-landscape-height: 124px;
+
+  /* ─── Spacing ─── */
+  --theme-space-2xs: 2px;
+  --theme-space-xs: 4px;
+  --theme-space-sm: 8px;
+  --theme-space-md: 12px;
+  --theme-space-lg: 16px;
+  --theme-space-xl: 20px;
+  --theme-space-2xl: 24px;
+  --theme-space-3xl: 32px;
+  --theme-space-4xl: 40px;
+  --theme-space-5xl: 48px;
+
+  /* ─── Border Radii ─── */
+  --theme-radius-sm: 4px;
+  --theme-radius-md: 6px;
+  --theme-radius-lg: 8px;
+  --theme-radius-pill: 10px;
+  --theme-radius-xl: 12px;
+
+  /* ─── Shadows ─── */
+  --theme-shadow-none: none;
+  --theme-shadow-low: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --theme-shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.15);
+  --theme-shadow-high: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
 /* ─── Dark theme overrides ─── */
@@ -100,8 +148,17 @@
   --theme-color-source-default: #f0e8dc;
   --theme-color-source-treasure: #e6c54a;
   --theme-color-source-victory: #6fa84a;
-  --theme-color-source-curse: #b054d4;
+  --theme-color-source-curse: #7e3eac;
   --theme-color-source-duration: #d97a2c;
+  --theme-color-source-attack: #b06a6a;
+  --theme-color-source-reaction: #5a7ab4;
+  --theme-color-source-potion: #4a9fad;
+
+  /* Status bar — dark theme overrides */
+  --theme-color-stat-actions: var(--theme-color-source-attack);
+  --theme-color-stat-treasure: var(--theme-color-source-treasure);
+  --theme-color-stat-buys: var(--theme-color-source-reaction);
+  --theme-color-phase: #4ab0bd;
   --theme-color-winner: #e6c54a;
 
   --theme-surface-app-start: #1a1714;
@@ -121,6 +178,7 @@
   --theme-border-danger: #c45a42;
 
   --theme-accent-gold: #c9a84c;
+  --theme-accent-gold-soft: rgba(201, 168, 76, 0.15);
 
   --theme-action-secondary-bg: #2c2620;
   --theme-action-nav-selected-bg: #4a3f32;
@@ -132,4 +190,7 @@
   --theme-text-disabled: #6b6153;
 
   --theme-color-ready: var(--theme-color-source-victory);
+
+  /* ─── Shadows (dark) ─── */
+  --theme-shadow-high: 0 12px 48px rgba(0, 0, 0, 0.5);
 }

@@ -2,9 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input } from '@an
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
 import { cardStore } from '../../state/card-state';
-import { CardFacing, CardId, Match, TokenDefinition, TokenId, TokenInstance } from 'shared/types';
-import { NgOptimizedImage } from '@angular/common';
-import { CARD_WIDTH } from '../../core/app-contants';
+import { Card, CardFacing, CardId, CardNoId, CardType, Match, TokenDefinition, TokenId, TokenInstance } from 'shared/types';
 import { CardSize } from '../../../types';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { selfPlayerIdStore } from '../../state/player-state';
@@ -19,11 +17,44 @@ type CardTokenBadge = {
   color: string;
 };
 
+// Card type → CSS source-color custom property used for the type bar
+// gradient and the cost-badge / value accent colors. Only the six visually
+// distinct types below contribute to the bar; anything else (ACTION,
+// ATTACK, COMMAND, etc.) is ignored when building the gradient and falls
+// through to the default (white) source color for the accent.
+const CARD_TYPE_COLOR_VAR: Partial<Record<CardType, string>> = {
+  DURATION: 'var(--theme-color-source-duration)',
+  REACTION: 'var(--theme-color-source-reaction)',
+  NIGHT: 'var(--theme-color-source-night)',
+  VICTORY: 'var(--theme-color-source-victory)',
+  TREASURE: 'var(--theme-color-source-treasure)',
+  CURSE: 'var(--theme-color-source-curse)',
+};
+
+// Hardcoded treasure values for the basic treasure piles. Other treasure cards
+// use variable / conditional values (e.g. Bank, Crown), so we only display the
+// large value indicator when the value is unambiguous.
+const FIXED_TREASURE_VALUES: Record<string, number> = {
+  copper: 1,
+  silver: 2,
+  gold: 3,
+  platinum: 5,
+};
+
+/**
+ * Render context for the card. Drives hover behaviour:
+ * - 'default' — subtle scale-up on hover (used in supply, play area, modals)
+ * - 'hand'    — card lifts on hover, signalling it is the player's own and
+ *               ready to be played
+ */
+export type CardRenderContext = 'default' | 'hand';
+
 @Component({
   selector: 'app-card',
-  imports: [
-    NgOptimizedImage
-  ],
+  imports: [],
+  host: {
+    '[attr.data-context]': 'context()',
+  },
   templateUrl: './card.component.html',
   styleUrl: './card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -34,52 +65,153 @@ export class CardComponent {
   private readonly _nanoStores = inject(NanostoresService);
   private readonly _sanitizer = inject(DomSanitizer);
 
-  cardId = input.required<CardId>();
+  // Either pass `cardId` (resolved against cardStore — the in-match flow) or
+  // pass a full card object via `cardData` (used on surfaces that render
+  // pre-match data, e.g. the match configuration screen, where cards exist
+  // as pre-selected templates without a runtime id yet).
+  cardId = input<CardId | undefined>(undefined);
+  cardData = input<Card | CardNoId | undefined>(undefined);
   size = input<CardSize>('full');
   // Optional override to force a card to render face up/down regardless of ownership.
   forceFacing = input<CardFacing | undefined>(undefined);
+  // When false, the structured cost badge inside the card is suppressed. Parent
+  // surfaces (supply piles, non-supply piles) that already render their own
+  // multi-currency cost overlay set this to false to avoid double-display.
+  showCost = input<boolean>(true);
+  // Context drives hover behaviour — see CardRenderContext.
+  context = input<CardRenderContext>('default');
+  // Optional pile/group count rendered as a top-right pill badge when greater
+  // than 1. Parents that group identical cards (e.g. hand groups, deck stacks)
+  // pass the group size; surfaces with no count semantics leave this 0.
+  count = input<number>(0);
 
   private readonly _cards = toSignal(this._nanoStores.useStore(cardStore), { initialValue: cardStore.get() });
   private readonly _selfPlayerId = toSignal(this._nanoStores.useStore(selfPlayerIdStore), { initialValue: selfPlayerIdStore.get() });
   private readonly _match = toSignal(this._nanoStores.useStore(matchStore));
   private readonly _tokenDefinitions = toSignal(this._nanoStores.useStore(tokenDefinitionStore), { initialValue: tokenDefinitionStore.get() });
 
-  // Active card model for this component instance.
-  readonly card = computed(() => this._cards()?.[this.cardId()]);
-  // Detail image path for right-click detail modal.
-  readonly detailPath = computed(() => this.card()?.detailImagePath);
+  // Active card model for this component instance — prefers the directly
+  // supplied cardData (pre-match surfaces), falling back to the
+  // cardStore lookup keyed by cardId (in-match surfaces).
+  readonly card = computed(() => {
+    const data = this.cardData();
+    if (data) return data;
+    const id = this.cardId();
+    if (id === undefined) return undefined;
+    return this._cards()?.[id];
+  });
 
-  // Sanitized card image URL resolved from ownership/facing.
+  // True when the card should render face down (opponent-owned + face: 'back',
+  // or an explicit forceFacing='back' override).
+  readonly isFaceDown = computed<boolean>(() => {
+    const card = this.card();
+    if (!card) return false;
+    const forced = this.forceFacing();
+    const effectiveFacing = forced ?? card.facing ?? 'front';
+    if (forced) return forced === 'back';
+    if (card.owner === this._selfPlayerId()) return false;
+    return effectiveFacing === 'back';
+  });
+
+  // Sanitized image URL — full card art when face up, card-back image when face down.
   readonly path = computed<SafeUrl | undefined>(() => {
     const card = this.card();
     if (!card) return undefined;
 
     const size = this.size();
-    const forcedFacing = this.forceFacing();
-    const effectiveFacing = forcedFacing ?? card.facing ?? 'front';
-    let path = '';
-
-    if (forcedFacing) {
-      // Force the facing when requested (e.g. trash previews for all players).
-      path = effectiveFacing === 'back'
-        ? `/assets/card-images/base-v2/${size}-size/card-back.jpg`
-        : size === 'half' ? card.halfImagePath : size === 'full' ? card.fullImagePath : card.detailImagePath;
+    if (this.isFaceDown()) {
+      return this._sanitizer.bypassSecurityTrustUrl(
+        `/assets/card-images/base-v2/${size}-size/card-back.jpg`,
+      );
     }
-    else if (card.owner === this._selfPlayerId()) {
-      path = size === 'half' ? card.halfImagePath : size === 'full' ? card.fullImagePath : card.detailImagePath;
-    }
-    else {
-      path = effectiveFacing === 'back'
-        ? `/assets/card-images/base-v2/${size}-size/card-back.jpg`
-        : size === 'half' ? card.halfImagePath : size === 'full' ? card.fullImagePath : card.detailImagePath;
-    }
-
+    const path = size === 'half' ? card.halfImagePath
+      : size === 'full' ? card.fullImagePath
+      : card.detailImagePath;
     return this._sanitizer.bypassSecurityTrustUrl(path);
   });
 
-  // Token badges to display on top of the card image.
+  // Detail image path for right-click detail modal.
+  readonly detailPath = computed(() => this.card()?.detailImagePath);
+
+  // Treasure cost shown in the circular badge.
+  readonly treasureCost = computed<number>(() => this.card()?.cost?.treasure ?? 0);
+
+  // Optional potion cost (Alchemy expansion). Rendered as a small chip next
+  // to the main cost badge when present.
+  readonly potionCost = computed<number>(() => this.card()?.cost?.potion ?? 0);
+
+  // Optional debt cost (Empires expansion). Rendered as a small chip next to
+  // the main cost badge when present.
+  readonly debtCost = computed<number>(() => this.card()?.cost?.debt ?? 0);
+
+  // The card's primary type drives the badge / value accent color and is the
+  // first segment of the type bar gradient.
+  readonly primaryType = computed<CardType | undefined>(() => this.card()?.type?.[0]);
+
+  // CSS color for the cost badge border and the value indicator — derived from
+  // the card's primary type so a Treasure shows gold, a Victory shows green, etc.
+  readonly accentColor = computed<string>(() => {
+    const type = this.primaryType();
+    if (!type) return 'var(--theme-color-source-default)';
+    return CARD_TYPE_COLOR_VAR[type] ?? 'var(--theme-color-source-default)';
+  });
+
+  // Linear gradient (or solid color) for the type bar at the bottom of the card.
+  // Only the six types listed in CARD_TYPE_COLOR_VAR (DURATION, REACTION,
+  // NIGHT, VICTORY, TREASURE, CURSE) contribute. Cards with no qualifying
+  // type render a solid white bar; multi-typed cards render a left-to-right
+  // gradient with one stop per qualifying type, in card-defined order.
+  //
+  // The Curse card itself is mis-typed as VICTORY in the card library, so
+  // we override it to render the CURSE color instead of green.
+  readonly typeBarBackground = computed<string>(() => {
+    const card = this.card();
+    if (card?.cardKey === 'curse') {
+      return CARD_TYPE_COLOR_VAR.CURSE ?? 'var(--theme-color-source-default)';
+    }
+    const types = (card?.type ?? []).filter((type) => type in CARD_TYPE_COLOR_VAR);
+    if (types.length === 0) {
+      return 'var(--theme-color-source-default)';
+    }
+    if (types.length === 1) {
+      return CARD_TYPE_COLOR_VAR[types[0]] ?? 'var(--theme-color-source-default)';
+    }
+    const stops = types
+      .map((type, index) => {
+        const color = CARD_TYPE_COLOR_VAR[type] ?? 'var(--theme-color-source-default)';
+        const percent = Math.round((index / (types.length - 1)) * 100);
+        return `${color} ${percent}%`;
+      })
+      .join(', ');
+    return `linear-gradient(90deg, ${stops})`;
+  });
+
+  // The large centered number shown between the name and the type bar.
+  // Populated for cards with an unambiguous numeric value: VP for victory and
+  // curse cards, fixed treasure values for the basic treasure piles.
+  readonly displayValue = computed<number | null>(() => {
+    const card = this.card();
+    if (!card) return null;
+    if (card.type.includes('VICTORY') && card.victoryPoints !== undefined && card.victoryPoints !== 0) {
+      return card.victoryPoints;
+    }
+    if (card.type.includes('CURSE') && card.victoryPoints !== undefined && card.victoryPoints !== 0) {
+      return card.victoryPoints;
+    }
+    const fixedTreasure = FIXED_TREASURE_VALUES[card.cardKey];
+    if (card.type.includes('TREASURE') && fixedTreasure !== undefined) {
+      return fixedTreasure;
+    }
+    return null;
+  });
+
+  // Token badges to display on top of the card image. Pre-match surfaces
+  // (cardData passed without a runtime cardId) never have tokens, so we
+  // skip the lookup entirely when no id is available.
   readonly tokenBadges = computed<CardTokenBadge[]>(() => {
-    return this.buildTokenBadges(this._match() ?? null, this._tokenDefinitions(), this.cardId());
+    const cardId = this.cardId();
+    if (cardId === undefined) return [];
+    return this.buildTokenBadges(this._match() ?? null, this._tokenDefinitions(), cardId);
   });
 
   // Token size mirrors pile badges: smaller for half-sized cards.
@@ -95,10 +227,7 @@ export class CardComponent {
       return;
     }
 
-    const forcedFacing = this.forceFacing();
-    const effectiveFacing = forcedFacing ?? card.facing ?? 'front';
-    const displayedFacing = card.owner === this._selfPlayerId() && !forcedFacing ? 'front' : effectiveFacing;
-    const detailImagePath = displayedFacing === 'back'
+    const detailImagePath = this.isFaceDown()
       ? CardComponent.CARD_BACK_DETAIL_IMAGE_PATH
       : card.detailImagePath;
 
@@ -136,5 +265,4 @@ export class CardComponent {
       .sort((a, b) => a.id.localeCompare(b.id));
   }
 
-  protected readonly CARD_WIDTH = CARD_WIDTH;
 }

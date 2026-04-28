@@ -41,5 +41,5 @@ app-scene-banner {
 
 .scene-content-body::-webkit-scrollbar-thumb {
   background-color: var(--theme-border-strong);
-  border-radius: 8px;
+  border-radius: var(--theme-radius-lg);
 }

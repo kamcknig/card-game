@@ -23,13 +23,6 @@ import {
   pileSelectionOverlayStore
 } from '../../../../state/pile-selection-overlay-state';
 
-type RectLike = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-};
-
 export class MatchScene {
   private _cleanup: (() => void)[] = [];
   private _selecting: boolean = false;
@@ -38,9 +31,6 @@ export class MatchScene {
 
   private get uiInteractive(): boolean {
     return !this._selecting && !this._selectingPiles && !awaitingServerLockReleaseStore.get();
-  }
-
-  public setScoreViewRect(_rect: RectLike): void {
   }
 
   constructor(

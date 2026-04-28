@@ -1,6 +1,4 @@
 <div class="score-panel">
-  @let victoryTokenCounts = victoryTokens();
-
   <div class="player-scores-container">
     @for (playerScore of orderedPlayerScores(); track playerScore.id) {
         @let isCurrentPlayer = currentPlayerTurnId() === playerScore.id;
@@ -20,22 +18,7 @@
 
           <div class="player-main">
             <span class="player-name">{{ playerScore.name }}</span>
-
-            <div class="score-cluster">
-              <span class="score-value">{{ playerScore.score }}</span>
-              <div class="victory-token-wrap">
-                <img
-                  class="victory-token-icon"
-                  ngSrc="/assets/ui-icons/victory-shield.png"
-                  width="24"
-                  height="24"
-                  alt="victory point token"
-                >
-                @if ((victoryTokenCounts[playerScore.id] ?? 0) > 0) {
-                  <span class="victory-token-count">{{ victoryTokenCounts[playerScore.id] ?? 0 }}</span>
-                }
-              </div>
-            </div>
+            <span class="score-value">{{ playerScore.score }} VP</span>
           </div>
         </div>
     }

@@ -1,7 +1,7 @@
 .prompt-select-content {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--theme-space-md);
   max-width: min(1180px, calc(100vw - 120px));
   position: relative;
 }
@@ -9,21 +9,21 @@
 .selection-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--theme-space-sm);
   max-height: min(480px, calc(100vh - 360px));
   overflow: auto;
-  padding: 2px;
+  padding: var(--theme-space-2xs);
 }
 
 .card-like-row {
   border-top: 1px solid var(--theme-border-strong);
-  padding-top: 10px;
+  padding-top: var(--theme-space-md);
 }
 
 .selection-entry {
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: var(--theme-radius-md);
   padding: 0;
   cursor: default;
   transform: translateY(0);
@@ -41,7 +41,7 @@
 .selection-entry.selected {
   transform: translateY(-10px);
   border-color: var(--theme-border-action);
-  box-shadow: 0 0 0 1px rgba(0, 213, 255, 0.35);
+  box-shadow: 0 0 0 1px var(--theme-color-selected-glow);
 }
 
 .selection-entry.non-selectable {
@@ -53,11 +53,11 @@
   z-index: 6;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--theme-space-sm);
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-medium));
   border: 1px solid var(--theme-border-action);
-  border-radius: 6px;
-  padding: 6px;
+  border-radius: var(--theme-radius-md);
+  padding: var(--theme-space-sm);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
   width: 220px;
   box-sizing: border-box;
@@ -66,7 +66,7 @@
 .way-picker-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--theme-space-sm);
   max-height: 320px;
   overflow: auto;
 }
@@ -74,7 +74,7 @@
 .way-entry {
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: var(--theme-radius-md);
   padding: 0;
   cursor: pointer;
   display: block;
@@ -86,5 +86,5 @@
 
 .way-entry.selected-way {
   border-color: var(--theme-border-action);
-  box-shadow: 0 0 0 1px rgba(0, 213, 255, 0.35);
+  box-shadow: 0 0 0 1px var(--theme-color-selected-glow);
 }

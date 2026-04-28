@@ -1,43 +1,34 @@
 @use '../cost-overlay-shared';
 
+// Host participates in the column 2 flex flow. Stretches the full column
+// width so the row divider above it (added by the column-level rule)
+// reaches the column borders on both sides; the inner grid still wraps
+// landscape cards naturally on the left.
 :host {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
+  display: block;
 }
 
-.landscape-overlay-root {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-}
-
+// Landscapes sit directly on the unified match-screen background — no
+// per-panel chrome.
 .landscape-panel {
-  position: fixed;
-  // Reactive top: kingdom_top(10) + kingdom_height(R×160+12) + gap(20) = R×160+42.
-  // Uses a 20px gap (double standard) so the landscape visually reads as separated from
-  // the dense kingdom panel above. --kingdom-row-count is set on the host by the component class.
-  top: calc(var(--kingdom-row-count, 2) * 160px + 42px);
-  border: 1px solid var(--theme-border-strong);
-  border-radius: 6px;
-  background: rgba(0, 0, 0, var(--theme-overlay-alpha-medium));
-  padding: 10px;
   box-sizing: border-box;
   pointer-events: none;
 }
 
+// Flex-wrap so landscape cards flow left-to-right and wrap to the next row
+// whenever the container is too narrow to fit the next card. Fixed-width
+// landscape entries keep each card sized at --card-landscape-width regardless
+// of the available space.
 .landscape-grid {
-  --landscape-columns: 1;
-  display: grid;
-  grid-template-columns: repeat(var(--landscape-columns), var(--card-landscape-width));
-  column-gap: 10px;
-  row-gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--theme-space-md);
 }
 
 .landscape-entry {
   position: relative;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--theme-radius-md);
   background: transparent;
   padding: 0;
   margin: 0;
@@ -51,7 +42,7 @@
   position: absolute;
   inset: -3px;
   border: 3px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--theme-radius-lg);
   pointer-events: none;
 }
 
@@ -60,11 +51,11 @@
 }
 
 .landscape-entry.selectable-card::after {
-  border-color: #ffaaaa;
+  border-color: var(--theme-color-selectable);
 }
 
 .landscape-entry.selected-card::after {
-  border-color: #6dff8c;
+  border-color: var(--theme-color-selected);
 }
 
 // Cost overlay positioned at top-left for landscape entries (events/projects).
@@ -74,7 +65,7 @@
   top: 5px;
   display: flex;
   align-items: flex-start;
-  gap: 3px;
+  gap: var(--theme-space-xs);
   pointer-events: none;
 }
 
@@ -86,27 +77,31 @@
   left: 8px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--theme-space-xs);
   pointer-events: none;
 }
 
 .cube-token-row {
   display: flex;
-  gap: 6px;
+  gap: var(--theme-space-sm);
 }
 
+// Game-art piece: physical cube token — black border is intentional
+// fixed game art, not theme chrome.
 .cube-token {
   width: 16px;
   height: 16px;
   border: 1px solid #111111;
-  border-radius: 2px;
+  border-radius: var(--theme-radius-sm);
 }
+
 
 .sinister-badge-row {
   display: flex;
-  gap: 6px;
+  gap: var(--theme-space-sm);
 }
 
+// Game-art piece: black-on-pile sinister-plot badge — fixed game art.
 .sinister-badge {
   min-width: 16px;
   height: 16px;
@@ -136,6 +131,7 @@
   object-fit: contain;
 }
 
+// Sun token number drawn on the sun art — color tracks the artwork.
 .sun-token-overlay span {
   position: absolute;
   inset: 0;

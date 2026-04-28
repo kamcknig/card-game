@@ -7,15 +7,15 @@
   cursor: pointer;
   font-size: 13px;
   color: var(--theme-text-primary);
-  padding: 6px 18px 6px 12px;
+  padding: var(--theme-space-sm) var(--theme-space-xl) var(--theme-space-sm) var(--theme-space-md);
   background: var(--theme-action-secondary-bg);
   border: 1px solid var(--theme-border-strong);
-  border-radius: 9px 0 0 9px;
+  border-radius: var(--theme-radius-lg) 0 0 var(--theme-radius-lg);
   border-right: none;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 10px;
+  gap: var(--theme-space-md);
   margin-right: calc(-1 * var(--tab-slide-distance));
   transform: translateX(0);
   transition:
@@ -46,7 +46,7 @@
   .badge-count {
     min-width: 28px;
     text-align: center;
-    padding: 3px 6px;
+    padding: var(--theme-space-xs) var(--theme-space-sm);
     border-radius: 999px;
     background: var(--theme-surface-count-badge);
     color: var(--theme-text-primary);

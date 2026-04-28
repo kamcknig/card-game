@@ -1,13 +1,14 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  HostListener,
+  ElementRef,
   computed,
   effect,
   inject,
   input,
   output,
-  signal
+  signal,
+  viewChild
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
@@ -20,17 +21,13 @@ import {
   CardId,
   CardLikeId,
   CardType,
-  Match,
   PlayerId,
-  TokenDefinition,
-  TokenId,
   TokenInstance
 } from 'shared/types';
 import { cardStore } from '../../../state/card-state';
 import { cardSourceStore } from '../../../state/card-source-store';
 import { matchStore } from '../../../state/match-state';
 import { selfPlayerIdStore } from '../../../state/player-state';
-import { kingdomSupplies } from '../../../state/match-logic';
 import { tokenDefinitionStore } from '../../../state/token-definition-state';
 import { selectableCardStore, waySelectableCardStore } from '../../../state/interactive-logic';
 import {
@@ -47,22 +44,10 @@ import {
   turnPhaseStore
 } from '../../../state/turn-state';
 import { cofferStore, debtStore, villagerStore } from '../../../state/resource-logic';
-import { CARD_HEIGHT, CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
-import {
-  SUPPLY_BASIC_PANEL_WIDTH_PX,
-  SUPPLY_PANEL_GAP_PX
-} from '../supply/supply-layout.constants';
-import { getLandscapePanelHeightPx } from '../landscapes/landscape-layout.constants';
-import { CountBadgeComponent } from '../count-badge/count-badge.component';
+import { CARD_WIDTH } from '../../../core/app-contants';
+import { SUPPLY_PANEL_GAP_PX } from '../supply/supply-layout.constants';
 import { TokenImageBadgeComponent } from '../token-image-badge/token-image-badge.component';
 import { getTokenImagePath, getTokenShortLabel } from '../views/token-utils';
-
-type RectLike = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-};
 
 type CardEntryViewModel = {
   trackKey: string;
@@ -121,40 +106,15 @@ const VICTORY_TOKEN_ID = 'prosperity:victory';
 const WAY_PICKER_PANEL_WIDTH_PX = 220;
 const WAY_PICKER_EDGE_OVERLAP_PX = 5;
 
-// Width of the HUD game log panel (fixed after resize removal).
-const HUD_LOG_PANEL_WIDTH_PX = 300;
-// Right margin of the HUD log stack from the viewport edge.
-const HUD_LOG_RIGHT_MARGIN_PX = 10;
-
-// Bottom-row layout constants — must be kept in sync with match-player-area.component.scss.
-// Stack panel: DECK/DISCARD label (~24px) + card (240px) = 264px.
-const STACK_PANEL_HEIGHT_PX = 24 + CARD_HEIGHT;
-// Hand panel base (no token trays): 20px padding + 2px border + 8px hand-row margin + 12px card padding + 240px card.
-const HAND_PANEL_BASE_HEIGHT_PX = 20 + 2 + 8 + 12 + CARD_HEIGHT;
-// Each visible token tray group adds: 8px margin-top + 18px label + 4px margin-bottom + 24px tray height.
-const HAND_PANEL_PER_TRAY_PX = 54;
-// Phase-status bar (ACTIONS/TREASURE/BUYS) sits above the hand panel: ~38px.
-const PHASE_STATUS_BAR_HEIGHT_PX = 38;
-// Player bottom row sits 10px above the viewport bottom edge.
-const PLAYER_BOTTOM_ROW_OFFSET_PX = 10;
-
 @Component({
   selector: 'app-match-player-area',
   imports: [
     CardComponent,
-    CountBadgeComponent,
     TokenImageBadgeComponent,
   ],
   templateUrl: './match-player-area.component.html',
   styleUrl: './match-player-area.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: {
-    // Drives play-area-panel top positioning in CSS via calc().
-    '[style.--kingdom-row-count]': 'kingdomRowCount()',
-    // Combined offset (landscape actual height + 2px border + 10px gap) added to the base
-    // top formula; 0 when no landscapes so the base formula alone provides the correct gap.
-    '[style.--landscape-display-height]': '_landscapeDisplayHeightCss()',
-  },
 })
 export class MatchPlayerAreaComponent {
   private readonly _nanoStores = inject(NanostoresService);
@@ -162,16 +122,10 @@ export class MatchPlayerAreaComponent {
   private readonly _wayPickerOverlay = inject(WayPickerOverlayService);
   private readonly _promptDialogCoordinator = inject(PromptDialogCoordinatorService);
 
-  scoreRect = input<RectLike | null>(null);
   visible = input(false);
 
   nextPhaseRequested = output<void>();
   playAllTreasuresRequested = output<void>();
-
-  private readonly _viewport = signal({
-    width: window.innerWidth,
-    height: window.innerHeight,
-  });
 
   private readonly _cardsById = toSignal(this._nanoStores.useStore(cardStore), {
     initialValue: cardStore.get(),
@@ -249,38 +203,6 @@ export class MatchPlayerAreaComponent {
     initialValue: debtStore.get(),
   });
 
-  // Reactive kingdom row count — set on the host so CSS can compute play-area-panel top.
-  private readonly _kingdomSupplies = toSignal(this._nanoStores.useStore(kingdomSupplies), {
-    initialValue: kingdomSupplies.get(),
-  });
-
-  readonly kingdomRowCount = computed(() => Math.max(2, Math.ceil((this._kingdomSupplies()?.length ?? 10) / 5)));
-
-  // Landscape display offset for the CSS top formula.
-  // When a landscape is present: the landscape top sits 20px below the kingdom bottom
-  // (R×160+42), so this offset equals: (landscape height + 2px border) + 10px gap below
-  // landscape + 10px extra for the wider kingdom-to-landscape gap = raw + 22.
-  // When no landscape: 0 — the base formula (R×160+32) already provides a 10px gap from kingdom.
-  private readonly _landscapeDisplayHeight = computed(() => {
-    const raw = getLandscapePanelHeightPx(this.countLandscapes(this._match()));
-    if (raw === 0) return 0;
-    return raw + 2 + (SUPPLY_PANEL_GAP_PX * 2);
-  });
-  readonly _landscapeDisplayHeightCss = computed(() => `${this._landscapeDisplayHeight()}px`);
-
-  // Dynamically computed bottom reserve so the play area ends with a standard gap above
-  // the phase-status bar, accounting for however many token tray groups are currently visible.
-  private readonly _playerBottomReservePx = computed(() => {
-    const trayGroups = (
-      (this.availableCubeTokens().length > 0 || this.availableTokenBadges().length > 0) ? 1 : 0
-    ) + (this.activeTokenBadges().length > 0 ? 1 : 0);
-
-    const handPanelHeight = HAND_PANEL_BASE_HEIGHT_PX + trayGroups * HAND_PANEL_PER_TRAY_PX;
-    const rowHeight = Math.max(STACK_PANEL_HEIGHT_PX, handPanelHeight);
-
-    return PLAYER_BOTTOM_ROW_OFFSET_PX + rowHeight + PHASE_STATUS_BAR_HEIGHT_PX + SUPPLY_PANEL_GAP_PX;
-  });
-
   private readonly _showCofferControls = signal(false);
   private readonly _showVillagerControls = signal(false);
   private readonly _showDebtControls = signal(false);
@@ -288,30 +210,56 @@ export class MatchPlayerAreaComponent {
   private readonly _villagerSpendAmount = signal(0);
   private readonly _debtPayAmount = signal(0);
 
-  /** Computes absolute positioning boundaries for the play area panel and hand layout. */
+  // Hand panel element — observed via ResizeObserver so the compact-mode
+  // toggle below tracks the actual rendered width rather than a fixed
+  // viewport-derived heuristic.
+  private readonly _handPanelEl = viewChild<ElementRef<HTMLElement>>('handPanel');
+  private readonly _handPanelWidth = signal(0);
+
+  // Mirrors the .hand-cards SCSS rules — gap and side padding both resolve
+  // to var(--theme-space-md) (12px). Used when computing whether the current
+  // hand fits the panel without overlap.
+  private static readonly HAND_CARDS_GAP_PX = 12;
+  private static readonly HAND_CARDS_HORIZONTAL_PADDING_PX = 12 * 2;
+
+  // Wires a ResizeObserver to the hand-panel element so the compact-mode
+  // signal recomputes whenever the panel changes width (viewport resize,
+  // sibling deck/discard layout shifts, etc).
+  private readonly _handPanelObserverEffect = effect((onCleanup) => {
+    const ref = this._handPanelEl();
+    if (!ref) {
+      this._handPanelWidth.set(0);
+      return;
+    }
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        this._handPanelWidth.set(entry.contentRect.width);
+      }
+    });
+    observer.observe(ref.nativeElement);
+    onCleanup(() => observer.disconnect());
+  });
+
+  /**
+   * Computes whether the hand should switch to overlap (compact) mode.
+   *
+   * `handCompact` activates the negative-margin overlap style only when the
+   * current hand can't fit at natural gap inside the measured panel width —
+   * so a 5-card hand stays spaced even on narrow viewports, and an
+   * overflowing hand collapses to overlap regardless of viewport size.
+   * Falls back to the viewport width before the first ResizeObserver tick
+   * so initial render still gets a sensible value.
+   */
   readonly layout = computed(() => {
-    const rect = this.scoreRect();
-    const viewport = this._viewport();
-    const gap = SUPPLY_PANEL_GAP_PX;
-
-    // Left edge: right of the basic supply panel with margin.
-    const basicLeft = gap;
-    const playAreaLeft = Math.max(
-      (rect?.x ?? 0) + (rect?.width ?? 0),
-      basicLeft + SUPPLY_BASIC_PANEL_WIDTH_PX
-    ) + gap;
-
-    // Right edge: left of the HUD log stack.
-    const playAreaRight = HUD_LOG_RIGHT_MARGIN_PX + HUD_LOG_PANEL_WIDTH_PX + gap;
-
-    // Top edge is handled by CSS via --kingdom-row-count and --landscape-display-height.
-    return {
-      playAreaLeft,
-      playAreaRight,
-      playAreaBottom: this._playerBottomReservePx(),
-      handMaxWidth: Math.max(460, viewport.width - (CARD_WIDTH * 2 + STANDARD_GAP * 8)),
-      handCompact: viewport.width < 1680,
-    };
+    const handCount = this.handGroups().length;
+    const handPanelWidth = this._handPanelWidth();
+    const required =
+      handCount * CARD_WIDTH
+      + Math.max(0, handCount - 1) * MatchPlayerAreaComponent.HAND_CARDS_GAP_PX
+      + MatchPlayerAreaComponent.HAND_CARDS_HORIZONTAL_PADDING_PX;
+    const handCompact = handPanelWidth > 0 && required > handPanelWidth;
+    return { handCompact };
   });
 
   readonly handGroups = computed(() => {
@@ -442,6 +390,43 @@ export class MatchPlayerAreaComponent {
     }
   });
 
+  // Public accessor for the current turn phase — used by the phase-status-bar
+  // template to drive stat highlighting and phase labels.
+  readonly turnPhase = this._turnPhase;
+
+  // Display label for the phase header rendered above the stat chips.
+  readonly phaseLabel = computed(() => {
+    const phase = this._turnPhase();
+    switch (phase) {
+      case 'action': return 'ACTION PHASE';
+      case 'buy': return 'BUY PHASE';
+      case 'night': return 'NIGHT PHASE';
+      case 'cleanup': return 'CLEANUP PHASE';
+      default: return '';
+    }
+  });
+
+  // Italic narrator-voice tip rendered below the stat chips. Surfaces the
+  // most actionable next step given the current phase + resource state.
+  readonly phaseTip = computed(() => {
+    const phase = this._turnPhase();
+    const r = this.resourceState();
+    switch (phase) {
+      case 'action':
+        return r.actions > 0 ? 'Play action cards now' : 'No actions left — end actions to buy';
+      case 'buy':
+        if (r.buys === 0) return 'No buys left — end your turn';
+        if (r.treasure === 0) return 'Play treasures or buy cards';
+        return 'Buy cards or end your turn';
+      case 'night':
+        return 'Play night cards or end your turn';
+      case 'cleanup':
+        return 'Cleaning up your turn';
+      default:
+        return '';
+    }
+  });
+
   // Whether the play-all-treasures shortcut should appear.
   readonly showPlayAllTreasures = computed(() => {
     if (!this.canUseTurnActions() || this._turnPhase() !== 'buy') {
@@ -560,14 +545,6 @@ export class MatchPlayerAreaComponent {
       this._showDebtControls.set(false);
     }
   });
-
-  @HostListener('window:resize')
-  onWindowResize(): void {
-    this._viewport.set({
-      width: window.innerWidth,
-      height: window.innerHeight,
-    });
-  }
 
   // Emits the next-phase request to parent for relay to the match controller.
   onNextPhaseRequested(): void {
@@ -844,19 +821,6 @@ export class MatchPlayerAreaComponent {
       return;
     }
     this._socketService.emit('payDebt', selfPlayerId, amount);
-  }
-
-  // Counts total landscape-type entries (events, landmarks, projects, ways, prophecies)
-  // used to compute how far down the play area panel should start.
-  private countLandscapes(match: Match | Readonly<Match> | null | undefined): number {
-    if (!match) {
-      return 0;
-    }
-    return (match.events?.length ?? 0)
-      + (match.landmarks?.length ?? 0)
-      + (match.projects?.length ?? 0)
-      + (match.ways?.length ?? 0)
-      + (match.prophecies?.length ?? 0);
   }
 
   private closeResourceControls(): void {

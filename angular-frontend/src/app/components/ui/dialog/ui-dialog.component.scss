@@ -20,7 +20,7 @@
 }
 
 .ui-dialog-shell {
-  padding: 12px;
+  padding: var(--theme-space-md);
   box-sizing: border-box;
 }
 
