@@ -4,8 +4,8 @@ $match-config-single-column-breakpoint: 940px;
 .match-config-content {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 24px;
+  gap: var(--theme-space-xl);
+  padding: var(--theme-space-2xl);
   font-family: var(--theme-font-body);
   color: var(--theme-text-primary);
   background: var(--theme-surface-panel);
@@ -22,13 +22,32 @@ $match-config-single-column-breakpoint: 940px;
 .leave-game-button {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--theme-space-sm);
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--theme-space-sm);
+}
+
+// Inline indicator showing which saved configuration is currently loaded.
+// Sits to the left of the Save/Load/Clear cluster as a quiet label so the
+// action buttons keep their visual weight.
+.loaded-config-label {
+  font-family: var(--theme-font-body);
+  font-size: 1.25rem;
+  color: var(--theme-text-secondary);
+  margin-right: var(--theme-space-xs);
+  max-width: 380px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loaded-config-label strong {
+  color: var(--theme-text-primary);
+  font-weight: 600;
 }
 
 // Secondary action buttons (expansion None/All, banned Select/Clear, Add Bot)
@@ -43,8 +62,8 @@ $match-config-single-column-breakpoint: 940px;
 .config-action-button {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
+  gap: var(--theme-space-xs);
+  padding: var(--theme-space-xs) var(--theme-space-md);
   font-family: var(--theme-font-body);
   font-size: 0.8rem;
   font-weight: 500;
@@ -53,7 +72,7 @@ $match-config-single-column-breakpoint: 940px;
 }
 
 .section-title {
-  margin: 0 0 16px;
+  margin: 0 0 var(--theme-space-lg);
   font-family: var(--theme-font-display);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -67,8 +86,8 @@ $match-config-single-column-breakpoint: 940px;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: var(--theme-space-sm);
+  margin-bottom: var(--theme-space-md);
 }
 
 .section-header-row .section-title {
@@ -79,19 +98,19 @@ $match-config-single-column-breakpoint: 940px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--theme-space-sm);
   margin-left: auto;
 }
 
 .section-inline-action-button {
-  padding: 4px 8px;
+  padding: var(--theme-space-xs) var(--theme-space-sm);
   font-size: 12px;
 }
 
 .config-section {
   border: 1px solid var(--theme-border-section-light);
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: var(--theme-radius-lg);
+  padding: var(--theme-space-md);
   box-sizing: border-box;
 }
 
@@ -99,23 +118,24 @@ $match-config-single-column-breakpoint: 940px;
   display: flex;
   align-items: flex-start;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: var(--theme-space-xl);
 }
 
 .kingdom-row {
   display: flex;
   align-items: flex-start;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: var(--theme-space-xl);
 }
 
 .card-like-row {
   display: flex;
   align-items: flex-start;
   flex-wrap: wrap;
-  gap: 20px;
-  // Cap card-like sections to 3 columns (Events/Landmarks/Artifacts/etc).
-  max-width: calc((var(--card-landscape-width) * 3) + (20px * 2));
+  gap: var(--theme-space-xl);
+  // Cap the row to four landscape sections wide (Events/Landmarks/Projects/
+  // Ways/etc.) before wrapping; narrower viewports wrap earlier via flex.
+  max-width: calc((var(--card-landscape-width) * 4) + (var(--theme-space-xl) * 3));
 }
 
 .card-likes-section {
@@ -162,19 +182,10 @@ $match-config-single-column-breakpoint: 940px;
   top: 0;
   left: 0;
   display: block;
-  width: 122px;
-  height: 122px;
-  border: 2px solid var(--theme-border-strong);
-  background: var(--theme-surface-card);
+  width: var(--card-width);
+  height: var(--card-small-height);
   // Stack cards with a positive Y offset for each subsequent card.
-  transform: translateY(calc(var(--banned-stack-index, 0) * 25px));
-
-  img {
-    display: block;
-    width: 122px;
-    height: 122px;
-    object-fit: cover;
-  }
+  transform: translateY(calc(var(--banned-stack-index, 0) * 32px));
 
   // Keep hidden until hover so the stack remains clean.
   .close-button {
@@ -190,20 +201,22 @@ $match-config-single-column-breakpoint: 940px;
 }
 
 .banned-card-list {
-  margin-top: 10px;
+  margin-top: var(--theme-space-md);
   // Cards are absolutely positioned to create a stacked/fanned pile.
   position: relative;
-  width: 122px;
-  min-height: 122px;
+  width: var(--card-width);
+  min-height: var(--card-small-height);
 }
 
 .kingdom-section .kingdom-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--theme-space-md);
   justify-content: flex-start;
-  // Cap kingdom list width so at most 5 cards render per row.
-  max-width: calc((122px * 5) + (10px * 4));
+  // Cap kingdom list width to fit exactly 5 cards plus 4 gaps. Tracks
+  // --card-width so the cap stays in sync with the in-match card size
+  // (now sourced from the shared <app-card> component).
+  max-width: calc((var(--card-width) * 5) + (var(--theme-space-md) * 4));
 }
 
 .kingdom-section .kingdom {
@@ -213,7 +226,10 @@ $match-config-single-column-breakpoint: 940px;
   align-items: center;
 }
 
-/* Card-like selection layout mirrors kingdom behavior and stays left-aligned. */
+/* Each card-like section stacks its selected cards vertically with a y-offset
+   overlap so multiple selections of the same type read as a fanned stack
+   rather than a wide row. The top ~40px of each card stays visible so the
+   card name and image header are recognizable in the cascade. */
 .events-section .events-list,
 .landmarks-section .landmarks-list,
 .artifacts-section .artifacts-list,
@@ -223,11 +239,38 @@ $match-config-single-column-breakpoint: 940px;
 .allies-section .allies-list,
 .prophecies-section .prophecies-list {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: flex-start;
-  // Cap card-like list width so at most 3 cards render per row.
-  max-width: calc((var(--card-landscape-width) * 3) + (10px * 2));
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: var(--card-landscape-width);
+}
+
+// Subsequent filled cards in the stack pull up over the previous one so
+// only the top strip of each earlier card is visible. Empty placeholder
+// slots (.is-empty) are excluded — the placeholder always sits fully
+// below the last filled card so it's clickable without being covered.
+// The 124px landscape height minus 40px peek = -84px overlap.
+.events-section .event-slot:not(.is-empty) + .event-slot:not(.is-empty),
+.landmarks-section .landmark-slot:not(.is-empty) + .landmark-slot:not(.is-empty),
+.artifacts-section .artifact-slot:not(.is-empty) + .artifact-slot:not(.is-empty),
+.projects-section .project-slot:not(.is-empty) + .project-slot:not(.is-empty),
+.ways-section .way-slot:not(.is-empty) + .way-slot:not(.is-empty),
+.traits-section .trait-slot:not(.is-empty) + .trait-slot:not(.is-empty),
+.allies-section .ally-slot:not(.is-empty) + .ally-slot:not(.is-empty),
+.prophecies-section .prophecy-slot:not(.is-empty) + .prophecy-slot:not(.is-empty) {
+  margin-top: -84px;
+}
+
+// Empty placeholder slot following any filled slot — keep a small gap so
+// the box visually separates from the cascade above it.
+.events-section .event-slot + .event-slot.is-empty,
+.landmarks-section .landmark-slot + .landmark-slot.is-empty,
+.artifacts-section .artifact-slot + .artifact-slot.is-empty,
+.projects-section .project-slot + .project-slot.is-empty,
+.ways-section .way-slot + .way-slot.is-empty,
+.traits-section .trait-slot + .trait-slot.is-empty,
+.allies-section .ally-slot + .ally-slot.is-empty,
+.prophecies-section .prophecy-slot + .prophecy-slot.is-empty {
+  margin-top: var(--theme-space-md);
 }
 
 .events-section .event-slot,
@@ -258,15 +301,15 @@ $match-config-single-column-breakpoint: 940px;
 .player-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: var(--theme-space-md);
+  margin-bottom: var(--theme-space-md);
 }
 
 .expansion-list {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-start;
-  gap: 10px;
+  gap: var(--theme-space-md);
   // Cap expansion icon list so at most 5 icons render per row.
   max-width: calc((50px * 5) + (10px * 4));
 }
@@ -323,7 +366,7 @@ $match-config-single-column-breakpoint: 940px;
   align-items: center;
   width: 50px;
   height: 50px;
-  gap: 16px;
+  gap: var(--theme-space-lg);
   cursor: pointer;             /* will become pointer when you add logic */
 }
 
@@ -333,12 +376,17 @@ $match-config-single-column-breakpoint: 940px;
 }
 
 .kingdom {
-  border: 2px solid var(--theme-border-strong);
-  width: 122px;
-  height: 122px;
+  position: relative;
+  width: var(--card-width);
+  height: var(--card-small-height);
 
   .no-kingdom {
     font-size: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
   }
 
   .close-button {
@@ -346,124 +394,81 @@ $match-config-single-column-breakpoint: 940px;
   }
 }
 
-/* Event slot styling mirrors kingdom slots */
-.event-slot {
+// Empty kingdom slot — bordered placeholder so it reads as a
+// "click to add" target, mirroring the empty landscape slot treatment.
+.kingdom:has(.no-kingdom) {
   border: 2px solid var(--theme-border-strong);
-  width: var(--card-landscape-width);
-  height: var(--card-landscape-height);
-
-  .no-event {
-    font-size: 32px;
-  }
-
-  .close-button {
-    font-size: 10px;
-  }
 }
 
-/* Landmark slot styling mirrors event slots */
-.landmark-slot {
-  border: 2px solid var(--theme-border-strong);
-  width: var(--card-landscape-width);
-  height: var(--card-landscape-height);
-
-  .no-landmark {
-    font-size: 32px;
-  }
-
-  .close-button {
-    font-size: 10px;
-  }
-}
-
-/* Artifact slot styling mirrors event slots */
-.artifact-slot {
-  border: 2px solid var(--theme-border-strong);
-  width: var(--card-landscape-width);
-  height: var(--card-landscape-height);
-
-  .no-artifact {
-    font-size: 32px;
-  }
-
-  .close-button {
-    font-size: 10px;
-  }
-}
-
-/* Project slot styling mirrors event slots */
-.project-slot {
-  border: 2px solid var(--theme-border-strong);
-  width: var(--card-landscape-width);
-  height: var(--card-landscape-height);
-
-  .no-project {
-    font-size: 32px;
-  }
-
-  .close-button {
-    font-size: 10px;
-  }
-}
-
-/* Way slot styling mirrors event slots */
-.way-slot {
-  border: 2px solid var(--theme-border-strong);
-  width: var(--card-landscape-width);
-  height: var(--card-landscape-height);
-
-  .no-way {
-    font-size: 32px;
-  }
-
-  .close-button {
-    font-size: 10px;
-  }
-}
-
-/* Ally slot styling mirrors event slots */
-.ally-slot {
-  border: 2px solid var(--theme-border-strong);
-  width: var(--card-landscape-width);
-  height: var(--card-landscape-height);
-
-  .no-ally {
-    font-size: 32px;
-  }
-
-  .close-button {
-    font-size: 10px;
-  }
-}
-
-/* Trait slot styling mirrors event slots */
-.trait-slot {
-  border: 2px solid var(--theme-border-strong);
-  width: var(--card-landscape-width);
-  height: var(--card-landscape-height);
-
-  .no-trait {
-    font-size: 32px;
-  }
-
-  .close-button {
-    font-size: 10px;
-  }
-}
-
-/* Prophecy slot styling mirrors event slots */
+/* Landscape slot — base layout shared across event/landmark/project/way/
+   trait/ally/prophecy/artifact slots. Filled slots intentionally have no
+   border so the card image is the entire visual; the empty placeholder
+   variant gets a border below to read as a "click to add" target. */
+.event-slot,
+.landmark-slot,
+.artifact-slot,
+.project-slot,
+.way-slot,
+.trait-slot,
+.ally-slot,
 .prophecy-slot {
-  border: 2px solid var(--theme-border-strong);
   width: var(--card-landscape-width);
   height: var(--card-landscape-height);
+}
 
-  .no-prophecy {
-    font-size: 32px;
-  }
+.event-slot .no-event,
+.landmark-slot .no-landmark,
+.artifact-slot .no-artifact,
+.project-slot .no-project,
+.way-slot .no-way,
+.trait-slot .no-trait,
+.ally-slot .no-ally,
+.prophecy-slot .no-prophecy {
+  font-size: 32px;
+}
 
-  .close-button {
-    font-size: 10px;
-  }
+// Empty placeholder slot — bordered box with a "?" inside that the owner
+// clicks to open the selection modal. Border only exists on the empty
+// variant so chosen cards display flush.
+.event-slot.is-empty,
+.landmark-slot.is-empty,
+.artifact-slot.is-empty,
+.project-slot.is-empty,
+.way-slot.is-empty,
+.trait-slot.is-empty,
+.ally-slot.is-empty,
+.prophecy-slot.is-empty {
+  border: 2px solid var(--theme-border-strong);
+}
+
+// Hover-reveal for the per-slot remove affordance — keep the row clean
+// until the owner hovers a chosen card; then surface the themed delete
+// badge (.close-button base style lives in styles.scss).
+.kingdom > .close-button,
+.event-slot > .close-button,
+.landmark-slot > .close-button,
+.artifact-slot > .close-button,
+.project-slot > .close-button,
+.way-slot > .close-button,
+.trait-slot > .close-button,
+.ally-slot > .close-button,
+.prophecy-slot > .close-button {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.kingdom:hover > .close-button,
+.event-slot:hover > .close-button,
+.landmark-slot:hover > .close-button,
+.artifact-slot:hover > .close-button,
+.project-slot:hover > .close-button,
+.way-slot:hover > .close-button,
+.trait-slot:hover > .close-button,
+.ally-slot:hover > .close-button,
+.prophecy-slot:hover > .close-button {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .disabled-add-slot {
@@ -472,7 +477,7 @@ $match-config-single-column-breakpoint: 940px;
 }
 
 .selection-helper {
-  margin: 8px 0 0;
+  margin: var(--theme-space-sm) 0 0;
   font-size: 12px;
   color: var(--theme-text-secondary);
 }
@@ -482,15 +487,15 @@ $match-config-single-column-breakpoint: 940px;
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 32px);
   overflow: auto;
-  padding: 16px;
-  border-radius: 8px;
+  padding: var(--theme-space-lg);
+  border-radius: var(--theme-radius-lg);
   border: 1px solid var(--theme-border-strong);
   background: var(--theme-surface-panel);
   color: var(--theme-text-primary);
 }
 
 .config-dialog h3 {
-  margin: 0 0 12px;
+  margin: 0 0 var(--theme-space-md);
   font-family: var(--theme-font-display);
   font-size: 1.1rem;
   font-weight: 600;
@@ -500,27 +505,27 @@ $match-config-single-column-breakpoint: 940px;
 .config-dialog-input {
   width: 100%;
   box-sizing: border-box;
-  padding: 8px 10px;
-  border-radius: 6px;
+  padding: var(--theme-space-sm) 10px;
+  border-radius: var(--theme-radius-md);
   border: 1px solid var(--theme-border-strong);
   background: var(--theme-surface-card);
   color: var(--theme-text-primary);
 }
 
 .config-dialog-meta {
-  margin-top: 8px;
+  margin-top: var(--theme-space-sm);
   color: var(--theme-text-secondary);
   font-size: 12px;
 }
 
 .config-dialog-warning {
-  margin-top: 8px;
+  margin-top: var(--theme-space-sm);
   color: var(--theme-border-danger);
   font-size: 12px;
 }
 
 .config-dialog-error {
-  margin-top: 8px;
+  margin-top: var(--theme-space-sm);
   color: var(--theme-border-danger);
   font-size: 12px;
 }
@@ -528,19 +533,19 @@ $match-config-single-column-breakpoint: 940px;
 .saved-config-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--theme-space-sm);
   max-height: 320px;
   overflow: auto;
-  padding: 2px;
+  padding: var(--theme-space-2xs);
 }
 
 .saved-config-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 6px 8px;
-  border-radius: 6px;
+  gap: var(--theme-space-md);
+  padding: var(--theme-space-sm);
+  border-radius: var(--theme-radius-md);
   border: 1px solid var(--theme-border-strong);
   background: var(--theme-surface-card);
 }
@@ -548,13 +553,13 @@ $match-config-single-column-breakpoint: 940px;
 .saved-config-choice {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--theme-space-sm);
   flex: 1;
   min-width: 0;
   width: 100%;
   border: 1px solid transparent;
-  border-radius: 5px;
-  padding: 6px 8px;
+  border-radius: var(--theme-radius-md);
+  padding: var(--theme-space-sm);
   background: transparent;
   color: var(--theme-text-primary);
   text-align: left;
@@ -586,10 +591,10 @@ $match-config-single-column-breakpoint: 940px;
 }
 
 .config-dialog-actions {
-  margin-top: 12px;
+  margin-top: var(--theme-space-md);
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--theme-space-sm);
 }
 
 // Save / Cancel dialog buttons use the shared `.btn .btn-primary` and

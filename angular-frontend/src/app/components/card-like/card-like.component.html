@@ -1,10 +1,44 @@
-<!-- Card-like art display with right-click detail. -->
-<div class="card-container" (contextmenu)="onContextMenu($event)">
-  <img
-    class="card-image"
-    [ngSrc]="path() ?? ''"
-    (error)="onImageError()"
-    [width]="imageWidth()"
-    height="20"
-  />
+<!-- Card-like display structured to match the portrait card pattern: art
+     window on top, card name below, kind-keyed accent strip at the bottom,
+     plus the optional cost cluster overlay. -->
+@let model = cardLike();
+<div
+  class="card-like-frame"
+  [style]="hostStyle()"
+  (contextmenu)="onContextMenu($event)"
+>
+  <div class="card-like-art">
+    <img
+      class="card-like-art-image"
+      [src]="path() ?? ''"
+      (error)="onImageError()"
+      alt=""
+    />
+  </div>
+
+  @if (showAccentStrip()) {
+    <div class="card-like-accent-strip">
+      @if (model) {
+        <span class="card-like-name" [title]="model.cardName">{{ model.cardName }}</span>
+      }
+    </div>
+  }
+
+  @if (showCost()) {
+    <div class="card-like-cost-cluster">
+      <div class="card-like-cost-badge">{{ treasureCost() }}</div>
+      @if (potionCost() > 0) {
+        <div class="card-like-cost-chip card-like-cost-chip-potion">
+          <img src="/assets/ui-icons/potion.png" alt="" />
+          @if (potionCost() > 1) { <span>{{ potionCost() }}</span> }
+        </div>
+      }
+      @if (debtCost() > 0) {
+        <div class="card-like-cost-chip">
+          <img src="/assets/ui-icons/debt-icon.png" alt="" />
+          <span>{{ debtCost() }}</span>
+        </div>
+      }
+    </div>
+  }
 </div>

@@ -12,6 +12,12 @@
   <!-- Right side of action bar: config actions -->
   <div sceneHeaderActions class="header-actions">
     @if (isGameOwner()) {
+      @let loadedName = loadedConfigurationName();
+      @if (loadedName) {
+        <span class="loaded-config-label" [title]="loadedName">
+          Configuration: <strong>{{ loadedName }}</strong>
+        </span>
+      }
       <button
         class="btn btn-secondary config-action-button"
         (click)="openSaveDialog()"
@@ -120,15 +126,14 @@
 
         <div class="banned-card-list" [style.height.px]="bannedKingdomStackHeight()">
           @for (bannedCard of bannedCards; track bannedCard.cardKey; let i = $index) {
-            <span class="banned-card-item" [style.--banned-stack-index]="i">
-              <img
-                alt="{{bannedCard.cardName}} image"
-                ngSrc="{{bannedCard.halfImagePath}}"
-                height="122"
-                width="122"
-              />
+            <span
+              class="banned-card-item"
+              [style.--banned-stack-index]="i"
+              (contextmenu)="onSlotContextMenu($event, bannedCard?.detailImagePath)"
+            >
+              <app-card [cardData]="bannedCard" [size]="'half'" [forceFacing]="'front'"></app-card>
               @if (isOwner) {
-                <span (click)="deleteBannedKingdom(bannedCard)" class="close-button">X</span>
+                <span (click)="deleteBannedKingdom(bannedCard)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></span>
               }
             </span>
           }
@@ -147,22 +152,16 @@
               class="kingdom"
               [ngStyle]="{'cursor': isOwner && kingdom === null ? 'pointer' : 'default'}"
               (click)="kingdom === null && isOwner ? openSelectionModal('kingdom') : null"
+              (contextmenu)="onSlotContextMenu($event, kingdom?.detailImagePath)"
             >
               @if (kingdom !== null && isOwner) {
-                <div (click)="deleteKingdom(kingdom)" class="close-button">X</div>
+                <div (click)="deleteKingdom(kingdom)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>
               }
-              <div>
-                @if (kingdom !== null) {
-                  <img
-                    alt="{{kingdom.cardName}} image"
-                    ngSrc="{{kingdom.halfImagePath}}"
-                    height="122"
-                    width="122"
-                  />
-                } @else {
-                  <span class="no-kingdom">?</span>
-                }
-              </div>
+              @if (kingdom !== null) {
+                <app-card [cardData]="kingdom" [size]="'half'" [forceFacing]="'front'"></app-card>
+              } @else {
+                <span class="no-kingdom">?</span>
+              }
             </div>
           }
         </div>
@@ -180,24 +179,19 @@
           @for (event of preSelectedEvents(); track event?.cardKey ?? $index) {
             <div
               class="event-slot"
+              [class.is-empty]="event === null"
               [ngStyle]="{'cursor': isOwner && event === null ? 'pointer' : 'default'}"
               (click)="event === null && isOwner ? openSelectionModal('events') : null"
+              (contextmenu)="onSlotContextMenu($event, event?.detailImagePath)"
             >
               @if (event !== null && isOwner) {
-                <div (click)="deleteEvent(event)" class="close-button">X</div>
+                <div (click)="deleteEvent(event)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>
               }
-              <div>
-                @if (event !== null) {
-                  <img
-                    alt="{{event.cardName}} image"
-                    ngSrc="{{event.fullImagePath}}"
-                    height="124"
-                    width="280"
-                  />
-                } @else {
-                  <span class="no-event">?</span>
-                }
-              </div>
+              @if (event !== null) {
+                <app-card-like [cardLikeData]="event" [kind]="'event'" [showCost]="true" [size]="'full'"></app-card-like>
+              } @else {
+                <span class="no-event">?</span>
+              }
             </div>
           }
         </div>
@@ -211,24 +205,19 @@
           @for (landmark of preSelectedLandmarks(); track landmark?.cardKey ?? $index) {
             <div
               class="landmark-slot"
+              [class.is-empty]="landmark === null"
               [ngStyle]="{'cursor': isOwner && landmark === null ? 'pointer' : 'default'}"
               (click)="landmark === null && isOwner ? openSelectionModal('landmarks') : null"
+              (contextmenu)="onSlotContextMenu($event, landmark?.detailImagePath)"
             >
               @if (landmark !== null && isOwner) {
-                <div (click)="deleteLandmark(landmark)" class="close-button">X</div>
+                <div (click)="deleteLandmark(landmark)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>
               }
-              <div>
-                @if (landmark !== null) {
-                  <img
-                    alt="{{landmark.cardName}} image"
-                    ngSrc="{{landmark.fullImagePath}}"
-                    height="124"
-                    width="280"
-                  />
-                } @else {
-                  <span class="no-landmark">?</span>
-                }
-              </div>
+              @if (landmark !== null) {
+                <app-card-like [cardLikeData]="landmark" [kind]="'landmark'" [size]="'full'"></app-card-like>
+              } @else {
+                <span class="no-landmark">?</span>
+              }
             </div>
           }
         </div>
@@ -242,24 +231,19 @@
           @for (project of preSelectedProjects(); track project?.cardKey ?? $index) {
             <div
               class="project-slot"
+              [class.is-empty]="project === null"
               [ngStyle]="{'cursor': isOwner && project === null ? 'pointer' : 'default'}"
               (click)="project === null && isOwner ? openSelectionModal('projects') : null"
+              (contextmenu)="onSlotContextMenu($event, project?.detailImagePath)"
             >
               @if (project !== null && isOwner) {
-                <div (click)="deleteProject(project)" class="close-button">X</div>
+                <div (click)="deleteProject(project)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>
               }
-              <div>
-                @if (project !== null) {
-                  <img
-                    alt="{{project.cardName}} image"
-                    ngSrc="{{project.fullImagePath}}"
-                    height="124"
-                    width="280"
-                  />
-                } @else {
-                  <span class="no-project">?</span>
-                }
-              </div>
+              @if (project !== null) {
+                <app-card-like [cardLikeData]="project" [kind]="'project'" [showCost]="true" [size]="'full'"></app-card-like>
+              } @else {
+                <span class="no-project">?</span>
+              }
             </div>
           }
         </div>
@@ -273,24 +257,19 @@
           @for (way of preSelectedWays(); track way?.cardKey ?? $index) {
             <div
               class="way-slot"
+              [class.is-empty]="way === null"
               [ngStyle]="{'cursor': isOwner && way === null ? 'pointer' : 'default'}"
               (click)="way === null && isOwner ? openSelectionModal('ways') : null"
+              (contextmenu)="onSlotContextMenu($event, way?.detailImagePath)"
             >
               @if (way !== null && isOwner) {
-                <div (click)="deleteWay(way)" class="close-button">X</div>
+                <div (click)="deleteWay(way)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>
               }
-              <div>
-                @if (way !== null) {
-                  <img
-                    alt="{{way.cardName}} image"
-                    ngSrc="{{way.fullImagePath}}"
-                    height="124"
-                    width="280"
-                  />
-                } @else {
-                  <span class="no-way">?</span>
-                }
-              </div>
+              @if (way !== null) {
+                <app-card-like [cardLikeData]="way" [kind]="'way'" [size]="'full'"></app-card-like>
+              } @else {
+                <span class="no-way">?</span>
+              }
             </div>
           }
         </div>
@@ -304,24 +283,19 @@
           @for (trait of preSelectedTraits(); track trait?.cardKey ?? $index) {
             <div
               class="trait-slot"
+              [class.is-empty]="trait === null"
               [ngStyle]="{'cursor': isOwner && trait === null ? 'pointer' : 'default'}"
               (click)="trait === null && isOwner ? openSelectionModal('traits') : null"
+              (contextmenu)="onSlotContextMenu($event, trait?.detailImagePath)"
             >
               @if (trait !== null && isOwner) {
-                <div (click)="deleteTrait(trait)" class="close-button">X</div>
+                <div (click)="deleteTrait(trait)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>
               }
-              <div>
-                @if (trait !== null) {
-                  <img
-                    alt="{{trait.cardName}} image"
-                    ngSrc="{{trait.fullImagePath}}"
-                    height="124"
-                    width="280"
-                  />
-                } @else {
-                  <span class="no-trait">?</span>
-                }
-              </div>
+              @if (trait !== null) {
+                <app-card-like [cardLikeData]="trait" [kind]="'trait'" [size]="'full'"></app-card-like>
+              } @else {
+                <span class="no-trait">?</span>
+              }
             </div>
           }
         </div>
@@ -336,27 +310,22 @@
           @for (ally of preSelectedAllies(); track ally?.cardKey ?? $index) {
             <div
               class="ally-slot"
+              [class.is-empty]="ally === null"
               [ngClass]="{'disabled-add-slot': ally === null && !canAddAllySelection}"
               [ngStyle]="{
                 'cursor': isOwner && ally === null ? (canAddAllySelection ? 'pointer' : 'not-allowed') : 'default'
               }"
               (click)="ally === null && isOwner && canAddAllySelection ? openSelectionModal('allies') : null"
+              (contextmenu)="onSlotContextMenu($event, ally?.detailImagePath)"
             >
               @if (ally !== null && isOwner) {
-                <div (click)="deleteAlly(ally)" class="close-button">X</div>
+                <div (click)="deleteAlly(ally)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>
               }
-              <div>
-                @if (ally !== null) {
-                  <img
-                    alt="{{ally.cardName}} image"
-                    ngSrc="{{ally.fullImagePath}}"
-                    height="124"
-                    width="280"
-                  />
-                } @else {
-                  <span class="no-ally">?</span>
-                }
-              </div>
+              @if (ally !== null) {
+                <app-card-like [cardLikeData]="ally" [kind]="'ally'" [size]="'full'"></app-card-like>
+              } @else {
+                <span class="no-ally">?</span>
+              }
             </div>
           }
         </div>
@@ -375,27 +344,22 @@
           @for (prophecy of preSelectedProphecies(); track prophecy?.cardKey ?? $index) {
             <div
               class="prophecy-slot"
+              [class.is-empty]="prophecy === null"
               [ngClass]="{'disabled-add-slot': prophecy === null && !canAddProphecySelection}"
               [ngStyle]="{
                 'cursor': isOwner && prophecy === null ? (canAddProphecySelection ? 'pointer' : 'not-allowed') : 'default'
               }"
               (click)="prophecy === null && isOwner && canAddProphecySelection ? openSelectionModal('prophecies') : null"
+              (contextmenu)="onSlotContextMenu($event, prophecy?.detailImagePath)"
             >
               @if (prophecy !== null && isOwner) {
-                <div (click)="deleteProphecy(prophecy)" class="close-button">X</div>
+                <div (click)="deleteProphecy(prophecy)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>
               }
-              <div>
-                @if (prophecy !== null) {
-                  <img
-                    alt="{{prophecy.cardName}} image"
-                    ngSrc="{{prophecy.fullImagePath}}"
-                    height="124"
-                    width="280"
-                  />
-                } @else {
-                  <span class="no-prophecy">?</span>
-                }
-              </div>
+              @if (prophecy !== null) {
+                <app-card-like [cardLikeData]="prophecy" [kind]="'prophecy'" [size]="'full'"></app-card-like>
+              } @else {
+                <span class="no-prophecy">?</span>
+              }
             </div>
           }
         </div>

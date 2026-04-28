@@ -4,7 +4,6 @@ import { NanostoresService } from '@nanostores/angular';
 import { Card, CardId, CardKey, CardLikeId, Match, PlayerId, TokenDefinition, TokenId, Trait } from 'shared/types';
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { CardComponent } from '../../card/card.component';
-import { CountBadgeComponent } from '../count-badge/count-badge.component';
 import { TokenImageBadgeComponent } from '../token-image-badge/token-image-badge.component';
 import { cardStore } from '../../../state/card-state';
 import { cardOverrideStore } from '../../../state/card-logic';
@@ -18,18 +17,7 @@ import { selectableCardStore, waySelectableCardStore } from '../../../state/inte
 import { getSupplyPileTokenVisualMap } from '../views/token-utils';
 import { displayCardDetail } from '../views/modal/display-card-detail';
 import { WayPickerOverlayService } from '../../../core/way-picker/way-picker-overlay.service';
-import {
-  SUPPLY_BASIC_PANEL_WIDTH_PX,
-  SUPPLY_KINGDOM_PANEL_WIDTH_PX,
-  SUPPLY_PANEL_GAP_PX
-} from '../supply/supply-layout.constants';
-
-type RectLike = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-};
+import { SUPPLY_PANEL_GAP_PX } from '../supply/supply-layout.constants';
 
 type NonSupplyTokenBadgeViewModel = {
   id: string;
@@ -101,7 +89,6 @@ const WAY_PICKER_EDGE_OVERLAP_PX = 5;
   selector: 'app-match-non-supply',
   imports: [
     CardComponent,
-    CountBadgeComponent,
     TokenImageBadgeComponent,
   ],
   templateUrl: './match-non-supply.component.html',
@@ -113,7 +100,6 @@ export class MatchNonSupplyComponent {
   private readonly _socketService = inject(SocketService);
   private readonly _wayPickerOverlay = inject(WayPickerOverlayService);
 
-  scoreRect = input<RectLike | null>(null);
   visible = input(false);
 
   private readonly _cardsById = toSignal(this._nanoStores.useStore(cardStore), {
@@ -167,16 +153,6 @@ export class MatchNonSupplyComponent {
 
   private readonly _promptInteractionLocked = toSignal(this._nanoStores.useStore(promptInteractionLockStore), {
     initialValue: promptInteractionLockStore.get(),
-  });
-
-  readonly panelLayout = computed(() => {
-    const rect = this.scoreRect();
-    const basicLeft = SUPPLY_PANEL_GAP_PX;
-    const kingdomLeft = Math.max((rect?.x ?? 0) + (rect?.width ?? 0), basicLeft + SUPPLY_BASIC_PANEL_WIDTH_PX) + SUPPLY_PANEL_GAP_PX;
-    return {
-      left: kingdomLeft + SUPPLY_KINGDOM_PANEL_WIDTH_PX + SUPPLY_PANEL_GAP_PX,
-      top: SUPPLY_PANEL_GAP_PX,
-    };
   });
 
   readonly pileSelectionModeActive = computed(() => (this._selectablePiles()?.length ?? 0) > 0);

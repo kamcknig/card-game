@@ -1,15 +1,67 @@
-<div class="card-container" [style]="'--token-size:' + tokenSizePx() + 'px'" (contextmenu)="onContextMenu($event)">
-  <img
-    class="card-image"
-    [ngSrc]="path() ?? ''"
-    width="{{CARD_WIDTH}}"
-    height="20"
-  />
-  <div class="token-container">
-    @for (badge of tokenBadges(); track badge.id) {
-      <div class="token-badge" [style.background]="badge.color">
-        <span class="token-text">{{ badge.label }}</span>
+@let cardModel = card();
+@if (cardModel) {
+  <div
+    class="card-frame"
+    [class.face-down]="isFaceDown()"
+    [class.size-half]="size() === 'half'"
+    [class.size-full]="size() === 'full'"
+    [style]="'--card-accent: ' + accentColor() + '; --card-token-size: ' + tokenSizePx() + 'px'"
+    (contextmenu)="onContextMenu($event)"
+  >
+    @if (isFaceDown()) {
+      <!-- Face-down: render the card-back image as the entire frame, no structure. -->
+      <img class="card-back-image" [src]="path() ?? ''" alt="" />
+    } @else {
+      <!-- Face-up: structured card built from DOM elements with the existing card image
+           used as the art swatch (cropped to the art window). -->
+      <div class="card-art">
+        <img class="card-art-image" [src]="path() ?? ''" alt="" />
       </div>
+
+      @let value = displayValue();
+      <div class="card-value-row">
+        @if (value !== null) {
+          <span class="card-value">{{ value }}</span>
+        }
+      </div>
+
+      <div class="card-type-bar" [style.background]="typeBarBackground()">
+        <span class="card-name" [title]="cardModel.cardName">{{ cardModel.cardName }}</span>
+      </div>
+
+      @if (showCost()) {
+        <div class="card-cost-cluster">
+          <div class="card-cost-badge">{{ treasureCost() }}</div>
+          @if (potionCost() > 0) {
+            <div class="card-cost-chip card-cost-chip-potion">
+              <img src="/assets/ui-icons/potion.png" alt="" />
+              @if (potionCost() > 1) { <span>{{ potionCost() }}</span> }
+            </div>
+          }
+          @if (debtCost() > 0) {
+            <div class="card-cost-chip">
+              <img src="/assets/ui-icons/debt-icon.png" alt="" />
+              <span>{{ debtCost() }}</span>
+            </div>
+          }
+        </div>
+      }
     }
+
+    <!-- Count badge — pile remaining count, hand-group size, or deck/discard
+         stack count. Parents pass 0 to suppress (e.g. single hand cards). -->
+    @if (count() > 0) {
+      <div class="card-count-badge">x{{ count() }}</div>
+    }
+
+    <!-- Token badges sit above the card art regardless of facing. Positioned
+         below the count badge when both are present. -->
+    <div class="token-container" [class.has-count]="count() > 0">
+      @for (badge of tokenBadges(); track badge.id) {
+        <div class="token-badge" [style.background]="badge.color">
+          <span class="token-text">{{ badge.label }}</span>
+        </div>
+      }
+    </div>
   </div>
-</div>
+}

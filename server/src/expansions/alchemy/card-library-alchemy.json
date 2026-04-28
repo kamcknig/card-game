@@ -4,7 +4,7 @@
       "treasure": 3,
       "potion": 1
     },
-    "type": ["TREASURE"]
+    "type": ["ACTION"]
   },
   "apothecary": {
     "cost": {

@@ -1,7 +1,7 @@
 .rearrange-content {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--theme-space-sm);
 }
 
 .rearrange-labels {
@@ -14,10 +14,10 @@
 
 .rearrange-list {
   display: flex;
-  gap: 8px;
+  gap: var(--theme-space-sm);
   max-width: min(1180px, calc(100vw - 140px));
   overflow: auto;
-  padding: 6px 2px;
+  padding: var(--theme-space-sm) var(--theme-space-2xs);
   min-height: 220px;
 }
 
@@ -31,7 +31,7 @@
 
 .cdk-drag-preview {
   box-sizing: border-box;
-  border-radius: 6px;
+  border-radius: var(--theme-radius-md);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
 }
 

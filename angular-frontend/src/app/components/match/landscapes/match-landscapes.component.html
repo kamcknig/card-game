@@ -1,78 +1,51 @@
 @if (visible() && hasLandscapes()) {
-  @let layout = panelLayout();
-  <div class="landscape-overlay-root">
-    <section
-      class="landscape-panel"
-      [style.left.px]="layout.left"
-    >
-      <div class="landscape-grid" [style.--landscape-columns]="columns()">
-        @for (landscape of landscapes(); track landscape.trackKey) {
-          <button
-            type="button"
-            class="landscape-entry"
-            [class.selectable-card]="landscape.selectable"
-            [class.selected-card]="landscape.selected"
-            (click)="onLandscapeClick(landscape, $event)"
-            (contextmenu)="onLandscapeContextMenu(landscape, $event)"
-          >
-            <app-card-like
-              [cardLikeId]="landscape.id"
-              [displayWidthPx]="landscapeCardWidthPx"
-            ></app-card-like>
+  <section class="landscape-panel">
+    <div class="landscape-grid">
+      @for (landscape of landscapes(); track landscape.trackKey) {
+        <button
+          type="button"
+          class="landscape-entry"
+          [class.selectable-card]="landscape.selectable"
+          [class.selected-card]="landscape.selected"
+          (click)="onLandscapeClick(landscape, $event)"
+          (contextmenu)="onLandscapeContextMenu(landscape, $event)"
+        >
+          <app-card-like
+            [cardLikeId]="landscape.id"
+            [kind]="landscape.kind"
+            [showCost]="landscape.showCost"
+            [displayWidthPx]="landscapeCardWidthPx"
+          ></app-card-like>
 
-            @if (landscape.showCost) {
-              <div class="cost-overlay">
-                <div class="cost-chip">
-                  <img src="/assets/ui-icons/coin.png" alt="" />
-                  <span>{{ landscape.treasureCost }}</span>
+          @if (landscape.cubeTokens.length > 0 || landscape.sinisterBadges.length > 0) {
+            <div class="project-token-overlay">
+              @if (landscape.cubeTokens.length > 0) {
+                <div class="cube-token-row">
+                  @for (cube of landscape.cubeTokens; track cube.id) {
+                    <div class="cube-token" [style.background]="cube.color"></div>
+                  }
                 </div>
-                @if (landscape.potionCost > 0) {
-                  <div class="cost-chip potion-cost">
-                    <img src="/assets/ui-icons/potion.png" alt="" />
-                    @if (landscape.potionCost > 1) {
-                      <span>{{ landscape.potionCost }}</span>
-                    }
-                  </div>
-                }
-                @if (landscape.debtCost > 0) {
-                  <div class="cost-chip">
-                    <img src="/assets/ui-icons/debt-icon.png" alt="" />
-                    <span>{{ landscape.debtCost }}</span>
-                  </div>
-                }
-              </div>
-            }
+              }
+              @if (landscape.sinisterBadges.length > 0) {
+                <div class="sinister-badge-row">
+                  @for (badge of landscape.sinisterBadges; track badge.id) {
+                    <div class="sinister-badge" [style.background]="badge.color">
+                      {{ badge.label }}
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
 
-            @if (landscape.cubeTokens.length > 0 || landscape.sinisterBadges.length > 0) {
-              <div class="project-token-overlay">
-                @if (landscape.cubeTokens.length > 0) {
-                  <div class="cube-token-row">
-                    @for (cube of landscape.cubeTokens; track cube.id) {
-                      <div class="cube-token" [style.background]="cube.color"></div>
-                    }
-                  </div>
-                }
-                @if (landscape.sinisterBadges.length > 0) {
-                  <div class="sinister-badge-row">
-                    @for (badge of landscape.sinisterBadges; track badge.id) {
-                      <div class="sinister-badge" [style.background]="badge.color">
-                        {{ badge.label }}
-                      </div>
-                    }
-                  </div>
-                }
-              </div>
-            }
-
-            @if (landscape.sunTokenCount > 0) {
-              <div class="sun-token-overlay">
-                <img src="/assets/ui-icons/sun-token-icon.png" alt="" />
-                <span>{{ landscape.sunTokenCount }}</span>
-              </div>
-            }
-          </button>
-        }
-      </div>
-    </section>
-  </div>
+          @if (landscape.sunTokenCount > 0) {
+            <div class="sun-token-overlay">
+              <img src="/assets/ui-icons/sun-token-icon.png" alt="" />
+              <span>{{ landscape.sunTokenCount }}</span>
+            </div>
+          }
+        </button>
+      }
+    </div>
+  </section>
 }

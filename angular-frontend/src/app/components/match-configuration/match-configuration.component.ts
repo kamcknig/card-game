@@ -50,7 +50,10 @@ import { SceneContentComponent } from '../scene-content/scene-content.component'
 import { UiDialogComponent } from '../ui/dialog/ui-dialog.component';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { compare } from 'fast-json-patch';
-import { FolderOpen, LogOut, LucideAngularModule, Save, Trash2 } from 'lucide-angular';
+import { FolderOpen, LogOut, LucideAngularModule, Save, Trash2, X } from 'lucide-angular';
+import { displayCardDetail } from '../match/views/modal/display-card-detail';
+import { CardComponent } from '../card/card.component';
+import { CardLikeComponent } from '../card-like/card-like.component';
 
 type SelectionModalKind =
   | 'bannedKingdom'
@@ -86,6 +89,8 @@ type SelectionModalState = {
     NgStyle,
     UiDialogComponent,
     LucideAngularModule,
+    CardComponent,
+    CardLikeComponent,
   ],
   templateUrl: './match-configuration.component.html',
   styleUrl: './match-configuration.component.scss',
@@ -97,6 +102,8 @@ export class MatchConfigurationComponent implements OnDestroy {
   readonly LoadIcon = FolderOpen;
   readonly ClearIcon = Trash2;
   readonly LeaveIcon = LogOut;
+  // Per-slot remove affordance shown on hover over a chosen card.
+  readonly RemoveIcon = X;
 
   private readonly _router = inject(Router);
   private readonly _nanoStoreService = inject(NanostoresService);
@@ -268,9 +275,16 @@ export class MatchConfigurationComponent implements OnDestroy {
   readonly preSelectedProphecies = computed(() => this.withTrailingEmptySlot(this.selectedProphecies()));
 
   // Banned-card stack height grows with card count for staggered overlap.
+  // Tracks the half-size card height and the stagger step from
+  // .banned-card-item in SCSS so the wrapper container is tall enough to
+  // contain the fanned stack.
+  private static readonly BANNED_CARD_HEIGHT_PX = 150;
+  private static readonly BANNED_CARD_STAGGER_PX = 32;
   readonly bannedKingdomStackHeight = computed(() => {
     const count = this.bannedKingdoms().length;
-    return count > 0 ? 122 + ((count - 1) * 25) : 122;
+    if (count < 1) return MatchConfigurationComponent.BANNED_CARD_HEIGHT_PX;
+    return MatchConfigurationComponent.BANNED_CARD_HEIGHT_PX
+      + (count - 1) * MatchConfigurationComponent.BANNED_CARD_STAGGER_PX;
   });
 
   constructor() {
@@ -438,6 +452,9 @@ export class MatchConfigurationComponent implements OnDestroy {
   }
 
   // Clears manually selected kingdom and landscape configuration fields.
+  // Also forgets which saved configuration was loaded — once the contents
+  // are wiped, it would be misleading to keep prefilling the save name or
+  // showing the loaded label in the header.
   clearConfiguration() {
     if (!this.isGameOwner() || !this.canClearConfiguration()) return;
     this.emitMatchConfigurationUpdate({
@@ -453,6 +470,7 @@ export class MatchConfigurationComponent implements OnDestroy {
       allies: [],
       prophecies: [],
     });
+    this.loadedConfigurationName.set(null);
   }
 
   // Closes the load-configuration dialog.
@@ -652,6 +670,19 @@ export class MatchConfigurationComponent implements OnDestroy {
     }
 
     this.closeSelectionModal();
+  }
+
+  // Right-click on a chosen slot — surface the full-screen detail view for
+  // the card if one is selected. Suppresses the browser's native context
+  // menu so the gesture is reserved for the in-app action; empty slots and
+  // missing detail paths are no-ops so the right-click on a "?" placeholder
+  // simply prevents the default menu without opening anything.
+  onSlotContextMenu(event: MouseEvent, detailImagePath: string | null | undefined): void {
+    event.preventDefault();
+    if (!detailImagePath) {
+      return;
+    }
+    void displayCardDetail({ detailImagePath });
   }
 
   // Removes one selected kingdom card from the fixed kingdom list.

@@ -1,25 +1,288 @@
-.card-image {
-  height: auto;
-}
+// Card component scaffold. Renders a structured DOM "card" using the existing
+// card art image as the art swatch (cropped to the art window), with CSS for
+// the cost badge, name, value, and type gradient bar.
 
-.card-container {
-  position: relative;
+:host {
   display: inline-block;
+  // Custom properties driven from the component class. Provide safe fallbacks so
+  // CSS continues to validate even when the template's inline style isn't set yet.
+  --card-accent: var(--theme-color-source-default);
+  --card-token-size: 28px;
+  // Hover treatment custom props — parents can override these to neutralise the
+  // type-color highlight (e.g. non-interactive stack cards). Default tracks the
+  // card's primary type accent.
+  --card-hover-border: var(--card-accent);
+  --card-hover-shadow: var(--card-accent);
 }
 
+.card-frame {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: var(--card-width);
+  border: 1px solid var(--theme-border-strong);
+  border-radius: var(--theme-radius-md);
+  background: var(--theme-surface-panel);
+  overflow: hidden;
+  box-sizing: border-box;
+  isolation: isolate;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.card-frame.size-half {
+  height: var(--card-small-height);
+}
+
+.card-frame.size-full {
+  height: var(--card-height);
+}
+
+// Hover styling — accent-tinted shadow + border. The scale transform lives on
+// the parent button (.supply-pile / .non-supply-pile / .board-card) so the
+// parent's selection ::before outline scales with the card and stays visible.
+// Hover colors come from the --card-hover-* custom props so parents can
+// neutralise them for non-interactive surfaces.
+.card-frame:hover {
+  border-color: var(--card-hover-border);
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--card-hover-shadow) 30%, transparent);
+}
+
+// Face-down cards must not reveal their type via the hover treatment — the
+// player can't see the card's identity, so the border and shadow stay neutral.
+.card-frame.face-down:hover {
+  --card-hover-border: var(--theme-border-strong);
+  --card-hover-shadow: transparent;
+}
+
+// Face-down: only the back image fills the frame; structural pieces are
+// suppressed by the template.
+.card-frame.face-down {
+  background: transparent;
+}
+
+.card-back-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+// Card art window. The existing card image is the source — object-fit covers
+// the window and object-position is shifted up so the printed card art (which
+// sits in the upper-middle of the source image) is what appears in the swatch.
+.card-art {
+  position: relative;
+  flex: 0 0 auto;
+  width: 100%;
+  height: 42%;
+  overflow: hidden;
+  background: #000;
+}
+
+.card-art-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 32%;
+  display: block;
+}
+
+// Card name rendered inline inside the type bar (gradient strip at the
+// bottom). Single-line and truncated with an ellipsis when the name is
+// longer than the card is wide; min-width: 0 lets the flex item shrink so
+// text-overflow can kick in.
+.card-name {
+  min-width: 0;
+  max-width: 100%;
+  font-family: var(--theme-font-body);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.1;
+  // Tight, opaque layered shadow — lower blur radius than before so the
+  // halo doesn't bleed across the bar, but every layer at full alpha so
+  // the name still pops against any gradient stop.
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 1),
+    0 0 2px rgba(0, 0, 0, 1),
+    0 0 1px rgba(0, 0, 0, 1);
+}
+
+// Spacer row that holds the optional value indicator. flex: 1 fills the gap
+// between name and type bar so layout works whether or not the value is shown.
+.card-value-row {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  min-height: 0;
+}
+
+.card-value {
+  font-family: var(--theme-font-display);
+  font-weight: 700;
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--card-accent);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+// Half-sized cards have less vertical room — shrink the value to fit the
+// compact frame.
+.card-frame.size-half .card-value {
+  font-size: 1.4rem;
+}
+
+// Type bar at the bottom of the card — a colored gradient strip (set inline
+// by the template) that hosts the card name as a centered label.
+.card-type-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0 var(--theme-space-xs);
+  overflow: hidden;
+}
+
+// Cluster anchored top-left holding the main cost badge plus optional potion
+// and debt chips next to it. Stacked horizontally so multi-currency costs
+// stay visible without crowding the card art.
+.card-cost-cluster {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+// Circular treasure cost badge. Border tracks the treasure source color
+// regardless of the card's primary type, since cost is always paid in coin.
+// Background mixes the treasure source color into the dark base so the chip
+// reads as a muted yellow coin without sacrificing white-text contrast.
+.card-cost-badge {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--theme-color-source-treasure) 35%, rgba(0, 0, 0, 0.85));
+  border: 1.5px solid var(--theme-color-source-treasure);
+  color: #ffffff;
+  font-family: var(--theme-font-display);
+  font-weight: 700;
+  font-size: 0.875rem;
+  line-height: 1;
+}
+
+// Smaller chip for potion / debt costs — positioned beside the main badge.
+// Renders the icon as a square background with the cost number overlaid.
+.card-cost-chip {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.card-cost-chip img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.card-cost-chip span {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--theme-font-display);
+  font-weight: 700;
+  font-size: 0.75rem;
+  // Black-on-coin / black-on-debt is fixed game art, not theme chrome.
+  color: #000000;
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.6);
+}
+
+// Potion cost — matches the treasure cost frame (dark circular background)
+// but with a blue border tracking the potion source color. Icon sits inside
+// the badge with the count (when > 1) overlaid in white for legibility.
+.card-cost-chip-potion {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1.5px solid var(--theme-color-source-potion);
+}
+
+.card-cost-chip-potion img {
+  width: 65%;
+  height: 65%;
+}
+
+.card-cost-chip-potion span {
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+
+// Count pill in the top-right corner. Shows "xN" for stacked groups of
+// identical cards (hand groups, deck stack) or pile remaining counts.
+// Background opacity matches the cost badges so all chrome reads consistent.
+.card-count-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid var(--theme-border-strong);
+  color: #ffffff;
+  font-family: var(--theme-font-body);
+  font-weight: 600;
+  font-size: 0.875rem;
+  line-height: 1;
+  z-index: 2;
+  pointer-events: none;
+}
+
+// Token badges container — reused from the previous card layout. Drops below
+// the count badge when both are present so the two stacks don't overlap.
 .token-container {
   position: absolute;
   top: 4px;
   right: 4px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--theme-space-2xs);
   pointer-events: none;
+  z-index: 2;
 }
 
+.token-container.has-count {
+  top: 28px;
+}
+
+// Game-art piece: black-on-white badge sits on the card image and reads as a
+// painted board-game token, so its colors are intentionally fixed across themes.
 .token-badge {
-  width: var(--token-size, 28px);
-  height: var(--token-size, 28px);
+  width: var(--card-token-size, 28px);
+  height: var(--card-token-size, 28px);
   border-radius: 999px;
   border: 2px solid #000000;
   display: flex;
@@ -27,7 +290,7 @@
   justify-content: center;
   color: #000000;
   font-weight: 600;
-  font-size: calc(var(--token-size, 28px) * 0.4);
+  font-size: calc(var(--card-token-size, 28px) * 0.4);
   box-sizing: border-box;
   background: #ffffff;
 }

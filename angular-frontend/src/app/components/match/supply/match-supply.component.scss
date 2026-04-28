@@ -1,42 +1,51 @@
 @use '../pile-shared' as pile;
 
+/* Component is a flow block; column layout in match.component positions it. */
 :host {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
+  display: block;
 }
 
-.supply-overlay-root {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-}
-
+// Supply rows sit directly on the unified match-screen background — no
+// per-panel chrome. Row dividers in the parent column provide separation.
 .supply-panel {
-  position: fixed;
-  border: 1px solid var(--theme-border-strong);
-  border-radius: 6px;
-  background: var(--theme-panel-bg);
-  padding: 10px;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .basic-columns {
   display: flex;
-  gap: 10px;
+  gap: var(--theme-space-md);
+  align-items: flex-start;
 }
 
 .pile-column {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--theme-space-md);
 }
 
+// Small uppercase label rendered above each labelled section in the basic
+// supply column (VICTORY / TREASURE / CURSE).
+.pile-section-label {
+  font-family: var(--theme-font-display);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--theme-text-tertiary);
+  font-weight: 600;
+  padding-left: var(--theme-space-2xs);
+}
+
+// Kingdom cards flow right-to-left, top-to-bottom (row-reverse), so the most
+// expensive pile sits at the top-right and cost descends leftward then wraps
+// to the next row. max-width caps the grid at 5 cards (5 × card width +
+// 4 × gap) so the layout stays at most 5 columns wide on any viewport;
+// narrower columns still wrap naturally via flex-wrap.
 .kingdom-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  column-gap: 32px;
-  row-gap: 10px;
+  display: flex;
+  flex-direction: row-reverse;
+  flex-wrap: wrap;
+  gap: var(--theme-space-md);
+  max-width: calc(5 * var(--card-width) + 4 * var(--theme-space-md));
 }
 
 .supply-pile {
@@ -44,7 +53,7 @@
   width: var(--card-width);
   min-height: var(--card-small-height);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--theme-radius-md);
   background: transparent;
   padding: 0;
   margin: 0;
@@ -52,6 +61,13 @@
   cursor: default;
   box-sizing: border-box;
   overflow: visible;
+  transition: transform 120ms ease;
+}
+
+// Scaling the parent button (instead of the card frame inside) keeps the
+// selectable ::before outline at inset: -3px aligned with the card on hover.
+.supply-pile:hover {
+  transform: scale(1.04);
 }
 
 .supply-pile::before {
@@ -59,7 +75,7 @@
   position: absolute;
   inset: -3px;
   border: 3px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--theme-radius-lg);
   pointer-events: none;
 }
 
@@ -70,7 +86,7 @@
 
 .supply-pile.selectable-card::before,
 .supply-pile.selectable-pile::before {
-  border-color: #ffaaaa;
+  border-color: var(--theme-color-selectable);
 }
 
 .supply-pile.selected-card,
@@ -80,11 +96,11 @@
 
 .supply-pile.selected-card::before,
 .supply-pile.selected-pile::before {
-  border-color: #6dff8c;
+  border-color: var(--theme-color-selected);
 }
 
 .supply-pile.way-selectable {
-  box-shadow: 0 0 0 2px rgba(0, 213, 255, 0.9);
+  box-shadow: 0 0 0 2px var(--theme-color-way-selectable);
 }
 
 @include pile.pile-decorations;

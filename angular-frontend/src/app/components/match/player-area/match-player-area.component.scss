@@ -1,30 +1,60 @@
+// Player-area host is a flex column inside column-2 of the match screen.
+// Three rows stack vertically: play area (grows), full-width phase status
+// bar, and the deck/hand/discard bottom row. The host owns its own row
+// dividers so they extend the full column width — the parent column-level
+// padding rule does not apply here (we override it).
 :host {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  // Override the column-level horizontal padding rule — inner sections
+  // each carry their own padding so dividers between them span the
+  // entire column width.
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
-.player-area-overlay-root {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
+// Each direct child fills the host width and carries the same horizontal
+// content padding as other column rows.
+:host > * {
+  padding-left: 10px;
+  padding-right: 10px;
+  box-sizing: border-box;
 }
 
+// Horizontal divider above each row except the first. With the host's
+// 10px gap, this places the line at the top of the row with breathing
+// room above (gap) and below (padding-top), centered between sections.
+:host > *:not(:first-child) {
+  border-top: 1px solid var(--theme-border-subtle);
+  padding-top: 10px;
+}
+
+// Play area sits on the unified match-screen background. The dashed
+// rounded border signals it as a "drop zone" for cards played this turn —
+// the only section that retains its own border by design. Grows to fill
+// the column's available vertical space, pushing the player bottom row
+// (deck / hand / discard) to the bottom of the column.
+//
+// margin-left/right inset the dashed-bordered box from the column borders
+// so the panel reads as a contained drop zone rather than a strip flush
+// with the column edges. The host-level padding rule (10px each side) is
+// neutralised here so the margin is the only horizontal inset.
 .play-area-panel {
-  position: absolute;
-  // Reactive top: kingdom_top(10) + kingdom_height(R×160+12) + standard_gap(10) = R×160+32.
-  // --landscape-display-height adds landscape actual height + 2px border + 10px gap when present (0 otherwise).
-  // Both CSS vars are set on the host by the component class.
-  top: calc(var(--kingdom-row-count, 2) * 160px + 32px + var(--landscape-display-height, 0px));
-  border: 1px solid var(--theme-border-strong);
-  border-radius: 6px;
-  background: var(--theme-panel-bg);
-  padding: 10px;
   box-sizing: border-box;
   pointer-events: auto;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex: 1 1 auto;
+  min-height: var(--card-height);
+  border: 1px dashed var(--theme-border-subtle);
+  border-radius: var(--theme-radius-md);
+  padding: var(--theme-space-md);
+  margin-left: 10px;
+  margin-right: 10px;
 }
 
 .play-area-header {
@@ -36,13 +66,13 @@
 
 .active-duration-button {
   border: 1px solid var(--theme-border-strong);
-  border-radius: 6px;
+  border-radius: var(--theme-radius-md);
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
   color: var(--theme-text-on-dark);
   font-family: var(--theme-font-body);
   font-size: 13px;
   font-weight: 600;
-  padding: 6px 10px;
+  padding: var(--theme-space-sm) var(--theme-space-md);
   cursor: pointer;
 }
 
@@ -50,16 +80,18 @@
   border-color: var(--theme-border-action);
 }
 
+// overflow is intentionally visible — cards scale 1.04 on hover and the
+// panel's padding gives the buffer; clipping here would cut off hovered cards.
+// flex-wrap: wrap handles row overflow when many cards are in play.
 .play-area-cards {
   flex: 1 1 auto;
   min-height: 0;
-  margin-top: 8px;
+  margin-top: var(--theme-space-sm);
   display: flex;
   align-items: flex-start;
   flex-wrap: wrap;
-  gap: 10px;
-  overflow: auto;
-  padding-bottom: 6px;
+  gap: var(--theme-space-md);
+  padding-bottom: var(--theme-space-sm);
 }
 
 .play-area-card {
@@ -70,15 +102,16 @@
   filter: saturate(0.4);
 }
 
+// Flow row — deck pinned to the left edge, discard pinned to the right edge,
+// hand panel fills the middle. The host-level horizontal padding (10px) gives
+// the deck and discard breathing room from the column borders so they don't
+// sit flush with them.
+// align-items: flex-end keeps the deck/discard cards aligned to the bottom of the hand shell.
 .player-bottom-row {
-  position: absolute;
-  bottom: 10px;
-  left: 0;
-  right: 0;
   display: flex;
   align-items: flex-end;
-  justify-content: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: var(--theme-space-md);
   pointer-events: none;
 }
 
@@ -101,25 +134,25 @@
   font-weight: 700;
   background: var(--theme-panel-bg);
   border: 1px solid var(--theme-border-strong);
-  padding: 4px 10px;
+  padding: var(--theme-space-xs) var(--theme-space-md);
 }
 
 // Label positioned above the stack card; bottom edge flush with the card top.
 .stack-label-top {
-  border-radius: 6px 6px 0 0;
+  border-radius: var(--theme-radius-md) var(--theme-radius-md) 0 0;
   border-bottom: none;
 }
 
 // Label positioned below the stack card; top edge flush with the card bottom.
 .stack-label-bottom {
-  border-radius: 0 0 6px 6px;
+  border-radius: 0 0 var(--theme-radius-md) var(--theme-radius-md);
   border-top: none;
 }
 
 .empty-stack {
   width: var(--card-width);
   height: var(--card-height);
-  border-radius: 4px;
+  border-radius: var(--theme-radius-sm);
   border: 1px solid var(--theme-border-strong);
   color: var(--theme-text-on-dark);
   background: rgba(0, 0, 0, 0.35);
@@ -129,65 +162,160 @@
   font-size: 12px;
 }
 
-.hand-panel-shell {
-  position: relative;
-  min-width: 460px;
-  max-width: 1120px;
-  pointer-events: none;
-}
-
+// Hand panel sits in the middle of .player-bottom-row alongside the deck and
+// discard stacks. flex: 1 fills the entire space between them so the deck and
+// discard can sit pinned to the left and right edges. Cards inside center
+// themselves and switch to overlap mode when they don't fit (driven by a
+// ResizeObserver-backed compact signal in the component class).
 .hand-panel {
-  border: 1px solid var(--theme-border-strong);
-  border-radius: 0 6px 6px 6px;
-  background: var(--theme-panel-bg);
-  padding: 10px;
   box-sizing: border-box;
   pointer-events: auto;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
+// Phase status bar — sibling of play-area-panel and player-bottom-row at the
+// player-area host level, so its top and bottom dividers extend the full
+// column width.
 .phase-status-bar {
-  position: absolute;
-  left: 0;
-  bottom: 100%;
-  border: 1px solid var(--theme-border-strong);
-  border-radius: 6px 6px 0 0;
-  background: var(--theme-panel-bg);
-  padding: 6px 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--theme-space-2xs);
   pointer-events: auto;
   max-width: 100%;
 }
 
-.phase-status-text {
+// Phase header — uppercase body sans-serif with a cyan accent so the player
+// always knows which phase they're in.
+.phase-label {
+  text-align: center;
+  font-family: var(--theme-font-body);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--theme-color-phase);
+  line-height: 1.4;
+}
+
+// Stats cluster and action cluster share the row centered as a single
+// group rather than being pushed to opposite edges, so the bar reads as
+// one cohesive unit instead of two separated halves.
+.phase-status-row {
   display: flex;
   align-items: center;
-  gap: 7px;
-  color: var(--theme-text-on-dark);
-  font-size: 17px;
-  font-weight: 700;
-  min-width: 0;
+  justify-content: center;
+  gap: var(--theme-space-md);
   flex-wrap: wrap;
 }
 
-.phase-status-text img {
-  width: 20px;
-  height: 20px;
+.phase-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--theme-space-sm);
+  flex-wrap: wrap;
+}
+
+// Pill chip rendering one stat — icon, value, and label inline.
+// line-height: 1 on the chip and its text children removes the extra
+// half-leading that browsers add by default, so glyphs of different sizes
+// (icon at 1rem, value at 0.875rem, label at 0.6875rem) sit on a common
+// optical center rather than shifting up or down by a few pixels.
+.phase-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--theme-space-xs);
+  padding: var(--theme-space-2xs) var(--theme-space-md);
+  border: 1px solid var(--theme-border-subtle);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-soft));
+  color: var(--theme-text-on-dark);
+  font-family: var(--theme-font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1;
+  // Each chip exposes --stat-color so depleted/active states can override
+  // a single token instead of duplicating per-stat rules.
+  --stat-color: var(--theme-text-tertiary);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    box-shadow 150ms ease;
+}
+
+.phase-stat-actions { --stat-color: var(--theme-color-stat-actions); }
+.phase-stat-treasure { --stat-color: var(--theme-color-stat-treasure); }
+.phase-stat-buys { --stat-color: var(--theme-color-stat-buys); }
+.phase-stat-potion { --stat-color: var(--theme-color-source-potion); }
+
+.phase-stat-icon {
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  color: var(--stat-color);
+}
+
+.phase-stat-icon-image {
+  width: 14px;
+  height: 14px;
   object-fit: contain;
+}
+
+.phase-stat-value {
+  font-weight: 700;
+  color: var(--stat-color);
+  min-width: 1ch;
+  text-align: center;
+  line-height: 1;
+}
+
+.phase-stat-label {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.6875rem;
+  color: var(--theme-text-tertiary);
+  line-height: 1;
+}
+
+// Depleted: zero value — icon and number drop to disabled grey.
+.phase-stat.depleted {
+  --stat-color: var(--theme-text-disabled);
+  opacity: var(--theme-action-disabled-opacity, 0.65);
+}
+
+// Phase-active: subtle tint background + colored border so the relevant
+// stats for the current phase pop. color-mix lets the tint track --stat-color
+// without per-stat alpha tokens.
+.phase-stat.phase-active {
+  border-color: color-mix(in srgb, var(--stat-color) 50%, var(--theme-border-subtle));
+  background: color-mix(in srgb, var(--stat-color) 12%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--stat-color) 25%, transparent);
 }
 
 .phase-status-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--theme-space-sm);
+  flex-wrap: wrap;
+}
+
+// Status bar tip — italic body sans-serif for a quiet hint.
+.phase-tip {
+  text-align: center;
+  font-family: var(--theme-font-body);
+  font-style: italic;
+  font-size: 0.9375rem;
+  color: var(--theme-text-tertiary);
+  line-height: 1.3;
 }
 
 .panel-button {
   border: 1px solid var(--theme-border-strong);
-  border-radius: 6px;
-  padding: 6px 10px;
+  border-radius: var(--theme-radius-md);
+  padding: var(--theme-space-sm) var(--theme-space-md);
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
   color: var(--theme-text-on-dark);
   font-family: var(--theme-font-body);
@@ -209,7 +337,7 @@
   width: 38px;
   height: 38px;
   border: 1px solid var(--theme-border-strong);
-  border-radius: 4px;
+  border-radius: var(--theme-radius-sm);
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
   padding: 0;
   cursor: pointer;
@@ -228,9 +356,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
+  color: var(--theme-text-on-dark);
   font-size: 17px;
   font-weight: 700;
+  // Drop shadow keeps the value readable over varied resource icon art.
   text-shadow: 0 0 3px #000000;
 }
 
@@ -240,10 +369,10 @@
   bottom: calc(100% + 6px);
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px;
+  gap: var(--theme-space-sm);
+  padding: var(--theme-space-sm);
   border: 1px solid var(--theme-border-strong);
-  border-radius: 6px;
+  border-radius: var(--theme-radius-md);
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
 }
 
@@ -251,7 +380,7 @@
   min-width: 30px;
   height: 30px;
   border: 1px solid var(--theme-border-strong);
-  border-radius: 4px;
+  border-radius: var(--theme-radius-sm);
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
   color: var(--theme-text-on-dark);
   font-family: var(--theme-font-body);
@@ -275,29 +404,32 @@
 }
 
 .token-tray-group {
-  margin-top: 8px;
+  margin-top: var(--theme-space-sm);
 }
 
 .token-tray-label {
   color: var(--theme-text-on-dark);
   font-size: 12px;
-  margin-bottom: 4px;
+  margin-bottom: var(--theme-space-xs);
 }
 
 .token-tray {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--theme-space-xs);
 }
 
+// Game-art piece: physical cube token — fixed game art, not theme chrome.
 .cube-token {
   width: 22px;
   height: 22px;
   border: 1px solid #111111;
-  border-radius: 2px;
+  border-radius: var(--theme-radius-sm);
 }
 
+// Game-art piece: black-on-white pill badge (e.g., token counts) —
+// fixed game art, not theme chrome.
 .token-badge {
   display: inline-flex;
   align-items: center;
@@ -309,9 +441,9 @@
   color: #000000;
   font-size: 10px;
   font-weight: 700;
-  padding: 0 4px;
+  padding: 0 var(--theme-space-xs);
   box-sizing: border-box;
-  gap: 3px;
+  gap: var(--theme-space-xs);
 }
 
 .token-badge span {
@@ -319,42 +451,34 @@
   font-weight: 700;
 }
 
-.hand-content-row {
-  margin-top: 8px;
-  display: flex;
-  align-items: center;
-  gap: 50px;
-}
-
+// overflow is intentionally visible — hand cards scale 1.05 on hover; the
+// extra side/bottom padding is the buffer that keeps the scaled card from
+// touching neighbouring elements (deck, discard). overflow-x: auto here
+// would trigger a scrollbar on hover and fight the scale; overflow-y: hidden
+// would clip vertical scale.
+//
+// justify-content: flex-start anchors the row to the left of the panel so
+// the leftmost hand card sits next to the deck (with the panel's left
+// padding providing the breathing room).
 .hand-cards {
-  flex: 1 1 auto;
-  min-width: 0;
+  margin-top: var(--theme-space-sm);
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 3px 3px 9px 3px;
+  justify-content: flex-start;
+  gap: var(--theme-space-md);
+  padding: var(--theme-space-sm) var(--theme-space-md) var(--theme-space-md) var(--theme-space-md);
 }
 
-.turn-actions {
-  flex: 0 0 auto;
-  align-self: start;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 8px;
-  min-width: 180px;
-}
-
+// PLAY ALL TREASURE / END BUYS / END ACTIONS buttons rendered inline at the
+// right end of the phase status bar.
 .turn-action-button {
   border: 1px solid var(--theme-border-strong);
-  border-radius: 8px;
-  padding: 10px 12px;
+  border-radius: var(--theme-radius-md);
+  padding: var(--theme-space-sm) var(--theme-space-md);
   color: var(--theme-text-on-dark);
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
-  font-family: var(--theme-font-display);
-  font-size: 16px;
+  font-family: var(--theme-font-body);
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -365,9 +489,20 @@
   border-color: var(--theme-border-action);
 }
 
+// Filled gold button — the treasure-themed primary CTA in the buy phase.
+// Uses --theme-accent-gold for the fill so the button reads as the
+// suggested next action; black text gives strong contrast on the gold
+// across both themes.
 .play-all-treasures-button {
-  border-color: var(--theme-border-strong);
-  color: #fff4e6;
+  background: var(--theme-accent-gold);
+  border-color: var(--theme-accent-gold);
+  color: var(--theme-overlay-color);
+  font-weight: 700;
+}
+
+.play-all-treasures-button:hover {
+  background: color-mix(in srgb, var(--theme-accent-gold) 88%, white);
+  border-color: color-mix(in srgb, var(--theme-accent-gold) 88%, white);
 }
 
 .hand-cards.compact {
@@ -385,7 +520,7 @@
 .board-card {
   position: relative;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--theme-radius-md);
   background: transparent;
   padding: 0;
   margin: 0;
@@ -393,6 +528,41 @@
   pointer-events: auto;
   box-sizing: border-box;
   isolation: isolate;
+  transition: transform 120ms ease;
+}
+
+// Scaling the parent (instead of the card frame inside) keeps the
+// selectable ::before outline aligned with the card on hover.
+.board-card:hover {
+  transform: scale(1.04);
+}
+
+// Hand cards scale a touch larger on hover to read as the player's own
+// cards. transform-origin keeps the scale centered so the card doesn't drift
+// upward.
+.hand-card-entry:hover {
+  transform: scale(1.05);
+}
+
+// Stack cards (deck, discard) only show the hover affordance when they are
+// currently interactive. The default :hover above would always scale and
+// highlight, suggesting the card is clickable when it isn't.
+.board-card.stack-card:hover {
+  transform: none;
+}
+
+.board-card.stack-card.selectable-card:hover,
+.board-card.stack-card.selectable-pile:hover,
+.board-card.stack-card.way-selectable:hover {
+  transform: scale(1.04);
+}
+
+// Non-interactive stack cards override the card-frame's hover treatment so
+// the type-color border / shadow stays neutral. The custom props cascade
+// into the encapsulated <app-card> via standard CSS inheritance.
+.board-card.stack-card:not(.selectable-card):not(.selectable-pile):not(.way-selectable) {
+  --card-hover-border: var(--theme-border-strong);
+  --card-hover-shadow: transparent;
 }
 
 .board-card::before {
@@ -400,7 +570,7 @@
   position: absolute;
   inset: -3px;
   border: 3px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--theme-radius-lg);
   pointer-events: none;
 }
 
@@ -409,15 +579,15 @@
 }
 
 .board-card.selectable-card::before {
-  border-color: #ffaaaa;
+  border-color: var(--theme-color-selectable);
 }
 
 .board-card.selected-card::before {
-  border-color: #6dff8c;
+  border-color: var(--theme-color-selected);
 }
 
 .board-card.way-selectable {
-  box-shadow: 0 0 0 2px rgba(0, 213, 255, 0.9);
+  box-shadow: 0 0 0 2px var(--theme-color-way-selectable);
 }
 
 // Count badge positioned at top-left of deck, discard, and hand group stacks.
@@ -433,10 +603,12 @@ app-count-badge {
   right: 4px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--theme-space-xs);
   pointer-events: none;
 }
 
+// Game-art piece: black-on-white pill badge over a stack image — fixed
+// game art, not theme chrome.
 .stack-token-badge {
   min-width: 24px;
   height: 24px;
@@ -447,6 +619,6 @@ app-count-badge {
   font-weight: 700;
   line-height: 20px;
   text-align: center;
-  padding: 0 4px;
+  padding: 0 var(--theme-space-xs);
   box-sizing: border-box;
 }

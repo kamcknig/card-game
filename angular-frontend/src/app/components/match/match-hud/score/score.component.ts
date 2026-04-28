@@ -2,17 +2,14 @@ import { ChangeDetectionStrategy, Component, computed, inject, input } from '@an
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
 import { currentPlayerTurnIdStore } from '../../../../state/turn-state';
-import { NgClass, NgOptimizedImage } from '@angular/common';
-import { PlayerId, TokenInstance } from 'shared/types';
+import { NgClass } from '@angular/common';
 import { playerIdStore, playerStore } from '../../../../state/player-state';
 import tinycolor from 'tinycolor2';
-import { matchStore } from '../../../../state/match-state';
 
 @Component({
   selector: 'app-score',
   imports: [
     NgClass,
-    NgOptimizedImage,
   ],
   templateUrl: './score.component.html',
   styleUrl: './score.component.scss',
@@ -27,24 +24,6 @@ export class ScoreComponent {
     initialValue: playerIdStore.get()
   });
   readonly currentPlayerTurnId = toSignal(this._nanoService.useStore(currentPlayerTurnIdStore));
-  private readonly _match = toSignal(this._nanoService.useStore(matchStore), {
-    initialValue: matchStore.get() ?? null
-  });
-
-  // Victory token counts keyed by player.
-  readonly victoryTokens = computed<Partial<Record<PlayerId, number>>>(() => {
-    const match = this._match();
-    const victoryTokenId = 'prosperity:victory';
-    const counts: Partial<Record<PlayerId, number>> = {};
-    const tokens = Object.values(match?.tokens ?? {}) as TokenInstance[];
-    for (const token of tokens) {
-      if (token.tokenId !== victoryTokenId) continue;
-      if (token.location.type !== 'player') continue;
-      const tokenCount = token.counters ?? 1;
-      counts[token.location.playerId] = (counts[token.location.playerId] ?? 0) + tokenCount;
-    }
-    return counts;
-  });
 
   // Precomputed score row styles and ordering aligned to player order.
   readonly orderedPlayerScores = computed(() => {

@@ -1,28 +1,43 @@
 @if (matchStarted()) {
-  <app-match-supply
-    [visible]="true"
-    [scoreRect]="scoreViewRect()"
-  ></app-match-supply>
-  <app-match-landscapes
-    [visible]="true"
-    [scoreRect]="scoreViewRect()"
-  ></app-match-landscapes>
-  <app-match-player-area
-    [visible]="true"
-    [scoreRect]="scoreViewRect()"
-    (nextPhaseRequested)="onNextPhaseRequested()"
-    (playAllTreasuresRequested)="onPlayAllTreasuresRequested()"
-  ></app-match-player-area>
-  <app-match-non-supply
-    [visible]="true"
-    [scoreRect]="scoreViewRect()"
-  ></app-match-non-supply>
-  <app-pile-selection-action></app-pile-selection-action>
+  <div class="match-screen">
+    <!-- Column 1 (left): score panel + basic supply -->
+    <div class="match-column match-column-left">
+      <app-match-score-panel></app-match-score-panel>
+      <app-match-supply [area]="'basic'" [visible]="true"></app-match-supply>
+    </div>
+
+    <!-- Column 2 (center): kingdom + non-supply, landscapes, play area, hand row -->
+    <div class="match-column match-column-center">
+      <div class="match-row-supply">
+        <app-match-supply [area]="'kingdom'" [visible]="true"></app-match-supply>
+        <app-match-non-supply
+          [visible]="true"
+        ></app-match-non-supply>
+      </div>
+
+      <app-match-landscapes
+        [visible]="true"
+      ></app-match-landscapes>
+
+      <app-match-player-area
+        [visible]="true"
+        (nextPhaseRequested)="onNextPhaseRequested()"
+        (playAllTreasuresRequested)="onPlayAllTreasuresRequested()"
+      ></app-match-player-area>
+    </div>
+
+    <!-- Column 3 (right): HUD log, HUD menu, mat tabs, debug overlay -->
+    <div class="match-column match-column-right">
+      <app-match-hud-aside
+        (resignRequested)="onResignRequested()"
+      ></app-match-hud-aside>
+    </div>
+
+    <app-pile-selection-action></app-pile-selection-action>
+  </div>
 }
 
+<!-- HUD remains outside the flow columns; its dialogs are full-screen overlays -->
 <app-match-hud
   [ngClass]="{'match-started': matchStarted()}"
-  (scoreViewResize)="onScoreViewResize($event)"
-  (nextPhaseRequested)="onNextPhaseRequested()"
-  (playAllTreasuresRequested)="onPlayAllTreasuresRequested()"
 ></app-match-hud>
