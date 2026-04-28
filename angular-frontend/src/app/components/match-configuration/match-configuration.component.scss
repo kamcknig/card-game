@@ -36,10 +36,10 @@ $match-config-single-column-breakpoint: 940px;
 // action buttons keep their visual weight.
 .loaded-config-label {
   font-family: var(--theme-font-body);
-  font-size: 1.6rem;
+  font-size: 1.25rem;
   color: var(--theme-text-secondary);
   margin-right: var(--theme-space-xs);
-  max-width: 480px;
+  max-width: 380px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -133,8 +133,9 @@ $match-config-single-column-breakpoint: 940px;
   align-items: flex-start;
   flex-wrap: wrap;
   gap: var(--theme-space-xl);
-  // Cap card-like sections to 3 columns (Events/Landmarks/Artifacts/etc).
-  max-width: calc((var(--card-landscape-width) * 3) + (20px * 2));
+  // Cap the row to four landscape sections wide (Events/Landmarks/Projects/
+  // Ways/etc.) before wrapping; narrower viewports wrap earlier via flex.
+  max-width: calc((var(--card-landscape-width) * 4) + (var(--theme-space-xl) * 3));
 }
 
 .card-likes-section {
@@ -221,8 +222,11 @@ $match-config-single-column-breakpoint: 940px;
   flex-wrap: wrap;
   gap: var(--theme-space-md);
   justify-content: flex-start;
-  // Cap kingdom list width so at most 5 cards render per row.
-  max-width: calc((122px * 5) + (10px * 4));
+  // Cap kingdom list width to fit exactly 5 cards plus 4 gaps. Using the
+  // gap token in the calc keeps this in sync if --theme-space-md ever
+  // changes; the 10px hardcode that was here before underestimated the
+  // gap and caused the row to wrap at 4 cards.
+  max-width: calc((122px * 5) + (var(--theme-space-md) * 4));
 }
 
 .kingdom-section .kingdom {
@@ -232,7 +236,10 @@ $match-config-single-column-breakpoint: 940px;
   align-items: center;
 }
 
-/* Card-like selection layout mirrors kingdom behavior and stays left-aligned. */
+/* Each card-like section stacks its selected cards vertically with a y-offset
+   overlap so multiple selections of the same type read as a fanned stack
+   rather than a wide row. The top ~40px of each card stays visible so the
+   card name and image header are recognizable in the cascade. */
 .events-section .events-list,
 .landmarks-section .landmarks-list,
 .artifacts-section .artifacts-list,
@@ -242,11 +249,38 @@ $match-config-single-column-breakpoint: 940px;
 .allies-section .allies-list,
 .prophecies-section .prophecies-list {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--theme-space-md);
-  justify-content: flex-start;
-  // Cap card-like list width so at most 3 cards render per row.
-  max-width: calc((var(--card-landscape-width) * 3) + (10px * 2));
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: var(--card-landscape-width);
+}
+
+// Subsequent filled cards in the stack pull up over the previous one so
+// only the top strip of each earlier card is visible. Empty placeholder
+// slots (.is-empty) are excluded — the placeholder always sits fully
+// below the last filled card so it's clickable without being covered.
+// The 124px landscape height minus 40px peek = -84px overlap.
+.events-section .event-slot:not(.is-empty) + .event-slot:not(.is-empty),
+.landmarks-section .landmark-slot:not(.is-empty) + .landmark-slot:not(.is-empty),
+.artifacts-section .artifact-slot:not(.is-empty) + .artifact-slot:not(.is-empty),
+.projects-section .project-slot:not(.is-empty) + .project-slot:not(.is-empty),
+.ways-section .way-slot:not(.is-empty) + .way-slot:not(.is-empty),
+.traits-section .trait-slot:not(.is-empty) + .trait-slot:not(.is-empty),
+.allies-section .ally-slot:not(.is-empty) + .ally-slot:not(.is-empty),
+.prophecies-section .prophecy-slot:not(.is-empty) + .prophecy-slot:not(.is-empty) {
+  margin-top: -84px;
+}
+
+// Empty placeholder slot following any filled slot — keep a small gap so
+// the box visually separates from the cascade above it.
+.events-section .event-slot + .event-slot.is-empty,
+.landmarks-section .landmark-slot + .landmark-slot.is-empty,
+.artifacts-section .artifact-slot + .artifact-slot.is-empty,
+.projects-section .project-slot + .project-slot.is-empty,
+.ways-section .way-slot + .way-slot.is-empty,
+.traits-section .trait-slot + .trait-slot.is-empty,
+.allies-section .ally-slot + .ally-slot.is-empty,
+.prophecies-section .prophecy-slot + .prophecy-slot.is-empty {
+  margin-top: var(--theme-space-md);
 }
 
 .events-section .event-slot,
@@ -365,124 +399,75 @@ $match-config-single-column-breakpoint: 940px;
   }
 }
 
-/* Event slot styling mirrors kingdom slots */
-.event-slot {
-  border: 2px solid var(--theme-border-strong);
-  width: var(--card-landscape-width);
-  height: var(--card-landscape-height);
-
-  .no-event {
-    font-size: 32px;
-  }
-
-  .close-button {
-    font-size: 10px;
-  }
-}
-
-/* Landmark slot styling mirrors event slots */
-.landmark-slot {
-  border: 2px solid var(--theme-border-strong);
-  width: var(--card-landscape-width);
-  height: var(--card-landscape-height);
-
-  .no-landmark {
-    font-size: 32px;
-  }
-
-  .close-button {
-    font-size: 10px;
-  }
-}
-
-/* Artifact slot styling mirrors event slots */
-.artifact-slot {
-  border: 2px solid var(--theme-border-strong);
-  width: var(--card-landscape-width);
-  height: var(--card-landscape-height);
-
-  .no-artifact {
-    font-size: 32px;
-  }
-
-  .close-button {
-    font-size: 10px;
-  }
-}
-
-/* Project slot styling mirrors event slots */
-.project-slot {
-  border: 2px solid var(--theme-border-strong);
-  width: var(--card-landscape-width);
-  height: var(--card-landscape-height);
-
-  .no-project {
-    font-size: 32px;
-  }
-
-  .close-button {
-    font-size: 10px;
-  }
-}
-
-/* Way slot styling mirrors event slots */
-.way-slot {
-  border: 2px solid var(--theme-border-strong);
-  width: var(--card-landscape-width);
-  height: var(--card-landscape-height);
-
-  .no-way {
-    font-size: 32px;
-  }
-
-  .close-button {
-    font-size: 10px;
-  }
-}
-
-/* Ally slot styling mirrors event slots */
-.ally-slot {
-  border: 2px solid var(--theme-border-strong);
-  width: var(--card-landscape-width);
-  height: var(--card-landscape-height);
-
-  .no-ally {
-    font-size: 32px;
-  }
-
-  .close-button {
-    font-size: 10px;
-  }
-}
-
-/* Trait slot styling mirrors event slots */
-.trait-slot {
-  border: 2px solid var(--theme-border-strong);
-  width: var(--card-landscape-width);
-  height: var(--card-landscape-height);
-
-  .no-trait {
-    font-size: 32px;
-  }
-
-  .close-button {
-    font-size: 10px;
-  }
-}
-
-/* Prophecy slot styling mirrors event slots */
+/* Landscape slot — base layout shared across event/landmark/project/way/
+   trait/ally/prophecy/artifact slots. Filled slots intentionally have no
+   border so the card image is the entire visual; the empty placeholder
+   variant gets a border below to read as a "click to add" target. */
+.event-slot,
+.landmark-slot,
+.artifact-slot,
+.project-slot,
+.way-slot,
+.trait-slot,
+.ally-slot,
 .prophecy-slot {
-  border: 2px solid var(--theme-border-strong);
   width: var(--card-landscape-width);
   height: var(--card-landscape-height);
+}
 
-  .no-prophecy {
-    font-size: 32px;
-  }
+.event-slot .no-event,
+.landmark-slot .no-landmark,
+.artifact-slot .no-artifact,
+.project-slot .no-project,
+.way-slot .no-way,
+.trait-slot .no-trait,
+.ally-slot .no-ally,
+.prophecy-slot .no-prophecy {
+  font-size: 32px;
+}
 
-  .close-button {
-    font-size: 10px;
-  }
+// Empty placeholder slot — bordered box with a "?" inside that the owner
+// clicks to open the selection modal. Border only exists on the empty
+// variant so chosen cards display flush.
+.event-slot.is-empty,
+.landmark-slot.is-empty,
+.artifact-slot.is-empty,
+.project-slot.is-empty,
+.way-slot.is-empty,
+.trait-slot.is-empty,
+.ally-slot.is-empty,
+.prophecy-slot.is-empty {
+  border: 2px solid var(--theme-border-strong);
+}
+
+// Hover-reveal for the per-slot remove affordance — keep the row clean
+// until the owner hovers a chosen card; then surface the themed delete
+// badge (.close-button base style lives in styles.scss).
+.kingdom > .close-button,
+.event-slot > .close-button,
+.landmark-slot > .close-button,
+.artifact-slot > .close-button,
+.project-slot > .close-button,
+.way-slot > .close-button,
+.trait-slot > .close-button,
+.ally-slot > .close-button,
+.prophecy-slot > .close-button {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.kingdom:hover > .close-button,
+.event-slot:hover > .close-button,
+.landmark-slot:hover > .close-button,
+.artifact-slot:hover > .close-button,
+.project-slot:hover > .close-button,
+.way-slot:hover > .close-button,
+.trait-slot:hover > .close-button,
+.ally-slot:hover > .close-button,
+.prophecy-slot:hover > .close-button {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .disabled-add-slot {

@@ -6,9 +6,10 @@
 
 :root {
   /* ─── Typography ─── */
-  --theme-font-display: 'Cinzel', Georgia, serif;
+  // App-wide sans-serif. The display token aliases body so legacy usages
+  // resolve to the same family; new code can use either token.
   --theme-font-body: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --theme-font-accent: 'Lora', Georgia, serif;
+  --theme-font-display: var(--theme-font-body);
   --theme-font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
   /* Text roles */

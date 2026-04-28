@@ -50,7 +50,8 @@ import { SceneContentComponent } from '../scene-content/scene-content.component'
 import { UiDialogComponent } from '../ui/dialog/ui-dialog.component';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { compare } from 'fast-json-patch';
-import { FolderOpen, LogOut, LucideAngularModule, Save, Trash2 } from 'lucide-angular';
+import { FolderOpen, LogOut, LucideAngularModule, Save, Trash2, X } from 'lucide-angular';
+import { displayCardDetail } from '../match/views/modal/display-card-detail';
 
 type SelectionModalKind =
   | 'bannedKingdom'
@@ -97,6 +98,8 @@ export class MatchConfigurationComponent implements OnDestroy {
   readonly LoadIcon = FolderOpen;
   readonly ClearIcon = Trash2;
   readonly LeaveIcon = LogOut;
+  // Per-slot remove affordance shown on hover over a chosen card.
+  readonly RemoveIcon = X;
 
   private readonly _router = inject(Router);
   private readonly _nanoStoreService = inject(NanostoresService);
@@ -656,6 +659,19 @@ export class MatchConfigurationComponent implements OnDestroy {
     }
 
     this.closeSelectionModal();
+  }
+
+  // Right-click on a chosen slot — surface the full-screen detail view for
+  // the card if one is selected. Suppresses the browser's native context
+  // menu so the gesture is reserved for the in-app action; empty slots and
+  // missing detail paths are no-ops so the right-click on a "?" placeholder
+  // simply prevents the default menu without opening anything.
+  onSlotContextMenu(event: MouseEvent, detailImagePath: string | null | undefined): void {
+    event.preventDefault();
+    if (!detailImagePath) {
+      return;
+    }
+    void displayCardDetail({ detailImagePath });
   }
 
   // Removes one selected kingdom card from the fixed kingdom list.

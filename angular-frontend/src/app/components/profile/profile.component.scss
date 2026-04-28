@@ -43,10 +43,10 @@
 
 // Back button injected into the banner header actions slot. Visual
 // identity comes from `.btn .btn-secondary` in styles.scss. Local rule
-// keeps the body-font sentence-case typography typical of chrome
-// navigation affordances — the .btn defaults (display font, uppercase,
-// 0.06em letter-spacing) read too loud for a header back button so they
-// are deliberately overridden here.
+// keeps the sentence-case typography typical of chrome navigation
+// affordances — the .btn defaults (uppercase, 0.06em letter-spacing)
+// read too loud for a header back button so they are deliberately
+// overridden here.
 .back-button {
   padding: var(--theme-space-sm) var(--theme-space-md);
   font-family: var(--theme-font-body);

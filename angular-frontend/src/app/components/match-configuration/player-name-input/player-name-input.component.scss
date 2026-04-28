@@ -4,6 +4,12 @@
   gap: var(--theme-space-md);
 }
 
+// Player name text in the roster — slightly larger than the default body
+// size so the name stands out as the primary content of each row.
+.player-name {
+  font-size: 1.125rem;
+}
+
 /* Fixed-width icon slot keeps checkboxes and names aligned across all player rows. */
 .player-icon {
   display: inline-flex;
@@ -71,11 +77,10 @@ input[type='checkbox'] {
 // Inline moderation actions (Kick / Ban) sit next to a player name in
 // the lobby roster. The visual identity comes from `.btn .btn-secondary`
 // or `.btn .btn-danger` in styles.scss. Local rule keeps the compact
-// inline scale (smaller padding / font / radius) and the body-font
-// sentence-case typography — these read as quiet inline affordances
-// rather than form-action CTAs, so the .btn defaults (display font,
-// uppercase, 0.06em letter-spacing, weight 600) are deliberately
-// overridden here.
+// inline scale (smaller padding / font / radius) and sentence-case
+// typography — these read as quiet inline affordances rather than
+// form-action CTAs, so the .btn defaults (uppercase, 0.06em
+// letter-spacing, weight 600) are deliberately overridden here.
 .moderation-button {
   border-radius: var(--theme-radius-sm);
   padding: var(--theme-space-xs) var(--theme-space-sm);
