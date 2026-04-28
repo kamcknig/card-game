@@ -118,9 +118,16 @@ export class CardComponent {
   // Detail image path for right-click detail modal.
   readonly detailPath = computed(() => this.card()?.detailImagePath);
 
-  // Treasure cost shown in the circular badge. Potion / debt are surfaced by
-  // parent overlays where present; the card's badge stays single-glance.
+  // Treasure cost shown in the circular badge.
   readonly treasureCost = computed<number>(() => this.card()?.cost?.treasure ?? 0);
+
+  // Optional potion cost (Alchemy expansion). Rendered as a small chip next
+  // to the main cost badge when present.
+  readonly potionCost = computed<number>(() => this.card()?.cost?.potion ?? 0);
+
+  // Optional debt cost (Empires expansion). Rendered as a small chip next to
+  // the main cost badge when present.
+  readonly debtCost = computed<number>(() => this.card()?.cost?.debt ?? 0);
 
   // The card's primary type drives the badge / value accent color and is the
   // first segment of the type bar gradient.

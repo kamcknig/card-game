@@ -64,6 +64,10 @@ export class CardLikeComponent {
   // When true, render the small bottom accent strip. Surfaces that don't have
   // a meaningful kind (mat preview, set-aside) suppress it by passing false.
   showAccentStrip = input<boolean>(true);
+  // When true, render the top-left cost cluster (treasure / potion / debt).
+  // Most landscapes (landmarks, ways, prophecies) have no cost; events and
+  // projects pass true.
+  showCost = input<boolean>(false);
 
   private readonly _cards = toSignal(this._nanoStores.useStore(cardStore), { initialValue: cardStore.get() });
   private readonly _match = toSignal(this._nanoStores.useStore(matchStore), { initialValue: matchStore.get() });
@@ -110,6 +114,15 @@ export class CardLikeComponent {
     if (!kind) return 'var(--theme-color-source-default)';
     return KIND_COLOR_VAR[kind];
   });
+
+  // Treasure cost shown in the circular badge.
+  readonly treasureCost = computed<number>(() => this.cardLike()?.cost?.treasure ?? 0);
+
+  // Optional potion cost (Alchemy expansion).
+  readonly potionCost = computed<number>(() => this.cardLike()?.cost?.potion ?? 0);
+
+  // Optional debt cost (Empires expansion).
+  readonly debtCost = computed<number>(() => this.cardLike()?.cost?.debt ?? 0);
 
   // Reset fallback override whenever source card-like or desired size changes.
   private readonly _resetFallbackOverrideEffect = effect(() => {

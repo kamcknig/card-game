@@ -32,19 +32,33 @@
       </div>
 
       @if (showCost()) {
-        <div class="card-cost-badge">{{ treasureCost() }}</div>
+        <div class="card-cost-cluster">
+          <div class="card-cost-badge">{{ treasureCost() }}</div>
+          @if (potionCost() > 0) {
+            <div class="card-cost-chip card-cost-chip-potion">
+              <img src="/assets/ui-icons/potion.png" alt="" />
+              @if (potionCost() > 1) { <span>{{ potionCost() }}</span> }
+            </div>
+          }
+          @if (debtCost() > 0) {
+            <div class="card-cost-chip">
+              <img src="/assets/ui-icons/debt-icon.png" alt="" />
+              <span>{{ debtCost() }}</span>
+            </div>
+          }
+        </div>
       }
     }
 
-    <!-- Group count pill — only shown when a parent passes count > 1 (e.g. hand
-         groups of identical cards, stacked deck/discard piles). -->
-    @if (count() > 1) {
-      <div class="card-count-badge">×{{ count() }}</div>
+    <!-- Count badge — pile remaining count, hand-group size, or deck/discard
+         stack count. Parents pass 0 to suppress (e.g. single hand cards). -->
+    @if (count() > 0) {
+      <div class="card-count-badge">{{ count() }}</div>
     }
 
     <!-- Token badges sit above the card art regardless of facing. Positioned
          below the count badge when both are present. -->
-    <div class="token-container" [class.has-count]="count() > 1">
+    <div class="token-container" [class.has-count]="count() > 0">
       @for (badge of tokenBadges(); track badge.id) {
         <div class="token-badge" [style.background]="badge.color">
           <span class="token-text">{{ badge.label }}</span>

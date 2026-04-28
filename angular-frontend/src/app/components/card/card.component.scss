@@ -146,12 +146,23 @@
   text-overflow: ellipsis;
 }
 
-// Circular cost badge in the top-left corner. Border picks up the card's
-// primary type accent so the badge reads as part of the card's identity.
-.card-cost-badge {
+// Cluster anchored top-left holding the main cost badge plus optional potion
+// and debt chips next to it. Stacked horizontally so multi-currency costs
+// stay visible without crowding the card art.
+.card-cost-cluster {
   position: absolute;
   top: 4px;
   left: 4px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+// Circular treasure cost badge. Border picks up the card's primary type accent
+// so the badge reads as part of the card's identity.
+.card-cost-badge {
   width: 26px;
   height: 26px;
   display: flex;
@@ -165,8 +176,37 @@
   font-weight: 700;
   font-size: 0.875rem;
   line-height: 1;
-  z-index: 2;
-  pointer-events: none;
+}
+
+// Smaller chip for potion / debt costs — positioned beside the main badge.
+// Renders the icon as a square background with the cost number overlaid.
+.card-cost-chip {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-cost-chip img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.card-cost-chip span {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--theme-font-display);
+  font-weight: 700;
+  font-size: 0.75rem;
+  // Black-on-coin / black-on-debt is fixed game art, not theme chrome.
+  color: #000000;
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.6);
 }
 
 // Group count pill in the top-right corner. Shows "×N" for stacked groups of

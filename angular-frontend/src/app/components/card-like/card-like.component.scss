@@ -43,3 +43,61 @@
   border-color: var(--card-like-accent);
   box-shadow: 0 4px 20px color-mix(in srgb, var(--card-like-accent) 30%, transparent);
 }
+
+// Cost cluster anchored top-left — mirrors the portrait card cost layout
+// adapted for the landscape frame.
+.card-like-cost-cluster {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.card-like-cost-badge {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1.5px solid var(--card-like-accent);
+  color: #ffffff;
+  font-family: var(--theme-font-display);
+  font-weight: 700;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.card-like-cost-chip {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-like-cost-chip img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.card-like-cost-chip span {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--theme-font-display);
+  font-weight: 700;
+  font-size: 0.75rem;
+  // Black-on-coin / black-on-debt is fixed game art, not theme chrome.
+  color: #000000;
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.6);
+}

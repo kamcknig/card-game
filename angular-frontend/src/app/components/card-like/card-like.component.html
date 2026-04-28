@@ -16,4 +16,21 @@
   @if (showAccentStrip()) {
     <div class="card-like-accent-strip"></div>
   }
+  @if (showCost()) {
+    <div class="card-like-cost-cluster">
+      <div class="card-like-cost-badge">{{ treasureCost() }}</div>
+      @if (potionCost() > 0) {
+        <div class="card-like-cost-chip">
+          <img src="/assets/ui-icons/potion.png" alt="" />
+          @if (potionCost() > 1) { <span>{{ potionCost() }}</span> }
+        </div>
+      }
+      @if (debtCost() > 0) {
+        <div class="card-like-cost-chip">
+          <img src="/assets/ui-icons/debt-icon.png" alt="" />
+          <span>{{ debtCost() }}</span>
+        </div>
+      }
+    </div>
+  }
 </div>

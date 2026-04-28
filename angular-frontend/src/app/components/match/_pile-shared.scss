@@ -28,9 +28,12 @@
     font-size: 12px;
   }
 
+  // Pile-level token decorations (embargoes, trade route, etc.). Lives in the
+  // bottom-left corner so it doesn't conflict with the card's cost cluster
+  // (top-left) or count badge (top-right).
   .pile-indicators {
     position: absolute;
-    top: 4px;
+    bottom: 4px;
     left: 4px;
     display: flex;
     flex-direction: column;

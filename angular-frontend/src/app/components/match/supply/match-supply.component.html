@@ -55,13 +55,12 @@
         [cardId]="pile.cardId"
         [size]="'half'"
         [forceFacing]="'front'"
-        [showCost]="false"
+        [count]="pile.count"
       ></app-card>
     } @else {
       <div class="empty-pile">Empty</div>
     }
     <div class="pile-indicators">
-      <app-count-badge [count]="pile.count"></app-count-badge>
       @if (pile.tokenBadgeStacks.length > 0) {
         <div class="pile-token-badges">
           @for (stack of pile.tokenBadgeStacks; track stack.id) {
@@ -96,24 +95,6 @@
               <span [style.color]="chip.textColor">{{ chip.count }}</span>
             </div>
           }
-        </div>
-      }
-    </div>
-    <div class="cost-overlay">
-      <div class="cost-chip">
-        <img src="/assets/ui-icons/coin.png" alt="" />
-        <span>{{ pile.treasureCost }}</span>
-      </div>
-      @if (pile.potionCost > 0) {
-        <div class="cost-chip potion-cost">
-          <img src="/assets/ui-icons/potion.png" alt="" />
-          @if (pile.potionCost > 1) { <span>{{ pile.potionCost }}</span> }
-        </div>
-      }
-      @if (pile.debtCost > 0) {
-        <div class="cost-chip">
-          <img src="/assets/ui-icons/debt-icon.png" alt="" />
-          <span>{{ pile.debtCost }}</span>
         </div>
       }
     </div>
