@@ -223,8 +223,8 @@
   text-shadow: 0 0 2px rgba(255, 255, 255, 0.6);
 }
 
-// Group count pill in the top-right corner. Shows "×N" for stacked groups of
-// identical cards (hand groups, deck stack).
+// Count pill in the top-right corner. Shows "xN" for stacked groups of
+// identical cards (hand groups, deck stack) or pile remaining counts.
 .card-count-badge {
   position: absolute;
   top: 4px;
@@ -232,14 +232,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 2px 6px;
+  padding: 2px 8px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.6);
   border: 1px solid var(--theme-border-strong);
   color: #ffffff;
   font-family: var(--theme-font-body);
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   line-height: 1;
   z-index: 2;
   pointer-events: none;
