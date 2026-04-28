@@ -171,6 +171,14 @@
   max-width: 1120px;
 }
 
+// In compact (overlap) mode the hand cards stack on top of each other with
+// negative margins, so the panel doesn't need the full 5-card-wide min-
+// width — drop it so the bottom row fits inside narrower columns and the
+// deck/discard stacks don't get clipped.
+.hand-panel.compact {
+  min-width: 0;
+}
+
 // Phase status bar — sibling of play-area-panel and player-bottom-row at the
 // player-area host level, so its top and bottom dividers extend the full
 // column width.
@@ -187,7 +195,7 @@
 .phase-label {
   text-align: center;
   font-family: var(--theme-font-body);
-  font-size: 0.75rem;
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: 0.16em;
   text-transform: uppercase;
@@ -298,7 +306,7 @@
   text-align: center;
   font-family: var(--theme-font-body);
   font-style: italic;
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   color: var(--theme-text-tertiary);
   line-height: 1.3;
 }

@@ -224,12 +224,16 @@ export class MatchPlayerAreaComponent {
   /**
    * Computes responsive hand-panel sizing from the current viewport width.
    *
-   * `handMaxWidth` caps the hand-panel-shell so it does not overflow the column
-   * when many cards are in play alongside deck and discard stacks. The minimum
-   * floor is the 5-card hand width so the shell never narrows below the
-   * SCSS-enforced min-width.
-   * `handCompact` activates the overlap-stacking style for the hand cards when
-   * the viewport is narrower than 1680px.
+   * `handMaxWidth` caps the hand-panel so it does not overflow the column
+   * when many cards are in play alongside deck and discard stacks. The
+   * minimum floor is the 5-card hand width so the panel never narrows
+   * below the SCSS-enforced min-width.
+   *
+   * `handCompact` activates the overlap-stacking style for the hand cards
+   * when the viewport is narrower than 1816px — at narrower sizes the
+   * column-2 content area can't fit deck + 5-card hand + discard side by
+   * side, so we collapse to overlap mode early to keep the deck/discard
+   * stacks from being clipped by column-2's overflow: hidden.
    */
   readonly layout = computed(() => {
     const viewport = this._viewport();
@@ -238,7 +242,7 @@ export class MatchPlayerAreaComponent {
         MatchPlayerAreaComponent.MIN_HAND_AREA_WIDTH_PX,
         viewport.width - (CARD_WIDTH * 2 + STANDARD_GAP * 8),
       ),
-      handCompact: viewport.width < 1680,
+      handCompact: viewport.width < 1816,
     };
   });
 

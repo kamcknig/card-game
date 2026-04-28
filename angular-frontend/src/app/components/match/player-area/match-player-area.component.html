@@ -237,6 +237,7 @@
 
     <section
       class="hand-panel"
+      [class.compact]="resolvedLayout.handCompact"
       [style.max-width.px]="resolvedLayout.handMaxWidth"
     >
       @if (availableCubeTokens().length > 0 || availableTokenBadges().length > 0) {
