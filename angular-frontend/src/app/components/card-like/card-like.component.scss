@@ -58,19 +58,11 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   text-align: center;
-  color: #ffffff;
+  color: #000000;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.1;
-  // Tight, opaque layered shadow — lower blur radius than before so the
-  // halo doesn't bleed across the bar, but every layer at full alpha so
-  // the name still pops against any kind accent (event red, project
-  // blue, etc.).
-  text-shadow:
-    0 1px 0 rgba(0, 0, 0, 1),
-    0 0 2px rgba(0, 0, 0, 1),
-    0 0 1px rgba(0, 0, 0, 1);
 }
 
 // Accent strip at the bottom of the frame echoing the portrait card type-bar
