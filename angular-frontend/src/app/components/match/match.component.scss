@@ -14,7 +14,9 @@
 
 /* Top-level flex row that separates the three layout columns. Horizontal
    padding only — top/bottom are flush so the vertical column dividers
-   extend the full height of the match screen (top edge to bottom edge). */
+   extend the full height of the match screen (top edge to bottom edge).
+   Vertical padding for content lives on the columns themselves so the
+   border lines reach the edges while the content stays inset from them. */
 .match-screen {
   display: flex;
   flex-direction: row;
@@ -26,14 +28,17 @@
   box-sizing: border-box;
 }
 
-/* Shared vertical-stack behaviour for all three columns. The vertical gap
-   between column rows is augmented with a 1px divider on each row except
-   the first via .match-row-divider — see section dividers below. */
+/* Shared vertical-stack behaviour for all three columns. Internal vertical
+   padding keeps the first/last rows clear of the screen edges while the
+   column box (and therefore the right-side border) still extends the full
+   match-screen height. */
 .match-column {
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-width: 0;
+  padding: 10px 0;
+  box-sizing: border-box;
 }
 
 /* Column 1 (left): score panel + basic supply. Sized to content.
