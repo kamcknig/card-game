@@ -1,25 +1,18 @@
 @use '../pile-shared' as pile;
 
+// Host is a flow block; the parent .match-row-supply flex container
+// places this element alongside the kingdom panel.
 :host {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-}
-
-.non-supply-overlay-root {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
+  display: block;
 }
 
 .non-supply-panel {
-  position: fixed;
   border: 1px solid var(--theme-border-strong);
   border-radius: var(--theme-radius-md);
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-medium));
   padding: var(--theme-space-md);
   box-sizing: border-box;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .kingdom-columns {

@@ -1,113 +1,106 @@
 @if (visible() && hasColumns()) {
-  @let layout = panelLayout();
-  <div class="non-supply-overlay-root">
-    <section
-      class="non-supply-panel"
-      [style.left.px]="layout.left"
-      [style.top.px]="layout.top"
-    >
-      <div class="kingdom-columns">
-        @for (column of kingdomColumns(); track column.trackKey) {
-          <div class="kingdom-column">
-            @for (section of column.sections; track section.trackKey) {
-              <div class="kingdom-section">
-                <div class="kingdom-piles" [class.loot-piles]="section.isLoot">
-                  @for (pile of section.rows; track pile.trackKey) {
-                    <button
-                      type="button"
-                      class="non-supply-pile"
-                      [class.selectable-card]="pile.selectableCard"
-                      [class.selected-card]="pile.selectedCard"
-                      [class.way-selectable]="pile.waySelectable"
-                      [class.selectable-pile]="pile.selectablePile"
-                      [class.selected-pile]="pile.selectedPile"
-                      [class.empty-pile-state]="pile.empty"
-                      (click)="onPileClick(pile, $event)"
-                      (mouseenter)="onPileMouseEnter(pile, $event)"
-                      (mouseleave)="onPileMouseLeave(pile)"
-                    >
-                      @if (pile.cardId !== null) {
-                        <app-card
-                          [cardId]="pile.cardId"
-                          [size]="'half'"
-                          [forceFacing]="pile.forceFacing"
-                        ></app-card>
-                      } @else {
-                        <div class="empty-pile">Empty</div>
-                      }
+  <section class="non-supply-panel">
+    <div class="kingdom-columns">
+      @for (column of kingdomColumns(); track column.trackKey) {
+        <div class="kingdom-column">
+          @for (section of column.sections; track section.trackKey) {
+            <div class="kingdom-section">
+              <div class="kingdom-piles" [class.loot-piles]="section.isLoot">
+                @for (pile of section.rows; track pile.trackKey) {
+                  <button
+                    type="button"
+                    class="non-supply-pile"
+                    [class.selectable-card]="pile.selectableCard"
+                    [class.selected-card]="pile.selectedCard"
+                    [class.way-selectable]="pile.waySelectable"
+                    [class.selectable-pile]="pile.selectablePile"
+                    [class.selected-pile]="pile.selectedPile"
+                    [class.empty-pile-state]="pile.empty"
+                    (click)="onPileClick(pile, $event)"
+                    (mouseenter)="onPileMouseEnter(pile, $event)"
+                    (mouseleave)="onPileMouseLeave(pile)"
+                  >
+                    @if (pile.cardId !== null) {
+                      <app-card
+                        [cardId]="pile.cardId"
+                        [size]="'half'"
+                        [forceFacing]="pile.forceFacing"
+                      ></app-card>
+                    } @else {
+                      <div class="empty-pile">Empty</div>
+                    }
 
-                      <div class="pile-indicators">
-                        @if (pile.count > 0) {
-                          <app-count-badge [count]="pile.count"></app-count-badge>
-                        }
-                        @if (pile.tokenBadgeStacks.length > 0) {
-                          <div class="pile-token-badges">
-                            @for (stack of pile.tokenBadgeStacks; track stack.id) {
-                              <div class="pile-token-badge-stack">
-                                @if (stack.badgeImagePath) {
-                                  <app-token-image-badge
-                                    [imagePath]="stack.badgeImagePath"
-                                    [highlightColor]="stack.color"
-                                  ></app-token-image-badge>
-                                } @else if (stack.imagePath) {
-                                  <div class="pile-token-badge-image">
-                                    <img [src]="stack.imagePath" alt="" />
-                                    <span class="pile-token-badge-image-count">{{ stack.count }}</span>
-                                  </div>
-                                } @else {
-                                  <div class="pile-token-badge" [style.background]="stack.color">
-                                    {{ stack.label }}
-                                  </div>
-                                  @if (stack.count > 1) {
-                                    <div class="pile-token-badge-count">{{ stack.count }}</div>
-                                  }
+                    <div class="pile-indicators">
+                      @if (pile.count > 0) {
+                        <app-count-badge [count]="pile.count"></app-count-badge>
+                      }
+                      @if (pile.tokenBadgeStacks.length > 0) {
+                        <div class="pile-token-badges">
+                          @for (stack of pile.tokenBadgeStacks; track stack.id) {
+                            <div class="pile-token-badge-stack">
+                              @if (stack.badgeImagePath) {
+                                <app-token-image-badge
+                                  [imagePath]="stack.badgeImagePath"
+                                  [highlightColor]="stack.color"
+                                ></app-token-image-badge>
+                              } @else if (stack.imagePath) {
+                                <div class="pile-token-badge-image">
+                                  <img [src]="stack.imagePath" alt="" />
+                                  <span class="pile-token-badge-image-count">{{ stack.count }}</span>
+                                </div>
+                              } @else {
+                                <div class="pile-token-badge" [style.background]="stack.color">
+                                  {{ stack.label }}
+                                </div>
+                                @if (stack.count > 1) {
+                                  <div class="pile-token-badge-count">{{ stack.count }}</div>
                                 }
-                              </div>
-                            }
-                          </div>
-                        }
-                        @if (pile.tokenChips.length > 0) {
-                          <div class="pile-token-chips">
-                            @for (chip of pile.tokenChips; track chip.id) {
-                              <div class="pile-token-chip">
-                                <img [src]="chip.imagePath" alt="" />
-                                <span [style.color]="chip.textColor">{{ chip.count }}</span>
-                              </div>
-                            }
-                          </div>
-                        }
-                      </div>
-                      <div class="cost-overlay">
-                        <div class="cost-chip">
-                          <img src="/assets/ui-icons/coin.png" alt="" />
-                          <span>{{ pile.treasureCost }}</span>
-                        </div>
-                        @if (pile.potionCost > 0) {
-                          <div class="cost-chip potion-cost">
-                            <img src="/assets/ui-icons/potion.png" alt="" />
-                            @if (pile.potionCost > 1) { <span>{{ pile.potionCost }}</span> }
-                          </div>
-                        }
-                        @if (pile.debtCost > 0) {
-                          <div class="cost-chip">
-                            <img src="/assets/ui-icons/debt-icon.png" alt="" />
-                            <span>{{ pile.debtCost }}</span>
-                          </div>
-                        }
-                      </div>
-                      @if (pile.trait) {
-                        <div class="pile-trait-tag" (contextmenu)="onTraitContextMenu($event, pile)">
-                          {{ pile.trait.cardName }}
+                              }
+                            </div>
+                          }
                         </div>
                       }
-                    </button>
-                  }
-                </div>
+                      @if (pile.tokenChips.length > 0) {
+                        <div class="pile-token-chips">
+                          @for (chip of pile.tokenChips; track chip.id) {
+                            <div class="pile-token-chip">
+                              <img [src]="chip.imagePath" alt="" />
+                              <span [style.color]="chip.textColor">{{ chip.count }}</span>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                    <div class="cost-overlay">
+                      <div class="cost-chip">
+                        <img src="/assets/ui-icons/coin.png" alt="" />
+                        <span>{{ pile.treasureCost }}</span>
+                      </div>
+                      @if (pile.potionCost > 0) {
+                        <div class="cost-chip potion-cost">
+                          <img src="/assets/ui-icons/potion.png" alt="" />
+                          @if (pile.potionCost > 1) { <span>{{ pile.potionCost }}</span> }
+                        </div>
+                      }
+                      @if (pile.debtCost > 0) {
+                        <div class="cost-chip">
+                          <img src="/assets/ui-icons/debt-icon.png" alt="" />
+                          <span>{{ pile.debtCost }}</span>
+                        </div>
+                      }
+                    </div>
+                    @if (pile.trait) {
+                      <div class="pile-trait-tag" (contextmenu)="onTraitContextMenu($event, pile)">
+                        {{ pile.trait.cardName }}
+                      </div>
+                    }
+                  </button>
+                }
               </div>
-            }
-          </div>
-        }
-      </div>
-    </section>
-  </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </section>
 }
