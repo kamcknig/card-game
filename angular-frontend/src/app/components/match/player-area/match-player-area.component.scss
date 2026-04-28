@@ -405,6 +405,27 @@
   transform: scale(1.05);
 }
 
+// Stack cards (deck, discard) only show the hover affordance when they are
+// currently interactive. The default :hover above would always scale and
+// highlight, suggesting the card is clickable when it isn't.
+.board-card.stack-card:hover {
+  transform: none;
+}
+
+.board-card.stack-card.selectable-card:hover,
+.board-card.stack-card.selectable-pile:hover,
+.board-card.stack-card.way-selectable:hover {
+  transform: scale(1.04);
+}
+
+// Non-interactive stack cards override the card-frame's hover treatment so
+// the type-color border / shadow stays neutral. The custom props cascade
+// into the encapsulated <app-card> via standard CSS inheritance.
+.board-card.stack-card:not(.selectable-card):not(.selectable-pile):not(.way-selectable) {
+  --card-hover-border: var(--theme-border-strong);
+  --card-hover-shadow: transparent;
+}
+
 .board-card::before {
   content: '';
   position: absolute;

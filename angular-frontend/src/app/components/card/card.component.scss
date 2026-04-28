@@ -8,6 +8,11 @@
   // CSS continues to validate even when the template's inline style isn't set yet.
   --card-accent: var(--theme-color-source-default);
   --card-token-size: 28px;
+  // Hover treatment custom props — parents can override these to neutralise the
+  // type-color highlight (e.g. non-interactive stack cards). Default tracks the
+  // card's primary type accent.
+  --card-hover-border: var(--card-accent);
+  --card-hover-shadow: var(--card-accent);
 }
 
 .card-frame {
@@ -35,9 +40,18 @@
 // Hover styling — accent-tinted shadow + border. The scale transform lives on
 // the parent button (.supply-pile / .non-supply-pile / .board-card) so the
 // parent's selection ::before outline scales with the card and stays visible.
+// Hover colors come from the --card-hover-* custom props so parents can
+// neutralise them for non-interactive surfaces.
 .card-frame:hover {
-  border-color: var(--card-accent);
-  box-shadow: 0 4px 20px color-mix(in srgb, var(--card-accent) 30%, transparent);
+  border-color: var(--card-hover-border);
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--card-hover-shadow) 30%, transparent);
+}
+
+// Face-down cards must not reveal their type via the hover treatment — the
+// player can't see the card's identity, so the border and shadow stay neutral.
+.card-frame.face-down:hover {
+  --card-hover-border: var(--theme-border-strong);
+  --card-hover-shadow: transparent;
 }
 
 // Face-down: only the back image fills the frame; structural pieces are
