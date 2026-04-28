@@ -11,7 +11,7 @@
   min-width: 240px;
   border: 1px solid var(--theme-border-strong);
   border-radius: var(--theme-radius-lg);
-  background: rgba(0, 0, 0, var(--theme-overlay-alpha-medium));
+  background: var(--theme-panel-bg);
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.28);
 }
 

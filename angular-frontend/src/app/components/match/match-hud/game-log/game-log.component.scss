@@ -1,14 +1,13 @@
 .content {
   color: var(--theme-text-on-dark);
-  background: rgba(0, 0, 0, var(--theme-overlay-alpha-medium));
+  background: var(--theme-panel-bg);
   border: 1px solid var(--theme-border-strong);
   border-radius: var(--theme-radius-md);
   width: 300px;
   height: 55vh;
   position: relative;
-  font-family: var(--theme-font-accent);
-  font-style: italic;
-  font-size: 0.95rem;
+  font-family: var(--theme-font-body);
+  font-size: 0.875rem;
   line-height: 1.55;
 
   .log-content {

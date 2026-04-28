@@ -6,9 +6,10 @@
 }
 
 // Grows to fill the column's available vertical space, pushing the player bottom row
-// (deck / hand / discard) to the bottom of the column.
+// (deck / hand / discard) to the bottom of the column. Dashed border signals that the
+// play area is a "drop zone" for cards that have been played this turn.
 .play-area-panel {
-  border: 1px solid var(--theme-border-strong);
+  border: 1px dashed var(--theme-border-strong);
   border-radius: var(--theme-radius-md);
   background: var(--theme-panel-bg);
   padding: var(--theme-space-md);

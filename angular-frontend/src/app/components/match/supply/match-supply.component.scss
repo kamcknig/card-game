@@ -16,6 +16,7 @@
 .basic-columns {
   display: flex;
   gap: var(--theme-space-md);
+  align-items: flex-start;
 }
 
 .pile-column {
@@ -24,11 +25,25 @@
   gap: var(--theme-space-md);
 }
 
+// Small uppercase label rendered above each labelled section in the basic
+// supply column (VICTORY / TREASURE / CURSE).
+.pile-section-label {
+  font-family: var(--theme-font-display);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--theme-text-tertiary);
+  font-weight: 600;
+  padding-left: var(--theme-space-2xs);
+}
+
+// Kingdom cards flow left-to-right, top-to-bottom, wrapping to fit the column's
+// available width. flex-wrap rather than a fixed grid lets the kingdom reflow at
+// any viewport size.
 .kingdom-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  column-gap: var(--theme-space-3xl);
-  row-gap: var(--theme-space-md);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--theme-space-md);
 }
 
 .supply-pile {

@@ -9,7 +9,7 @@
 .non-supply-panel {
   border: 1px solid var(--theme-border-strong);
   border-radius: var(--theme-radius-md);
-  background: rgba(0, 0, 0, var(--theme-overlay-alpha-medium));
+  background: var(--theme-panel-bg);
   padding: var(--theme-space-md);
   box-sizing: border-box;
   pointer-events: auto;

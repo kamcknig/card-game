@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
 import { Card, CardId, CardKey, CardLikeId, Match, PlayerId, TokenDefinition, TokenId, Trait } from 'shared/types';
@@ -74,6 +75,7 @@ type SupplyPileViewModel = {
 @Component({
   selector: 'app-match-supply',
   imports: [
+    NgTemplateOutlet,
     CardComponent,
     CountBadgeComponent,
     TokenImageBadgeComponent,
@@ -163,10 +165,18 @@ export class MatchSupplyComponent {
 
   private readonly _tokenVisualByPile = computed(() => this.buildTokenVisualByPile(this._match() ?? null, this._tokenDefinitions()));
 
+  // Victory piles excluding Curse — rendered under the VICTORY label in the basic supply.
   readonly basicVictoryPiles = computed(() => {
     const supplies = this._basicSupplies();
-    const victoryKeys = supplies?.[0] ?? [];
+    const victoryKeys = (supplies?.[0] ?? []).filter((key) => key !== 'curse');
     return this.buildSupplyPileModels(victoryKeys, this._basicSupplyCardIds() ?? []);
+  });
+
+  // Curse pile rendered under its own CURSE label below the victory piles.
+  readonly basicCursePiles = computed(() => {
+    const supplies = this._basicSupplies();
+    const curseKeys = (supplies?.[0] ?? []).filter((key) => key === 'curse');
+    return this.buildSupplyPileModels(curseKeys, this._basicSupplyCardIds() ?? []);
   });
 
   readonly basicTreasurePiles = computed(() => {
