@@ -45,6 +45,9 @@
   border-color: var(--theme-border-action);
 }
 
+// overflow is intentionally visible — cards scale 1.04 on hover and the
+// panel's padding gives the buffer; clipping here would cut off hovered cards.
+// flex-wrap: wrap handles row overflow when many cards are in play.
 .play-area-cards {
   flex: 1 1 auto;
   min-height: 0;
@@ -53,7 +56,6 @@
   align-items: flex-start;
   flex-wrap: wrap;
   gap: var(--theme-space-md);
-  overflow: auto;
   padding-bottom: var(--theme-space-sm);
 }
 
@@ -332,15 +334,18 @@
   gap: var(--theme-space-5xl);
 }
 
+// overflow is intentionally visible — hand cards scale 1.05 on hover; the
+// extra side/bottom padding is the buffer that keeps the scaled card from
+// touching neighbouring elements (deck, turn-actions). overflow-x: auto here
+// would trigger a scrollbar on hover and fight the scale; overflow-y: hidden
+// would clip vertical scale.
 .hand-cards {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
   align-items: flex-start;
   gap: var(--theme-space-md);
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: var(--theme-space-xs) var(--theme-space-xs) var(--theme-space-sm) var(--theme-space-xs);
+  padding: var(--theme-space-sm) var(--theme-space-md) var(--theme-space-md) var(--theme-space-md);
 }
 
 .turn-actions {
