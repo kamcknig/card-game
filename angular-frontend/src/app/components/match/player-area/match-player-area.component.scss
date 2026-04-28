@@ -37,6 +37,11 @@
 // the only section that retains its own border by design. Grows to fill
 // the column's available vertical space, pushing the player bottom row
 // (deck / hand / discard) to the bottom of the column.
+//
+// margin-left/right inset the dashed-bordered box from the column borders
+// so the panel reads as a contained drop zone rather than a strip flush
+// with the column edges. The host-level padding rule (10px each side) is
+// neutralised here so the margin is the only horizontal inset.
 .play-area-panel {
   box-sizing: border-box;
   pointer-events: auto;
@@ -48,6 +53,8 @@
   border: 1px dashed var(--theme-border-subtle);
   border-radius: var(--theme-radius-md);
   padding: var(--theme-space-md);
+  margin-left: 10px;
+  margin-right: 10px;
 }
 
 .play-area-header {
@@ -188,10 +195,13 @@
   line-height: 1.4;
 }
 
+// Stats cluster and action cluster share the row centered as a single
+// group rather than being pushed to opposite edges, so the bar reads as
+// one cohesive unit instead of two separated halves.
 .phase-status-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   gap: var(--theme-space-md);
   flex-wrap: wrap;
 }
