@@ -1,15 +1,11 @@
 /* Host fills the viewport so the three-column layout has a known coordinate
    space to work within. Sub-components that are still absolutely positioned
-   during the migration continue to anchor against the viewport correctly.
-
-   Background uses --theme-panel-bg so the entire match screen reads as the
-   single dark surface that individual panels used to provide. */
+   during the migration continue to anchor against the viewport correctly. */
 :host {
   display: block;
   position: fixed;
   inset: 0;
   overflow: hidden;
-  background: var(--theme-panel-bg);
 }
 
 /* Top-level flex row that separates the three layout columns. Zero padding
