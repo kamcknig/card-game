@@ -162,12 +162,6 @@ export class CardComponent {
     return `linear-gradient(90deg, ${stops})`;
   });
 
-  // Human-readable type label rendered on the type bar — joins types with " - ".
-  readonly typeBarLabel = computed<string>(() => {
-    const types = this.card()?.type ?? [];
-    return types.map((type) => this.formatTypeLabel(type)).join(' - ');
-  });
-
   // The large centered number shown between the name and the type bar.
   // Populated for cards with an unambiguous numeric value: VP for victory and
   // curse cards, fixed treasure values for the basic treasure piles.
@@ -243,9 +237,4 @@ export class CardComponent {
       .sort((a, b) => a.id.localeCompare(b.id));
   }
 
-  // Title-cases a CardType code (e.g. 'ACTION' → 'Action', 'TREASURE' → 'Treasure').
-  private formatTypeLabel(type: CardType): string {
-    if (!type) return '';
-    return `${type[0]}${type.slice(1).toLowerCase()}`;
-  }
 }

@@ -47,38 +47,44 @@
   object-position: center 70%;
 }
 
-// Card name strip below the art. Uses the display font and stays single-line,
-// matching the portrait card name treatment.
+// Card name rendered inline inside the accent strip. Single-line and
+// truncated with an ellipsis when the name is wider than the bar; min-width:
+// 0 lets the flex item shrink so text-overflow can kick in.
 .card-like-name {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--theme-space-sm) var(--theme-space-xs);
-  font-family: var(--theme-font-display);
-  font-size: 0.875rem;
-  font-weight: 600;
+  min-width: 0;
+  max-width: 100%;
+  font-family: var(--theme-font-body);
+  font-size: 1rem;
+  font-weight: 700;
   letter-spacing: 0.04em;
   text-align: center;
-  color: var(--theme-text-on-dark);
-  background: rgba(0, 0, 0, 0.55);
+  color: #ffffff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.1;
-  min-height: 30px;
+  // Tight, opaque layered shadow — lower blur radius than before so the
+  // halo doesn't bleed across the bar, but every layer at full alpha so
+  // the name still pops against any kind accent (event red, project
+  // blue, etc.).
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 1),
+    0 0 2px rgba(0, 0, 0, 1),
+    0 0 1px rgba(0, 0, 0, 1);
 }
 
-// Thin accent strip at the bottom of the frame echoing the portrait card type
-// bar treatment. Color is driven by the card-like's kind via --card-like-accent.
+// Accent strip at the bottom of the frame echoing the portrait card type-bar
+// treatment. Hosts the card name as a centered label; color is driven by the
+// card-like's kind via --card-like-accent.
 .card-like-accent-strip {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 4px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 var(--theme-space-xs);
   background: var(--card-like-accent);
-  pointer-events: none;
+  overflow: hidden;
 }
 
 .card-like-frame:hover {

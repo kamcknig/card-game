@@ -18,8 +18,6 @@
         <img class="card-art-image" [src]="path() ?? ''" alt="" />
       </div>
 
-      <div class="card-name" [title]="cardModel.cardName">{{ cardModel.cardName }}</div>
-
       @let value = displayValue();
       <div class="card-value-row">
         @if (value !== null) {
@@ -28,7 +26,7 @@
       </div>
 
       <div class="card-type-bar" [style.background]="typeBarBackground()">
-        <span class="card-type-bar-text">{{ typeBarLabel() }}</span>
+        <span class="card-name" [title]="cardModel.cardName">{{ cardModel.cardName }}</span>
       </div>
 
       @if (showCost()) {

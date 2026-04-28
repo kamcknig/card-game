@@ -16,12 +16,12 @@
     />
   </div>
 
-  @if (model) {
-    <div class="card-like-name" [title]="model.cardName">{{ model.cardName }}</div>
-  }
-
   @if (showAccentStrip()) {
-    <div class="card-like-accent-strip"></div>
+    <div class="card-like-accent-strip">
+      @if (model) {
+        <span class="card-like-name" [title]="model.cardName">{{ model.cardName }}</span>
+      }
+    </div>
   }
 
   @if (showCost()) {

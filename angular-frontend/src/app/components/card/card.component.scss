@@ -87,26 +87,30 @@
   display: block;
 }
 
-// Card name strip below the art. Uses the display font and stays single-line,
-// truncating with an ellipsis when the name is longer than the card is wide.
+// Card name rendered inline inside the type bar (gradient strip at the
+// bottom). Single-line and truncated with an ellipsis when the name is
+// longer than the card is wide; min-width: 0 lets the flex item shrink so
+// text-overflow can kick in.
 .card-name {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--theme-space-2xs) var(--theme-space-xs);
-  font-family: var(--theme-font-display);
-  font-size: 0.875rem;
-  font-weight: 600;
+  min-width: 0;
+  max-width: 100%;
+  font-family: var(--theme-font-body);
+  font-size: 1rem;
+  font-weight: 700;
   letter-spacing: 0.04em;
   text-align: center;
-  color: var(--theme-text-on-dark);
-  background: rgba(0, 0, 0, 0.55);
+  color: #ffffff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.1;
-  min-height: 22px;
+  // Tight, opaque layered shadow — lower blur radius than before so the
+  // halo doesn't bleed across the bar, but every layer at full alpha so
+  // the name still pops against any gradient stop.
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 1),
+    0 0 2px rgba(0, 0, 0, 1),
+    0 0 1px rgba(0, 0, 0, 1);
 }
 
 // Spacer row that holds the optional value indicator. flex: 1 fills the gap
@@ -135,29 +139,16 @@
   font-size: 1.4rem;
 }
 
-// Type bar at the bottom of the card. Background gradient is set inline by
-// the template; text is white with a soft drop shadow for legibility on any
-// gradient combination.
+// Type bar at the bottom of the card — a colored gradient strip (set inline
+// by the template) that hosts the card name as a centered label.
 .card-type-bar {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--theme-space-2xs) var(--theme-space-xs);
-  min-height: 18px;
-  font-family: var(--theme-font-display);
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #ffffff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-}
-
-.card-type-bar-text {
-  white-space: nowrap;
+  min-height: 24px;
+  padding: 0 var(--theme-space-xs);
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 // Cluster anchored top-left holding the main cost badge plus optional potion
