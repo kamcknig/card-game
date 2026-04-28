@@ -18,6 +18,11 @@ Send configuration to front-end include things like
 
 ---
 
+Knights appear in search for kingdoms when adding cards - only randomizers
+should appear
+
+---
+
 When no cards in hand, the hand should not collapse vertically
 
 ---
