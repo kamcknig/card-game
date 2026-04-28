@@ -31,6 +31,25 @@ $match-config-single-column-breakpoint: 940px;
   gap: var(--theme-space-sm);
 }
 
+// Inline indicator showing which saved configuration is currently loaded.
+// Sits to the left of the Save/Load/Clear cluster as a quiet label so the
+// action buttons keep their visual weight.
+.loaded-config-label {
+  font-family: var(--theme-font-body);
+  font-size: 1.6rem;
+  color: var(--theme-text-secondary);
+  margin-right: var(--theme-space-xs);
+  max-width: 480px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.loaded-config-label strong {
+  color: var(--theme-text-primary);
+  font-weight: 600;
+}
+
 // Secondary action buttons (expansion None/All, banned Select/Clear, Add Bot)
 // use `.btn .btn-secondary` from styles.scss. No local rule needed.
 

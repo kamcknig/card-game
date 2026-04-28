@@ -438,6 +438,9 @@ export class MatchConfigurationComponent implements OnDestroy {
   }
 
   // Clears manually selected kingdom and landscape configuration fields.
+  // Also forgets which saved configuration was loaded — once the contents
+  // are wiped, it would be misleading to keep prefilling the save name or
+  // showing the loaded label in the header.
   clearConfiguration() {
     if (!this.isGameOwner() || !this.canClearConfiguration()) return;
     this.emitMatchConfigurationUpdate({
@@ -453,6 +456,7 @@ export class MatchConfigurationComponent implements OnDestroy {
       allies: [],
       prophecies: [],
     });
+    this.loadedConfigurationName.set(null);
   }
 
   // Closes the load-configuration dialog.

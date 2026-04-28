@@ -12,6 +12,12 @@
   <!-- Right side of action bar: config actions -->
   <div sceneHeaderActions class="header-actions">
     @if (isGameOwner()) {
+      @let loadedName = loadedConfigurationName();
+      @if (loadedName) {
+        <span class="loaded-config-label" [title]="loadedName">
+          Configuration: <strong>{{ loadedName }}</strong>
+        </span>
+      }
       <button
         class="btn btn-secondary config-action-button"
         (click)="openSaveDialog()"
