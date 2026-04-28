@@ -182,19 +182,10 @@ $match-config-single-column-breakpoint: 940px;
   top: 0;
   left: 0;
   display: block;
-  width: 122px;
-  height: 122px;
-  border: 2px solid var(--theme-border-strong);
-  background: var(--theme-surface-card);
+  width: var(--card-width);
+  height: var(--card-small-height);
   // Stack cards with a positive Y offset for each subsequent card.
-  transform: translateY(calc(var(--banned-stack-index, 0) * 25px));
-
-  img {
-    display: block;
-    width: 122px;
-    height: 122px;
-    object-fit: cover;
-  }
+  transform: translateY(calc(var(--banned-stack-index, 0) * 32px));
 
   // Keep hidden until hover so the stack remains clean.
   .close-button {
@@ -213,8 +204,8 @@ $match-config-single-column-breakpoint: 940px;
   margin-top: var(--theme-space-md);
   // Cards are absolutely positioned to create a stacked/fanned pile.
   position: relative;
-  width: 122px;
-  min-height: 122px;
+  width: var(--card-width);
+  min-height: var(--card-small-height);
 }
 
 .kingdom-section .kingdom-list {
@@ -222,11 +213,10 @@ $match-config-single-column-breakpoint: 940px;
   flex-wrap: wrap;
   gap: var(--theme-space-md);
   justify-content: flex-start;
-  // Cap kingdom list width to fit exactly 5 cards plus 4 gaps. Using the
-  // gap token in the calc keeps this in sync if --theme-space-md ever
-  // changes; the 10px hardcode that was here before underestimated the
-  // gap and caused the row to wrap at 4 cards.
-  max-width: calc((122px * 5) + (var(--theme-space-md) * 4));
+  // Cap kingdom list width to fit exactly 5 cards plus 4 gaps. Tracks
+  // --card-width so the cap stays in sync with the in-match card size
+  // (now sourced from the shared <app-card> component).
+  max-width: calc((var(--card-width) * 5) + (var(--theme-space-md) * 4));
 }
 
 .kingdom-section .kingdom {
@@ -386,17 +376,28 @@ $match-config-single-column-breakpoint: 940px;
 }
 
 .kingdom {
-  border: 2px solid var(--theme-border-strong);
-  width: 122px;
-  height: 122px;
+  position: relative;
+  width: var(--card-width);
+  height: var(--card-small-height);
 
   .no-kingdom {
     font-size: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
   }
 
   .close-button {
     font-size: 10px;
   }
+}
+
+// Empty kingdom slot — bordered placeholder so it reads as a
+// "click to add" target, mirroring the empty landscape slot treatment.
+.kingdom:has(.no-kingdom) {
+  border: 2px solid var(--theme-border-strong);
 }
 
 /* Landscape slot — base layout shared across event/landmark/project/way/

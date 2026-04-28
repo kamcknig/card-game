@@ -52,6 +52,8 @@ import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { compare } from 'fast-json-patch';
 import { FolderOpen, LogOut, LucideAngularModule, Save, Trash2, X } from 'lucide-angular';
 import { displayCardDetail } from '../match/views/modal/display-card-detail';
+import { CardComponent } from '../card/card.component';
+import { CardLikeComponent } from '../card-like/card-like.component';
 
 type SelectionModalKind =
   | 'bannedKingdom'
@@ -87,6 +89,8 @@ type SelectionModalState = {
     NgStyle,
     UiDialogComponent,
     LucideAngularModule,
+    CardComponent,
+    CardLikeComponent,
   ],
   templateUrl: './match-configuration.component.html',
   styleUrl: './match-configuration.component.scss',
@@ -271,9 +275,16 @@ export class MatchConfigurationComponent implements OnDestroy {
   readonly preSelectedProphecies = computed(() => this.withTrailingEmptySlot(this.selectedProphecies()));
 
   // Banned-card stack height grows with card count for staggered overlap.
+  // Tracks the half-size card height and the stagger step from
+  // .banned-card-item in SCSS so the wrapper container is tall enough to
+  // contain the fanned stack.
+  private static readonly BANNED_CARD_HEIGHT_PX = 150;
+  private static readonly BANNED_CARD_STAGGER_PX = 32;
   readonly bannedKingdomStackHeight = computed(() => {
     const count = this.bannedKingdoms().length;
-    return count > 0 ? 122 + ((count - 1) * 25) : 122;
+    if (count < 1) return MatchConfigurationComponent.BANNED_CARD_HEIGHT_PX;
+    return MatchConfigurationComponent.BANNED_CARD_HEIGHT_PX
+      + (count - 1) * MatchConfigurationComponent.BANNED_CARD_STAGGER_PX;
   });
 
   constructor() {

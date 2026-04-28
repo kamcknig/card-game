@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input } from '@an
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
 import { cardStore } from '../../state/card-state';
-import { CardFacing, CardId, CardType, Match, TokenDefinition, TokenId, TokenInstance } from 'shared/types';
+import { Card, CardFacing, CardId, CardNoId, CardType, Match, TokenDefinition, TokenId, TokenInstance } from 'shared/types';
 import { CardSize } from '../../../types';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { selfPlayerIdStore } from '../../state/player-state';
@@ -65,7 +65,12 @@ export class CardComponent {
   private readonly _nanoStores = inject(NanostoresService);
   private readonly _sanitizer = inject(DomSanitizer);
 
-  cardId = input.required<CardId>();
+  // Either pass `cardId` (resolved against cardStore — the in-match flow) or
+  // pass a full card object via `cardData` (used on surfaces that render
+  // pre-match data, e.g. the match configuration screen, where cards exist
+  // as pre-selected templates without a runtime id yet).
+  cardId = input<CardId | undefined>(undefined);
+  cardData = input<Card | CardNoId | undefined>(undefined);
   size = input<CardSize>('full');
   // Optional override to force a card to render face up/down regardless of ownership.
   forceFacing = input<CardFacing | undefined>(undefined);
@@ -85,8 +90,16 @@ export class CardComponent {
   private readonly _match = toSignal(this._nanoStores.useStore(matchStore));
   private readonly _tokenDefinitions = toSignal(this._nanoStores.useStore(tokenDefinitionStore), { initialValue: tokenDefinitionStore.get() });
 
-  // Active card model for this component instance.
-  readonly card = computed(() => this._cards()?.[this.cardId()]);
+  // Active card model for this component instance — prefers the directly
+  // supplied cardData (pre-match surfaces), falling back to the
+  // cardStore lookup keyed by cardId (in-match surfaces).
+  readonly card = computed(() => {
+    const data = this.cardData();
+    if (data) return data;
+    const id = this.cardId();
+    if (id === undefined) return undefined;
+    return this._cards()?.[id];
+  });
 
   // True when the card should render face down (opponent-owned + face: 'back',
   // or an explicit forceFacing='back' override).
@@ -192,9 +205,13 @@ export class CardComponent {
     return null;
   });
 
-  // Token badges to display on top of the card image.
+  // Token badges to display on top of the card image. Pre-match surfaces
+  // (cardData passed without a runtime cardId) never have tokens, so we
+  // skip the lookup entirely when no id is available.
   readonly tokenBadges = computed<CardTokenBadge[]>(() => {
-    return this.buildTokenBadges(this._match() ?? null, this._tokenDefinitions(), this.cardId());
+    const cardId = this.cardId();
+    if (cardId === undefined) return [];
+    return this.buildTokenBadges(this._match() ?? null, this._tokenDefinitions(), cardId);
   });
 
   // Token size mirrors pile badges: smaller for half-sized cards.

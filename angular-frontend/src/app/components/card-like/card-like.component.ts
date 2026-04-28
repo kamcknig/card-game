@@ -2,12 +2,11 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, si
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
-import { CardLikeId } from 'shared/types';
+import { CardLike, CardLikeId, CardLikeNoId } from 'shared/types';
 import { findCardLikeInMatch } from 'shared/find-card-like-in-match';
 import { CardSize } from '../../../types';
 import { cardStore } from '../../state/card-state';
 import { matchStore } from '../../state/match-state';
-import { CARD_WIDTH } from '../../core/app-contants';
 import { displayCardDetail } from '../match/views/modal/display-card-detail';
 
 /**
@@ -56,9 +55,17 @@ export class CardLikeComponent {
   private readonly _nanoStores = inject(NanostoresService);
   private readonly _sanitizer = inject(DomSanitizer);
 
-  cardLikeId = input.required<CardLikeId>();
+  // Either pass `cardLikeId` (resolved against cardStore + active match —
+  // the in-match flow) or pass a full card-like object via `cardLikeData`
+  // for surfaces that render pre-match data (e.g. the match configuration
+  // screen, where landscape templates exist before the match starts).
+  cardLikeId = input<CardLikeId | undefined>(undefined);
+  cardLikeData = input<CardLike | CardLikeNoId | undefined>(undefined);
   size = input<CardSize>('half');
-  displayWidthPx = input<number>(CARD_WIDTH);
+  // When unset, the SCSS default (--card-landscape-width) takes effect, so
+  // landscape cards render at their intrinsic width. Pass an explicit value
+  // only for surfaces that need a non-default width (e.g. way-picker overlay).
+  displayWidthPx = input<number | undefined>(undefined);
   // Optional kind drives the bottom accent strip color and cost badge accent.
   kind = input<CardLikeKind | undefined>(undefined);
   // When true, render the small bottom accent strip. Surfaces that don't have
@@ -74,11 +81,16 @@ export class CardLikeComponent {
   // Tracks a one-time image fallback after load error.
   private readonly _fallbackOverridePath = signal<string | undefined>(undefined);
 
-  // Resolved card-like data from library or active match.
+  // Resolved card-like data — prefers a directly-supplied cardLikeData
+  // (pre-match surfaces) and otherwise falls back to a cardStore / active
+  // match lookup keyed by cardLikeId (in-match surfaces).
   readonly cardLike = computed(() => {
+    const data = this.cardLikeData();
+    if (data) return data;
+    const cardLikeId = this.cardLikeId();
+    if (cardLikeId === undefined) return undefined;
     const cards = this._cards();
     const match = this._match();
-    const cardLikeId = this.cardLikeId();
     return cards[cardLikeId] ?? findCardLikeInMatch(match, cardLikeId);
   });
 
@@ -105,8 +117,17 @@ export class CardLikeComponent {
     return this._sanitizer.bypassSecurityTrustUrl(imagePath);
   });
 
-  // Width used by image-based layouts (way-picker, landscape overlay).
-  readonly imageWidth = computed(() => this.displayWidthPx());
+  // Inline style for the host element. Always includes the accent color,
+  // and only includes --card-like-width when a custom width was passed —
+  // otherwise the SCSS default (--card-landscape-width) wins.
+  readonly hostStyle = computed(() => {
+    const accent = this.kindAccent();
+    const width = this.displayWidthPx();
+    if (width === undefined) {
+      return `--card-like-accent: ${accent}`;
+    }
+    return `--card-like-accent: ${accent}; --card-like-width: ${width}px`;
+  });
 
   // CSS color for the bottom accent strip — derived from the card-like's kind.
   readonly kindAccent = computed<string>(() => {
@@ -127,6 +148,7 @@ export class CardLikeComponent {
   // Reset fallback override whenever source card-like or desired size changes.
   private readonly _resetFallbackOverrideEffect = effect(() => {
     this.cardLikeId();
+    this.cardLikeData();
     this.size();
     this._fallbackOverridePath.set(undefined);
   });

@@ -4,7 +4,7 @@
 @let model = cardLike();
 <div
   class="card-like-frame"
-  [style]="'--card-like-accent: ' + kindAccent() + '; --card-like-width: ' + imageWidth() + 'px'"
+  [style]="hostStyle()"
   (contextmenu)="onContextMenu($event)"
 >
   <div class="card-like-art">
