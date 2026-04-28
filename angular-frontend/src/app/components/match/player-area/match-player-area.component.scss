@@ -1,21 +1,11 @@
+// display: contents makes the host element transparent to the parent flex container so
+// .play-area-panel and .player-bottom-row become direct grandchildren of the column flex
+// container, receiving the standard column gap automatically without a wrapper.
 :host {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-}
-
-.player-area-overlay-root {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
+  display: contents;
 }
 
 .play-area-panel {
-  position: absolute;
-  // Reactive top: kingdom_top(10) + kingdom_height(R×160+12) + standard_gap(10) = R×160+32.
-  // --landscape-display-height adds landscape actual height + 2px border + 10px gap when present (0 otherwise).
-  // Both CSS vars are set on the host by the component class.
-  top: calc(var(--kingdom-row-count, 2) * 160px + 32px + var(--landscape-display-height, 0px));
   border: 1px solid var(--theme-border-strong);
   border-radius: var(--theme-radius-md);
   background: var(--theme-panel-bg);
@@ -25,6 +15,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-height: var(--card-height);
 }
 
 .play-area-header {
@@ -70,11 +61,9 @@
   filter: saturate(0.4);
 }
 
+// Flow row — deck, hand shell, and discard center themselves horizontally.
+// align-items: flex-end keeps the deck/discard cards aligned to the bottom of the hand shell.
 .player-bottom-row {
-  position: absolute;
-  bottom: 10px;
-  left: 0;
-  right: 0;
   display: flex;
   align-items: flex-end;
   justify-content: center;
