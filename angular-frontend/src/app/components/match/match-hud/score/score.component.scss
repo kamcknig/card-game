@@ -73,12 +73,6 @@
   min-width: 0;
 }
 
-.score-cluster {
-  display: inline-flex;
-  align-items: center;
-  gap: 0;
-}
-
 .player-name {
   font-size: 21px;
   font-weight: 400;
@@ -88,30 +82,15 @@
   text-overflow: ellipsis;
 }
 
-.victory-token-wrap {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-
-.victory-token-icon {
-  filter: none;
-}
-
-.victory-token-count {
-  font-size: 15px;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -55%);
-  color: var(--theme-text-on-dark);
-  position: absolute;
-}
-
+// Score readout — green to pick up the victory card type color so the VP
+// total reads as victory points at a glance.
 .score-value {
   font-size: 21px;
   line-height: 1;
-  font-weight: 400;
+  font-weight: 600;
   min-width: 0;
-  text-align: left;
-  color: var(--theme-text-on-dark);
+  text-align: right;
+  color: var(--theme-color-source-victory);
+  font-family: var(--theme-font-display);
+  letter-spacing: 0.04em;
 }
