@@ -82,7 +82,7 @@
   justify-content: center;
   padding: var(--theme-space-2xs) var(--theme-space-xs);
   font-family: var(--theme-font-display);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-align: center;
@@ -92,7 +92,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.1;
-  min-height: 18px;
+  min-height: 22px;
 }
 
 // Spacer row that holds the optional value indicator. flex: 1 fills the gap
