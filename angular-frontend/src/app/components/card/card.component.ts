@@ -17,16 +17,18 @@ type CardTokenBadge = {
   color: string;
 };
 
-// Card type → CSS source-color custom property used for the type bar gradient
-// and the cost-badge / value accent colors. Types that are not visually
-// distinct fall through to the default (white/cream) source color.
+// Card type → CSS source-color custom property used for the type bar
+// gradient and the cost-badge / value accent colors. Only the six visually
+// distinct types below contribute to the bar; anything else (ACTION,
+// ATTACK, COMMAND, etc.) is ignored when building the gradient and falls
+// through to the default (white) source color for the accent.
 const CARD_TYPE_COLOR_VAR: Partial<Record<CardType, string>> = {
-  TREASURE: 'var(--theme-color-source-treasure)',
-  VICTORY: 'var(--theme-color-source-victory)',
-  CURSE: 'var(--theme-color-source-curse)',
   DURATION: 'var(--theme-color-source-duration)',
-  ATTACK: 'var(--theme-color-source-attack)',
   REACTION: 'var(--theme-color-source-reaction)',
+  NIGHT: 'var(--theme-color-source-night)',
+  VICTORY: 'var(--theme-color-source-victory)',
+  TREASURE: 'var(--theme-color-source-treasure)',
+  CURSE: 'var(--theme-color-source-curse)',
 };
 
 // Hardcoded treasure values for the basic treasure piles. Other treasure cards
@@ -142,10 +144,19 @@ export class CardComponent {
   });
 
   // Linear gradient (or solid color) for the type bar at the bottom of the card.
-  // Each card type maps to its source color; multi-typed cards render a left-to-right
-  // gradient with one stop per type.
+  // Only the six types listed in CARD_TYPE_COLOR_VAR (DURATION, REACTION,
+  // NIGHT, VICTORY, TREASURE, CURSE) contribute. Cards with no qualifying
+  // type render a solid white bar; multi-typed cards render a left-to-right
+  // gradient with one stop per qualifying type, in card-defined order.
+  //
+  // The Curse card itself is mis-typed as VICTORY in the card library, so
+  // we override it to render the CURSE color instead of green.
   readonly typeBarBackground = computed<string>(() => {
-    const types = this.card()?.type ?? [];
+    const card = this.card();
+    if (card?.cardKey === 'curse') {
+      return CARD_TYPE_COLOR_VAR.CURSE ?? 'var(--theme-color-source-default)';
+    }
+    const types = (card?.type ?? []).filter((type) => type in CARD_TYPE_COLOR_VAR);
     if (types.length === 0) {
       return 'var(--theme-color-source-default)';
     }
