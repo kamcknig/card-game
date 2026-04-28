@@ -35,12 +35,16 @@
   background: #000;
 }
 
+// object-position pushes the visible window down past the upper-left of the
+// source image where Dominion event/project images print the cost circle.
+// Without this shift, the printed cost would still show alongside the new
+// CSS cost cluster.
 .card-like-art-image {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 30%;
+  object-position: center 70%;
 }
 
 // Card name strip below the art. Uses the display font and stays single-line,
