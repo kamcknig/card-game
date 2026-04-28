@@ -1,8 +1,11 @@
 @use '../cost-overlay-shared';
 
 // Host participates in the column 2 flex flow — no fixed positioning.
+// align-self: flex-start prevents the column flex container from stretching the
+// host across the full column width so the panel shrinks to wrap its grid content.
 :host {
   display: block;
+  align-self: flex-start;
 }
 
 .landscape-panel {
