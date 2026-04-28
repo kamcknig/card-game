@@ -1,23 +1,11 @@
 @use '../cost-overlay-shared';
 
+// Host participates in the column 2 flex flow — no fixed positioning.
 :host {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-}
-
-.landscape-overlay-root {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
+  display: block;
 }
 
 .landscape-panel {
-  position: fixed;
-  // Reactive top: kingdom_top(10) + kingdom_height(R×160+12) + gap(20) = R×160+42.
-  // Uses a 20px gap (double standard) so the landscape visually reads as separated from
-  // the dense kingdom panel above. --kingdom-row-count is set on the host by the component class.
-  top: calc(var(--kingdom-row-count, 2) * 160px + 42px);
   border: 1px solid var(--theme-border-strong);
   border-radius: var(--theme-radius-md);
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-medium));
