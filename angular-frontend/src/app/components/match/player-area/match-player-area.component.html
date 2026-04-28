@@ -57,12 +57,10 @@
               [cardId]="deck.cardId"
               [size]="'full'"
               [forceFacing]="deck.forceFacing"
+              [count]="deck.showCount ? deck.count : 0"
             ></app-card>
           } @else {
             <div class="empty-stack">Empty</div>
-          }
-          @if (deck.showCount) {
-            <app-count-badge [count]="deck.count"></app-count-badge>
           }
           @if (deck.tokenBadges.length > 0) {
             <div class="stack-token-badges">
@@ -250,10 +248,9 @@
                     [cardId]="handGroup.cardId"
                     [size]="'full'"
                     [forceFacing]="'front'"
+                    [context]="'hand'"
+                    [count]="handGroup.count"
                   ></app-card>
-                  @if (handGroup.count > 1) {
-                    <app-count-badge [count]="handGroup.count"></app-count-badge>
-                  }
                 </button>
               }
             </div>
@@ -301,12 +298,10 @@
               [cardId]="discard.cardId"
               [size]="'full'"
               [forceFacing]="'front'"
+              [count]="discard.showCount ? discard.count : 0"
             ></app-card>
           } @else {
             <div class="empty-stack">Empty</div>
-          }
-          @if (discard.showCount) {
-            <app-count-badge [count]="discard.count"></app-count-badge>
           }
         </button>
       </section>

@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, si
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
-import { NgOptimizedImage } from '@angular/common';
 import { CardLikeId } from 'shared/types';
 import { findCardLikeInMatch } from 'shared/find-card-like-in-match';
 import { CardSize } from '../../../types';
@@ -11,11 +10,44 @@ import { matchStore } from '../../state/match-state';
 import { CARD_WIDTH } from '../../core/app-contants';
 import { displayCardDetail } from '../match/views/modal/display-card-detail';
 
+/**
+ * Semantic kind of a card-like — drives the bottom accent strip color so
+ * landscape cards (events, projects, ways, etc.) read consistently with the
+ * portrait card type bar treatment.
+ */
+export type CardLikeKind =
+  | 'event'
+  | 'landmark'
+  | 'project'
+  | 'way'
+  | 'prophecy'
+  | 'boon'
+  | 'hex'
+  | 'state'
+  | 'artifact'
+  | 'ally'
+  | 'trait';
+
+// Card-like kind → CSS source-color custom property used for the bottom accent
+// strip and the cost badge border. Falls through to the default cream when the
+// kind is unknown (e.g. mat-preview surface, set-aside zones).
+const KIND_COLOR_VAR: Record<CardLikeKind, string> = {
+  event: 'var(--theme-color-source-event)',
+  landmark: 'var(--theme-color-source-landmark)',
+  project: 'var(--theme-color-source-project)',
+  way: 'var(--theme-color-way)',
+  prophecy: 'var(--theme-color-source-default)',
+  boon: 'var(--theme-color-source-boon)',
+  hex: 'var(--theme-color-source-hex)',
+  state: 'var(--theme-color-source-state)',
+  artifact: 'var(--theme-color-source-artifact)',
+  ally: 'var(--theme-color-source-default)',
+  trait: 'var(--theme-color-source-default)',
+};
+
 @Component({
   selector: 'app-card-like',
-  imports: [
-    NgOptimizedImage
-  ],
+  imports: [],
   templateUrl: './card-like.component.html',
   styleUrl: './card-like.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -27,6 +59,11 @@ export class CardLikeComponent {
   cardLikeId = input.required<CardLikeId>();
   size = input<CardSize>('half');
   displayWidthPx = input<number>(CARD_WIDTH);
+  // Optional kind drives the bottom accent strip color and cost badge accent.
+  kind = input<CardLikeKind | undefined>(undefined);
+  // When true, render the small bottom accent strip. Surfaces that don't have
+  // a meaningful kind (mat preview, set-aside) suppress it by passing false.
+  showAccentStrip = input<boolean>(true);
 
   private readonly _cards = toSignal(this._nanoStores.useStore(cardStore), { initialValue: cardStore.get() });
   private readonly _match = toSignal(this._nanoStores.useStore(matchStore), { initialValue: matchStore.get() });
@@ -66,6 +103,13 @@ export class CardLikeComponent {
 
   // Width used by image-based layouts (way-picker, landscape overlay).
   readonly imageWidth = computed(() => this.displayWidthPx());
+
+  // CSS color for the bottom accent strip — derived from the card-like's kind.
+  readonly kindAccent = computed<string>(() => {
+    const kind = this.kind();
+    if (!kind) return 'var(--theme-color-source-default)';
+    return KIND_COLOR_VAR[kind];
+  });
 
   // Reset fallback override whenever source card-like or desired size changes.
   private readonly _resetFallbackOverrideEffect = effect(() => {

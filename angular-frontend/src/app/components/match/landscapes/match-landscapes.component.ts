@@ -25,9 +25,12 @@ type ProjectSinisterBadgeViewModel = {
   label: string;
 };
 
+type LandscapeKind = 'event' | 'landmark' | 'project' | 'way' | 'prophecy';
+
 type LandscapeCardViewModel = {
   trackKey: string;
   id: CardLikeId;
+  kind: LandscapeKind;
   detailImagePath: string;
   selectable: boolean;
   selected: boolean;
@@ -173,7 +176,7 @@ export class MatchLandscapesComponent {
 
   private buildLandscapeModel(
     cardLike: CardLike,
-    kind: 'event' | 'landmark' | 'project' | 'way' | 'prophecy',
+    kind: LandscapeKind,
     selectableCards: Set<number>,
     selectedCards: Set<number>,
     tokens: TokenInstance[],
@@ -193,6 +196,7 @@ export class MatchLandscapesComponent {
     return {
       trackKey: `${kind}:${cardLike.cardKey}:${cardLike.id}`,
       id: cardLike.id,
+      kind,
       detailImagePath: cardLike.detailImagePath,
       selectable: selectableCards.has(cardLike.id),
       selected: selectedCards.has(cardLike.id),

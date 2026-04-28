@@ -32,6 +32,21 @@
   height: var(--card-height);
 }
 
+// Default hover — subtle scale-up plus a soft drop shadow tinted with the
+// card's primary type accent so the card visually pops without changing the
+// underlying layout.
+.card-frame:hover {
+  transform: scale(1.04);
+  border-color: var(--card-accent);
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--card-accent) 30%, transparent);
+}
+
+// Hand cards lift up on hover instead of scaling, signalling that the card is
+// the player's own and ready to be played.
+:host([data-context='hand']) .card-frame:hover {
+  transform: translateY(-12px) scale(1.05);
+}
+
 // Face-down: only the back image fills the frame; structural pieces are
 // suppressed by the template.
 .card-frame.face-down {
@@ -161,7 +176,30 @@
   pointer-events: none;
 }
 
-// Token badges container — reused from the previous card layout.
+// Group count pill in the top-right corner. Shows "×N" for stacked groups of
+// identical cards (hand groups, deck stack).
+.card-count-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--theme-border-strong);
+  color: #ffffff;
+  font-family: var(--theme-font-body);
+  font-weight: 600;
+  font-size: 0.75rem;
+  line-height: 1;
+  z-index: 2;
+  pointer-events: none;
+}
+
+// Token badges container — reused from the previous card layout. Drops below
+// the count badge when both are present so the two stacks don't overlap.
 .token-container {
   position: absolute;
   top: 4px;
@@ -171,6 +209,10 @@
   gap: var(--theme-space-2xs);
   pointer-events: none;
   z-index: 2;
+}
+
+.token-container.has-count {
+  top: 28px;
 }
 
 // Game-art piece: black-on-white badge sits on the card image and reads as a

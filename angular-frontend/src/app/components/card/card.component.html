@@ -36,8 +36,15 @@
       }
     }
 
-    <!-- Token badges sit above the card art regardless of facing. -->
-    <div class="token-container">
+    <!-- Group count pill — only shown when a parent passes count > 1 (e.g. hand
+         groups of identical cards, stacked deck/discard piles). -->
+    @if (count() > 1) {
+      <div class="card-count-badge">×{{ count() }}</div>
+    }
+
+    <!-- Token badges sit above the card art regardless of facing. Positioned
+         below the count badge when both are present. -->
+    <div class="token-container" [class.has-count]="count() > 1">
       @for (badge of tokenBadges(); track badge.id) {
         <div class="token-badge" [style.background]="badge.color">
           <span class="token-text">{{ badge.label }}</span>

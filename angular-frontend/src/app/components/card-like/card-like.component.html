@@ -1,10 +1,19 @@
-<!-- Card-like art display with right-click detail. -->
-<div class="card-container" (contextmenu)="onContextMenu($event)">
+<!-- Card-like art display. Image carries the printed name/cost/type artwork;
+     the bottom accent strip echoes the portrait card type bar treatment so
+     events / projects / ways read consistently with kingdom cards. -->
+<div
+  class="card-like-frame"
+  [style]="'--card-like-accent: ' + kindAccent() + '; --card-like-width: ' + imageWidth() + 'px'"
+  (contextmenu)="onContextMenu($event)"
+>
   <img
-    class="card-image"
-    [ngSrc]="path() ?? ''"
+    class="card-like-image"
+    [src]="path() ?? ''"
     (error)="onImageError()"
     [width]="imageWidth()"
-    height="20"
+    alt=""
   />
+  @if (showAccentStrip()) {
+    <div class="card-like-accent-strip"></div>
+  }
 </div>

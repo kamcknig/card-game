@@ -45,7 +45,6 @@ import {
 import { cofferStore, debtStore, villagerStore } from '../../../state/resource-logic';
 import { CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
 import { SUPPLY_PANEL_GAP_PX } from '../supply/supply-layout.constants';
-import { CountBadgeComponent } from '../count-badge/count-badge.component';
 import { TokenImageBadgeComponent } from '../token-image-badge/token-image-badge.component';
 import { getTokenImagePath, getTokenShortLabel } from '../views/token-utils';
 
@@ -110,7 +109,6 @@ const WAY_PICKER_EDGE_OVERLAP_PX = 5;
   selector: 'app-match-player-area',
   imports: [
     CardComponent,
-    CountBadgeComponent,
     TokenImageBadgeComponent,
   ],
   templateUrl: './match-player-area.component.html',

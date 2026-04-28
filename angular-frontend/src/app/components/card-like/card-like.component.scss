@@ -1,10 +1,45 @@
-/* Card-like image styling. */
-.card-image {
+// Card-like (landscape) component scaffold. The image holds the printed
+// landscape art; the frame adds a thin accent strip at the bottom keyed off
+// the kind, plus a hover treatment that mirrors the portrait card frame.
+
+:host {
+  display: inline-block;
+  --card-like-accent: var(--theme-color-source-default);
+  --card-like-width: var(--card-landscape-width);
+}
+
+.card-like-frame {
+  position: relative;
+  display: inline-block;
+  width: var(--card-like-width);
+  border: 1px solid var(--theme-border-strong);
+  border-radius: var(--theme-radius-md);
+  overflow: hidden;
+  isolation: isolate;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+  vertical-align: top;
+}
+
+.card-like-image {
+  display: block;
+  width: 100%;
   height: auto;
 }
 
-/* Container matches card layout for consistent spacing. */
-.card-container {
-  position: relative;
-  display: inline-block;
+// Thin accent strip at the bottom of the frame echoing the portrait card type
+// bar treatment. Color is driven by the card-like's kind via --card-like-accent.
+.card-like-accent-strip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: var(--card-like-accent);
+  pointer-events: none;
+}
+
+.card-like-frame:hover {
+  transform: scale(1.02);
+  border-color: var(--card-like-accent);
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--card-like-accent) 30%, transparent);
 }

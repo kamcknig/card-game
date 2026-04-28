@@ -39,9 +39,20 @@ const FIXED_TREASURE_VALUES: Record<string, number> = {
   platinum: 5,
 };
 
+/**
+ * Render context for the card. Drives hover behaviour:
+ * - 'default' — subtle scale-up on hover (used in supply, play area, modals)
+ * - 'hand'    — card lifts on hover, signalling it is the player's own and
+ *               ready to be played
+ */
+export type CardRenderContext = 'default' | 'hand';
+
 @Component({
   selector: 'app-card',
   imports: [],
+  host: {
+    '[attr.data-context]': 'context()',
+  },
   templateUrl: './card.component.html',
   styleUrl: './card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -60,6 +71,12 @@ export class CardComponent {
   // surfaces (supply piles, non-supply piles) that already render their own
   // multi-currency cost overlay set this to false to avoid double-display.
   showCost = input<boolean>(true);
+  // Context drives hover behaviour — see CardRenderContext.
+  context = input<CardRenderContext>('default');
+  // Optional pile/group count rendered as a top-right pill badge when greater
+  // than 1. Parents that group identical cards (e.g. hand groups, deck stacks)
+  // pass the group size; surfaces with no count semantics leave this 0.
+  count = input<number>(0);
 
   private readonly _cards = toSignal(this._nanoStores.useStore(cardStore), { initialValue: cardStore.get() });
   private readonly _selfPlayerId = toSignal(this._nanoStores.useStore(selfPlayerIdStore), { initialValue: selfPlayerIdStore.get() });
