@@ -96,6 +96,8 @@
   pointer-events: none;
 }
 
+// Circular treasure cost badge. Border tracks the treasure source color
+// regardless of the card-like's kind, since cost is always paid in coin.
 .card-like-cost-badge {
   width: 28px;
   height: 28px;
@@ -104,7 +106,7 @@
   justify-content: center;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.85);
-  border: 1.5px solid var(--card-like-accent);
+  border: 1.5px solid var(--theme-color-source-treasure);
   color: #ffffff;
   font-family: var(--theme-font-display);
   font-weight: 700;
@@ -119,6 +121,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
 }
 
 .card-like-cost-chip img {
@@ -139,4 +142,25 @@
   // Black-on-coin / black-on-debt is fixed game art, not theme chrome.
   color: #000000;
   text-shadow: 0 0 2px rgba(255, 255, 255, 0.6);
+}
+
+// Potion cost — matches the treasure cost frame (dark circular background)
+// but with a blue border tracking the potion source color. Icon sits inside
+// the badge with the count (when > 1) overlaid in white for legibility.
+.card-like-cost-chip-potion {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1.5px solid var(--theme-color-source-potion);
+}
+
+.card-like-cost-chip-potion img {
+  width: 65%;
+  height: 65%;
+}
+
+.card-like-cost-chip-potion span {
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
