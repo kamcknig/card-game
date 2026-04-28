@@ -5,11 +5,9 @@
   display: block;
 }
 
+// Supply rows sit directly on the unified match-screen background — no
+// per-panel chrome. Row dividers in the parent column provide separation.
 .supply-panel {
-  border: 1px solid var(--theme-border-strong);
-  border-radius: var(--theme-radius-md);
-  background: var(--theme-panel-bg);
-  padding: var(--theme-space-md);
   pointer-events: auto;
 }
 

@@ -5,14 +5,12 @@
   display: contents;
 }
 
-// Grows to fill the column's available vertical space, pushing the player bottom row
-// (deck / hand / discard) to the bottom of the column. Dashed border signals that the
-// play area is a "drop zone" for cards that have been played this turn.
+// Play area sits on the unified match-screen background. The dashed
+// rounded border signals it as a "drop zone" for cards played this turn —
+// the only section that retains its own border by design. Grows to fill
+// the column's available vertical space, pushing the player bottom row
+// (deck / hand / discard) to the bottom of the column.
 .play-area-panel {
-  border: 1px dashed var(--theme-border-strong);
-  border-radius: var(--theme-radius-md);
-  background: var(--theme-panel-bg);
-  padding: var(--theme-space-md);
   box-sizing: border-box;
   pointer-events: auto;
   display: flex;
@@ -20,6 +18,9 @@
   overflow: hidden;
   flex: 1 1 auto;
   min-height: var(--card-height);
+  border: 1px dashed var(--theme-border-subtle);
+  border-radius: var(--theme-radius-md);
+  padding: var(--theme-space-md);
 }
 
 .play-area-header {
@@ -131,12 +132,14 @@
 // min-width is wide enough to seat 5 hand cards at their natural gap so the
 // hand never shrinks below a 5-card row even when the player is holding fewer.
 // Math: 5 × card width + 4 × inner gap (between cards) + 2 × hand-cards padding
-//      + 2 × hand-panel padding + 2px border ≈ 5 × var(--card-width) + 8 × md + 2px.
+//      = 5 × var(--card-width) + 6 × var(--theme-space-md). The hand-panel /
+// status bar no longer have their own border or padding chrome, so the shell
+// only needs to size to the hand-cards content.
 .hand-panel-shell {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  min-width: calc(5 * var(--card-width) + 8 * var(--theme-space-md) + 2px);
+  min-width: calc(5 * var(--card-width) + 6 * var(--theme-space-md));
   max-width: 1120px;
   pointer-events: none;
 }
@@ -145,27 +148,33 @@
   align-self: stretch;
 }
 
+// Hand panel sits directly on the unified match-screen background. The
+// divider between status bar and hand is drawn by the .hand-panel-shell rule
+// below — there is no per-panel chrome here.
 .hand-panel {
-  border: 1px solid var(--theme-border-strong);
-  border-radius: 0 var(--theme-radius-md) var(--theme-radius-md) var(--theme-radius-md);
-  background: var(--theme-panel-bg);
-  padding: var(--theme-space-md);
   box-sizing: border-box;
   pointer-events: auto;
 }
 
-// Phase status bar — flow-positioned above the hand panel; bottom edge flush
-// with the hand panel via shared border radii. Stacks: phase header, the
-// stats-and-actions row, and the italic tip caption.
+// Divider between phase status bar and hand panel inside the shell — the
+// status bar's bottom border serves as the horizontal rule, and the hand
+// panel takes a matching top padding so the rule is centered in the gap.
+.hand-panel-shell > .phase-status-bar {
+  border-bottom: 1px solid var(--theme-border-subtle);
+  padding-bottom: var(--theme-space-sm);
+}
+
+.hand-panel-shell > .hand-panel {
+  padding-top: var(--theme-space-sm);
+}
+
+// Phase status bar — flow-positioned above the hand panel. No background or
+// outer border; the divider between status bar and hand panel is drawn via
+// the .hand-panel-shell selector above.
 .phase-status-bar {
   display: flex;
   flex-direction: column;
   gap: var(--theme-space-2xs);
-  border: 1px solid var(--theme-border-strong);
-  border-bottom: none;
-  border-radius: var(--theme-radius-md) var(--theme-radius-md) 0 0;
-  background: var(--theme-panel-bg);
-  padding: var(--theme-space-sm) var(--theme-space-md);
   pointer-events: auto;
   max-width: 100%;
 }

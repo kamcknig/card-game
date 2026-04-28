@@ -1,26 +1,34 @@
 /* Host fills the viewport so the three-column layout has a known coordinate
    space to work within. Sub-components that are still absolutely positioned
-   during the migration continue to anchor against the viewport correctly. */
+   during the migration continue to anchor against the viewport correctly.
+
+   Background uses --theme-panel-bg so the entire match screen reads as the
+   single dark surface that individual panels used to provide. */
 :host {
   display: block;
   position: fixed;
   inset: 0;
   overflow: hidden;
+  background: var(--theme-panel-bg);
 }
 
-/* Top-level flex row that separates the three layout columns. */
+/* Top-level flex row that separates the three layout columns. Horizontal
+   padding only — top/bottom are flush so the vertical column dividers
+   extend the full height of the match screen (top edge to bottom edge). */
 .match-screen {
   display: flex;
   flex-direction: row;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 10px;
-  padding: 10px;
+  padding: 0 10px;
   width: 100%;
   height: 100%;
   box-sizing: border-box;
 }
 
-/* Shared vertical-stack behaviour for all three columns. */
+/* Shared vertical-stack behaviour for all three columns. The vertical gap
+   between column rows is augmented with a 1px divider on each row except
+   the first via .match-row-divider — see section dividers below. */
 .match-column {
   display: flex;
   flex-direction: column;
@@ -28,18 +36,22 @@
   min-width: 0;
 }
 
-/* Column 1 (left): score panel + basic supply. Sized to content. */
+/* Column 1 (left): score panel + basic supply. Sized to content.
+   Vertical divider sits at the column's right edge with no internal padding,
+   so horizontal row dividers inside the column extend right up to the line. */
 .match-column-left {
   flex: 0 0 auto;
+  border-right: 1px solid var(--theme-border-subtle);
 }
 
 /* Column 2 (center): kingdom, non-supply, landscapes, play area, hand row.
-   Grows to fill the remaining horizontal space. */
+   Grows to fill the remaining horizontal space. Right border is the
+   vertical divider between column 2 and column 3. */
 .match-column-center {
   flex: 1 1 auto;
   min-width: 0;
-  height: 100%;
   overflow: hidden;
+  border-right: 1px solid var(--theme-border-subtle);
 }
 
 /* Column 3 (right): HUD log, HUD menu, mat tabs. Sized to content. */
@@ -54,4 +66,18 @@
   flex-direction: row;
   align-items: flex-start;
   gap: 10px;
+}
+
+/* Horizontal section dividers between rows in each column. Targets every
+   direct flex child after the first so we don't have to add a class to
+   each element — works automatically as new sections are added.
+
+   Note: app-match-player-area uses display: contents on its host, which
+   promotes its <section class="play-area-panel"> and
+   <section class="player-bottom-row"> to direct flex children of the
+   column, so they participate in this selector. */
+.match-column-left > *:not(:first-child),
+.match-column-center > *:not(:first-child) {
+  border-top: 1px solid var(--theme-border-subtle);
+  padding-top: 10px;
 }

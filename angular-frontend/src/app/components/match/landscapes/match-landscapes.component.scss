@@ -8,11 +8,9 @@
   align-self: flex-start;
 }
 
+// Landscapes sit directly on the unified match-screen background — no
+// per-panel chrome.
 .landscape-panel {
-  border: 1px solid var(--theme-border-strong);
-  border-radius: var(--theme-radius-md);
-  background: var(--theme-panel-bg);
-  padding: var(--theme-space-md);
   box-sizing: border-box;
   pointer-events: none;
 }

@@ -31,6 +31,8 @@ app-game-log {
   pointer-events: auto;
 }
 
+// HUD menu sits directly on the unified match-screen background — no per-panel
+// chrome.
 .hud-menu {
   display: flex;
   justify-content: flex-end;
@@ -38,8 +40,6 @@ app-game-log {
   width: 300px;
   padding: var(--theme-space-xs);
   box-sizing: border-box;
-  border-radius: var(--theme-radius-md);
-  background-color: var(--theme-panel-bg);
   pointer-events: auto;
 }
 

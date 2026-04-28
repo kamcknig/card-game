@@ -215,10 +215,11 @@ export class MatchPlayerAreaComponent {
   private readonly _debtPayAmount = signal(0);
 
   // Minimum hand area width — fits 5 hand cards at natural gap plus the
-  // hand-cards padding, hand-panel padding, and 1px border. Mirrors the
-  // .hand-panel-shell min-width in SCSS so the hand never collapses below a
-  // 5-card row even when the player is holding fewer cards.
-  private static readonly MIN_HAND_AREA_WIDTH_PX = CARD_WIDTH * 5 + STANDARD_GAP * 9;
+  // hand-cards horizontal padding. Mirrors the .hand-panel-shell min-width in
+  // SCSS so the hand never collapses below a 5-card row even when the player
+  // is holding fewer cards. (Hand panel and status bar no longer carry their
+  // own padding/border chrome.)
+  private static readonly MIN_HAND_AREA_WIDTH_PX = CARD_WIDTH * 5 + STANDARD_GAP * 7;
 
   /**
    * Computes responsive hand-panel sizing from the current viewport width.
