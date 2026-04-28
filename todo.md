@@ -6,6 +6,18 @@
 
 ---
 
+add settings to the match screen
+- toggle light/dark mode
+
+---
+
+Send configuration to front-end include things like
+
+- regex for email
+- regex for username
+
+---
+
 When no cards in hand, the hand should not collapse vertically
 
 ---
