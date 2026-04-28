@@ -1,24 +1,16 @@
 @use '../pile-shared' as pile;
 
+/* Component is a flow block; column layout in match.component positions it. */
 :host {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-}
-
-.supply-overlay-root {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
+  display: block;
 }
 
 .supply-panel {
-  position: fixed;
   border: 1px solid var(--theme-border-strong);
   border-radius: var(--theme-radius-md);
   background: var(--theme-panel-bg);
   padding: var(--theme-space-md);
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .basic-columns {

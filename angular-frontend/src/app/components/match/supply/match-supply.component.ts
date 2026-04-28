@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, HostListener, computed, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
 import { Card, CardId, CardKey, CardLikeId, Match, PlayerId, TokenDefinition, TokenId, Trait } from 'shared/types';
@@ -19,18 +19,14 @@ import { tokenDefinitionStore } from '../../../state/token-definition-state';
 import { displayCardDetail } from '../views/modal/display-card-detail';
 import { getSupplyPileTokenVisualMap } from '../views/token-utils';
 import { WayPickerOverlayService } from '../../../core/way-picker/way-picker-overlay.service';
-import {
-  SUPPLY_BASIC_PANEL_HEIGHT_PX,
-  SUPPLY_BASIC_PANEL_WIDTH_PX,
-  SUPPLY_PANEL_GAP_PX
-} from './supply-layout.constants';
+import { SUPPLY_PANEL_GAP_PX } from './supply-layout.constants';
 
-type RectLike = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-};
+/**
+ * Which half of the supply this instance renders.
+ * - 'basic'   — victory + treasure piles (column 1)
+ * - 'kingdom' — kingdom piles (column 2)
+ */
+export type MatchSupplyArea = 'basic' | 'kingdom';
 
 type SupplyTokenBadgeViewModel = {
   id: string;
@@ -94,13 +90,9 @@ export class MatchSupplyComponent {
   private readonly _socketService = inject(SocketService);
   private readonly _wayPickerOverlay = inject(WayPickerOverlayService);
 
-  scoreRect = input<RectLike | null>(null);
+  /** Controls whether this instance renders the basic supply or the kingdom supply. */
+  area = input<MatchSupplyArea>('kingdom');
   visible = input(false);
-
-  private readonly _viewport = signal({
-    width: window.innerWidth,
-    height: window.innerHeight,
-  });
 
   private readonly _cardsById = toSignal(this._nanoStores.useStore(cardStore), {
     initialValue: cardStore.get(),
@@ -167,23 +159,6 @@ export class MatchSupplyComponent {
     initialValue: promptInteractionLockStore.get(),
   });
 
-  readonly supplyLayout = computed(() => {
-    const rect = this.scoreRect();
-    const viewport = this._viewport();
-    const basicLeft = SUPPLY_PANEL_GAP_PX;
-    const minBasicTop = (rect?.y ?? 0) + (rect?.height ?? 0) + SUPPLY_PANEL_GAP_PX;
-    const centeredBasicTop = Math.floor(viewport.height * 0.5 - SUPPLY_BASIC_PANEL_HEIGHT_PX * 0.5);
-    const basicTop = Math.max(minBasicTop, centeredBasicTop);
-    const kingdomLeft = Math.max((rect?.x ?? 0) + (rect?.width ?? 0), basicLeft + SUPPLY_BASIC_PANEL_WIDTH_PX) + SUPPLY_PANEL_GAP_PX;
-    const kingdomTop = SUPPLY_PANEL_GAP_PX;
-    return {
-      basicLeft,
-      basicTop,
-      kingdomLeft,
-      kingdomTop,
-    };
-  });
-
   private readonly _traitByPile = computed(() => this.buildTraitByPile(this._match() ?? null));
 
   private readonly _tokenVisualByPile = computed(() => this.buildTokenVisualByPile(this._match() ?? null, this._tokenDefinitions()));
@@ -220,14 +195,6 @@ export class MatchSupplyComponent {
   });
 
   readonly pileSelectionModeActive = computed(() => (this._selectablePiles()?.length ?? 0) > 0);
-
-  @HostListener('window:resize')
-  onWindowResize() {
-    this._viewport.set({
-      width: window.innerWidth,
-      height: window.innerHeight,
-    });
-  }
 
   // Handles pile card clicks for normal taps and select-pile prompt toggles.
   onPileClick(pile: SupplyPileViewModel, event: MouseEvent) {

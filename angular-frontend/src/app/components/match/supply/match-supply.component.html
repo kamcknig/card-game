@@ -1,11 +1,6 @@
 @if (visible()) {
-  @let layout = supplyLayout();
-  <div class="supply-overlay-root">
-    <section
-      class="supply-panel"
-      [style.left.px]="layout.basicLeft"
-      [style.top.px]="layout.basicTop"
-    >
+  @if (area() === 'basic') {
+    <section class="supply-panel">
       <div class="basic-columns">
         <div class="pile-column">
           @for (pile of basicVictoryPiles(); track pile.trackKey) {
@@ -186,12 +181,10 @@
         </div>
       </div>
     </section>
+  }
 
-    <section
-      class="supply-panel"
-      [style.left.px]="layout.kingdomLeft"
-      [style.top.px]="layout.kingdomTop"
-    >
+  @if (area() === 'kingdom') {
+    <section class="supply-panel">
       <div class="kingdom-grid">
         @for (pile of kingdomPiles(); track pile.trackKey) {
           <button
@@ -281,5 +274,5 @@
         }
       </div>
     </section>
-  </div>
+  }
 }
