@@ -1,13 +1,14 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  HostListener,
+  ElementRef,
   computed,
   effect,
   inject,
   input,
   output,
-  signal
+  signal,
+  viewChild
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
@@ -43,7 +44,7 @@ import {
   turnPhaseStore
 } from '../../../state/turn-state';
 import { cofferStore, debtStore, villagerStore } from '../../../state/resource-logic';
-import { CARD_WIDTH, STANDARD_GAP } from '../../../core/app-contants';
+import { CARD_WIDTH } from '../../../core/app-contants';
 import { SUPPLY_PANEL_GAP_PX } from '../supply/supply-layout.constants';
 import { TokenImageBadgeComponent } from '../token-image-badge/token-image-badge.component';
 import { getTokenImagePath, getTokenShortLabel } from '../views/token-utils';
@@ -125,11 +126,6 @@ export class MatchPlayerAreaComponent {
 
   nextPhaseRequested = output<void>();
   playAllTreasuresRequested = output<void>();
-
-  private readonly _viewport = signal({
-    width: window.innerWidth,
-    height: window.innerHeight,
-  });
 
   private readonly _cardsById = toSignal(this._nanoStores.useStore(cardStore), {
     initialValue: cardStore.get(),
@@ -214,36 +210,56 @@ export class MatchPlayerAreaComponent {
   private readonly _villagerSpendAmount = signal(0);
   private readonly _debtPayAmount = signal(0);
 
-  // Minimum hand area width — fits 5 hand cards at natural gap plus the
-  // hand-cards horizontal padding. Mirrors the .hand-panel-shell min-width in
-  // SCSS so the hand never collapses below a 5-card row even when the player
-  // is holding fewer cards. (Hand panel and status bar no longer carry their
-  // own padding/border chrome.)
-  private static readonly MIN_HAND_AREA_WIDTH_PX = CARD_WIDTH * 5 + STANDARD_GAP * 7;
+  // Hand panel element — observed via ResizeObserver so the compact-mode
+  // toggle below tracks the actual rendered width rather than a fixed
+  // viewport-derived heuristic.
+  private readonly _handPanelEl = viewChild<ElementRef<HTMLElement>>('handPanel');
+  private readonly _handPanelWidth = signal(0);
+
+  // Mirrors the .hand-cards SCSS rules — gap and side padding both resolve
+  // to var(--theme-space-md) (12px). Used when computing whether the current
+  // hand fits the panel without overlap.
+  private static readonly HAND_CARDS_GAP_PX = 12;
+  private static readonly HAND_CARDS_HORIZONTAL_PADDING_PX = 12 * 2;
+
+  // Wires a ResizeObserver to the hand-panel element so the compact-mode
+  // signal recomputes whenever the panel changes width (viewport resize,
+  // sibling deck/discard layout shifts, etc).
+  private readonly _handPanelObserverEffect = effect((onCleanup) => {
+    const ref = this._handPanelEl();
+    if (!ref) {
+      this._handPanelWidth.set(0);
+      return;
+    }
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        this._handPanelWidth.set(entry.contentRect.width);
+      }
+    });
+    observer.observe(ref.nativeElement);
+    onCleanup(() => observer.disconnect());
+  });
 
   /**
-   * Computes responsive hand-panel sizing from the current viewport width.
+   * Computes whether the hand should switch to overlap (compact) mode.
    *
-   * `handMaxWidth` caps the hand-panel so it does not overflow the column
-   * when many cards are in play alongside deck and discard stacks. The
-   * minimum floor is the 5-card hand width so the panel never narrows
-   * below the SCSS-enforced min-width.
-   *
-   * `handCompact` activates the overlap-stacking style for the hand cards
-   * when the viewport is narrower than 1816px — at narrower sizes the
-   * column-2 content area can't fit deck + 5-card hand + discard side by
-   * side, so we collapse to overlap mode early to keep the deck/discard
-   * stacks from being clipped by column-2's overflow: hidden.
+   * `handCompact` activates the negative-margin overlap style only when the
+   * current hand can't fit at natural gap inside the measured panel width —
+   * so a 5-card hand stays spaced even on narrow viewports, and an
+   * overflowing hand collapses to overlap regardless of viewport size.
+   * Falls back to the viewport width before the first ResizeObserver tick
+   * so initial render still gets a sensible value.
    */
   readonly layout = computed(() => {
-    const viewport = this._viewport();
-    return {
-      handMaxWidth: Math.max(
-        MatchPlayerAreaComponent.MIN_HAND_AREA_WIDTH_PX,
-        viewport.width - (CARD_WIDTH * 2 + STANDARD_GAP * 8),
-      ),
-      handCompact: viewport.width < 1816,
-    };
+    const handCount = this.handGroups().length;
+    const handPanelWidth = this._handPanelWidth();
+    const required =
+      handCount * CARD_WIDTH
+      + Math.max(0, handCount - 1) * MatchPlayerAreaComponent.HAND_CARDS_GAP_PX
+      + MatchPlayerAreaComponent.HAND_CARDS_HORIZONTAL_PADDING_PX;
+    const handCompact = handPanelWidth > 0 && required > handPanelWidth;
+    return { handCompact };
   });
 
   readonly handGroups = computed(() => {
@@ -529,14 +545,6 @@ export class MatchPlayerAreaComponent {
       this._showDebtControls.set(false);
     }
   });
-
-  @HostListener('window:resize')
-  onWindowResize(): void {
-    this._viewport.set({
-      width: window.innerWidth,
-      height: window.innerHeight,
-    });
-  }
 
   // Emits the next-phase request to parent for relay to the match controller.
   onNextPhaseRequested(): void {

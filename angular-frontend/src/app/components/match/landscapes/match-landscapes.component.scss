@@ -15,12 +15,14 @@
   pointer-events: none;
 }
 
+// Flex-wrap so landscape cards flow left-to-right and wrap to the next row
+// whenever the container is too narrow to fit the next card. Fixed-width
+// landscape entries keep each card sized at --card-landscape-width regardless
+// of the available space.
 .landscape-grid {
-  --landscape-columns: 1;
-  display: grid;
-  grid-template-columns: repeat(var(--landscape-columns), var(--card-landscape-width));
-  column-gap: var(--theme-space-md);
-  row-gap: var(--theme-space-md);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--theme-space-md);
 }
 
 .landscape-entry {

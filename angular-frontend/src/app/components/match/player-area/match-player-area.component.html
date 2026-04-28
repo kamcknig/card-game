@@ -31,7 +31,7 @@
         >
           <app-card
             [cardId]="playCard.cardId"
-            [size]="'full'"
+            [size]="'half'"
             [forceFacing]="'front'"
           ></app-card>
         </button>
@@ -236,9 +236,8 @@
     </section>
 
     <section
+      #handPanel
       class="hand-panel"
-      [class.compact]="resolvedLayout.handCompact"
-      [style.max-width.px]="resolvedLayout.handMaxWidth"
     >
       @if (availableCubeTokens().length > 0 || availableTokenBadges().length > 0) {
         <div class="token-tray-group">

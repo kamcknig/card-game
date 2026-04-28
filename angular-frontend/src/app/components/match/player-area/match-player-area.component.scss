@@ -102,12 +102,15 @@
   filter: saturate(0.4);
 }
 
-// Flow row — deck, hand shell, and discard center themselves horizontally.
+// Flow row — deck pinned to the left edge, discard pinned to the right edge,
+// hand panel fills the middle. The host-level horizontal padding (10px) gives
+// the deck and discard breathing room from the column borders so they don't
+// sit flush with them.
 // align-items: flex-end keeps the deck/discard cards aligned to the bottom of the hand shell.
 .player-bottom-row {
   display: flex;
   align-items: flex-end;
-  justify-content: center;
+  justify-content: space-between;
   gap: var(--theme-space-md);
   pointer-events: none;
 }
@@ -160,22 +163,14 @@
 }
 
 // Hand panel sits in the middle of .player-bottom-row alongside the deck and
-// discard stacks. Min-width is wide enough to seat 5 hand cards at their
-// natural gap so the hand never shrinks below a 5-card row even when the
-// player is holding fewer. Math: 5 × card + 4 × inner gap + 2 × hand-cards
-// padding = 5 × var(--card-width) + 6 × var(--theme-space-md).
+// discard stacks. flex: 1 fills the entire space between them so the deck and
+// discard can sit pinned to the left and right edges. Cards inside center
+// themselves and switch to overlap mode when they don't fit (driven by a
+// ResizeObserver-backed compact signal in the component class).
 .hand-panel {
   box-sizing: border-box;
   pointer-events: auto;
-  min-width: calc(5 * var(--card-width) + 6 * var(--theme-space-md));
-  max-width: 1120px;
-}
-
-// In compact (overlap) mode the hand cards stack on top of each other with
-// negative margins, so the panel doesn't need the full 5-card-wide min-
-// width — drop it so the bottom row fits inside narrower columns and the
-// deck/discard stacks don't get clipped.
-.hand-panel.compact {
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -222,6 +217,10 @@
 }
 
 // Pill chip rendering one stat — icon, value, and label inline.
+// line-height: 1 on the chip and its text children removes the extra
+// half-leading that browsers add by default, so glyphs of different sizes
+// (icon at 1rem, value at 0.875rem, label at 0.6875rem) sit on a common
+// optical center rather than shifting up or down by a few pixels.
 .phase-stat {
   display: inline-flex;
   align-items: center;
@@ -234,6 +233,7 @@
   font-family: var(--theme-font-body);
   font-size: 0.875rem;
   font-weight: 600;
+  line-height: 1;
   // Each chip exposes --stat-color so depleted/active states can override
   // a single token instead of duplicating per-stat rules.
   --stat-color: var(--theme-text-tertiary);
@@ -269,6 +269,7 @@
   color: var(--stat-color);
   min-width: 1ch;
   text-align: center;
+  line-height: 1;
 }
 
 .phase-stat-label {
@@ -276,6 +277,7 @@
   letter-spacing: 0.1em;
   font-size: 0.6875rem;
   color: var(--theme-text-tertiary);
+  line-height: 1;
 }
 
 // Depleted: zero value — icon and number drop to disabled grey.
@@ -455,10 +457,15 @@
 // touching neighbouring elements (deck, discard). overflow-x: auto here
 // would trigger a scrollbar on hover and fight the scale; overflow-y: hidden
 // would clip vertical scale.
+//
+// justify-content: flex-start anchors the row to the left of the panel so
+// the leftmost hand card sits next to the deck (with the panel's left
+// padding providing the breathing room).
 .hand-cards {
   margin-top: var(--theme-space-sm);
   display: flex;
   align-items: flex-start;
+  justify-content: flex-start;
   gap: var(--theme-space-md);
   padding: var(--theme-space-sm) var(--theme-space-md) var(--theme-space-md) var(--theme-space-md);
 }

@@ -8,6 +8,13 @@
 
 add settings to the match screen
 - toggle light/dark mode
+- toggle timestamps on ui log
+
+---
+
+ui log
+- add optional timestamps
+- card names should be pressable to show the card
 
 ---
 

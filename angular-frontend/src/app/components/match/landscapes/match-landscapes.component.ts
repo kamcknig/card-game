@@ -9,10 +9,7 @@ import { selfPlayerIdStore } from '../../../state/player-state';
 import { awaitingServerLockReleaseStore, promptInteractionLockStore, selectedCardStore } from '../../../state/interactive-state';
 import { selectableCardStore } from '../../../state/interactive-logic';
 import { displayCardDetail } from '../views/modal/display-card-detail';
-import {
-  LANDSCAPE_CARD_WIDTH_PX,
-  LANDSCAPE_MAX_COLUMNS,
-} from './landscape-layout.constants';
+import { LANDSCAPE_CARD_WIDTH_PX } from './landscape-layout.constants';
 
 type ProjectCubeTokenViewModel = {
   id: string;
@@ -119,14 +116,6 @@ export class MatchLandscapesComponent {
   });
 
   readonly hasLandscapes = computed(() => this.landscapes().length > 0);
-
-  readonly columns = computed(() => {
-    const count = this.landscapes().length;
-    if (count < 1) {
-      return 1;
-    }
-    return Math.max(1, Math.min(LANDSCAPE_MAX_COLUMNS, count));
-  });
 
   readonly landscapeCardWidthPx = LANDSCAPE_CARD_WIDTH_PX;
 

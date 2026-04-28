@@ -35,12 +35,14 @@
   padding-left: var(--theme-space-2xs);
 }
 
-// Kingdom cards flow left-to-right, top-to-bottom, wrapping to fit the column's
-// available width. max-width caps the grid at 5 cards (5 × card width +
+// Kingdom cards flow right-to-left, top-to-bottom (row-reverse), so the most
+// expensive pile sits at the top-right and cost descends leftward then wraps
+// to the next row. max-width caps the grid at 5 cards (5 × card width +
 // 4 × gap) so the layout stays at most 5 columns wide on any viewport;
 // narrower columns still wrap naturally via flex-wrap.
 .kingdom-grid {
   display: flex;
+  flex-direction: row-reverse;
   flex-wrap: wrap;
   gap: var(--theme-space-md);
   max-width: calc(5 * var(--card-width) + 4 * var(--theme-space-md));
