@@ -1,31 +1,3 @@
-<div class="mat-tab-content">
-  @let trashMatValue = trashMat();
-  @if (trashMatValue) {
-    <app-mat-tab
-      [mat]="trashMatValue"
-      (click)="onMatClick(trashMatValue)"
-      (mouseenter)="onMatMouseEnter(trashMatValue)"
-      (mouseleave)="onMatMouseLeave(trashMatValue)">
-    </app-mat-tab>
-  }
-  @for (setAsideMat of setAsideMats(); track setAsideMat.id) {
-    <app-mat-tab
-      [mat]="setAsideMat"
-      (click)="onMatClick(setAsideMat)"
-      (mouseenter)="onMatMouseEnter(setAsideMat)"
-      (mouseleave)="onMatMouseLeave(setAsideMat)">
-    </app-mat-tab>
-  }
-  @for (mat of selfMats(); track mat.id) {
-    <app-mat-tab
-      [mat]="mat"
-      (click)="onMatClick(mat)"
-      (mouseenter)="onMatMouseEnter(mat)"
-      (mouseleave)="onMatMouseLeave(mat)">
-    </app-mat-tab>
-  }
-</div>
-
 <div class="hud-log-stack">
   <app-game-log [entries]="logEntries()"></app-game-log>
 
@@ -53,6 +25,34 @@
       </button>
     }
   </div>
+</div>
+
+<div class="mat-tab-content">
+  @let trashMatValue = trashMat();
+  @if (trashMatValue) {
+    <app-mat-tab
+      [mat]="trashMatValue"
+      (click)="onMatClick(trashMatValue)"
+      (mouseenter)="onMatMouseEnter(trashMatValue)"
+      (mouseleave)="onMatMouseLeave(trashMatValue)">
+    </app-mat-tab>
+  }
+  @for (setAsideMat of setAsideMats(); track setAsideMat.id) {
+    <app-mat-tab
+      [mat]="setAsideMat"
+      (click)="onMatClick(setAsideMat)"
+      (mouseenter)="onMatMouseEnter(setAsideMat)"
+      (mouseleave)="onMatMouseLeave(setAsideMat)">
+    </app-mat-tab>
+  }
+  @for (mat of selfMats(); track mat.id) {
+    <app-mat-tab
+      [mat]="mat"
+      (click)="onMatClick(mat)"
+      (mouseenter)="onMatMouseEnter(mat)"
+      (mouseleave)="onMatMouseLeave(mat)">
+    </app-mat-tab>
+  }
 </div>
 
 @if (debugOverlayVisible()) {

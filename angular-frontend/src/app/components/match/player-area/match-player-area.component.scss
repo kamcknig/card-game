@@ -5,6 +5,8 @@
   display: contents;
 }
 
+// Grows to fill the column's available vertical space, pushing the player bottom row
+// (deck / hand / discard) to the bottom of the column.
 .play-area-panel {
   border: 1px solid var(--theme-border-strong);
   border-radius: var(--theme-radius-md);
@@ -15,6 +17,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  flex: 1 1 auto;
   min-height: var(--card-height);
 }
 
@@ -118,11 +121,20 @@
   font-size: 12px;
 }
 
+// Stacks the phase status bar above the hand panel as flow siblings so the
+// status bar contributes to layout — the column's standard gap then sits cleanly
+// between the play area panel and the top of the status bar.
 .hand-panel-shell {
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   min-width: 460px;
   max-width: 1120px;
   pointer-events: none;
+}
+
+.hand-panel-shell > .hand-panel {
+  align-self: stretch;
 }
 
 .hand-panel {
@@ -134,11 +146,11 @@
   pointer-events: auto;
 }
 
+// Flow-positioned above the hand panel so it occupies real layout space.
+// Bottom edge is flush with the hand panel's top edge via shared border radii.
 .phase-status-bar {
-  position: absolute;
-  left: 0;
-  bottom: 100%;
   border: 1px solid var(--theme-border-strong);
+  border-bottom: none;
   border-radius: var(--theme-radius-md) var(--theme-radius-md) 0 0;
   background: var(--theme-panel-bg);
   padding: var(--theme-space-sm) var(--theme-space-md);
