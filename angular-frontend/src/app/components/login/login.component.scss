@@ -3,10 +3,10 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: var(--theme-space-lg);
   width: 100%;
   height: 100%;
-  padding: 24px 16px;
+  padding: var(--theme-space-2xl) var(--theme-space-lg);
   box-sizing: border-box;
   background: linear-gradient(150deg, var(--theme-surface-app-start) 0%, var(--theme-surface-app-end) 100%);
 }
@@ -17,14 +17,14 @@
   gap: 0;
   width: min(360px, 90vw);
   border: 1px solid var(--theme-border-subtle);
-  border-radius: 8px;
+  border-radius: var(--theme-radius-lg);
   overflow: hidden;
   background: var(--theme-surface-panel);
 }
 
 .login-mode-button {
   flex: 1 1 50%;
-  padding: 10px 12px;
+  padding: var(--theme-space-md);
   border: none;
   background: transparent;
   color: var(--theme-text-secondary);
@@ -49,11 +49,11 @@
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--theme-space-lg);
   width: min(360px, 90vw);
-  padding: 32px;
+  padding: var(--theme-space-3xl);
   border: 1px solid var(--theme-border-subtle);
-  border-radius: 12px;
+  border-radius: var(--theme-radius-xl);
   background: var(--theme-surface-card);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
 }
@@ -96,7 +96,7 @@
 // Scoped to direct `.btn` children so it only affects the main form's submit
 // (the resend form is a separate flex container with its own spacing).
 .login-form > .btn {
-  margin-top: 4px;
+  margin-top: var(--theme-space-xs);
 }
 
 // Resend-confirmation panel sits below the login form card. The toggle is
@@ -107,7 +107,7 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 10px;
+  gap: var(--theme-space-md);
   width: min(360px, 90vw);
 }
 
@@ -119,7 +119,7 @@
   font-size: 0.85rem;
   text-decoration: underline;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: var(--theme-space-xs) var(--theme-space-sm);
 
   &:hover,
   &:focus-visible {
@@ -129,17 +129,17 @@
   &:focus-visible {
     outline: 2px solid var(--theme-border-strong);
     outline-offset: 2px;
-    border-radius: 2px;
+    border-radius: var(--theme-radius-sm);
   }
 }
 
 .login-resend-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 20px;
+  gap: var(--theme-space-md);
+  padding: var(--theme-space-xl);
   border: 1px solid var(--theme-border-subtle);
-  border-radius: 12px;
+  border-radius: var(--theme-radius-xl);
   background: var(--theme-surface-card);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }

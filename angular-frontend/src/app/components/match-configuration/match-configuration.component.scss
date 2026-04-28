@@ -4,8 +4,8 @@ $match-config-single-column-breakpoint: 940px;
 .match-config-content {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 24px;
+  gap: var(--theme-space-xl);
+  padding: var(--theme-space-2xl);
   font-family: var(--theme-font-body);
   color: var(--theme-text-primary);
   background: var(--theme-surface-panel);
@@ -22,13 +22,13 @@ $match-config-single-column-breakpoint: 940px;
 .leave-game-button {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--theme-space-sm);
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--theme-space-sm);
 }
 
 // Secondary action buttons (expansion None/All, banned Select/Clear, Add Bot)
@@ -43,8 +43,8 @@ $match-config-single-column-breakpoint: 940px;
 .config-action-button {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 5px 10px;
+  gap: var(--theme-space-xs);
+  padding: var(--theme-space-xs) var(--theme-space-md);
   font-family: var(--theme-font-body);
   font-size: 0.8rem;
   font-weight: 500;
@@ -53,7 +53,7 @@ $match-config-single-column-breakpoint: 940px;
 }
 
 .section-title {
-  margin: 0 0 16px;
+  margin: 0 0 var(--theme-space-lg);
   font-family: var(--theme-font-display);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -67,8 +67,8 @@ $match-config-single-column-breakpoint: 940px;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: var(--theme-space-sm);
+  margin-bottom: var(--theme-space-md);
 }
 
 .section-header-row .section-title {
@@ -79,19 +79,19 @@ $match-config-single-column-breakpoint: 940px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--theme-space-sm);
   margin-left: auto;
 }
 
 .section-inline-action-button {
-  padding: 4px 8px;
+  padding: var(--theme-space-xs) var(--theme-space-sm);
   font-size: 12px;
 }
 
 .config-section {
   border: 1px solid var(--theme-border-section-light);
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: var(--theme-radius-lg);
+  padding: var(--theme-space-md);
   box-sizing: border-box;
 }
 
@@ -99,21 +99,21 @@ $match-config-single-column-breakpoint: 940px;
   display: flex;
   align-items: flex-start;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: var(--theme-space-xl);
 }
 
 .kingdom-row {
   display: flex;
   align-items: flex-start;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: var(--theme-space-xl);
 }
 
 .card-like-row {
   display: flex;
   align-items: flex-start;
   flex-wrap: wrap;
-  gap: 20px;
+  gap: var(--theme-space-xl);
   // Cap card-like sections to 3 columns (Events/Landmarks/Artifacts/etc).
   max-width: calc((var(--card-landscape-width) * 3) + (20px * 2));
 }
@@ -190,7 +190,7 @@ $match-config-single-column-breakpoint: 940px;
 }
 
 .banned-card-list {
-  margin-top: 10px;
+  margin-top: var(--theme-space-md);
   // Cards are absolutely positioned to create a stacked/fanned pile.
   position: relative;
   width: 122px;
@@ -200,7 +200,7 @@ $match-config-single-column-breakpoint: 940px;
 .kingdom-section .kingdom-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--theme-space-md);
   justify-content: flex-start;
   // Cap kingdom list width so at most 5 cards render per row.
   max-width: calc((122px * 5) + (10px * 4));
@@ -224,7 +224,7 @@ $match-config-single-column-breakpoint: 940px;
 .prophecies-section .prophecies-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--theme-space-md);
   justify-content: flex-start;
   // Cap card-like list width so at most 3 cards render per row.
   max-width: calc((var(--card-landscape-width) * 3) + (10px * 2));
@@ -258,15 +258,15 @@ $match-config-single-column-breakpoint: 940px;
 .player-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: var(--theme-space-md);
+  margin-bottom: var(--theme-space-md);
 }
 
 .expansion-list {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-start;
-  gap: 10px;
+  gap: var(--theme-space-md);
   // Cap expansion icon list so at most 5 icons render per row.
   max-width: calc((50px * 5) + (10px * 4));
 }
@@ -323,7 +323,7 @@ $match-config-single-column-breakpoint: 940px;
   align-items: center;
   width: 50px;
   height: 50px;
-  gap: 16px;
+  gap: var(--theme-space-lg);
   cursor: pointer;             /* will become pointer when you add logic */
 }
 
@@ -472,7 +472,7 @@ $match-config-single-column-breakpoint: 940px;
 }
 
 .selection-helper {
-  margin: 8px 0 0;
+  margin: var(--theme-space-sm) 0 0;
   font-size: 12px;
   color: var(--theme-text-secondary);
 }
@@ -482,15 +482,15 @@ $match-config-single-column-breakpoint: 940px;
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 32px);
   overflow: auto;
-  padding: 16px;
-  border-radius: 8px;
+  padding: var(--theme-space-lg);
+  border-radius: var(--theme-radius-lg);
   border: 1px solid var(--theme-border-strong);
   background: var(--theme-surface-panel);
   color: var(--theme-text-primary);
 }
 
 .config-dialog h3 {
-  margin: 0 0 12px;
+  margin: 0 0 var(--theme-space-md);
   font-family: var(--theme-font-display);
   font-size: 1.1rem;
   font-weight: 600;
@@ -500,27 +500,27 @@ $match-config-single-column-breakpoint: 940px;
 .config-dialog-input {
   width: 100%;
   box-sizing: border-box;
-  padding: 8px 10px;
-  border-radius: 6px;
+  padding: var(--theme-space-sm) 10px;
+  border-radius: var(--theme-radius-md);
   border: 1px solid var(--theme-border-strong);
   background: var(--theme-surface-card);
   color: var(--theme-text-primary);
 }
 
 .config-dialog-meta {
-  margin-top: 8px;
+  margin-top: var(--theme-space-sm);
   color: var(--theme-text-secondary);
   font-size: 12px;
 }
 
 .config-dialog-warning {
-  margin-top: 8px;
+  margin-top: var(--theme-space-sm);
   color: var(--theme-border-danger);
   font-size: 12px;
 }
 
 .config-dialog-error {
-  margin-top: 8px;
+  margin-top: var(--theme-space-sm);
   color: var(--theme-border-danger);
   font-size: 12px;
 }
@@ -528,19 +528,19 @@ $match-config-single-column-breakpoint: 940px;
 .saved-config-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--theme-space-sm);
   max-height: 320px;
   overflow: auto;
-  padding: 2px;
+  padding: var(--theme-space-2xs);
 }
 
 .saved-config-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 6px 8px;
-  border-radius: 6px;
+  gap: var(--theme-space-md);
+  padding: var(--theme-space-sm);
+  border-radius: var(--theme-radius-md);
   border: 1px solid var(--theme-border-strong);
   background: var(--theme-surface-card);
 }
@@ -548,13 +548,13 @@ $match-config-single-column-breakpoint: 940px;
 .saved-config-choice {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--theme-space-sm);
   flex: 1;
   min-width: 0;
   width: 100%;
   border: 1px solid transparent;
-  border-radius: 5px;
-  padding: 6px 8px;
+  border-radius: var(--theme-radius-md);
+  padding: var(--theme-space-sm);
   background: transparent;
   color: var(--theme-text-primary);
   text-align: left;
@@ -586,10 +586,10 @@ $match-config-single-column-breakpoint: 940px;
 }
 
 .config-dialog-actions {
-  margin-top: 12px;
+  margin-top: var(--theme-space-md);
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--theme-space-sm);
 }
 
 // Save / Cancel dialog buttons use the shared `.btn .btn-primary` and

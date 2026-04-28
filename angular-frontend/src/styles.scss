@@ -244,25 +244,3 @@ hr {
   background: var(--theme-action-danger-soft-bg);
   color: var(--theme-text-primary);
 }
-
-// CDK overlay content: dismiss button used inside email-required dialog.
-// Defined globally because the dialog is teleported into the CDK overlay
-// container, which breaks Angular's emulated view-encapsulation scoping.
-.email-required-dialog__dismiss {
-  border: 1px solid var(--theme-border-action);
-  background: var(--theme-action-primary-muted-bg);
-  color: var(--theme-text-primary);
-  border-radius: 6px;
-  padding: 8px 14px;
-  font-family: var(--theme-font-display);
-  font-weight: 600;
-  font-size: 0.82rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  cursor: pointer;
-
-  &:hover {
-    opacity: 0.85;
-  }
-}

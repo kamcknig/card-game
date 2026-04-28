@@ -10,11 +10,11 @@
 
 .lobby-nav {
   border-right: 1px solid var(--theme-border-subtle);
-  padding: 16px;
+  padding: var(--theme-space-lg);
   background: var(--theme-surface-nav);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--theme-space-sm);
 }
 
 .nav-button {
@@ -22,8 +22,8 @@
   border: 1px solid transparent;
   background: transparent;
   color: var(--theme-text-secondary);
-  border-radius: 8px;
-  padding: 10px 12px;
+  border-radius: var(--theme-radius-lg);
+  padding: var(--theme-space-md);
   text-align: left;
   font-family: var(--theme-font-body);
   font-weight: 600;
@@ -42,15 +42,15 @@
 }
 
 .lobby-content {
-  padding: 24px;
+  padding: var(--theme-space-2xl);
 }
 
 .content-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: var(--theme-space-md);
+  margin-bottom: var(--theme-space-sm);
 
   h2 {
     margin: 0;
@@ -64,42 +64,42 @@
 
 
 .status-message {
-  margin: 14px 0;
+  margin: var(--theme-space-lg) 0;
   border: 1px solid var(--theme-border-danger);
   background: var(--theme-surface-danger-soft);
   color: var(--theme-text-primary);
-  border-radius: 6px;
-  padding: 10px 12px;
+  border-radius: var(--theme-radius-md);
+  padding: var(--theme-space-md);
 }
 
 .empty-state {
-  margin-top: 32px;
-  padding: 32px;
+  margin-top: var(--theme-space-3xl);
+  padding: var(--theme-space-3xl);
   text-align: center;
   color: var(--theme-text-secondary);
   border: 2px dashed var(--theme-border-subtle);
-  border-radius: 10px;
+  border-radius: var(--theme-radius-pill);
   font-style: italic;
 }
 
 .game-list {
   list-style: none;
-  margin: 16px 0 0;
+  margin: var(--theme-space-lg) 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--theme-space-sm);
 }
 
 .game-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 14px;
+  gap: var(--theme-space-lg);
   border: 1px solid var(--theme-border-subtle);
-  border-radius: 8px;
+  border-radius: var(--theme-radius-lg);
   background: var(--theme-surface-card);
-  padding: 12px 14px;
+  padding: var(--theme-space-md) var(--theme-space-lg);
   transition: border-color 120ms ease, transform 120ms ease;
 
   &:hover {
@@ -137,14 +137,14 @@
 // Email-required dialog panel: shown when a legacy user tries to create or
 // join a game without an email address attached to their account.
 .email-required-dialog {
-  padding: 28px 24px 20px;
+  padding: var(--theme-space-3xl) var(--theme-space-2xl) var(--theme-space-xl);
   max-width: 460px;
   background: var(--theme-surface-card);
   border: 1px solid var(--theme-border-subtle);
-  border-radius: 10px;
+  border-radius: var(--theme-radius-pill);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--theme-space-md);
 }
 
 .email-required-dialog__title {
@@ -167,8 +167,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 4px;
+  gap: var(--theme-space-md);
+  margin-top: var(--theme-space-xs);
 }
 
 // Primary action: navigates to /profile/security styled as a button-link.
@@ -183,5 +183,6 @@
   text-decoration: none;
 }
 
-// .email-required-dialog__dismiss is defined globally in styles.scss because
-// CDK overlay teleportation breaks emulated view-encapsulation scoping.
+// Dismiss button uses the global `.btn .btn-primary-muted` recipe from
+// styles.scss; CDK overlay teleportation breaks emulated view-encapsulation
+// scoping, so any local rule wouldn't apply anyway.

@@ -17,9 +17,9 @@
   // Both CSS vars are set on the host by the component class.
   top: calc(var(--kingdom-row-count, 2) * 160px + 32px + var(--landscape-display-height, 0px));
   border: 1px solid var(--theme-border-strong);
-  border-radius: 6px;
+  border-radius: var(--theme-radius-md);
   background: var(--theme-panel-bg);
-  padding: 10px;
+  padding: var(--theme-space-md);
   box-sizing: border-box;
   pointer-events: auto;
   display: flex;
@@ -36,13 +36,13 @@
 
 .active-duration-button {
   border: 1px solid var(--theme-border-strong);
-  border-radius: 6px;
+  border-radius: var(--theme-radius-md);
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
   color: var(--theme-text-on-dark);
   font-family: var(--theme-font-body);
   font-size: 13px;
   font-weight: 600;
-  padding: 6px 10px;
+  padding: var(--theme-space-sm) var(--theme-space-md);
   cursor: pointer;
 }
 
@@ -53,13 +53,13 @@
 .play-area-cards {
   flex: 1 1 auto;
   min-height: 0;
-  margin-top: 8px;
+  margin-top: var(--theme-space-sm);
   display: flex;
   align-items: flex-start;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: var(--theme-space-md);
   overflow: auto;
-  padding-bottom: 6px;
+  padding-bottom: var(--theme-space-sm);
 }
 
 .play-area-card {
@@ -78,7 +78,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  gap: 10px;
+  gap: var(--theme-space-md);
   pointer-events: none;
 }
 
@@ -101,25 +101,25 @@
   font-weight: 700;
   background: var(--theme-panel-bg);
   border: 1px solid var(--theme-border-strong);
-  padding: 4px 10px;
+  padding: var(--theme-space-xs) var(--theme-space-md);
 }
 
 // Label positioned above the stack card; bottom edge flush with the card top.
 .stack-label-top {
-  border-radius: 6px 6px 0 0;
+  border-radius: var(--theme-radius-md) var(--theme-radius-md) 0 0;
   border-bottom: none;
 }
 
 // Label positioned below the stack card; top edge flush with the card bottom.
 .stack-label-bottom {
-  border-radius: 0 0 6px 6px;
+  border-radius: 0 0 var(--theme-radius-md) var(--theme-radius-md);
   border-top: none;
 }
 
 .empty-stack {
   width: var(--card-width);
   height: var(--card-height);
-  border-radius: 4px;
+  border-radius: var(--theme-radius-sm);
   border: 1px solid var(--theme-border-strong);
   color: var(--theme-text-on-dark);
   background: rgba(0, 0, 0, 0.35);
@@ -138,9 +138,9 @@
 
 .hand-panel {
   border: 1px solid var(--theme-border-strong);
-  border-radius: 0 6px 6px 6px;
+  border-radius: 0 var(--theme-radius-md) var(--theme-radius-md) var(--theme-radius-md);
   background: var(--theme-panel-bg);
-  padding: 10px;
+  padding: var(--theme-space-md);
   box-sizing: border-box;
   pointer-events: auto;
 }
@@ -150,13 +150,13 @@
   left: 0;
   bottom: 100%;
   border: 1px solid var(--theme-border-strong);
-  border-radius: 6px 6px 0 0;
+  border-radius: var(--theme-radius-md) var(--theme-radius-md) 0 0;
   background: var(--theme-panel-bg);
-  padding: 6px 10px;
+  padding: var(--theme-space-sm) var(--theme-space-md);
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--theme-space-md);
   pointer-events: auto;
   max-width: 100%;
 }
@@ -164,7 +164,7 @@
 .phase-status-text {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--theme-space-sm);
   color: var(--theme-text-on-dark);
   font-size: 17px;
   font-weight: 700;
@@ -181,13 +181,13 @@
 .phase-status-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--theme-space-sm);
 }
 
 .panel-button {
   border: 1px solid var(--theme-border-strong);
-  border-radius: 6px;
-  padding: 6px 10px;
+  border-radius: var(--theme-radius-md);
+  padding: var(--theme-space-sm) var(--theme-space-md);
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
   color: var(--theme-text-on-dark);
   font-family: var(--theme-font-body);
@@ -209,7 +209,7 @@
   width: 38px;
   height: 38px;
   border: 1px solid var(--theme-border-strong);
-  border-radius: 4px;
+  border-radius: var(--theme-radius-sm);
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
   padding: 0;
   cursor: pointer;
@@ -228,9 +228,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
+  color: var(--theme-text-on-dark);
   font-size: 17px;
   font-weight: 700;
+  // Drop shadow keeps the value readable over varied resource icon art.
   text-shadow: 0 0 3px #000000;
 }
 
@@ -240,10 +241,10 @@
   bottom: calc(100% + 6px);
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px;
+  gap: var(--theme-space-sm);
+  padding: var(--theme-space-sm);
   border: 1px solid var(--theme-border-strong);
-  border-radius: 6px;
+  border-radius: var(--theme-radius-md);
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
 }
 
@@ -251,7 +252,7 @@
   min-width: 30px;
   height: 30px;
   border: 1px solid var(--theme-border-strong);
-  border-radius: 4px;
+  border-radius: var(--theme-radius-sm);
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
   color: var(--theme-text-on-dark);
   font-family: var(--theme-font-body);
@@ -275,29 +276,32 @@
 }
 
 .token-tray-group {
-  margin-top: 8px;
+  margin-top: var(--theme-space-sm);
 }
 
 .token-tray-label {
   color: var(--theme-text-on-dark);
   font-size: 12px;
-  margin-bottom: 4px;
+  margin-bottom: var(--theme-space-xs);
 }
 
 .token-tray {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--theme-space-xs);
 }
 
+// Game-art piece: physical cube token — fixed game art, not theme chrome.
 .cube-token {
   width: 22px;
   height: 22px;
   border: 1px solid #111111;
-  border-radius: 2px;
+  border-radius: var(--theme-radius-sm);
 }
 
+// Game-art piece: black-on-white pill badge (e.g., token counts) —
+// fixed game art, not theme chrome.
 .token-badge {
   display: inline-flex;
   align-items: center;
@@ -309,9 +313,9 @@
   color: #000000;
   font-size: 10px;
   font-weight: 700;
-  padding: 0 4px;
+  padding: 0 var(--theme-space-xs);
   box-sizing: border-box;
-  gap: 3px;
+  gap: var(--theme-space-xs);
 }
 
 .token-badge span {
@@ -320,10 +324,10 @@
 }
 
 .hand-content-row {
-  margin-top: 8px;
+  margin-top: var(--theme-space-sm);
   display: flex;
   align-items: center;
-  gap: 50px;
+  gap: var(--theme-space-5xl);
 }
 
 .hand-cards {
@@ -331,10 +335,10 @@
   min-width: 0;
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: var(--theme-space-md);
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 3px 3px 9px 3px;
+  padding: var(--theme-space-xs) var(--theme-space-xs) var(--theme-space-sm) var(--theme-space-xs);
 }
 
 .turn-actions {
@@ -343,14 +347,14 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 8px;
+  gap: var(--theme-space-sm);
   min-width: 180px;
 }
 
 .turn-action-button {
   border: 1px solid var(--theme-border-strong);
-  border-radius: 8px;
-  padding: 10px 12px;
+  border-radius: var(--theme-radius-lg);
+  padding: var(--theme-space-md);
   color: var(--theme-text-on-dark);
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
   font-family: var(--theme-font-display);
@@ -367,6 +371,7 @@
 
 .play-all-treasures-button {
   border-color: var(--theme-border-strong);
+  // Warm cream text — treasure-themed accent for the play-all-treasures CTA.
   color: #fff4e6;
 }
 
@@ -385,7 +390,7 @@
 .board-card {
   position: relative;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--theme-radius-md);
   background: transparent;
   padding: 0;
   margin: 0;
@@ -400,7 +405,7 @@
   position: absolute;
   inset: -3px;
   border: 3px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--theme-radius-lg);
   pointer-events: none;
 }
 
@@ -409,15 +414,15 @@
 }
 
 .board-card.selectable-card::before {
-  border-color: #ffaaaa;
+  border-color: var(--theme-color-selectable);
 }
 
 .board-card.selected-card::before {
-  border-color: #6dff8c;
+  border-color: var(--theme-color-selected);
 }
 
 .board-card.way-selectable {
-  box-shadow: 0 0 0 2px rgba(0, 213, 255, 0.9);
+  box-shadow: 0 0 0 2px var(--theme-color-way-selectable);
 }
 
 // Count badge positioned at top-left of deck, discard, and hand group stacks.
@@ -433,10 +438,12 @@ app-count-badge {
   right: 4px;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--theme-space-xs);
   pointer-events: none;
 }
 
+// Game-art piece: black-on-white pill badge over a stack image — fixed
+// game art, not theme chrome.
 .stack-token-badge {
   min-width: 24px;
   height: 24px;
@@ -447,6 +454,6 @@ app-count-badge {
   font-weight: 700;
   line-height: 20px;
   text-align: center;
-  padding: 0 4px;
+  padding: 0 var(--theme-space-xs);
   box-sizing: border-box;
 }

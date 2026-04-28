@@ -13,10 +13,13 @@
   right: 4px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--theme-space-2xs);
   pointer-events: none;
 }
 
+// Game-art piece: black-on-white badge sits on the card image and reads
+// as a painted board-game token, so its colors are intentionally fixed
+// across themes (not theme chrome).
 .token-badge {
   width: var(--token-size, 28px);
   height: var(--token-size, 28px);

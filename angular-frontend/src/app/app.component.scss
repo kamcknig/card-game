@@ -68,8 +68,8 @@ app-match-hud.match-started {
   left: 50%;
   transform: translateX(-50%);
   z-index: 9999;
-  padding: 6px 18px;
-  border-radius: 20px;
+  padding: var(--theme-space-sm) var(--theme-space-xl);
+  border-radius: var(--theme-radius-xl);
   background: var(--theme-surface-panel);
   border: 1px solid var(--theme-border-danger);
   color: var(--theme-border-danger);

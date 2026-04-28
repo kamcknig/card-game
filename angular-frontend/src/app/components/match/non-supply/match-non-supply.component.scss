@@ -15,9 +15,9 @@
 .non-supply-panel {
   position: fixed;
   border: 1px solid var(--theme-border-strong);
-  border-radius: 6px;
+  border-radius: var(--theme-radius-md);
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-medium));
-  padding: 10px;
+  padding: var(--theme-space-md);
   box-sizing: border-box;
   pointer-events: none;
 }
@@ -25,13 +25,13 @@
 .kingdom-columns {
   display: flex;
   align-items: flex-start;
-  gap: 30px;
+  gap: var(--theme-space-3xl);
 }
 
 .kingdom-column {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--theme-space-md);
 }
 
 .kingdom-section {
@@ -57,7 +57,7 @@
   width: var(--card-width);
   min-height: var(--card-small-height);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--theme-radius-md);
   background: transparent;
   padding: 0;
   margin: 0;
@@ -72,7 +72,7 @@
   position: absolute;
   inset: -3px;
   border: 3px solid transparent;
-  border-radius: 8px;
+  border-radius: var(--theme-radius-lg);
   pointer-events: none;
 }
 
@@ -83,16 +83,16 @@
 
 .non-supply-pile.selectable-card::before,
 .non-supply-pile.selectable-pile::before {
-  border-color: #ffaaaa;
+  border-color: var(--theme-color-selectable);
 }
 
 .non-supply-pile.selected-card::before,
 .non-supply-pile.selected-pile::before {
-  border-color: #6dff8c;
+  border-color: var(--theme-color-selected);
 }
 
 .non-supply-pile.way-selectable {
-  box-shadow: 0 0 0 2px rgba(0, 213, 255, 0.9);
+  box-shadow: 0 0 0 2px var(--theme-color-way-selectable);
 }
 
 .non-supply-pile.empty-pile-state {

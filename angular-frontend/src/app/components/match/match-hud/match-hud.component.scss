@@ -16,8 +16,8 @@ app-score {
 
 .pause-dialog-card {
   border: 1px solid var(--theme-border-strong);
-  border-radius: 8px;
-  padding: 14px 18px;
+  border-radius: var(--theme-radius-lg);
+  padding: var(--theme-space-lg) var(--theme-space-xl);
   color: var(--theme-text-on-dark);
   font-size: 36px;
   font-weight: 700;
@@ -27,8 +27,8 @@ app-score {
 
 .waiting-dialog-card {
   border: 1px solid var(--theme-border-strong);
-  border-radius: 8px;
-  padding: 14px 18px;
+  border-radius: var(--theme-radius-lg);
+  padding: var(--theme-space-lg) var(--theme-space-xl);
   color: var(--theme-text-on-dark);
   font-size: 28px;
   line-height: 1.2;
@@ -42,7 +42,7 @@ app-score {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 6px;
+  gap: var(--theme-space-sm);
   overflow: visible;
   pointer-events: auto;
 }
@@ -54,12 +54,12 @@ app-score {
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
   border: 1px solid var(--theme-border-strong);
   pointer-events: auto;
-  padding: 10px 10px 120px 10px;
+  padding: var(--theme-space-md) var(--theme-space-md) 120px var(--theme-space-md);
 }
 
 .mat-modal-title {
   color: var(--theme-text-on-dark);
-  margin-bottom: 20px;
+  margin-bottom: var(--theme-space-xl);
   font-size: 24px;
 }
 
@@ -67,21 +67,21 @@ app-score {
   display: flex;
   justify-content: start;
   min-width: 600px;
-  gap: 20px;
+  gap: var(--theme-space-xl);
 }
 
 .player-item {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--theme-space-md);
 }
 
 .card-flex-container {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--theme-space-xl);
   position: relative;
-  padding-bottom: 50px;
+  padding-bottom: var(--theme-space-5xl);
 }
 
 .card-item {
@@ -96,7 +96,7 @@ app-score {
   flex-direction: column;
   // Keep stacked HUD items pinned to the right edge as log width changes.
   align-items: flex-end;
-  gap: 8px;
+  gap: var(--theme-space-sm);
   pointer-events: auto;
 }
 
@@ -108,12 +108,12 @@ app-game-log {
 .hud-menu {
   display: flex;
   justify-content: flex-end;
-  gap: 6px;
+  gap: var(--theme-space-sm);
   width: 300px;
-  padding: 4px;
+  padding: var(--theme-space-xs);
   box-sizing: border-box;
-  border-radius: 5px;
-  background-color: rgba(0, 0, 0, 0.6);
+  border-radius: var(--theme-radius-md);
+  background-color: var(--theme-panel-bg);
   pointer-events: auto;
 }
 
@@ -130,7 +130,7 @@ app-game-log {
   border: 1px solid var(--theme-border-strong);
   background: var(--theme-surface-panel);
   color: var(--theme-text-primary);
-  border-radius: 4px;
+  border-radius: var(--theme-radius-sm);
   cursor: pointer;
   font-family: var(--theme-font-body);
   font-weight: 600;
@@ -193,9 +193,9 @@ app-game-log {
   right: 10px;
   min-width: 210px;
   max-width: 360px;
-  padding: 8px 10px;
+  padding: var(--theme-space-sm) var(--theme-space-md);
   border: 1px solid var(--theme-border-strong);
-  border-radius: 6px;
+  border-radius: var(--theme-radius-md);
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
   color: var(--theme-text-on-dark);
   font-size: 12px;
@@ -207,33 +207,33 @@ app-game-log {
 
 .debug-runtime-title {
   font-weight: 700;
-  margin-bottom: 4px;
+  margin-bottom: var(--theme-space-xs);
 }
 
 .debug-runtime-row {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--theme-space-md);
 }
 
 // Container for debug action buttons rendered below the runtime ID rows.
 .debug-runtime-actions {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-top: 8px;
+  gap: var(--theme-space-xs);
+  margin-top: var(--theme-space-sm);
   border-top: 1px solid var(--theme-border-strong);
-  padding-top: 8px;
+  padding-top: var(--theme-space-sm);
 }
 
 // Compact button for debug actions inside the runtime overlay.
 .debug-action-btn {
   display: block;
   width: 100%;
-  padding: 3px 8px;
+  padding: var(--theme-space-xs) var(--theme-space-sm);
   background: transparent;
   border: 1px solid var(--theme-border-strong);
-  border-radius: 3px;
+  border-radius: var(--theme-radius-sm);
   color: var(--theme-text-on-dark);
   font-family: var(--theme-font-body);
   font-size: 11px;
@@ -249,8 +249,8 @@ app-game-log {
   background: var(--theme-surface-panel);
   color: var(--theme-text-primary);
   border: 1px solid var(--theme-border-strong);
-  padding: 18px 22px;
-  border-radius: 10px;
+  padding: var(--theme-space-xl) var(--theme-space-2xl);
+  border-radius: var(--theme-radius-pill);
   min-width: 280px;
   text-align: center;
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
@@ -259,16 +259,16 @@ app-game-log {
 .disconnect-title {
   font-size: 16px;
   font-weight: 600;
-  margin-bottom: 8px;
+  margin-bottom: var(--theme-space-sm);
 }
 
 .disconnect-names {
-  margin-bottom: 12px;
+  margin-bottom: var(--theme-space-md);
 }
 
 .disconnect-name {
   font-size: 14px;
-  margin-top: 4px;
+  margin-top: var(--theme-space-xs);
 }
 
 // Visual identity comes from `.btn .btn-danger` in styles.scss. No local
@@ -278,8 +278,8 @@ app-game-log {
   background: var(--theme-surface-panel);
   color: var(--theme-text-primary);
   border: 1px solid var(--theme-border-strong);
-  padding: 20px 24px;
-  border-radius: 10px;
+  padding: var(--theme-space-xl) var(--theme-space-2xl);
+  border-radius: var(--theme-radius-pill);
   min-width: 300px;
   max-width: 400px;
   text-align: center;
@@ -290,20 +290,20 @@ app-game-log {
 .resign-dialog-title {
   font-size: 18px;
   font-weight: 700;
-  margin-bottom: 10px;
+  margin-bottom: var(--theme-space-md);
 }
 
 .resign-dialog-body {
   font-size: 14px;
   color: var(--theme-text-secondary);
-  margin-bottom: 18px;
+  margin-bottom: var(--theme-space-xl);
   line-height: 1.4;
 }
 
 .resign-dialog-actions {
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: var(--theme-space-md);
 }
 
 // Cancel/Resign buttons in this dialog use the shared `.btn .btn-secondary`

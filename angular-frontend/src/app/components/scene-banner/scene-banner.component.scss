@@ -18,8 +18,8 @@
   min-width: min(420px, 100%);
   max-width: 100%;
   height: var(--banner-height);
-  margin: 16px auto;
-  padding: 8px 20px;
+  margin: var(--theme-space-lg) auto;
+  padding: var(--theme-space-sm) var(--theme-space-xl);
   background-image: url('/assets/ui/banner.png');
   background-repeat: no-repeat;
   background-position: center;
@@ -64,7 +64,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
+  padding: var(--theme-space-md) var(--theme-space-lg);
   background: var(--theme-surface-panel);
   border-top: 1px solid var(--theme-border-subtle);
 }
@@ -72,20 +72,20 @@
 .action-bar-left {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--theme-space-sm);
 }
 
 .action-bar-right {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--theme-space-sm);
 }
 
 // Wrapper for projected header actions; hide divider when empty.
 .action-bar-projected {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--theme-space-sm);
 
   &:empty + .action-bar-divider {
     display: none;

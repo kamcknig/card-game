@@ -1,7 +1,7 @@
 .content {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--theme-space-md);
 }
 
 /* Fixed-width icon slot keeps checkboxes and names aligned across all player rows. */
@@ -23,7 +23,7 @@ input[type='checkbox'] {
   flex-shrink: 0;
   position: relative;
   border: 1.5px solid var(--theme-border-action);
-  border-radius: 3px;
+  border-radius: var(--theme-radius-sm);
   background: var(--theme-surface-panel);
   cursor: pointer;
   transition: background 150ms ease, border-color 120ms ease;
@@ -33,6 +33,9 @@ input[type='checkbox'] {
     background: var(--theme-color-ready);
     border-color: var(--theme-color-ready);
 
+    // White checkmark drawn over the green --theme-color-ready fill;
+    // fixed colour because it reads as the visual "ready" check on the
+    // game-state pill, not theme chrome.
     &::after {
       content: '';
       position: absolute;
@@ -74,8 +77,8 @@ input[type='checkbox'] {
 // uppercase, 0.06em letter-spacing, weight 600) are deliberately
 // overridden here.
 .moderation-button {
-  border-radius: 4px;
-  padding: 4px 8px;
+  border-radius: var(--theme-radius-sm);
+  padding: var(--theme-space-xs) var(--theme-space-sm);
   font-family: var(--theme-font-body);
   font-size: 0.75rem;
   font-weight: 500;

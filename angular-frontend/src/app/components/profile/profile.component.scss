@@ -11,11 +11,11 @@
 
 .profile-nav {
   border-right: 1px solid var(--theme-border-subtle);
-  padding: 16px;
+  padding: var(--theme-space-lg);
   background: var(--theme-surface-nav);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--theme-space-sm);
 }
 
 .nav-button {
@@ -23,8 +23,8 @@
   border: 1px solid var(--theme-border-action);
   background: var(--theme-action-secondary-bg);
   color: var(--theme-text-primary);
-  border-radius: 8px;
-  padding: 10px 12px;
+  border-radius: var(--theme-radius-lg);
+  padding: var(--theme-space-md);
   text-align: left;
   font-family: var(--theme-font-body);
   font-size: 0.9rem;
@@ -38,7 +38,7 @@
 }
 
 .profile-content {
-  padding: 20px;
+  padding: var(--theme-space-xl);
 }
 
 // Back button injected into the banner header actions slot. Visual
@@ -48,7 +48,7 @@
 // 0.06em letter-spacing) read too loud for a header back button so they
 // are deliberately overridden here.
 .back-button {
-  padding: 7px 12px;
+  padding: var(--theme-space-sm) var(--theme-space-md);
   font-family: var(--theme-font-body);
   font-size: 0.875rem;
   font-weight: 500;

@@ -2,20 +2,20 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: var(--theme-space-sm);
   min-width: 220px;
 }
 
 .number-input {
   width: 220px;
   height: 48px;
-  border-radius: 6px;
+  border-radius: var(--theme-radius-md);
   border: 1px solid var(--theme-border-strong);
   background: var(--theme-surface-panel);
   color: var(--theme-text-primary);
   font-size: 22px;
   text-align: center;
-  padding: 6px 10px;
+  padding: var(--theme-space-sm) var(--theme-space-md);
   box-sizing: border-box;
 }
 

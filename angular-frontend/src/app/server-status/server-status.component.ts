@@ -29,7 +29,7 @@ const SERVER_STATUS_POLL_INTERVAL_MS = 10_000;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
-      font-family: sans-serif;
+      font-family: var(--theme-font-body);
       background: #1a1a1a;
       color: #e0e0e0;
       padding: 2rem;
@@ -88,7 +88,7 @@ const SERVER_STATUS_POLL_INTERVAL_MS = 10_000;
       color: #ffd93d;
     }
     .issue-code {
-      font-family: monospace;
+      font-family: var(--theme-font-mono);
       font-size: 0.85rem;
       color: #c0c0c0;
       font-weight: 600;

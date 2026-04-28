@@ -14,6 +14,8 @@
     object-fit: contain;
   }
 
+  // Cost number drawn over the coin icon image — black-on-coin is fixed
+  // game art, not theme chrome.
   .cost-chip span {
     position: absolute;
     inset: 0;

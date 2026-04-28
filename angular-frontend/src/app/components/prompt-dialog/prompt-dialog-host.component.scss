@@ -2,15 +2,15 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--theme-space-md);
   min-width: min(780px, calc(100vw - 120px));
   max-width: min(1240px, calc(100vw - 80px));
   max-height: min(860px, calc(100vh - 80px));
   overflow: hidden;
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
   border: 1px solid var(--theme-border-strong);
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: var(--theme-radius-lg);
+  padding: var(--theme-space-md);
   color: var(--theme-text-on-dark);
   box-sizing: border-box;
 }
@@ -20,7 +20,7 @@
   top: 6px;
   right: 6px;
   border: 1px solid var(--theme-border-strong);
-  border-radius: 4px;
+  border-radius: var(--theme-radius-sm);
   background: var(--theme-surface-panel);
   color: var(--theme-text-primary);
   width: 26px;
@@ -31,7 +31,7 @@
 .prompt-dialog-title {
   font-size: 24px;
   font-weight: 600;
-  margin-right: 28px;
+  margin-right: var(--theme-space-3xl);
 }
 
 .prompt-dialog-body {
@@ -41,23 +41,23 @@
 .prompt-dialog-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--theme-space-sm);
   justify-content: center;
-  padding-top: 4px;
+  padding-top: var(--theme-space-xs);
 }
 
 .prompt-action-button {
   border: 1px solid var(--theme-border-strong);
   background: var(--theme-surface-panel);
   color: var(--theme-text-primary);
-  border-radius: 6px;
+  border-radius: var(--theme-radius-md);
   font-family: var(--theme-font-display);
   font-size: 16px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   min-height: 36px;
-  padding: 6px 14px;
+  padding: var(--theme-space-sm) var(--theme-space-lg);
   cursor: pointer;
 }
 
