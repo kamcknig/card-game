@@ -12,32 +12,43 @@
   background: var(--theme-panel-bg);
 }
 
-/* Top-level flex row that separates the three layout columns. Horizontal
-   padding only — top/bottom are flush so the vertical column dividers
-   extend the full height of the match screen (top edge to bottom edge).
-   Vertical padding for content lives on the columns themselves so the
-   border lines reach the edges while the content stays inset from them. */
+/* Top-level flex row that separates the three layout columns. Zero padding
+   and zero gap so column dividers reach screen edges (vertically) and
+   adjacent column borders sit flush against the next column (horizontally).
+   Per-row content padding lives on the column children — see
+   .match-column > * below. */
 .match-screen {
   display: flex;
   flex-direction: row;
   align-items: stretch;
-  gap: 10px;
-  padding: 0 10px;
+  gap: 0;
+  padding: 0;
   width: 100%;
   height: 100%;
   box-sizing: border-box;
 }
 
 /* Shared vertical-stack behaviour for all three columns. Internal vertical
-   padding keeps the first/last rows clear of the screen edges while the
-   column box (and therefore the right-side border) still extends the full
-   match-screen height. */
+   padding keeps the first/last rows clear of the screen edges; horizontal
+   padding lives on each row so the row borders extend the full column
+   width (otherwise column padding would shrink the border length). */
 .match-column {
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-width: 0;
   padding: 10px 0;
+  box-sizing: border-box;
+}
+
+/* Per-row horizontal content padding. Each row's box-sizing is border-box
+   so the border-top added by the divider rule below spans the row's full
+   width including the padding — that is, the full column width. */
+.match-column-left > *,
+.match-column-center > *,
+.match-column-right > * {
+  padding-left: 10px;
+  padding-right: 10px;
   box-sizing: border-box;
 }
 

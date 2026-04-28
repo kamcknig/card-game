@@ -1,11 +1,11 @@
 @use '../cost-overlay-shared';
 
-// Host participates in the column 2 flex flow — no fixed positioning.
-// align-self: flex-start prevents the column flex container from stretching the
-// host across the full column width so the panel shrinks to wrap its grid content.
+// Host participates in the column 2 flex flow. Stretches the full column
+// width so the row divider above it (added by the column-level rule)
+// reaches the column borders on both sides; the inner grid still wraps
+// landscape cards naturally on the left.
 :host {
   display: block;
-  align-self: flex-start;
 }
 
 // Landscapes sit directly on the unified match-screen background — no

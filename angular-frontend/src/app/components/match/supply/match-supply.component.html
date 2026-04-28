@@ -3,7 +3,6 @@
     <section class="supply-panel">
       <div class="basic-columns">
         <div class="pile-column">
-          <div class="pile-section-label">Victory</div>
           @for (pile of basicVictoryPiles(); track pile.trackKey) {
             <ng-container *ngTemplateOutlet="pileButton; context: { $implicit: pile }"></ng-container>
           }
@@ -13,7 +12,6 @@
         </div>
 
         <div class="pile-column">
-          <div class="pile-section-label">Treasure</div>
           @for (pile of basicTreasurePiles(); track pile.trackKey) {
             <ng-container *ngTemplateOutlet="pileButton; context: { $implicit: pile }"></ng-container>
           }

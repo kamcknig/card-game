@@ -1,8 +1,35 @@
-// display: contents makes the host element transparent to the parent flex container so
-// .play-area-panel and .player-bottom-row become direct grandchildren of the column flex
-// container, receiving the standard column gap automatically without a wrapper.
+// Player-area host is a flex column inside column-2 of the match screen.
+// Three rows stack vertically: play area (grows), full-width phase status
+// bar, and the deck/hand/discard bottom row. The host owns its own row
+// dividers so they extend the full column width — the parent column-level
+// padding rule does not apply here (we override it).
 :host {
-  display: contents;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  // Override the column-level horizontal padding rule — inner sections
+  // each carry their own padding so dividers between them span the
+  // entire column width.
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+// Each direct child fills the host width and carries the same horizontal
+// content padding as other column rows.
+:host > * {
+  padding-left: 10px;
+  padding-right: 10px;
+  box-sizing: border-box;
+}
+
+// Horizontal divider above each row except the first. With the host's
+// 10px gap, this places the line at the top of the row with breathing
+// room above (gap) and below (padding-top), centered between sections.
+:host > *:not(:first-child) {
+  border-top: 1px solid var(--theme-border-subtle);
+  padding-top: 10px;
 }
 
 // Play area sits on the unified match-screen background. The dashed
@@ -125,52 +152,21 @@
   font-size: 12px;
 }
 
-// Stacks the phase status bar above the hand panel as flow siblings so the
-// status bar contributes to layout — the column's standard gap then sits cleanly
-// between the play area panel and the top of the status bar.
-//
-// min-width is wide enough to seat 5 hand cards at their natural gap so the
-// hand never shrinks below a 5-card row even when the player is holding fewer.
-// Math: 5 × card width + 4 × inner gap (between cards) + 2 × hand-cards padding
-//      = 5 × var(--card-width) + 6 × var(--theme-space-md). The hand-panel /
-// status bar no longer have their own border or padding chrome, so the shell
-// only needs to size to the hand-cards content.
-.hand-panel-shell {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  min-width: calc(5 * var(--card-width) + 6 * var(--theme-space-md));
-  max-width: 1120px;
-  pointer-events: none;
-}
-
-.hand-panel-shell > .hand-panel {
-  align-self: stretch;
-}
-
-// Hand panel sits directly on the unified match-screen background. The
-// divider between status bar and hand is drawn by the .hand-panel-shell rule
-// below — there is no per-panel chrome here.
+// Hand panel sits in the middle of .player-bottom-row alongside the deck and
+// discard stacks. Min-width is wide enough to seat 5 hand cards at their
+// natural gap so the hand never shrinks below a 5-card row even when the
+// player is holding fewer. Math: 5 × card + 4 × inner gap + 2 × hand-cards
+// padding = 5 × var(--card-width) + 6 × var(--theme-space-md).
 .hand-panel {
   box-sizing: border-box;
   pointer-events: auto;
+  min-width: calc(5 * var(--card-width) + 6 * var(--theme-space-md));
+  max-width: 1120px;
 }
 
-// Divider between phase status bar and hand panel inside the shell — the
-// status bar's bottom border serves as the horizontal rule, and the hand
-// panel takes a matching top padding so the rule is centered in the gap.
-.hand-panel-shell > .phase-status-bar {
-  border-bottom: 1px solid var(--theme-border-subtle);
-  padding-bottom: var(--theme-space-sm);
-}
-
-.hand-panel-shell > .hand-panel {
-  padding-top: var(--theme-space-sm);
-}
-
-// Phase status bar — flow-positioned above the hand panel. No background or
-// outer border; the divider between status bar and hand panel is drawn via
-// the .hand-panel-shell selector above.
+// Phase status bar — sibling of play-area-panel and player-bottom-row at the
+// player-area host level, so its top and bottom dividers extend the full
+// column width.
 .phase-status-bar {
   display: flex;
   flex-direction: column;

@@ -1,344 +1,342 @@
 @if (visible()) {
   @let resolvedLayout = layout();
   @let resources = resourceState();
+
+  <!-- Play area: cards played this turn. -->
   <section class="play-area-panel">
-      <div class="play-area-header">
-        @if (activeDurationCardIds().length > 0) {
-          <button
-            type="button"
-            class="active-duration-button"
-            (click)="onActiveDurationCardsRequested()"
-          >
-            Active duration cards ({{ activeDurationCardIds().length }})
-          </button>
-        }
-      </div>
-
-      <div class="play-area-cards">
-        @for (playCard of playAreaCards(); track playCard.trackKey) {
-          <button
-            type="button"
-            class="board-card play-area-card"
-            [class.selectable-card]="playCard.selectable"
-            [class.selected-card]="playCard.selected"
-            [class.way-selectable]="playCard.waySelectable"
-            [class.play-area-card-dimmed]="playCard.dimmed"
-            (click)="onCardClick(playCard.cardId, $event)"
-            (mouseenter)="onCardMouseEnter(playCard.cardId, $event)"
-            (mouseleave)="onCardMouseLeave(playCard.cardId)"
-          >
-            <app-card
-              [cardId]="playCard.cardId"
-              [size]="'full'"
-              [forceFacing]="'front'"
-            ></app-card>
-          </button>
-        }
-      </div>
-    </section>
-
-    <section class="player-bottom-row">
-      @let deck = deckPile();
-      <section class="stack-panel">
-        <div class="stack-label stack-label-top">DECK</div>
+    <div class="play-area-header">
+      @if (activeDurationCardIds().length > 0) {
         <button
           type="button"
-          class="board-card stack-card"
-          [class.selectable-card]="deck.selectable"
-          [class.selected-card]="deck.selected"
-          [class.way-selectable]="deck.waySelectable"
-          [disabled]="deck.cardId === null"
-          (click)="deck.cardId !== null && onCardClick(deck.cardId, $event)"
-          (mouseenter)="deck.cardId !== null && onCardMouseEnter(deck.cardId, $event)"
-          (mouseleave)="deck.cardId !== null && onCardMouseLeave(deck.cardId)"
+          class="active-duration-button"
+          (click)="onActiveDurationCardsRequested()"
         >
-          @if (deck.cardId !== null) {
-            <app-card
-              [cardId]="deck.cardId"
-              [size]="'full'"
-              [forceFacing]="deck.forceFacing"
-              [count]="deck.showCount ? deck.count : 0"
-            ></app-card>
-          } @else {
-            <div class="empty-stack">Empty</div>
-          }
-          @if (deck.tokenBadges.length > 0) {
-            <div class="stack-token-badges">
-              @for (badge of deck.tokenBadges; track badge.id) {
-                @if (badge.imagePath) {
-                  <app-token-image-badge
-                    [imagePath]="badge.imagePath"
-                    [highlightColor]="badge.color"
-                  ></app-token-image-badge>
-                } @else {
-                  <div class="stack-token-badge" [style.background]="badge.color">
-                    {{ badge.label }}
-                    @if (badge.count > 1) {
-                      <span>{{ badge.count }}</span>
-                    }
-                  </div>
-                }
-              }
-            </div>
-          }
+          Active duration cards ({{ activeDurationCardIds().length }})
         </button>
-      </section>
+      }
+    </div>
 
-      <section
-        class="hand-panel-shell"
-        [style.max-width.px]="resolvedLayout.handMaxWidth"
-      >
-        <div class="phase-status-bar" [attr.data-phase]="turnPhase()">
-          <div class="phase-label">{{ phaseLabel() }}</div>
+    <div class="play-area-cards">
+      @for (playCard of playAreaCards(); track playCard.trackKey) {
+        <button
+          type="button"
+          class="board-card play-area-card"
+          [class.selectable-card]="playCard.selectable"
+          [class.selected-card]="playCard.selected"
+          [class.way-selectable]="playCard.waySelectable"
+          [class.play-area-card-dimmed]="playCard.dimmed"
+          (click)="onCardClick(playCard.cardId, $event)"
+          (mouseenter)="onCardMouseEnter(playCard.cardId, $event)"
+          (mouseleave)="onCardMouseLeave(playCard.cardId)"
+        >
+          <app-card
+            [cardId]="playCard.cardId"
+            [size]="'full'"
+            [forceFacing]="'front'"
+          ></app-card>
+        </button>
+      }
+    </div>
+  </section>
 
-          <div class="phase-status-row">
-            <div class="phase-stats">
-              <div
-                class="phase-stat phase-stat-actions"
-                [class.depleted]="resources.actions === 0"
-                [class.phase-active]="turnPhase() === 'action'"
-              >
-                <span class="phase-stat-icon" aria-hidden="true">+</span>
-                <span class="phase-stat-value">{{ resources.actions }}</span>
-                <span class="phase-stat-label">Actions</span>
-              </div>
+  <!-- Phase / status bar: full column width, sits between the play area and
+       the deck/hand/discard row so the divider above and below it spans the
+       full column. -->
+  <div class="phase-status-bar" [attr.data-phase]="turnPhase()">
+    <div class="phase-label">{{ phaseLabel() }}</div>
 
-              <div
-                class="phase-stat phase-stat-treasure"
-                [class.depleted]="resources.treasure === 0"
-                [class.phase-active]="turnPhase() === 'buy'"
-              >
-                <span class="phase-stat-icon" aria-hidden="true">●</span>
-                <span class="phase-stat-value">{{ resources.treasure }}</span>
-                <span class="phase-stat-label">Treasure</span>
-              </div>
-
-              <div
-                class="phase-stat phase-stat-buys"
-                [class.depleted]="resources.buys === 0"
-                [class.phase-active]="turnPhase() === 'buy'"
-              >
-                <span class="phase-stat-icon" aria-hidden="true">◆</span>
-                <span class="phase-stat-value">{{ resources.buys }}</span>
-                <span class="phase-stat-label">Buys</span>
-              </div>
-
-              @if (resources.potions > 0) {
-                <div class="phase-stat phase-stat-potion">
-                  <img class="phase-stat-icon-image" src="/assets/ui-icons/potion.png" alt="" />
-                  <span class="phase-stat-value">{{ resources.potions }}</span>
-                  <span class="phase-stat-label">Potions</span>
-                </div>
-              }
-            </div>
-
-            <div class="phase-status-actions">
-            @if (stateCardLikeIds().length > 0) {
-              <button
-                type="button"
-                class="panel-button"
-                (click)="onStatesRequested()"
-              >
-                States
-              </button>
-            }
-            @if (artifactCardLikeIds().length > 0) {
-              <button
-                type="button"
-                class="panel-button"
-                (click)="onArtifactsRequested()"
-              >
-                ARTIFACTS
-              </button>
-            }
-
-            @if (canSpendVillagers()) {
-              <div class="resource-control">
-                <button type="button" class="resource-icon-button" (click)="onToggleVillagerControls()">
-                  <img src="/assets/ui-icons/villagers.jpg" alt="" />
-                  <span>{{ resources.villagers }}</span>
-                </button>
-                @if (showVillagerControls()) {
-                  <div class="resource-controls-popover">
-                    <button type="button" (click)="onDecreaseVillagerSpend()">-</button>
-                    <span>{{ villagerSpendAmount() }}</span>
-                    <button type="button" (click)="onIncreaseVillagerSpend()">+</button>
-                    <button type="button" class="resource-confirm-button" (click)="onExecuteVillagerSpend()">
-                      {{ villagerSpendAmount() > 0 ? 'SPEND' : 'CANCEL' }}
-                    </button>
-                  </div>
-                }
-              </div>
-            }
-
-            @if (resources.coffers > 0) {
-              <div class="resource-control">
-                <button type="button" class="resource-icon-button" (click)="onToggleCofferControls()">
-                  <img src="/assets/ui-icons/coffers.jpg" alt="" />
-                  <span>{{ resources.coffers }}</span>
-                </button>
-                @if (showCofferControls()) {
-                  <div class="resource-controls-popover">
-                    <button type="button" (click)="onDecreaseCofferExchange()">-</button>
-                    <span>{{ cofferExchangeAmount() }}</span>
-                    <button type="button" (click)="onIncreaseCofferExchange()">+</button>
-                    <button type="button" class="resource-confirm-button" (click)="onExecuteCofferExchange()">
-                      {{ cofferExchangeAmount() > 0 ? 'EXCHANGE' : 'CANCEL' }}
-                    </button>
-                  </div>
-                }
-              </div>
-            }
-
-            @if (resources.debt > 0) {
-              <div class="resource-control">
-                <button type="button" class="resource-icon-button" (click)="onToggleDebtControls()">
-                  <img src="/assets/ui-icons/64px-debt.png" alt="" />
-                  <span>{{ resources.debt }}</span>
-                </button>
-                @if (showDebtControls()) {
-                  <div class="resource-controls-popover">
-                    <button type="button" (click)="onDecreaseDebtPay()">-</button>
-                    <span>{{ debtPayAmount() }}</span>
-                    <button type="button" (click)="onIncreaseDebtPay()">+</button>
-                    <button type="button" class="resource-confirm-button" (click)="onExecuteDebtPay()">
-                      {{ debtPayAmount() > 0 ? 'PAY' : 'CANCEL' }}
-                    </button>
-                  </div>
-                }
-              </div>
-            }
-
-            @if (canUseTurnActions()) {
-              <!-- Always rendered so the status bar width stays stable; visibility
-                   toggles when the action isn't applicable in the current phase. -->
-              <button
-                type="button"
-                class="turn-action-button play-all-treasures-button"
-                [style.visibility]="showPlayAllTreasures() ? 'visible' : 'hidden'"
-                [attr.aria-hidden]="!showPlayAllTreasures()"
-                [tabindex]="showPlayAllTreasures() ? 0 : -1"
-                (click)="onPlayAllTreasuresRequested()"
-              >
-                PLAY ALL TREASURE
-              </button>
-              <button
-                type="button"
-                class="turn-action-button next-phase-button"
-                (click)="onNextPhaseRequested()"
-              >
-                {{ nextPhaseLabel() }}
-              </button>
-            }
-          </div>
-          </div>
-
-          @let tip = phaseTip();
-          @if (tip) {
-            <div class="phase-tip">{{ tip }}</div>
-          }
+    <div class="phase-status-row">
+      <div class="phase-stats">
+        <div
+          class="phase-stat phase-stat-actions"
+          [class.depleted]="resources.actions === 0"
+          [class.phase-active]="turnPhase() === 'action'"
+        >
+          <span class="phase-stat-icon" aria-hidden="true">+</span>
+          <span class="phase-stat-value">{{ resources.actions }}</span>
+          <span class="phase-stat-label">Actions</span>
         </div>
 
-        <section class="hand-panel">
-          @if (availableCubeTokens().length > 0 || availableTokenBadges().length > 0) {
-            <div class="token-tray-group">
-              <div class="token-tray-label">Available Tokens</div>
-              <div class="token-tray">
-                @for (cube of availableCubeTokens(); track cube.id) {
-                  <div class="cube-token" [style.background]="cube.color"></div>
-                }
-                @for (badge of availableTokenBadges(); track badge.id) {
-                  @if (badge.imagePath) {
-                    <app-token-image-badge
-                      [imagePath]="badge.imagePath"
-                      [highlightColor]="badge.color"
-                    ></app-token-image-badge>
-                  } @else {
-                    <div class="token-badge" [style.background]="badge.color">
-                      {{ badge.label }}
-                      @if (badge.count > 1) {
-                        <span>{{ badge.count }}</span>
-                      }
-                    </div>
-                  }
-                }
-              </div>
-            </div>
-          }
+        <div
+          class="phase-stat phase-stat-treasure"
+          [class.depleted]="resources.treasure === 0"
+          [class.phase-active]="turnPhase() === 'buy'"
+        >
+          <span class="phase-stat-icon" aria-hidden="true">●</span>
+          <span class="phase-stat-value">{{ resources.treasure }}</span>
+          <span class="phase-stat-label">Treasure</span>
+        </div>
 
-          @if (activeTokenBadges().length > 0) {
-            <div class="token-tray-group">
-              <div class="token-tray-label">Active Tokens</div>
-              <div class="token-tray">
-                @for (badge of activeTokenBadges(); track badge.id) {
-                  @if (badge.imagePath) {
-                    <app-token-image-badge
-                      [imagePath]="badge.imagePath"
-                      [highlightColor]="badge.color"
-                    ></app-token-image-badge>
-                  } @else {
-                    <div class="token-badge" [style.background]="badge.color">
-                      {{ badge.label }}
-                      @if (badge.count > 1) {
-                        <span>{{ badge.count }}</span>
-                      }
-                    </div>
-                  }
-                }
-              </div>
-            </div>
-          }
+        <div
+          class="phase-stat phase-stat-buys"
+          [class.depleted]="resources.buys === 0"
+          [class.phase-active]="turnPhase() === 'buy'"
+        >
+          <span class="phase-stat-icon" aria-hidden="true">◆</span>
+          <span class="phase-stat-value">{{ resources.buys }}</span>
+          <span class="phase-stat-label">Buys</span>
+        </div>
 
-          <div class="hand-cards" [class.compact]="resolvedLayout.handCompact">
-            @for (handGroup of handGroups(); track handGroup.trackKey; let index = $index) {
-              <button
-                type="button"
-                class="board-card hand-card-entry"
-                [class.selectable-card]="handGroup.selectable"
-                [class.selected-card]="handGroup.selected"
-                [class.way-selectable]="handGroup.waySelectable"
-                (click)="onCardClick(handGroup.cardId, $event)"
-                (mouseenter)="onCardMouseEnter(handGroup.cardId, $event)"
-                (mouseleave)="onCardMouseLeave(handGroup.cardId)"
-              >
-                <app-card
-                  [cardId]="handGroup.cardId"
-                  [size]="'full'"
-                  [forceFacing]="'front'"
-                  [context]="'hand'"
-                  [count]="handGroup.count"
-                ></app-card>
-              </button>
+        @if (resources.potions > 0) {
+          <div class="phase-stat phase-stat-potion">
+            <img class="phase-stat-icon-image" src="/assets/ui-icons/potion.png" alt="" />
+            <span class="phase-stat-value">{{ resources.potions }}</span>
+            <span class="phase-stat-label">Potions</span>
+          </div>
+        }
+      </div>
+
+      <div class="phase-status-actions">
+        @if (stateCardLikeIds().length > 0) {
+          <button type="button" class="panel-button" (click)="onStatesRequested()">
+            States
+          </button>
+        }
+        @if (artifactCardLikeIds().length > 0) {
+          <button type="button" class="panel-button" (click)="onArtifactsRequested()">
+            ARTIFACTS
+          </button>
+        }
+
+        @if (canSpendVillagers()) {
+          <div class="resource-control">
+            <button type="button" class="resource-icon-button" (click)="onToggleVillagerControls()">
+              <img src="/assets/ui-icons/villagers.jpg" alt="" />
+              <span>{{ resources.villagers }}</span>
+            </button>
+            @if (showVillagerControls()) {
+              <div class="resource-controls-popover">
+                <button type="button" (click)="onDecreaseVillagerSpend()">-</button>
+                <span>{{ villagerSpendAmount() }}</span>
+                <button type="button" (click)="onIncreaseVillagerSpend()">+</button>
+                <button type="button" class="resource-confirm-button" (click)="onExecuteVillagerSpend()">
+                  {{ villagerSpendAmount() > 0 ? 'SPEND' : 'CANCEL' }}
+                </button>
+              </div>
             }
           </div>
-        </section>
-      </section>
+        }
 
-      @let discard = discardPile();
-      <section class="stack-panel">
-        <div class="stack-label stack-label-top">DISCARD</div>
-        <button
-          type="button"
-          class="board-card stack-card"
-          [class.selectable-card]="discard.selectable"
-          [class.selected-card]="discard.selected"
-          [class.way-selectable]="discard.waySelectable"
-          [disabled]="discard.cardId === null"
-          (click)="discard.cardId !== null && onCardClick(discard.cardId, $event)"
-          (mouseenter)="discard.cardId !== null && onCardMouseEnter(discard.cardId, $event)"
-          (mouseleave)="discard.cardId !== null && onCardMouseLeave(discard.cardId)"
-        >
-          @if (discard.cardId !== null) {
+        @if (resources.coffers > 0) {
+          <div class="resource-control">
+            <button type="button" class="resource-icon-button" (click)="onToggleCofferControls()">
+              <img src="/assets/ui-icons/coffers.jpg" alt="" />
+              <span>{{ resources.coffers }}</span>
+            </button>
+            @if (showCofferControls()) {
+              <div class="resource-controls-popover">
+                <button type="button" (click)="onDecreaseCofferExchange()">-</button>
+                <span>{{ cofferExchangeAmount() }}</span>
+                <button type="button" (click)="onIncreaseCofferExchange()">+</button>
+                <button type="button" class="resource-confirm-button" (click)="onExecuteCofferExchange()">
+                  {{ cofferExchangeAmount() > 0 ? 'EXCHANGE' : 'CANCEL' }}
+                </button>
+              </div>
+            }
+          </div>
+        }
+
+        @if (resources.debt > 0) {
+          <div class="resource-control">
+            <button type="button" class="resource-icon-button" (click)="onToggleDebtControls()">
+              <img src="/assets/ui-icons/64px-debt.png" alt="" />
+              <span>{{ resources.debt }}</span>
+            </button>
+            @if (showDebtControls()) {
+              <div class="resource-controls-popover">
+                <button type="button" (click)="onDecreaseDebtPay()">-</button>
+                <span>{{ debtPayAmount() }}</span>
+                <button type="button" (click)="onIncreaseDebtPay()">+</button>
+                <button type="button" class="resource-confirm-button" (click)="onExecuteDebtPay()">
+                  {{ debtPayAmount() > 0 ? 'PAY' : 'CANCEL' }}
+                </button>
+              </div>
+            }
+          </div>
+        }
+
+        @if (canUseTurnActions()) {
+          <!-- Always rendered so the status bar width stays stable; visibility
+               toggles when the action isn't applicable in the current phase. -->
+          <button
+            type="button"
+            class="turn-action-button play-all-treasures-button"
+            [style.visibility]="showPlayAllTreasures() ? 'visible' : 'hidden'"
+            [attr.aria-hidden]="!showPlayAllTreasures()"
+            [tabindex]="showPlayAllTreasures() ? 0 : -1"
+            (click)="onPlayAllTreasuresRequested()"
+          >
+            PLAY ALL TREASURE
+          </button>
+          <button
+            type="button"
+            class="turn-action-button next-phase-button"
+            (click)="onNextPhaseRequested()"
+          >
+            {{ nextPhaseLabel() }}
+          </button>
+        }
+      </div>
+    </div>
+
+    @let tip = phaseTip();
+    @if (tip) {
+      <div class="phase-tip">{{ tip }}</div>
+    }
+  </div>
+
+  <!-- Bottom row: deck stack on the left, hand panel in the middle, discard
+       stack on the right. Phase status bar above is at the column level so
+       its top/bottom dividers reach the column borders. -->
+  <section class="player-bottom-row">
+    @let deck = deckPile();
+    <section class="stack-panel">
+      <div class="stack-label stack-label-top">DECK</div>
+      <button
+        type="button"
+        class="board-card stack-card"
+        [class.selectable-card]="deck.selectable"
+        [class.selected-card]="deck.selected"
+        [class.way-selectable]="deck.waySelectable"
+        [disabled]="deck.cardId === null"
+        (click)="deck.cardId !== null && onCardClick(deck.cardId, $event)"
+        (mouseenter)="deck.cardId !== null && onCardMouseEnter(deck.cardId, $event)"
+        (mouseleave)="deck.cardId !== null && onCardMouseLeave(deck.cardId)"
+      >
+        @if (deck.cardId !== null) {
+          <app-card
+            [cardId]="deck.cardId"
+            [size]="'full'"
+            [forceFacing]="deck.forceFacing"
+            [count]="deck.showCount ? deck.count : 0"
+          ></app-card>
+        } @else {
+          <div class="empty-stack">Empty</div>
+        }
+        @if (deck.tokenBadges.length > 0) {
+          <div class="stack-token-badges">
+            @for (badge of deck.tokenBadges; track badge.id) {
+              @if (badge.imagePath) {
+                <app-token-image-badge
+                  [imagePath]="badge.imagePath"
+                  [highlightColor]="badge.color"
+                ></app-token-image-badge>
+              } @else {
+                <div class="stack-token-badge" [style.background]="badge.color">
+                  {{ badge.label }}
+                  @if (badge.count > 1) {
+                    <span>{{ badge.count }}</span>
+                  }
+                </div>
+              }
+            }
+          </div>
+        }
+      </button>
+    </section>
+
+    <section
+      class="hand-panel"
+      [style.max-width.px]="resolvedLayout.handMaxWidth"
+    >
+      @if (availableCubeTokens().length > 0 || availableTokenBadges().length > 0) {
+        <div class="token-tray-group">
+          <div class="token-tray-label">Available Tokens</div>
+          <div class="token-tray">
+            @for (cube of availableCubeTokens(); track cube.id) {
+              <div class="cube-token" [style.background]="cube.color"></div>
+            }
+            @for (badge of availableTokenBadges(); track badge.id) {
+              @if (badge.imagePath) {
+                <app-token-image-badge
+                  [imagePath]="badge.imagePath"
+                  [highlightColor]="badge.color"
+                ></app-token-image-badge>
+              } @else {
+                <div class="token-badge" [style.background]="badge.color">
+                  {{ badge.label }}
+                  @if (badge.count > 1) {
+                    <span>{{ badge.count }}</span>
+                  }
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+
+      @if (activeTokenBadges().length > 0) {
+        <div class="token-tray-group">
+          <div class="token-tray-label">Active Tokens</div>
+          <div class="token-tray">
+            @for (badge of activeTokenBadges(); track badge.id) {
+              @if (badge.imagePath) {
+                <app-token-image-badge
+                  [imagePath]="badge.imagePath"
+                  [highlightColor]="badge.color"
+                ></app-token-image-badge>
+              } @else {
+                <div class="token-badge" [style.background]="badge.color">
+                  {{ badge.label }}
+                  @if (badge.count > 1) {
+                    <span>{{ badge.count }}</span>
+                  }
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+
+      <div class="hand-cards" [class.compact]="resolvedLayout.handCompact">
+        @for (handGroup of handGroups(); track handGroup.trackKey; let index = $index) {
+          <button
+            type="button"
+            class="board-card hand-card-entry"
+            [class.selectable-card]="handGroup.selectable"
+            [class.selected-card]="handGroup.selected"
+            [class.way-selectable]="handGroup.waySelectable"
+            (click)="onCardClick(handGroup.cardId, $event)"
+            (mouseenter)="onCardMouseEnter(handGroup.cardId, $event)"
+            (mouseleave)="onCardMouseLeave(handGroup.cardId)"
+          >
             <app-card
-              [cardId]="discard.cardId"
+              [cardId]="handGroup.cardId"
               [size]="'full'"
               [forceFacing]="'front'"
-              [count]="discard.showCount ? discard.count : 0"
+              [context]="'hand'"
+              [count]="handGroup.count"
             ></app-card>
-          } @else {
-            <div class="empty-stack">Empty</div>
-          }
-        </button>
-      </section>
+          </button>
+        }
+      </div>
     </section>
+
+    @let discard = discardPile();
+    <section class="stack-panel">
+      <div class="stack-label stack-label-top">DISCARD</div>
+      <button
+        type="button"
+        class="board-card stack-card"
+        [class.selectable-card]="discard.selectable"
+        [class.selected-card]="discard.selected"
+        [class.way-selectable]="discard.waySelectable"
+        [disabled]="discard.cardId === null"
+        (click)="discard.cardId !== null && onCardClick(discard.cardId, $event)"
+        (mouseenter)="discard.cardId !== null && onCardMouseEnter(discard.cardId, $event)"
+        (mouseleave)="discard.cardId !== null && onCardMouseLeave(discard.cardId)"
+      >
+        @if (discard.cardId !== null) {
+          <app-card
+            [cardId]="discard.cardId"
+            [size]="'full'"
+            [forceFacing]="'front'"
+            [count]="discard.showCount ? discard.count : 0"
+          ></app-card>
+        } @else {
+          <div class="empty-stack">Empty</div>
+        }
+      </button>
+    </section>
+  </section>
 }
