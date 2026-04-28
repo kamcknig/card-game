@@ -37,6 +37,7 @@ import { CardImagePreloadService } from '../../core/card-image-preload.service';
     MatchHudComponent,
   ],
   templateUrl: './match.component.html',
+  styleUrl: './match.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MatchComponent implements OnDestroy {
