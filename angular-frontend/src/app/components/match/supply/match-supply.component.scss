@@ -59,6 +59,13 @@
   cursor: default;
   box-sizing: border-box;
   overflow: visible;
+  transition: transform 120ms ease;
+}
+
+// Scaling the parent button (instead of the card frame inside) keeps the
+// selectable ::before outline at inset: -3px aligned with the card on hover.
+.supply-pile:hover {
+  transform: scale(1.04);
 }
 
 .supply-pile::before {

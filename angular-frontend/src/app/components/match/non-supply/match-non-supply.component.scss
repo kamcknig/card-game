@@ -58,6 +58,13 @@
   cursor: default;
   box-sizing: border-box;
   overflow: visible;
+  transition: transform 120ms ease;
+}
+
+// Scale the parent button so the selectable ::before outline scales with
+// the card frame on hover.
+.non-supply-pile:hover {
+  transform: scale(1.04);
 }
 
 .non-supply-pile::before {

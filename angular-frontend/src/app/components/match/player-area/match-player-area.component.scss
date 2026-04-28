@@ -400,6 +400,20 @@
   pointer-events: auto;
   box-sizing: border-box;
   isolation: isolate;
+  transition: transform 120ms ease;
+}
+
+// Scaling the parent (instead of the card frame inside) keeps the
+// selectable ::before outline aligned with the card on hover.
+.board-card:hover {
+  transform: scale(1.04);
+}
+
+// Hand cards scale a touch larger on hover to read as the player's own
+// cards. transform-origin keeps the scale centered so the card doesn't drift
+// upward.
+.hand-card-entry:hover {
+  transform: scale(1.05);
 }
 
 .board-card::before {
