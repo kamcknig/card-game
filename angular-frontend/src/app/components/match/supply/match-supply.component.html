@@ -7,11 +7,8 @@
           @for (pile of basicVictoryPiles(); track pile.trackKey) {
             <ng-container *ngTemplateOutlet="pileButton; context: { $implicit: pile }"></ng-container>
           }
-          @if (basicCursePiles().length > 0) {
-            <div class="pile-section-label">Curse</div>
-            @for (pile of basicCursePiles(); track pile.trackKey) {
-              <ng-container *ngTemplateOutlet="pileButton; context: { $implicit: pile }"></ng-container>
-            }
+          @for (pile of basicCursePiles(); track pile.trackKey) {
+            <ng-container *ngTemplateOutlet="pileButton; context: { $implicit: pile }"></ng-container>
           }
         </div>
 
