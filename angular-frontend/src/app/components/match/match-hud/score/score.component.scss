@@ -83,7 +83,8 @@
 }
 
 // Score readout — green to pick up the victory card type color so the VP
-// total reads as victory points at a glance.
+// total reads as victory points at a glance. Body font (sans-serif) keeps
+// the readout legible at HUD size.
 .score-value {
   font-size: 21px;
   line-height: 1;
@@ -91,6 +92,5 @@
   min-width: 0;
   text-align: right;
   color: var(--theme-color-source-victory);
-  font-family: var(--theme-font-display);
-  letter-spacing: 0.04em;
+  font-family: var(--theme-font-body);
 }
