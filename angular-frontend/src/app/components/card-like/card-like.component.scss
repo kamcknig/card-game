@@ -10,20 +10,59 @@
 
 .card-like-frame {
   position: relative;
-  display: inline-block;
+  display: flex;
+  flex-direction: column;
   width: var(--card-like-width);
+  height: var(--card-landscape-height);
+  background: var(--theme-surface-panel);
   border: 1px solid var(--theme-border-strong);
   border-radius: var(--theme-radius-md);
   overflow: hidden;
   isolation: isolate;
   transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
   vertical-align: top;
+  box-sizing: border-box;
 }
 
-.card-like-image {
+// Art window — the existing landscape image is cropped via object-position
+// so the printed art portion shows in the swatch.
+.card-like-art {
+  position: relative;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: #000;
+}
+
+.card-like-art-image {
   display: block;
   width: 100%;
-  height: auto;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+}
+
+// Card name strip below the art. Uses the display font and stays single-line,
+// matching the portrait card name treatment.
+.card-like-name {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--theme-space-2xs) var(--theme-space-xs);
+  font-family: var(--theme-font-display);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: var(--theme-text-on-dark);
+  background: rgba(0, 0, 0, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.1;
+  min-height: 18px;
 }
 
 // Thin accent strip at the bottom of the frame echoing the portrait card type
