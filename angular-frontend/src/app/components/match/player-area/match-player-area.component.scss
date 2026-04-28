@@ -127,11 +127,16 @@
 // Stacks the phase status bar above the hand panel as flow siblings so the
 // status bar contributes to layout — the column's standard gap then sits cleanly
 // between the play area panel and the top of the status bar.
+//
+// min-width is wide enough to seat 5 hand cards at their natural gap so the
+// hand never shrinks below a 5-card row even when the player is holding fewer.
+// Math: 5 × card width + 4 × inner gap (between cards) + 2 × hand-cards padding
+//      + 2 × hand-panel padding + 2px border ≈ 5 × var(--card-width) + 8 × md + 2px.
 .hand-panel-shell {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  min-width: 460px;
+  min-width: calc(5 * var(--card-width) + 8 * var(--theme-space-md) + 2px);
   max-width: 1120px;
   pointer-events: none;
 }
@@ -149,43 +154,138 @@
   pointer-events: auto;
 }
 
-// Flow-positioned above the hand panel so it occupies real layout space.
-// Bottom edge is flush with the hand panel's top edge via shared border radii.
+// Phase status bar — flow-positioned above the hand panel; bottom edge flush
+// with the hand panel via shared border radii. Stacks: phase header, the
+// stats-and-actions row, and the italic tip caption.
 .phase-status-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--theme-space-2xs);
   border: 1px solid var(--theme-border-strong);
   border-bottom: none;
   border-radius: var(--theme-radius-md) var(--theme-radius-md) 0 0;
   background: var(--theme-panel-bg);
   padding: var(--theme-space-sm) var(--theme-space-md);
-  display: inline-flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--theme-space-md);
   pointer-events: auto;
   max-width: 100%;
 }
 
-.phase-status-text {
+// Phase header — uppercase body sans-serif with a cyan accent so the player
+// always knows which phase they're in.
+.phase-label {
+  text-align: center;
+  font-family: var(--theme-font-body);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--theme-color-phase);
+  line-height: 1.4;
+}
+
+.phase-status-row {
   display: flex;
   align-items: center;
-  gap: var(--theme-space-sm);
-  color: var(--theme-text-on-dark);
-  font-size: 17px;
-  font-weight: 700;
-  min-width: 0;
+  justify-content: space-between;
+  gap: var(--theme-space-md);
   flex-wrap: wrap;
 }
 
-.phase-status-text img {
-  width: 20px;
-  height: 20px;
+.phase-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--theme-space-sm);
+  flex-wrap: wrap;
+}
+
+// Pill chip rendering one stat — icon, value, and label inline.
+.phase-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--theme-space-xs);
+  padding: var(--theme-space-2xs) var(--theme-space-md);
+  border: 1px solid var(--theme-border-subtle);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-soft));
+  color: var(--theme-text-on-dark);
+  font-family: var(--theme-font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  // Each chip exposes --stat-color so depleted/active states can override
+  // a single token instead of duplicating per-stat rules.
+  --stat-color: var(--theme-text-tertiary);
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease,
+    color 120ms ease,
+    box-shadow 150ms ease;
+}
+
+.phase-stat-actions { --stat-color: var(--theme-color-stat-actions); }
+.phase-stat-treasure { --stat-color: var(--theme-color-stat-treasure); }
+.phase-stat-buys { --stat-color: var(--theme-color-stat-buys); }
+.phase-stat-potion { --stat-color: var(--theme-color-source-potion); }
+
+.phase-stat-icon {
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  color: var(--stat-color);
+}
+
+.phase-stat-icon-image {
+  width: 14px;
+  height: 14px;
   object-fit: contain;
+}
+
+.phase-stat-value {
+  font-weight: 700;
+  color: var(--stat-color);
+  min-width: 1ch;
+  text-align: center;
+}
+
+.phase-stat-label {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.6875rem;
+  color: var(--theme-text-tertiary);
+}
+
+// Depleted: zero value — icon and number drop to disabled grey.
+.phase-stat.depleted {
+  --stat-color: var(--theme-text-disabled);
+  opacity: var(--theme-action-disabled-opacity, 0.65);
+}
+
+// Phase-active: subtle tint background + colored border so the relevant
+// stats for the current phase pop. color-mix lets the tint track --stat-color
+// without per-stat alpha tokens.
+.phase-stat.phase-active {
+  border-color: color-mix(in srgb, var(--stat-color) 50%, var(--theme-border-subtle));
+  background: color-mix(in srgb, var(--stat-color) 12%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--stat-color) 25%, transparent);
 }
 
 .phase-status-actions {
   display: flex;
   align-items: center;
   gap: var(--theme-space-sm);
+  flex-wrap: wrap;
+}
+
+// Status bar tip — italic body sans-serif for a quiet hint without leaning
+// on the serif accent face.
+.phase-tip {
+  text-align: center;
+  font-family: var(--theme-font-body);
+  font-style: italic;
+  font-size: 0.8125rem;
+  color: var(--theme-text-tertiary);
+  line-height: 1.3;
 }
 
 .panel-button {
@@ -348,7 +448,7 @@
   padding: var(--theme-space-sm) var(--theme-space-md);
   color: var(--theme-text-on-dark);
   background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
-  font-family: var(--theme-font-display);
+  font-family: var(--theme-font-body);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -360,10 +460,20 @@
   border-color: var(--theme-border-action);
 }
 
+// Filled gold button — the treasure-themed primary CTA in the buy phase.
+// Uses --theme-accent-gold for the fill so the button reads as the
+// suggested next action; black text gives strong contrast on the gold
+// across both themes.
 .play-all-treasures-button {
-  border-color: var(--theme-border-strong);
-  // Warm cream text — treasure-themed accent for the play-all-treasures CTA.
-  color: #fff4e6;
+  background: var(--theme-accent-gold);
+  border-color: var(--theme-accent-gold);
+  color: var(--theme-overlay-color);
+  font-weight: 700;
+}
+
+.play-all-treasures-button:hover {
+  background: color-mix(in srgb, var(--theme-accent-gold) 88%, white);
+  border-color: color-mix(in srgb, var(--theme-accent-gold) 88%, white);
 }
 
 .hand-cards.compact {

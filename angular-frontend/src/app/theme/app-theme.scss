@@ -31,6 +31,14 @@
   --theme-color-source-reaction: #6a8ac4;
   --theme-color-source-potion: #5fb8c7;
   --theme-color-source-event: #ffe0a8;
+
+  /* Status bar — aliases the semantic source colors so the stat chips can
+     evolve independently of card-type theming if needed. */
+  --theme-color-stat-actions: var(--theme-color-source-attack);
+  --theme-color-stat-treasure: var(--theme-color-source-treasure);
+  --theme-color-stat-buys: var(--theme-color-source-reaction);
+  /* Phase header accent — cyan, distinct from any stat color */
+  --theme-color-phase: #5fc7d4;
   --theme-color-source-landmark: #ffd09d;
   --theme-color-source-project: #b6f1ad;
   --theme-color-way: #9fc6ff;
@@ -143,6 +151,12 @@
   --theme-color-source-attack: #b06a6a;
   --theme-color-source-reaction: #5a7ab4;
   --theme-color-source-potion: #4a9fad;
+
+  /* Status bar — dark theme overrides */
+  --theme-color-stat-actions: var(--theme-color-source-attack);
+  --theme-color-stat-treasure: var(--theme-color-source-treasure);
+  --theme-color-stat-buys: var(--theme-color-source-reaction);
+  --theme-color-phase: #4ab0bd;
   --theme-color-winner: #e6c54a;
 
   --theme-surface-app-start: #1a1714;

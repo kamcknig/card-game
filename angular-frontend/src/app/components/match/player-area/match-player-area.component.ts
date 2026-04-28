@@ -214,18 +214,29 @@ export class MatchPlayerAreaComponent {
   private readonly _villagerSpendAmount = signal(0);
   private readonly _debtPayAmount = signal(0);
 
+  // Minimum hand area width — fits 5 hand cards at natural gap plus the
+  // hand-cards padding, hand-panel padding, and 1px border. Mirrors the
+  // .hand-panel-shell min-width in SCSS so the hand never collapses below a
+  // 5-card row even when the player is holding fewer cards.
+  private static readonly MIN_HAND_AREA_WIDTH_PX = CARD_WIDTH * 5 + STANDARD_GAP * 9;
+
   /**
    * Computes responsive hand-panel sizing from the current viewport width.
    *
    * `handMaxWidth` caps the hand-panel-shell so it does not overflow the column
-   * when many cards are in play alongside deck and discard stacks.
+   * when many cards are in play alongside deck and discard stacks. The minimum
+   * floor is the 5-card hand width so the shell never narrows below the
+   * SCSS-enforced min-width.
    * `handCompact` activates the overlap-stacking style for the hand cards when
    * the viewport is narrower than 1680px.
    */
   readonly layout = computed(() => {
     const viewport = this._viewport();
     return {
-      handMaxWidth: Math.max(460, viewport.width - (CARD_WIDTH * 2 + STANDARD_GAP * 8)),
+      handMaxWidth: Math.max(
+        MatchPlayerAreaComponent.MIN_HAND_AREA_WIDTH_PX,
+        viewport.width - (CARD_WIDTH * 2 + STANDARD_GAP * 8),
+      ),
       handCompact: viewport.width < 1680,
     };
   });
@@ -355,6 +366,43 @@ export class MatchPlayerAreaComponent {
         return 'END BUYS';
       default:
         return 'NEXT';
+    }
+  });
+
+  // Public accessor for the current turn phase — used by the phase-status-bar
+  // template to drive stat highlighting and phase labels.
+  readonly turnPhase = this._turnPhase;
+
+  // Display label for the phase header rendered above the stat chips.
+  readonly phaseLabel = computed(() => {
+    const phase = this._turnPhase();
+    switch (phase) {
+      case 'action': return 'ACTION PHASE';
+      case 'buy': return 'BUY PHASE';
+      case 'night': return 'NIGHT PHASE';
+      case 'cleanup': return 'CLEANUP PHASE';
+      default: return '';
+    }
+  });
+
+  // Italic narrator-voice tip rendered below the stat chips. Surfaces the
+  // most actionable next step given the current phase + resource state.
+  readonly phaseTip = computed(() => {
+    const phase = this._turnPhase();
+    const r = this.resourceState();
+    switch (phase) {
+      case 'action':
+        return r.actions > 0 ? 'Play action cards now' : 'No actions left — end actions to buy';
+      case 'buy':
+        if (r.buys === 0) return 'No buys left — end your turn';
+        if (r.treasure === 0) return 'Play treasures or buy cards';
+        return 'Buy cards or end your turn';
+      case 'night':
+        return 'Play night cards or end your turn';
+      case 'cleanup':
+        return 'Cleaning up your turn';
+      default:
+        return '';
     }
   });
 

@@ -88,21 +88,51 @@
         class="hand-panel-shell"
         [style.max-width.px]="resolvedLayout.handMaxWidth"
       >
-        <div class="phase-status-bar">
-          <div class="phase-status-text">
-            <span>ACTIONS {{ resources.actions }}</span>
-            <span>/</span>
-            <span>TREASURE {{ resources.treasure }}</span>
-            @if (resources.potions > 0) {
-              <span>/</span>
-              <img src="/assets/ui-icons/potion.png" alt="" />
-              <span>{{ resources.potions }}</span>
-            }
-            <span>/</span>
-            <span>BUYS {{ resources.buys }}</span>
-          </div>
+        <div class="phase-status-bar" [attr.data-phase]="turnPhase()">
+          <div class="phase-label">{{ phaseLabel() }}</div>
 
-          <div class="phase-status-actions">
+          <div class="phase-status-row">
+            <div class="phase-stats">
+              <div
+                class="phase-stat phase-stat-actions"
+                [class.depleted]="resources.actions === 0"
+                [class.phase-active]="turnPhase() === 'action'"
+              >
+                <span class="phase-stat-icon" aria-hidden="true">+</span>
+                <span class="phase-stat-value">{{ resources.actions }}</span>
+                <span class="phase-stat-label">Actions</span>
+              </div>
+
+              <div
+                class="phase-stat phase-stat-treasure"
+                [class.depleted]="resources.treasure === 0"
+                [class.phase-active]="turnPhase() === 'buy'"
+              >
+                <span class="phase-stat-icon" aria-hidden="true">●</span>
+                <span class="phase-stat-value">{{ resources.treasure }}</span>
+                <span class="phase-stat-label">Treasure</span>
+              </div>
+
+              <div
+                class="phase-stat phase-stat-buys"
+                [class.depleted]="resources.buys === 0"
+                [class.phase-active]="turnPhase() === 'buy'"
+              >
+                <span class="phase-stat-icon" aria-hidden="true">◆</span>
+                <span class="phase-stat-value">{{ resources.buys }}</span>
+                <span class="phase-stat-label">Buys</span>
+              </div>
+
+              @if (resources.potions > 0) {
+                <div class="phase-stat phase-stat-potion">
+                  <img class="phase-stat-icon-image" src="/assets/ui-icons/potion.png" alt="" />
+                  <span class="phase-stat-value">{{ resources.potions }}</span>
+                  <span class="phase-stat-label">Potions</span>
+                </div>
+              }
+            </div>
+
+            <div class="phase-status-actions">
             @if (stateCardLikeIds().length > 0) {
               <button
                 type="button"
@@ -180,15 +210,18 @@
             }
 
             @if (canUseTurnActions()) {
-              @if (showPlayAllTreasures()) {
-                <button
-                  type="button"
-                  class="turn-action-button play-all-treasures-button"
-                  (click)="onPlayAllTreasuresRequested()"
-                >
-                  PLAY ALL TREASURE
-                </button>
-              }
+              <!-- Always rendered so the status bar width stays stable; visibility
+                   toggles when the action isn't applicable in the current phase. -->
+              <button
+                type="button"
+                class="turn-action-button play-all-treasures-button"
+                [style.visibility]="showPlayAllTreasures() ? 'visible' : 'hidden'"
+                [attr.aria-hidden]="!showPlayAllTreasures()"
+                [tabindex]="showPlayAllTreasures() ? 0 : -1"
+                (click)="onPlayAllTreasuresRequested()"
+              >
+                PLAY ALL TREASURE
+              </button>
               <button
                 type="button"
                 class="turn-action-button next-phase-button"
@@ -198,6 +231,12 @@
               </button>
             }
           </div>
+          </div>
+
+          @let tip = phaseTip();
+          @if (tip) {
+            <div class="phase-tip">{{ tip }}</div>
+          }
         </div>
 
         <section class="hand-panel">
