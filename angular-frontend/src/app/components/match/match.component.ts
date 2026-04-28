@@ -58,9 +58,6 @@ export class MatchComponent implements OnDestroy {
   /** Non-Angular controller managing game interaction and socket coordination. */
   readonly matchScene = signal<MatchScene | undefined>(undefined);
 
-  /** Passed to match sub-components for layout-aware score view positioning. */
-  readonly scoreViewRect = signal<{ x: number; y: number; width: number; height: number } | null>(null);
-
   readonly matchStarted = toSignal(this._nanoStores.useStore(matchStartedStore), { initialValue: false });
 
   /** Tracks when the server has identified the local player. Drives MatchScene creation. */
@@ -104,12 +101,6 @@ export class MatchComponent implements OnDestroy {
     );
     await scene.initialize();
     this.matchScene.set(scene);
-  }
-
-  /** Relays score view resize events to sub-components and the match controller. */
-  onScoreViewResize(rect: { x: number; y: number; width: number; height: number }): void {
-    this.scoreViewRect.set(rect);
-    this.matchScene()?.setScoreViewRect(rect);
   }
 
   /**
