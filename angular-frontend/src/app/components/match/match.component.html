@@ -2,7 +2,7 @@
   <div class="match-screen">
     <!-- Column 1 (left): score panel (Phase 2) + basic supply (Phase 3) -->
     <div class="match-column match-column-left">
-      <!-- Phase 2: app-score moves here -->
+      <app-match-score-panel></app-match-score-panel>
       <!-- Phase 3: basic supply moves here -->
     </div>
 
@@ -32,9 +32,11 @@
       ></app-match-player-area>
     </div>
 
-    <!-- Column 3 (right): HUD log, HUD menu, mat tabs (Phase 6) -->
+    <!-- Column 3 (right): HUD log, HUD menu, mat tabs, debug overlay -->
     <div class="match-column match-column-right">
-      <!-- Phase 6: HUD log + menu + mats move here -->
+      <app-match-hud-aside
+        (resignRequested)="onResignRequested()"
+      ></app-match-hud-aside>
     </div>
 
     <app-pile-selection-action></app-pile-selection-action>
@@ -44,7 +46,4 @@
 <!-- HUD remains outside the flow columns; its dialogs are full-screen overlays -->
 <app-match-hud
   [ngClass]="{'match-started': matchStarted()}"
-  (scoreViewResize)="onScoreViewResize($event)"
-  (nextPhaseRequested)="onNextPhaseRequested()"
-  (playAllTreasuresRequested)="onPlayAllTreasuresRequested()"
 ></app-match-hud>

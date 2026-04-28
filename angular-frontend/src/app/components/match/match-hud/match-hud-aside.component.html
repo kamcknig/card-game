@@ -1,0 +1,114 @@
+<div class="mat-tab-content">
+  @let trashMatValue = trashMat();
+  @if (trashMatValue) {
+    <app-mat-tab
+      [mat]="trashMatValue"
+      (click)="onMatClick(trashMatValue)"
+      (mouseenter)="onMatMouseEnter(trashMatValue)"
+      (mouseleave)="onMatMouseLeave(trashMatValue)">
+    </app-mat-tab>
+  }
+  @for (setAsideMat of setAsideMats(); track setAsideMat.id) {
+    <app-mat-tab
+      [mat]="setAsideMat"
+      (click)="onMatClick(setAsideMat)"
+      (mouseenter)="onMatMouseEnter(setAsideMat)"
+      (mouseleave)="onMatMouseLeave(setAsideMat)">
+    </app-mat-tab>
+  }
+  @for (mat of selfMats(); track mat.id) {
+    <app-mat-tab
+      [mat]="mat"
+      (click)="onMatClick(mat)"
+      (mouseenter)="onMatMouseEnter(mat)"
+      (mouseleave)="onMatMouseLeave(mat)">
+    </app-mat-tab>
+  }
+</div>
+
+<div class="hud-log-stack">
+  <app-game-log [entries]="logEntries()"></app-game-log>
+
+  <div class="hud-menu">
+    <button
+      class="hud-menu-icon resign-button"
+      title="Resign and leave game"
+      aria-label="Resign and leave game"
+      (click)="onResignMatch()"
+    >
+      <lucide-icon [img]="FlagIcon" [size]="20" />
+    </button>
+    @if (isAdmin()) {
+      <button
+        class="hud-menu-icon debug-toggle"
+        [attr.aria-pressed]="debugOverlayVisible()"
+        [class.active]="debugOverlayVisible()"
+        [title]="debugOverlayVisible() ? 'Debug overlay: ON' : 'Debug overlay: OFF'"
+        aria-label="Toggle debug overlay"
+        (click)="toggleDebugOverlay()"
+      >
+        <span class="debug-icon-gear"><lucide-icon [img]="SettingsIcon" [size]="18" /></span>
+        <span class="debug-icon-question"><lucide-icon [img]="CircleQuestionMarkIcon" [size]="10" /></span>
+        <span class="debug-icon-state">{{ debugOverlayVisible() ? 'ON' : 'OFF' }}</span>
+      </button>
+    }
+  </div>
+</div>
+
+@if (debugOverlayVisible()) {
+  @let runtimeContext = debugRuntimeContext();
+  @if (runtimeContext) {
+    <div class="debug-runtime-overlay">
+      <div class="debug-runtime-title">Debug Runtime</div>
+      <div class="debug-runtime-row"><span>Game:</span> <span>{{ runtimeContext.gameName }}</span></div>
+      <div class="debug-runtime-row"><span>Game ID:</span> <span>{{ runtimeContext.gameId }}</span></div>
+      <div class="debug-runtime-row"><span>Match ID:</span> <span>{{ runtimeContext.matchScopeId ?? 'n/a' }}</span></div>
+      <div class="debug-runtime-actions">
+        <button class="debug-action-btn" (click)="debugEndGame()">End Game</button>
+      </div>
+    </div>
+  }
+}
+
+@let currentVisibleMat = visibleMat();
+@if (currentVisibleMat) {
+  <app-ui-dialog
+    [zIndex]="4100"
+    [hasBackdrop]="false"
+    [backdropVariant]="'soft'"
+    (close)="closeVisibleMat()"
+  >
+    <div class="mat-modal-content">
+      <div class="mat-modal-title">{{ getVisibleMatTitle() }}</div>
+      <div class="player-flex-container">
+        @for (playerMatContent of getVisibleMatContent(); track playerMatContent.id) {
+          <div class="player-item">
+            @if (playerMatContent.playerName) {
+              <div>{{ playerMatContent.playerName }}</div>
+            }
+            <div class="card-flex-container">
+              @for (cardId of playerMatContent.cardIds; track cardId) {
+                <div class="card-item">
+                  @if (currentVisibleMat.mat === 'set-aside' && !isCardInstance(cardId)) {
+                    <app-card-like
+                      [size]="'half'"
+                      [cardLikeId]="cardId"
+                    ></app-card-like>
+                  }
+                  @else {
+                    <app-card
+                      [size]="'half'"
+                      [cardId]="cardId"
+                      [forceFacing]="currentVisibleMat.mat === 'set-aside' ? undefined : 'front'"
+                    ></app-card>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+      <div (mousedown)="closeVisibleMat()">X</div>
+    </div>
+  </app-ui-dialog>
+}

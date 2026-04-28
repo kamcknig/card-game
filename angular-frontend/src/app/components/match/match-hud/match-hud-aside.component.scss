@@ -1,0 +1,211 @@
+// Host is a flex column; the parent match-column-right provides the outer
+// sizing and gap. Items stack top-to-bottom with a small gap.
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--theme-space-sm);
+  align-items: stretch;
+  // Keep the aside interactive while the match screen itself has pointer-events: none.
+  pointer-events: auto;
+}
+
+// Mat tabs render flush to the right edge of the column.
+.mat-tab-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--theme-space-sm);
+  overflow: visible;
+}
+
+.hud-log-stack {
+  display: flex;
+  flex-direction: column;
+  // Keep stacked HUD items pinned to the right edge as log width changes.
+  align-items: flex-end;
+  gap: var(--theme-space-sm);
+}
+
+app-game-log {
+  position: relative;
+  pointer-events: auto;
+}
+
+.hud-menu {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--theme-space-sm);
+  width: 300px;
+  padding: var(--theme-space-xs);
+  box-sizing: border-box;
+  border-radius: var(--theme-radius-md);
+  background-color: var(--theme-panel-bg);
+  pointer-events: auto;
+}
+
+.hud-menu-icon {
+  // Keep icon controls at fixed intrinsic widths; do not stretch to fill the menu row.
+  width: 34px;
+  height: 34px;
+  // Flex-center the Lucide icon; absolutely positioned children inside
+  // (.debug-icon-question, .debug-icon-state) bypass flex and stay pinned to
+  // the button corners regardless.
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--theme-border-strong);
+  background: var(--theme-surface-panel);
+  color: var(--theme-text-primary);
+  border-radius: var(--theme-radius-sm);
+  cursor: pointer;
+  font-family: var(--theme-font-body);
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.2px;
+  padding: 0;
+  position: relative;
+}
+
+.debug-toggle {
+  width: 44px;
+}
+
+.debug-toggle.active {
+  border-color: var(--theme-border-action);
+  background: var(--theme-action-primary-bg);
+  color: var(--theme-text-primary);
+}
+
+.resign-button {
+  font-size: 16px;
+}
+
+// Gear / question wrap Lucide <lucide-icon [size]="..." /> — sizing is owned
+// by the icon component, not font-size. These wrappers only carry layout
+// positioning for the badge-style question overlay.
+.debug-icon-gear {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.debug-icon-question {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+.debug-icon-state {
+  position: absolute;
+  left: 4px;
+  bottom: 2px;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.2px;
+  color: var(--theme-text-secondary);
+}
+
+.debug-toggle.active .debug-icon-state {
+  color: var(--theme-text-primary);
+}
+
+.debug-runtime-overlay {
+  min-width: 210px;
+  max-width: 360px;
+  padding: var(--theme-space-sm) var(--theme-space-md);
+  border: 1px solid var(--theme-border-strong);
+  border-radius: var(--theme-radius-md);
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
+  color: var(--theme-text-on-dark);
+  font-size: 12px;
+  line-height: 1.35;
+  // Keep runtime ids copyable when the debug overlay is visible.
+  pointer-events: auto;
+  user-select: text;
+}
+
+.debug-runtime-title {
+  font-weight: 700;
+  margin-bottom: var(--theme-space-xs);
+}
+
+.debug-runtime-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--theme-space-md);
+}
+
+// Container for debug action buttons rendered below the runtime ID rows.
+.debug-runtime-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--theme-space-xs);
+  margin-top: var(--theme-space-sm);
+  border-top: 1px solid var(--theme-border-strong);
+  padding-top: var(--theme-space-sm);
+}
+
+// Compact button for debug actions inside the runtime overlay.
+.debug-action-btn {
+  display: block;
+  width: 100%;
+  padding: var(--theme-space-xs) var(--theme-space-sm);
+  background: transparent;
+  border: 1px solid var(--theme-border-strong);
+  border-radius: var(--theme-radius-sm);
+  color: var(--theme-text-on-dark);
+  font-family: var(--theme-font-body);
+  font-size: 11px;
+  cursor: pointer;
+  text-align: left;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+// Mat preview modal styles — mirrored from match-hud.component.scss so the
+// dialog renders correctly when triggered from the aside.
+.mat-modal-content {
+  color: var(--theme-text-on-dark);
+  position: relative;
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
+  border: 1px solid var(--theme-border-strong);
+  pointer-events: auto;
+  padding: var(--theme-space-md) var(--theme-space-md) 120px var(--theme-space-md);
+}
+
+.mat-modal-title {
+  color: var(--theme-text-on-dark);
+  margin-bottom: var(--theme-space-xl);
+  font-size: 24px;
+}
+
+.player-flex-container {
+  display: flex;
+  justify-content: start;
+  min-width: 600px;
+  gap: var(--theme-space-xl);
+}
+
+.player-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--theme-space-md);
+}
+
+.card-flex-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--theme-space-xl);
+  position: relative;
+  padding-bottom: var(--theme-space-5xl);
+}
+
+.card-item {
+  margin-bottom: calc(-1 * var(--card-small-height));
+}
