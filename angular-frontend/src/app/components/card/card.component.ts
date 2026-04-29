@@ -42,16 +42,6 @@ const muteBarColor = (color: string): string => `color-mix(in srgb, ${color} 55%
 // across the whole bar.
 const TYPE_BAR_PLATEAU_HALF_WIDTH = 35;
 
-// Hardcoded treasure values for the basic treasure piles. Other treasure cards
-// use variable / conditional values (e.g. Bank, Crown), so we only display the
-// large value indicator when the value is unambiguous.
-const FIXED_TREASURE_VALUES: Record<string, number> = {
-  copper: 1,
-  silver: 2,
-  gold: 3,
-  platinum: 5,
-};
-
 /**
  * Render context for the card. Drives hover behaviour:
  * - 'default' — subtle scale-up on hover (used in supply, play area, modals)
@@ -202,25 +192,6 @@ export class CardComponent {
       return [`${color} ${start.toFixed(2)}%`, `${color} ${end.toFixed(2)}%`];
     });
     return `linear-gradient(90deg, ${stops.join(', ')})`;
-  });
-
-  // The large centered number shown between the name and the type bar.
-  // Populated for cards with an unambiguous numeric value: VP for victory and
-  // curse cards, fixed treasure values for the basic treasure piles.
-  readonly displayValue = computed<number | null>(() => {
-    const card = this.card();
-    if (!card) return null;
-    if (card.type.includes('VICTORY') && card.victoryPoints !== undefined && card.victoryPoints !== 0) {
-      return card.victoryPoints;
-    }
-    if (card.type.includes('CURSE') && card.victoryPoints !== undefined && card.victoryPoints !== 0) {
-      return card.victoryPoints;
-    }
-    const fixedTreasure = FIXED_TREASURE_VALUES[card.cardKey];
-    if (card.type.includes('TREASURE') && fixedTreasure !== undefined) {
-      return fixedTreasure;
-    }
-    return null;
   });
 
   // Token badges to display on top of the card image. Pre-match surfaces

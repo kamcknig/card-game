@@ -21,7 +21,6 @@
            image bottom-aligned to the type bar + bottom type bar with name.
            Cost cluster and count badge sit inside the top filler bar so they
            are vertically centred within it. -->
-      @let value = displayValue();
       <div class="card-art-frame-top" [style.background]="typeBarBackground()">
         @if (showCost()) {
           <div class="card-cost-cluster">
@@ -39,10 +38,6 @@
               </div>
             }
           </div>
-        }
-
-        @if (value !== null) {
-          <span class="card-value">{{ value }}</span>
         }
 
         @if (count() > 0) {
