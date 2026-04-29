@@ -31,10 +31,10 @@ const CARD_TYPE_COLOR_VAR: Partial<Record<CardType, string>> = {
   CURSE: 'var(--theme-color-source-curse)',
 };
 
-// Mute factor for type-bar backgrounds — 85% source color blended with 15%
+// Mute factor for type-bar backgrounds — 75% source color blended with 25%
 // neutral gray. The cost-badge border and the value-indicator text continue
 // to read the vibrant source color directly.
-const muteBarColor = (color: string): string => `color-mix(in srgb, ${color} 85%, gray)`;
+const muteBarColor = (color: string): string => `color-mix(in srgb, ${color} 75%, gray)`;
 
 // Half-width of each color's solid plateau when building a multi-type bar
 // gradient. With this value, two-type cards render ~35% solid on each side
@@ -175,7 +175,7 @@ export class CardComponent {
   // each color holds a solid plateau on its side with a narrow transition
   // zone between adjacent colors.
   //
-  // All output colors are passed through muteBarColor() so the bar reads ~15%
+  // All output colors are passed through muteBarColor() so the bar reads ~25%
   // softer than the source-color tokens used elsewhere. The Curse card itself
   // is mis-typed as VICTORY in the card library, so we override it to render
   // the CURSE color instead of green.
