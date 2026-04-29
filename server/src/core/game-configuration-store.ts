@@ -19,9 +19,9 @@ export interface GameConfigurationStore {
   setMatchScopeId(matchScopeId: number): void;
   // Loads persisted lobby configuration values into the provided default match config object.
   load(defaultConfig: MatchConfiguration): void;
-  // Persists the current preselected kingdom supply list.
+  // Persists the current preselected kingdoms supply list.
   persistPreselectedKingdoms(kingdomSupply: Supply[]): void;
-  // Persists the current banned kingdom list.
+  // Persists the current banned kingdoms list.
   persistBannedKingdoms(bannedKingdoms: CardNoId[]): void;
   // Persists the current preselected events.
   persistEvents(events: EventNoId[]): void;
@@ -108,7 +108,7 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
     if (bannedKingdoms) {
       defaultConfig.bannedKingdoms = bannedKingdoms;
       this.logLoadedList(
-        'banned kingdom card(s)',
+        'banned kingdoms card(s)',
         bannedKingdoms.length,
         bannedKingdoms.map(card => card.cardKey),
       );
@@ -119,7 +119,7 @@ export class FileGameConfigurationStore implements GameConfigurationStore {
     if (preselectedKingdoms) {
       defaultConfig.preselectedKingdoms = preselectedKingdoms.map(supply => supply.cards[0]);
       this.logLoadedList(
-        'preselected kingdom pile(s)',
+        'preselected kingdoms pile(s)',
         preselectedKingdoms.length,
         preselectedKingdoms.map(supply => supply.name),
       );

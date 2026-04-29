@@ -178,9 +178,9 @@ export class SelectCardLikeModalComponent implements OnInit {
         const types: CardType[] = 'type' in result && Array.isArray(result.type)
           ? (result.type as CardType[])
           : [];
-        const imagePath = imageSize === 'half' && 'halfImagePath' in result
-          ? (result as CardNoId).halfImagePath
-          : result.fullImagePath;
+        const imagePath = imageSize === 'half' && 'artImagePath' in result
+          ? (result as CardNoId).artImagePath
+          : result.artImagePath;
         return {
           ...result,
           imagePath,

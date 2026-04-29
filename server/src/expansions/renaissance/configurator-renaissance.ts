@@ -7,7 +7,7 @@ import { RenaissanceArtifactKey, renaissanceArtifactKeys } from './artifact-keys
 import { registerRenaissanceTokenDefinitions } from './token-definitions-renaissance.ts';
 import { renaissanceTokenIds } from './token-ids-renaissance.ts';
 
-// Maps Renaissance kingdom cards to the artifacts they can grant.
+// Maps Renaissance kingdoms cards to the artifacts they can grant.
 const artifactSourceMap: Record<string, RenaissanceArtifactKey[]> = {
   'border-guard': [renaissanceArtifactKeys.horn, renaissanceArtifactKeys.lantern],
   'flag-bearer': [renaissanceArtifactKeys.flag],

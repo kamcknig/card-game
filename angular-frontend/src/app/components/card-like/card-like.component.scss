@@ -24,27 +24,37 @@
   box-sizing: border-box;
 }
 
-// Art window — the existing landscape image is cropped via object-position
-// so the printed art portion shows in the swatch.
+// Art window. Sized by the inner image's natural aspect ratio so the image's
+// bottom edge is flush with the top of the accent strip. Any remaining
+// vertical space above the image is absorbed by .card-like-art-frame-top,
+// which carries the same kind-keyed color as the strip.
 .card-like-art {
   position: relative;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   width: 100%;
-  min-height: 0;
+  display: block;
   overflow: hidden;
-  background: #000;
 }
 
-// object-position pushes the visible window down past the upper-left of the
-// source image where Dominion event/project images print the cost circle.
-// Without this shift, the printed cost would still show alongside the new
-// CSS cost cluster.
 .card-like-art-image {
   display: block;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 70%;
+  height: auto;
+}
+
+// Top filler bar. Mirrors the bottom .card-like-accent-strip color via the
+// shared --card-like-accent variable, muted by ~45% (55% source + 45% gray)
+// so the bar reads softer than the vibrant accent used for borders/hover.
+// flex: 1 1 0 + min-height: 0 lets it absorb whatever vertical space the
+// natural-height image leaves above. The cost cluster is absolutely
+// positioned against this bar so it vertically centres within whatever
+// height the bar happens to be.
+.card-like-art-frame-top {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  background: color-mix(in srgb, var(--card-like-accent) 55%, gray);
+  overflow: hidden;
 }
 
 // Card name rendered inline inside the accent strip. Single-line and
@@ -58,24 +68,17 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   text-align: center;
-  color: #ffffff;
+  color: #000000;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.1;
-  // Tight, opaque layered shadow — lower blur radius than before so the
-  // halo doesn't bleed across the bar, but every layer at full alpha so
-  // the name still pops against any kind accent (event red, project
-  // blue, etc.).
-  text-shadow:
-    0 1px 0 rgba(0, 0, 0, 1),
-    0 0 2px rgba(0, 0, 0, 1),
-    0 0 1px rgba(0, 0, 0, 1);
 }
 
 // Accent strip at the bottom of the frame echoing the portrait card type-bar
 // treatment. Hosts the card name as a centered label; color is driven by the
-// card-like's kind via --card-like-accent.
+// card-like's kind via --card-like-accent, muted by ~45% to match the top
+// filler bar.
 .card-like-accent-strip {
   flex: 0 0 auto;
   display: flex;
@@ -83,7 +86,7 @@
   justify-content: center;
   min-height: 30px;
   padding: 0 var(--theme-space-xs);
-  background: var(--card-like-accent);
+  background: color-mix(in srgb, var(--card-like-accent) 55%, gray);
   overflow: hidden;
 }
 
@@ -93,12 +96,14 @@
   box-shadow: 0 4px 20px color-mix(in srgb, var(--card-like-accent) 30%, transparent);
 }
 
-// Cost cluster anchored top-left — mirrors the portrait card cost layout
-// adapted for the landscape frame.
+// Cost cluster anchored to the left edge of the top filler bar, vertically
+// centered within it — mirrors the portrait card cost layout adapted for the
+// landscape frame.
 .card-like-cost-cluster {
   position: absolute;
-  top: 4px;
+  top: 50%;
   left: 4px;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   gap: 3px;

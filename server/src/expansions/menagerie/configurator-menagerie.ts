@@ -140,7 +140,7 @@ const cleanupWayOfTheMouseSyntheticPiles = (
   config.nonSupply = nextNonSupply;
 };
 
-// Resolves the selected expansion data used for kingdom-randomizer candidate discovery.
+// Resolves the selected expansion data used for kingdoms-randomizer candidate discovery.
 const getConfiguredExpansionData = (args: ExpansionConfiguratorContext): ExpansionData[] => {
   return args.config.expansions.reduce((expansions, configuredExpansion) => {
     const expansionData = args.expansionCatalog[configuredExpansion.name];
@@ -275,7 +275,7 @@ const configureWayOfTheMouse = (args: ExpansionConfiguratorContext): void => {
   // Runtime set-aside card is created directly into shared set-aside during match setup.
 };
 
-// Ensures the Horse pile is present only when required by selected kingdom cards.
+// Ensures the Horse pile is present only when required by selected kingdoms cards.
 const configureHorsePile = (configuratorArgs: ExpansionConfiguratorContext) => {
   const config = configuratorArgs.config;
   const hasHorseSource =

@@ -31,15 +31,16 @@ const CARD_TYPE_COLOR_VAR: Partial<Record<CardType, string>> = {
   CURSE: 'var(--theme-color-source-curse)',
 };
 
-// Hardcoded treasure values for the basic treasure piles. Other treasure cards
-// use variable / conditional values (e.g. Bank, Crown), so we only display the
-// large value indicator when the value is unambiguous.
-const FIXED_TREASURE_VALUES: Record<string, number> = {
-  copper: 1,
-  silver: 2,
-  gold: 3,
-  platinum: 5,
-};
+// Mute factor for type-bar backgrounds — 55% source color blended with 45%
+// neutral gray. The cost-badge border and the value-indicator text continue
+// to read the vibrant source color directly.
+const muteBarColor = (color: string): string => `color-mix(in srgb, ${color} 55%, gray)`;
+
+// Half-width of each color's solid plateau when building a multi-type bar
+// gradient. With this value, two-type cards render ~35% solid on each side
+// and a 30%-wide transition zone in the centre instead of a smooth fade
+// across the whole bar.
+const TYPE_BAR_PLATEAU_HALF_WIDTH = 35;
 
 /**
  * Render context for the card. Drives hover behaviour:
@@ -60,7 +61,7 @@ export type CardRenderContext = 'default' | 'hand';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CardComponent {
-  private static readonly CARD_BACK_DETAIL_IMAGE_PATH = '/assets/card-images/base-v2/detail/card-back.jpg';
+  private static readonly CARD_BACK_DETAIL_IMAGE_PATH = '/assets/card-images/base-v2/card-back-detail.jpg';
 
   private readonly _nanoStores = inject(NanostoresService);
   private readonly _sanitizer = inject(DomSanitizer);
@@ -113,21 +114,21 @@ export class CardComponent {
     return effectiveFacing === 'back';
   });
 
-  // Sanitized image URL — full card art when face up, card-back image when face down.
+  // Sanitized image URL — flat art image when face up, card-back art when face down.
+  // The `size` input no longer influences the source URL; it only affects CSS sizing.
+  // The URL is derived from expansionName + cardKey rather than read from
+  // card.artImagePath so stale saved configurations (with legacy paths or no
+  // artImagePath at all) still resolve to the current flat asset layout.
   readonly path = computed<SafeUrl | undefined>(() => {
     const card = this.card();
     if (!card) return undefined;
 
-    const size = this.size();
     if (this.isFaceDown()) {
-      return this._sanitizer.bypassSecurityTrustUrl(
-        `/assets/card-images/base-v2/${size}-size/card-back.jpg`,
-      );
+      return this._sanitizer.bypassSecurityTrustUrl('/assets/card-images/base-v2/card-back-art.jpg');
     }
-    const path = size === 'half' ? card.halfImagePath
-      : size === 'full' ? card.fullImagePath
-      : card.detailImagePath;
-    return this._sanitizer.bypassSecurityTrustUrl(path);
+    return this._sanitizer.bypassSecurityTrustUrl(
+      `/assets/card-images/${card.expansionName}/${card.cardKey}-art.jpg`,
+    );
   });
 
   // Detail image path for right-click detail modal.
@@ -156,53 +157,41 @@ export class CardComponent {
     return CARD_TYPE_COLOR_VAR[type] ?? 'var(--theme-color-source-default)';
   });
 
-  // Linear gradient (or solid color) for the type bar at the bottom of the card.
-  // Only the six types listed in CARD_TYPE_COLOR_VAR (DURATION, REACTION,
-  // NIGHT, VICTORY, TREASURE, CURSE) contribute. Cards with no qualifying
-  // type render a solid white bar; multi-typed cards render a left-to-right
-  // gradient with one stop per qualifying type, in card-defined order.
+  // Linear gradient (or solid color) for the type bars at the top and bottom
+  // of the card. Only the six types listed in CARD_TYPE_COLOR_VAR (DURATION,
+  // REACTION, NIGHT, VICTORY, TREASURE, CURSE) contribute. Cards with no
+  // qualifying type render a solid muted-default bar; single-type cards a
+  // single solid muted color; multi-typed cards a horizontal gradient where
+  // each color holds a solid plateau on its side with a narrow transition
+  // zone between adjacent colors.
   //
-  // The Curse card itself is mis-typed as VICTORY in the card library, so
-  // we override it to render the CURSE color instead of green.
+  // All output colors are passed through muteBarColor() so the bar reads ~45%
+  // softer than the source-color tokens used elsewhere. The Curse card itself
+  // is mis-typed as VICTORY in the card library, so we override it to render
+  // the CURSE color instead of green.
   readonly typeBarBackground = computed<string>(() => {
     const card = this.card();
     if (card?.cardKey === 'curse') {
-      return CARD_TYPE_COLOR_VAR.CURSE ?? 'var(--theme-color-source-default)';
+      return muteBarColor(CARD_TYPE_COLOR_VAR.CURSE ?? 'var(--theme-color-source-default)');
     }
     const types = (card?.type ?? []).filter((type) => type in CARD_TYPE_COLOR_VAR);
     if (types.length === 0) {
-      return 'var(--theme-color-source-default)';
+      return muteBarColor('var(--theme-color-source-default)');
     }
     if (types.length === 1) {
-      return CARD_TYPE_COLOR_VAR[types[0]] ?? 'var(--theme-color-source-default)';
+      return muteBarColor(CARD_TYPE_COLOR_VAR[types[0]] ?? 'var(--theme-color-source-default)');
     }
-    const stops = types
-      .map((type, index) => {
-        const color = CARD_TYPE_COLOR_VAR[type] ?? 'var(--theme-color-source-default)';
-        const percent = Math.round((index / (types.length - 1)) * 100);
-        return `${color} ${percent}%`;
-      })
-      .join(', ');
-    return `linear-gradient(90deg, ${stops})`;
-  });
-
-  // The large centered number shown between the name and the type bar.
-  // Populated for cards with an unambiguous numeric value: VP for victory and
-  // curse cards, fixed treasure values for the basic treasure piles.
-  readonly displayValue = computed<number | null>(() => {
-    const card = this.card();
-    if (!card) return null;
-    if (card.type.includes('VICTORY') && card.victoryPoints !== undefined && card.victoryPoints !== 0) {
-      return card.victoryPoints;
-    }
-    if (card.type.includes('CURSE') && card.victoryPoints !== undefined && card.victoryPoints !== 0) {
-      return card.victoryPoints;
-    }
-    const fixedTreasure = FIXED_TREASURE_VALUES[card.cardKey];
-    if (card.type.includes('TREASURE') && fixedTreasure !== undefined) {
-      return fixedTreasure;
-    }
-    return null;
+    // Each colour gets two stops — one entering its plateau, one leaving it —
+    // so the visible gradient sits between the inner stops only.
+    const solidExtent = TYPE_BAR_PLATEAU_HALF_WIDTH / (types.length - 1);
+    const stops = types.flatMap((type, index) => {
+      const color = muteBarColor(CARD_TYPE_COLOR_VAR[type] ?? 'var(--theme-color-source-default)');
+      const center = (index / (types.length - 1)) * 100;
+      const start = Math.max(0, center - solidExtent);
+      const end = Math.min(100, center + solidExtent);
+      return [`${color} ${start.toFixed(2)}%`, `${color} ${end.toFixed(2)}%`];
+    });
+    return `linear-gradient(90deg, ${stops.join(', ')})`;
   });
 
   // Token badges to display on top of the card image. Pre-match surfaces
@@ -227,9 +216,11 @@ export class CardComponent {
       return;
     }
 
+    // Derive the detail URL from expansionName + cardKey for the same reason
+    // path() does — saved configurations may carry stale legacy paths.
     const detailImagePath = this.isFaceDown()
       ? CardComponent.CARD_BACK_DETAIL_IMAGE_PATH
-      : card.detailImagePath;
+      : `/assets/card-images/${card.expansionName}/${card.cardKey}-detail.jpg`;
 
     if (!detailImagePath) {
       return;

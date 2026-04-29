@@ -120,7 +120,7 @@ const settlersBustlingVillageOrder: CardKey[] = [
 
 const configurator: ExpansionConfiguratorFactory = () => {
   return async args => {
-    // Locate the Castles split pile in the kingdom supply, if present.
+    // Locate the Castles split pile in the kingdoms supply, if present.
     const castlesSupply = args.config.kingdomSupply.find(supply =>
       supply.cards.some(card => getCardPileKey(card) === 'castles'),
     );
@@ -166,7 +166,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
 };
 
 const configureCatapultRockPile = (args: ExpansionConfiguratorContext) => {
-  // Locate the Catapult/Rocks split pile in the kingdom supply, if present.
+  // Locate the Catapult/Rocks split pile in the kingdoms supply, if present.
   // Use the shared split pile configurator for canonical ordering.
   configureSplitPile(args, {
     pileKey: 'catapult/rocks',
@@ -176,7 +176,7 @@ const configureCatapultRockPile = (args: ExpansionConfiguratorContext) => {
 };
 
 const configureEncampmentPlunderPile = (args: ExpansionConfiguratorContext) => {
-  // Locate the encampment/plunder split pile in the kingdom supply, if present.
+  // Locate the encampment/plunder split pile in the kingdoms supply, if present.
   // Use the shared split pile configurator for canonical ordering.
   configureSplitPile(args, {
     pileKey: 'encampment/plunder',
@@ -186,7 +186,7 @@ const configureEncampmentPlunderPile = (args: ExpansionConfiguratorContext) => {
 };
 
 const configureGladiatorFortune = (args: ExpansionConfiguratorContext) => {
-  // Locate the gladiator/fortune split pile in the kingdom supply, if present.
+  // Locate the gladiator/fortune split pile in the kingdoms supply, if present.
   // Use the shared split pile configurator for canonical ordering.
   configureSplitPile(args, {
     pileKey: 'gladiator/fortune',
@@ -196,7 +196,7 @@ const configureGladiatorFortune = (args: ExpansionConfiguratorContext) => {
 };
 
 const configurePatricianEmporium = (args: ExpansionConfiguratorContext) => {
-  // Locate the patrician/emporium split pile in the kingdom supply, if present.
+  // Locate the patrician/emporium split pile in the kingdoms supply, if present.
   // Use the shared split pile configurator for canonical ordering.
   configureSplitPile(args, {
     pileKey: 'patrician/emporium',
@@ -206,7 +206,7 @@ const configurePatricianEmporium = (args: ExpansionConfiguratorContext) => {
 };
 
 const configureSettlersBustlingVillage = (args: ExpansionConfiguratorContext) => {
-  // Locate the settlers/bustling-village split pile in the kingdom supply, if present.
+  // Locate the settlers/bustling-village split pile in the kingdoms supply, if present.
   // Use the shared split pile configurator for canonical ordering.
   configureSplitPile(args, {
     pileKey: 'settlers/bustling-village',

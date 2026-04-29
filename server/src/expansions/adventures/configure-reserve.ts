@@ -2,7 +2,7 @@ import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 import { addMatToMatchConfig } from '../../utils/add-mat-to-match-config.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 
-// Non-RESERVE kingdom cards that still require the tavern mat (e.g., Miser puts Coppers on it).
+// Non-RESERVE kingdoms cards that still require the tavern mat (e.g., Miser puts Coppers on it).
 const NON_RESERVE_TAVERN_MAT_CARDS: ReadonlyArray<string> = ['miser'];
 
 export const configureReserve = (args: ExpansionConfiguratorContext) => {

@@ -97,7 +97,7 @@ export class CardInteractivityController {
         // Supply lookups return full card data for purchase checks.
         const supply: Card[] = this.findCardService.findCards({ location: ['basicSupply', 'kingdomSupply'] });
 
-        // a loop going backwards through the supply and kingdom. we only mark the last one as selectable (this should
+        // a loop going backwards through the supply and kingdoms. we only mark the last one as selectable (this should
         // be the top of any pile). a bit hacky to assume that.
         for (let i = supply.length - 1; i >= 0; i--) {
           const card = supply[i];
