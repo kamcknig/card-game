@@ -4,7 +4,13 @@ import { formatCardName } from './format-card-name.ts';
 export const createCardData = (cardKey: CardKey, expansionName: string, templateData: Partial<CardNoId>) => {
   const data = {
     ...createCardLike(cardKey, expansionName, templateData),
-    halfImagePath: `./assets/card-images/${expansionName}/half-size/${cardKey}.jpg`,
+    // Cards use the flat asset layout: <expansion>/<key>-art.jpg and
+    // <key>-detail.jpg. createCardLike emits the legacy sub-directory
+    // detailImagePath; we override it here so cards resolve to the flat path.
+    // fullImagePath is inherited from CardLike and is unused by card consumers
+    // after the frontend migration.
+    artImagePath: `./assets/card-images/${expansionName}/${cardKey}-art.jpg`,
+    detailImagePath: `./assets/card-images/${expansionName}/${cardKey}-detail.jpg`,
     kingdom: templateData.kingdom ?? cardKey,
   };
 

@@ -1201,7 +1201,7 @@ export type CardArgs = {
   abilityText: string;
   expansionName: string;
   facing?: CardFacing;
-  halfImagePath: string;
+  artImagePath: string;
   isBasic?: boolean;
   kingdom: string;
   mat: Mats | undefined;
@@ -1244,7 +1244,7 @@ export class Card<M = unknown> extends CardLike<M> {
   override abilityText: string;
   targetScheme?: EffectTarget;
   expansionName: string;
-  halfImagePath: string;
+  artImagePath: string;
   owner: PlayerId | null;
 
   constructor(args: CardArgs) {
@@ -1262,7 +1262,7 @@ export class Card<M = unknown> extends CardLike<M> {
     this.targetScheme = args.targetScheme;
     this.expansionName = args.expansionName;
     this.fullImagePath = args.fullImagePath;
-    this.halfImagePath = args.halfImagePath;
+    this.artImagePath = args.artImagePath;
     this.detailImagePath = args.detailImagePath;
     this.owner = args.owner ?? null;
     this.mat = args.mat;

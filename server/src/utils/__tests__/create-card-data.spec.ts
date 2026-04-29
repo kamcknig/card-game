@@ -18,7 +18,7 @@ Deno.test('createCardLike prefers randomizer key as default kingdom when provide
   assertEquals((cardLike as unknown as { kingdom: string }).kingdom, 'ruins');
 });
 
-Deno.test('createCardData adds half image path and preserves explicit overrides', () => {
+Deno.test('createCardData adds flat art/detail image paths and preserves explicit overrides', () => {
   const card = createCardData('village', 'base-v2', {
     cardName: 'Village+',
     kingdom: 'custom-pile',
@@ -26,7 +26,11 @@ Deno.test('createCardData adds half image path and preserves explicit overrides'
 
   assertEquals(card.cardName, 'Village+');
   assertEquals(card.kingdom, 'custom-pile');
-  assertEquals(card.halfImagePath, './assets/card-images/base-v2/half-size/village.jpg');
+  // Cards use the flat asset layout; artImagePath replaces the legacy halfImagePath.
+  assertEquals(card.artImagePath, './assets/card-images/base-v2/village-art.jpg');
+  // detailImagePath is overridden to the flat path for cards.
+  assertEquals(card.detailImagePath, './assets/card-images/base-v2/village-detail.jpg');
+  // fullImagePath is still inherited from createCardLike (legacy sub-directory).
   assertEquals(card.fullImagePath, './assets/card-images/base-v2/full-size/village.jpg');
 });
 

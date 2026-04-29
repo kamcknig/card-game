@@ -152,7 +152,7 @@ Deno.test('Card constructor assigns all card-specific fields', () => {
     ...createCardLikeArgs({ id: 100 }),
     abilityText: '+2 Cards',
     expansionName: 'base-v2',
-    halfImagePath: '/half/village.jpg',
+    artImagePath: '/half/village.jpg',
     kingdom: 'village',
     type: ['ACTION'],
     partOfSupply: true,
@@ -162,7 +162,7 @@ Deno.test('Card constructor assigns all card-specific fields', () => {
   assertEquals(card.id, 100);
   assertEquals(card.abilityText, '+2 Cards');
   assertEquals(card.expansionName, 'base-v2');
-  assertEquals(card.halfImagePath, '/half/village.jpg');
+  assertEquals(card.artImagePath, '/half/village.jpg');
   assertEquals(card.kingdom, 'village');
   assertEquals(card.type, ['ACTION']);
   assertEquals(card.partOfSupply, true);
@@ -178,7 +178,7 @@ Deno.test('Card constructor uses provided optional values', () => {
     ...createCardLikeArgs({ id: 101 }),
     abilityText: '1VP per 10 cards',
     expansionName: 'base-v2',
-    halfImagePath: '/half/gardens.jpg',
+    artImagePath: '/half/gardens.jpg',
     kingdom: 'gardens',
     type: ['VICTORY', 'ACTION'],
     partOfSupply: true,
@@ -203,7 +203,7 @@ Deno.test('Card.toString returns formatted card string', () => {
     ...createCardLikeArgs({ id: 102, cardKey: 'market' }),
     abilityText: '+1 Card, +1 Action, +1 Buy, +$1',
     expansionName: 'base-v2',
-    halfImagePath: '/half/market.jpg',
+    artImagePath: '/half/market.jpg',
     kingdom: 'market',
     type: ['ACTION'],
     partOfSupply: true,
@@ -452,7 +452,7 @@ Deno.test('Card constructor defaults partOfSupply to true when not provided', ()
     ...createCardLikeArgs({ id: 103, cardKey: 'mine' }),
     abilityText: 'Trash a Treasure...',
     expansionName: 'base-v2',
-    halfImagePath: '/half/mine.jpg',
+    artImagePath: '/half/mine.jpg',
     kingdom: 'mine',
     type: ['ACTION'],
     mat: undefined,
@@ -467,7 +467,7 @@ Deno.test('Card Deno.customInspect returns toString value', () => {
     ...createCardLikeArgs({ id: 104, cardKey: 'chapel' }),
     abilityText: 'Trash up to 4 cards...',
     expansionName: 'base-v2',
-    halfImagePath: '/half/chapel.jpg',
+    artImagePath: '/half/chapel.jpg',
     kingdom: 'chapel',
     type: ['ACTION'],
     partOfSupply: true,
