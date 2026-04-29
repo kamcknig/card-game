@@ -143,7 +143,7 @@
               [style.--banned-stack-index]="i"
               (contextmenu)="onSlotContextMenu($event, bannedCard?.detailImagePath)"
             >
-              <app-card [cardData]="bannedCard" [size]="'half'" [forceFacing]="'front'"></app-card>
+              <app-card [cardData]="bannedCard" [forceFacing]="'front'"></app-card>
               @if (isOwner) {
                 <span (click)="deleteBannedKingdom(bannedCard)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></span>
               }
@@ -170,7 +170,7 @@
                 <div (click)="deleteKingdom(kingdom)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>
               }
               @if (kingdom !== null) {
-                <app-card [cardData]="kingdom" [size]="'half'" [forceFacing]="'front'"></app-card>
+                <app-card [cardData]="kingdom" [forceFacing]="'front'"></app-card>
               } @else {
                 <span class="no-kingdom">?</span>
               }
@@ -200,7 +200,7 @@
                 <div (click)="deleteEvent(event)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>
               }
               @if (event !== null) {
-                <app-card-like [cardLikeData]="event" [kind]="'event'" [showCost]="true" [size]="'full'"></app-card-like>
+                <app-card-like [cardLikeData]="event" [kind]="'event'" [showCost]="true"></app-card-like>
               } @else {
                 <span class="no-event">?</span>
               }
@@ -226,7 +226,7 @@
                 <div (click)="deleteLandmark(landmark)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>
               }
               @if (landmark !== null) {
-                <app-card-like [cardLikeData]="landmark" [kind]="'landmark'" [size]="'full'"></app-card-like>
+                <app-card-like [cardLikeData]="landmark" [kind]="'landmark'"></app-card-like>
               } @else {
                 <span class="no-landmark">?</span>
               }
@@ -252,7 +252,7 @@
                 <div (click)="deleteProject(project)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>
               }
               @if (project !== null) {
-                <app-card-like [cardLikeData]="project" [kind]="'project'" [showCost]="true" [size]="'full'"></app-card-like>
+                <app-card-like [cardLikeData]="project" [kind]="'project'" [showCost]="true"></app-card-like>
               } @else {
                 <span class="no-project">?</span>
               }
@@ -278,7 +278,7 @@
                 <div (click)="deleteWay(way)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>
               }
               @if (way !== null) {
-                <app-card-like [cardLikeData]="way" [kind]="'way'" [size]="'full'"></app-card-like>
+                <app-card-like [cardLikeData]="way" [kind]="'way'"></app-card-like>
               } @else {
                 <span class="no-way">?</span>
               }
@@ -304,7 +304,7 @@
                 <div (click)="deleteTrait(trait)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>
               }
               @if (trait !== null) {
-                <app-card-like [cardLikeData]="trait" [kind]="'trait'" [size]="'full'"></app-card-like>
+                <app-card-like [cardLikeData]="trait" [kind]="'trait'"></app-card-like>
               } @else {
                 <span class="no-trait">?</span>
               }
@@ -334,7 +334,7 @@
                 <div (click)="deleteAlly(ally)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>
               }
               @if (ally !== null) {
-                <app-card-like [cardLikeData]="ally" [kind]="'ally'" [size]="'full'"></app-card-like>
+                <app-card-like [cardLikeData]="ally" [kind]="'ally'"></app-card-like>
               } @else {
                 <span class="no-ally">?</span>
               }
@@ -368,7 +368,7 @@
                 <div (click)="deleteProphecy(prophecy)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>
               }
               @if (prophecy !== null) {
-                <app-card-like [cardLikeData]="prophecy" [kind]="'prophecy'" [size]="'full'"></app-card-like>
+                <app-card-like [cardLikeData]="prophecy" [kind]="'prophecy'"></app-card-like>
               } @else {
                 <span class="no-prophecy">?</span>
               }

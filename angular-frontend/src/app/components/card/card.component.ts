@@ -3,7 +3,6 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
 import { cardStore } from '../../state/card-state';
 import { Card, CardFacing, CardId, CardNoId, CardType, Match, TokenDefinition, TokenId, TokenInstance } from 'shared/types';
-import { CardSize } from '../../../types';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { selfPlayerIdStore } from '../../state/player-state';
 import { matchStore } from '../../state/match-state';
@@ -72,7 +71,6 @@ export class CardComponent {
   // as pre-selected templates without a runtime id yet).
   cardId = input<CardId | undefined>(undefined);
   cardData = input<Card | CardNoId | undefined>(undefined);
-  size = input<CardSize>('full');
   // Optional override to force a card to render face up/down regardless of ownership.
   forceFacing = input<CardFacing | undefined>(undefined);
   // When false, the structured cost badge inside the card is suppressed. Parent
@@ -203,8 +201,9 @@ export class CardComponent {
     return this.buildTokenBadges(this._match() ?? null, this._tokenDefinitions(), cardId);
   });
 
-  // Token size mirrors pile badges: smaller for half-sized cards.
-  readonly tokenSizePx = computed(() => this.size() === 'half' ? 25 : 35);
+  // Token badge size — small to match the half-size card frame the rest of
+  // the app renders.
+  readonly tokenSizePx = 25;
 
   // Opens a detail view when right-clicking the card.
   onContextMenu(event: MouseEvent) {

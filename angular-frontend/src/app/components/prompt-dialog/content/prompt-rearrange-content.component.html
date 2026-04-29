@@ -12,7 +12,7 @@
     (cdkDropListDropped)="onDropped($event)">
     @for (cardId of orderedCardIds(); track cardId) {
       <div cdkDrag class="rearrange-item">
-        <app-card [cardId]="cardId" [size]="'half'"></app-card>
+        <app-card [cardId]="cardId"></app-card>
       </div>
     }
   </div>

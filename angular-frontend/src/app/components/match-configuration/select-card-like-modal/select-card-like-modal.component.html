@@ -65,7 +65,7 @@
             [class.selected]="isSelected(item.cardKey)"
             (click)="toggleCard(item.cardKey)"
           >
-            <app-card [cardData]="item" [size]="'half'" [forceFacing]="'front'" />
+            <app-card [cardData]="item" [forceFacing]="'front'" />
             @if (isSelected(item.cardKey)) {
               <div class="card-tile-checkmark">
                 <lucide-icon [img]="CheckIcon" [size]="10" />
@@ -91,7 +91,6 @@
             <app-card-like
               [cardLikeData]="item"
               [kind]="cardLikeKind()"
-              [size]="'full'"
               [showCost]="cardLikeShowCost()"
             />
             @if (isSelected(item.cardKey)) {
