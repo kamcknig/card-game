@@ -807,6 +807,9 @@ export class CardLike<M = unknown> {
   cost: CardCost;
   // Optional rules text for card-like display.
   abilityText?: string;
+  // Expansion the card-like belongs to. Set by createCardLike at construction
+  // time; used by frontend renderers to derive image URLs from expansion + key.
+  expansionName?: string;
   artImagePath: string;
   detailImagePath: string;
   // Optional randomizer overrides for pile-level cost/type metadata.
@@ -1242,7 +1245,7 @@ export class Card<M = unknown> extends CardLike<M> {
   victoryPoints: number;
   override abilityText: string;
   targetScheme?: EffectTarget;
-  expansionName: string;
+  override expansionName: string;
   owner: PlayerId | null;
 
   constructor(args: CardArgs) {

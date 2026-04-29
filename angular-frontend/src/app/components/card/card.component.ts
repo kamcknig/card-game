@@ -115,6 +115,9 @@ export class CardComponent {
 
   // Sanitized image URL — flat art image when face up, card-back art when face down.
   // The `size` input no longer influences the source URL; it only affects CSS sizing.
+  // The URL is derived from expansionName + cardKey rather than read from
+  // card.artImagePath so stale saved configurations (with legacy paths or no
+  // artImagePath at all) still resolve to the current flat asset layout.
   readonly path = computed<SafeUrl | undefined>(() => {
     const card = this.card();
     if (!card) return undefined;
@@ -122,7 +125,9 @@ export class CardComponent {
     if (this.isFaceDown()) {
       return this._sanitizer.bypassSecurityTrustUrl('/assets/card-images/base-v2/card-back-art.jpg');
     }
-    return this._sanitizer.bypassSecurityTrustUrl(card.artImagePath);
+    return this._sanitizer.bypassSecurityTrustUrl(
+      `/assets/card-images/${card.expansionName}/${card.cardKey}-art.jpg`,
+    );
   });
 
   // Detail image path for right-click detail modal.
@@ -222,9 +227,11 @@ export class CardComponent {
       return;
     }
 
+    // Derive the detail URL from expansionName + cardKey for the same reason
+    // path() does — saved configurations may carry stale legacy paths.
     const detailImagePath = this.isFaceDown()
       ? CardComponent.CARD_BACK_DETAIL_IMAGE_PATH
-      : card.detailImagePath;
+      : `/assets/card-images/${card.expansionName}/${card.cardKey}-detail.jpg`;
 
     if (!detailImagePath) {
       return;

@@ -94,12 +94,19 @@ export class CardLikeComponent {
     return cards[cardLikeId] ?? findCardLikeInMatch(match, cardLikeId);
   });
 
-  // Detail image path for right-click detail modal.
-  readonly detailPath = computed(() => this.cardLike()?.detailImagePath);
+  // Detail image path for right-click detail modal. Derived from expansionName
+  // + cardKey to bypass stale paths in saved configurations.
+  readonly detailPath = computed(() => {
+    const cardLike = this.cardLike();
+    if (!cardLike) return undefined;
+    const expansionName = (cardLike as { expansionName?: string }).expansionName;
+    if (!expansionName) return cardLike.detailImagePath;
+    return `/assets/card-images/${expansionName}/${cardLike.cardKey}-detail.jpg`;
+  });
 
   // Detail-resolution fallback for the rare case where the in-card art image
   // fails to load — swap to the larger detail image so something still renders.
-  readonly fallbackPath = computed(() => this.cardLike()?.detailImagePath);
+  readonly fallbackPath = computed(() => this.detailPath());
 
   // Primary resolved image path before fallback override.
   readonly resolvedPath = computed(() => {
@@ -172,9 +179,18 @@ export class CardLikeComponent {
   }
 
   // Card-likes use the small art image in-card and the large detail image
-  // for the right-click zoom view.
-  private resolveImagePath(cardLike: { artImagePath: string; detailImagePath: string }, size: CardSize): string {
-    if (size === 'detail') return cardLike.detailImagePath;
-    return cardLike.artImagePath;
+  // for the right-click zoom view. URLs are derived from expansionName +
+  // cardKey rather than read from stored fields so saved configurations with
+  // legacy paths still resolve to the current flat asset layout.
+  private resolveImagePath(
+    cardLike: { artImagePath: string; detailImagePath: string; expansionName?: string; cardKey: string },
+    size: CardSize,
+  ): string {
+    const expansionName = cardLike.expansionName;
+    if (!expansionName) {
+      return size === 'detail' ? cardLike.detailImagePath : cardLike.artImagePath;
+    }
+    const suffix = size === 'detail' ? 'detail' : 'art';
+    return `/assets/card-images/${expansionName}/${cardLike.cardKey}-${suffix}.jpg`;
   }
 }
