@@ -43,7 +43,7 @@
 }
 
 // Top filler bar. Mirrors the bottom .card-like-accent-strip color via the
-// shared --card-like-accent variable, muted by ~25% (75% source + 25% gray)
+// shared --card-like-accent variable, muted by ~45% (55% source + 45% gray)
 // so the bar reads softer than the vibrant accent used for borders/hover.
 // flex: 1 1 0 + min-height: 0 lets it absorb whatever vertical space the
 // natural-height image leaves above. The cost cluster is absolutely
@@ -53,7 +53,7 @@
   position: relative;
   flex: 1 1 0;
   min-height: 0;
-  background: color-mix(in srgb, var(--card-like-accent) 75%, gray);
+  background: color-mix(in srgb, var(--card-like-accent) 55%, gray);
   overflow: hidden;
 }
 
@@ -77,7 +77,7 @@
 
 // Accent strip at the bottom of the frame echoing the portrait card type-bar
 // treatment. Hosts the card name as a centered label; color is driven by the
-// card-like's kind via --card-like-accent, muted by ~25% to match the top
+// card-like's kind via --card-like-accent, muted by ~45% to match the top
 // filler bar.
 .card-like-accent-strip {
   flex: 0 0 auto;
@@ -86,7 +86,7 @@
   justify-content: center;
   min-height: 30px;
   padding: 0 var(--theme-space-xs);
-  background: color-mix(in srgb, var(--card-like-accent) 75%, gray);
+  background: color-mix(in srgb, var(--card-like-accent) 55%, gray);
   overflow: hidden;
 }
 
