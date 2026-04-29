@@ -101,12 +101,14 @@
   --theme-overlay-alpha-strong: 0.8;
   --theme-panel-bg: rgba(0, 0, 0, var(--theme-overlay-alpha-medium));
 
-  /* Card dimensions — single source of truth for card sizing across the UI. */
+  /* Card dimensions — single source of truth for card sizing across the UI.
+     Frame heights include extra space above the image for the top filler bar
+     (which absorbs whatever the natural-aspect image and bottom bar leave). */
   --card-width: 150px;
-  --card-height: 240px;
-  --card-small-height: 150px;
+  --card-height: 245px;
+  --card-small-height: 155px;
   --card-landscape-width: 280px;
-  --card-landscape-height: 170px;
+  --card-landscape-height: 175px;
 
   /* ─── Spacing ─── */
   --theme-space-2xs: 2px;
