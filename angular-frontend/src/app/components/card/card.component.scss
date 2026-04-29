@@ -255,8 +255,9 @@
   transform: none;
 }
 
-// Token badges container — reused from the previous card layout. Drops below
-// the count badge when both are present so the two stacks don't overlap.
+// Token badges container. Default rules cover the face-down branch: pinned
+// to the top-right corner of the back image, stacked vertically, dropped
+// below the count badge when both are present so the two don't overlap.
 .token-container {
   position: absolute;
   top: 4px;
@@ -270,6 +271,18 @@
 
 .token-container.has-count {
   top: 28px;
+}
+
+// Face-up variant: lives inside .card-art-frame-bottom, horizontally centred
+// between the cost cluster (left edge) and the count badge (right edge),
+// vertically centred within the bar. Multiple tokens stack side-by-side so
+// the cluster grows horizontally rather than spilling out of the bar height.
+.token-container.token-container-in-bar {
+  top: 50%;
+  left: 50%;
+  right: auto;
+  transform: translate(-50%, -50%);
+  flex-direction: row;
 }
 
 // Game-art piece: black-on-white badge sits on the card image and reads as a

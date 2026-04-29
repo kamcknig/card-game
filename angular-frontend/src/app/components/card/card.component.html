@@ -11,15 +11,26 @@
     @if (isFaceDown()) {
       <!-- Face-down: render the card-back image as the entire frame, no structure.
            Count badge (when present) is pinned to the top-right corner of the
-           back image since there is no top filler bar to centre it within. -->
+           back image since there is no top filler bar to centre it within.
+           Token badges, when present, stack below the count badge. -->
       <img class="card-back-image" [src]="path() ?? ''" alt="" />
       @if (count() > 0) {
         <div class="card-count-badge card-count-badge-corner">x{{ count() }}</div>
       }
+      @if (tokenBadges().length > 0) {
+        <div class="token-container" [class.has-count]="count() > 0">
+          @for (badge of tokenBadges(); track badge.id) {
+            <div class="token-badge" [style.background]="badge.color">
+              <span class="token-text">{{ badge.label }}</span>
+            </div>
+          }
+        </div>
+      }
     } @else {
       <!-- Face-up: top type bar carrying the card name + naturally-sized art
            image + bottom filler bar that absorbs remaining vertical space and
-           hosts the cost cluster and count badge, both vertically centred. -->
+           hosts the cost cluster (left), token badges (centre), and count
+           badge (right) — all vertically centred within the bar. -->
       <div class="card-type-bar" [style.background]="typeBarBackground()">
         <span class="card-name" [title]="cardModel.cardName">{{ cardModel.cardName }}</span>
       </div>
@@ -47,20 +58,20 @@
           </div>
         }
 
+        @if (tokenBadges().length > 0) {
+          <div class="token-container token-container-in-bar">
+            @for (badge of tokenBadges(); track badge.id) {
+              <div class="token-badge" [style.background]="badge.color">
+                <span class="token-text">{{ badge.label }}</span>
+              </div>
+            }
+          </div>
+        }
+
         @if (count() > 0) {
           <div class="card-count-badge">x{{ count() }}</div>
         }
       </div>
     }
-
-    <!-- Token badges sit above the card art regardless of facing. Positioned
-         below the count badge when both are present. -->
-    <div class="token-container" [class.has-count]="count() > 0">
-      @for (badge of tokenBadges(); track badge.id) {
-        <div class="token-badge" [style.background]="badge.color">
-          <span class="token-text">{{ badge.label }}</span>
-        </div>
-      }
-    </div>
   </div>
 }
