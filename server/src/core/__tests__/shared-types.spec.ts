@@ -162,7 +162,9 @@ Deno.test('Card constructor assigns all card-specific fields', () => {
   assertEquals(card.id, 100);
   assertEquals(card.abilityText, '+2 Cards');
   assertEquals(card.expansionName, 'base-v2');
-  assertEquals(card.artImagePath, '/half/village.jpg');
+  // CardLike base constructor derives art/detail URLs from expansionName + cardKey,
+  // so the path passed in args is overridden with the canonical flat-layout URL.
+  assertEquals(card.artImagePath, './assets/card-images/base-v2/test-card-art.jpg');
   assertEquals(card.kingdom, 'village');
   assertEquals(card.type, ['ACTION']);
   assertEquals(card.partOfSupply, true);

@@ -823,12 +823,19 @@ export class CardLike<M = unknown> {
     this.cardKey = args.cardKey ?? '';
     this.cardName = args.cardName ?? '';
     this.abilityText = args.abilityText ?? '';
-    // expansionName is propagated from createCardLike's emitted data so frontend
-    // renderers can derive image URLs from expansion + key. Subclasses that
-    // construct via super(args) inherit this assignment automatically.
     this.expansionName = args.expansionName;
-    this.artImagePath = args.artImagePath ?? '';
-    this.detailImagePath = args.detailImagePath ?? '';
+    // Always derive image paths from expansion + key. This normalises card-like
+    // instances built from saved match configurations (which may carry legacy
+    // sub-directory paths in args) so every consumer sees the current flat
+    // asset layout. Falls back to whatever args provided when expansion + key
+    // are not both present.
+    if (args.expansionName && args.cardKey) {
+      this.artImagePath = `./assets/card-images/${args.expansionName}/${args.cardKey}-art.jpg`;
+      this.detailImagePath = `./assets/card-images/${args.expansionName}/${args.cardKey}-detail.jpg`;
+    } else {
+      this.artImagePath = args.artImagePath ?? '';
+      this.detailImagePath = args.detailImagePath ?? '';
+    }
     this.randomizerData = args.randomizerData;
     this.kingdomSelectable = args.kingdomSelectable ?? true;
     this.cost = args.cost ?? { treasure: 0 };
@@ -875,8 +882,6 @@ export class Event extends CardLike {
 
     this.id = args.id;
     this.cardName = args.cardName;
-    this.artImagePath = args.artImagePath;
-    this.detailImagePath = args.detailImagePath;
     this.randomizer = args.randomizer ?? null;
   }
 
@@ -903,8 +908,6 @@ export class Ally extends CardLike {
 
     this.id = args.id;
     this.cardName = args.cardName;
-    this.artImagePath = args.artImagePath;
-    this.detailImagePath = args.detailImagePath;
     this.randomizer = args.randomizer ?? null;
   }
 
@@ -931,8 +934,6 @@ export class Prophecy extends CardLike {
 
     this.id = args.id;
     this.cardName = args.cardName;
-    this.artImagePath = args.artImagePath;
-    this.detailImagePath = args.detailImagePath;
     this.randomizer = args.randomizer ?? null;
   }
 
@@ -959,8 +960,6 @@ export class Landmark extends CardLike {
 
     this.id = args.id;
     this.cardName = args.cardName;
-    this.artImagePath = args.artImagePath;
-    this.detailImagePath = args.detailImagePath;
     this.randomizer = args.randomizer ?? null;
   }
 
@@ -987,8 +986,6 @@ export class Project extends CardLike {
 
     this.id = args.id;
     this.cardName = args.cardName;
-    this.artImagePath = args.artImagePath;
-    this.detailImagePath = args.detailImagePath;
     this.randomizer = args.randomizer ?? null;
   }
 
@@ -1015,8 +1012,6 @@ export class Way extends CardLike {
 
     this.id = args.id;
     this.cardName = args.cardName;
-    this.artImagePath = args.artImagePath;
-    this.detailImagePath = args.detailImagePath;
     this.randomizer = args.randomizer ?? null;
   }
 
@@ -1047,8 +1042,6 @@ export class Trait extends CardLike {
 
     this.id = args.id;
     this.cardName = args.cardName;
-    this.artImagePath = args.artImagePath;
-    this.detailImagePath = args.detailImagePath;
     this.randomizer = args.randomizer ?? null;
     this.pileKey = args.pileKey ?? null;
   }
@@ -1072,8 +1065,6 @@ export class Boon extends CardLike {
 
     this.id = args.id;
     this.cardName = args.cardName;
-    this.artImagePath = args.artImagePath;
-    this.detailImagePath = args.detailImagePath;
   }
 
   override toString() {
@@ -1095,8 +1086,6 @@ export class Hex extends CardLike {
 
     this.id = args.id;
     this.cardName = args.cardName;
-    this.artImagePath = args.artImagePath;
-    this.detailImagePath = args.detailImagePath;
   }
 
   override toString() {
@@ -1118,8 +1107,6 @@ export class State extends CardLike {
 
     this.id = args.id;
     this.cardName = args.cardName;
-    this.artImagePath = args.artImagePath;
-    this.detailImagePath = args.detailImagePath;
   }
 
   override toString() {
@@ -1141,8 +1128,6 @@ export class Artifact extends CardLike {
 
     this.id = args.id;
     this.cardName = args.cardName;
-    this.artImagePath = args.artImagePath;
-    this.detailImagePath = args.detailImagePath;
   }
 
   override toString() {
@@ -1266,8 +1251,6 @@ export class Card<M = unknown> extends CardLike<M> {
     this.victoryPoints = args.victoryPoints ?? 0;
     this.targetScheme = args.targetScheme;
     this.expansionName = args.expansionName;
-    this.artImagePath = args.artImagePath;
-    this.detailImagePath = args.detailImagePath;
     this.owner = args.owner ?? null;
     this.mat = args.mat;
     this.kingdom = args.kingdom;
