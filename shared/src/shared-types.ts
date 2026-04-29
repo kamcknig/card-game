@@ -823,6 +823,10 @@ export class CardLike<M = unknown> {
     this.cardKey = args.cardKey ?? '';
     this.cardName = args.cardName ?? '';
     this.abilityText = args.abilityText ?? '';
+    // expansionName is propagated from createCardLike's emitted data so frontend
+    // renderers can derive image URLs from expansion + key. Subclasses that
+    // construct via super(args) inherit this assignment automatically.
+    this.expansionName = args.expansionName;
     this.artImagePath = args.artImagePath ?? '';
     this.detailImagePath = args.detailImagePath ?? '';
     this.randomizerData = args.randomizerData;

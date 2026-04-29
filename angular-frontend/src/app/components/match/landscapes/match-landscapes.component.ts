@@ -142,10 +142,13 @@ export class MatchLandscapesComponent {
     });
   }
 
-  // Uses the existing detail dialog behavior for landscape art.
+  // Uses the existing detail dialog behavior for landscape art. The detail URL
+  // is derived from expansionName + cardKey (built into landscape.detailImagePath
+  // at view-model construction) so saved configs with stale paths still resolve.
   onLandscapeContextMenu(landscape: LandscapeCardViewModel, event: MouseEvent): void {
     event.preventDefault();
     event.stopPropagation();
+    if (!landscape.detailImagePath) return;
     void displayCardDetail({ detailImagePath: landscape.detailImagePath });
   }
 
@@ -182,11 +185,18 @@ export class MatchLandscapesComponent {
       ? this.getSunTokenCount(cardLike.id, tokens)
       : 0;
 
+    // Derive the detail URL from expansionName + cardKey rather than reading
+    // cardLike.detailImagePath so saved configs with legacy paths still resolve.
+    const expansionName = (cardLike as { expansionName?: string }).expansionName;
+    const detailImagePath = expansionName
+      ? `/assets/card-images/${expansionName}/${cardLike.cardKey}-detail.jpg`
+      : cardLike.detailImagePath;
+
     return {
       trackKey: `${kind}:${cardLike.cardKey}:${cardLike.id}`,
       id: cardLike.id,
       kind,
-      detailImagePath: cardLike.detailImagePath,
+      detailImagePath,
       selectable: selectableCards.has(cardLike.id),
       selected: selectedCards.has(cardLike.id),
       showCost,
