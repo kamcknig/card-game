@@ -31,6 +31,17 @@ const CARD_TYPE_COLOR_VAR: Partial<Record<CardType, string>> = {
   CURSE: 'var(--theme-color-source-curse)',
 };
 
+// Mute factor for type-bar backgrounds — 85% source color blended with 15%
+// neutral gray. The cost-badge border and the value-indicator text continue
+// to read the vibrant source color directly.
+const muteBarColor = (color: string): string => `color-mix(in srgb, ${color} 85%, gray)`;
+
+// Half-width of each color's solid plateau when building a multi-type bar
+// gradient. With this value, two-type cards render ~35% solid on each side
+// and a 30%-wide transition zone in the centre instead of a smooth fade
+// across the whole bar.
+const TYPE_BAR_PLATEAU_HALF_WIDTH = 35;
+
 // Hardcoded treasure values for the basic treasure piles. Other treasure cards
 // use variable / conditional values (e.g. Bank, Crown), so we only display the
 // large value indicator when the value is unambiguous.
@@ -156,34 +167,41 @@ export class CardComponent {
     return CARD_TYPE_COLOR_VAR[type] ?? 'var(--theme-color-source-default)';
   });
 
-  // Linear gradient (or solid color) for the type bar at the bottom of the card.
-  // Only the six types listed in CARD_TYPE_COLOR_VAR (DURATION, REACTION,
-  // NIGHT, VICTORY, TREASURE, CURSE) contribute. Cards with no qualifying
-  // type render a solid white bar; multi-typed cards render a left-to-right
-  // gradient with one stop per qualifying type, in card-defined order.
+  // Linear gradient (or solid color) for the type bars at the top and bottom
+  // of the card. Only the six types listed in CARD_TYPE_COLOR_VAR (DURATION,
+  // REACTION, NIGHT, VICTORY, TREASURE, CURSE) contribute. Cards with no
+  // qualifying type render a solid muted-default bar; single-type cards a
+  // single solid muted color; multi-typed cards a horizontal gradient where
+  // each color holds a solid plateau on its side with a narrow transition
+  // zone between adjacent colors.
   //
-  // The Curse card itself is mis-typed as VICTORY in the card library, so
-  // we override it to render the CURSE color instead of green.
+  // All output colors are passed through muteBarColor() so the bar reads ~15%
+  // softer than the source-color tokens used elsewhere. The Curse card itself
+  // is mis-typed as VICTORY in the card library, so we override it to render
+  // the CURSE color instead of green.
   readonly typeBarBackground = computed<string>(() => {
     const card = this.card();
     if (card?.cardKey === 'curse') {
-      return CARD_TYPE_COLOR_VAR.CURSE ?? 'var(--theme-color-source-default)';
+      return muteBarColor(CARD_TYPE_COLOR_VAR.CURSE ?? 'var(--theme-color-source-default)');
     }
     const types = (card?.type ?? []).filter((type) => type in CARD_TYPE_COLOR_VAR);
     if (types.length === 0) {
-      return 'var(--theme-color-source-default)';
+      return muteBarColor('var(--theme-color-source-default)');
     }
     if (types.length === 1) {
-      return CARD_TYPE_COLOR_VAR[types[0]] ?? 'var(--theme-color-source-default)';
+      return muteBarColor(CARD_TYPE_COLOR_VAR[types[0]] ?? 'var(--theme-color-source-default)');
     }
-    const stops = types
-      .map((type, index) => {
-        const color = CARD_TYPE_COLOR_VAR[type] ?? 'var(--theme-color-source-default)';
-        const percent = Math.round((index / (types.length - 1)) * 100);
-        return `${color} ${percent}%`;
-      })
-      .join(', ');
-    return `linear-gradient(90deg, ${stops})`;
+    // Each colour gets two stops — one entering its plateau, one leaving it —
+    // so the visible gradient sits between the inner stops only.
+    const solidExtent = TYPE_BAR_PLATEAU_HALF_WIDTH / (types.length - 1);
+    const stops = types.flatMap((type, index) => {
+      const color = muteBarColor(CARD_TYPE_COLOR_VAR[type] ?? 'var(--theme-color-source-default)');
+      const center = (index / (types.length - 1)) * 100;
+      const start = Math.max(0, center - solidExtent);
+      const end = Math.min(100, center + solidExtent);
+      return [`${color} ${start.toFixed(2)}%`, `${color} ${end.toFixed(2)}%`];
+    });
+    return `linear-gradient(90deg, ${stops.join(', ')})`;
   });
 
   // The large centered number shown between the name and the type bar.
