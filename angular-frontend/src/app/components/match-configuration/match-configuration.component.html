@@ -69,8 +69,17 @@
       <section class="expansions config-section">
         <div class="section-header-row">
           <h2 class="section-title">Expansions</h2>
-          @if (isOwner) {
-            <div class="section-header-actions">
+          <div class="section-header-actions">
+            <label class="show-names-toggle">
+              <input
+                type="checkbox"
+                class="form-checkbox"
+                [checked]="showExpansionNames()"
+                (change)="showExpansionNames.set($any($event.target).checked)"
+              />
+              Show names
+            </label>
+            @if (isOwner) {
               <button
                 class="btn btn-secondary section-inline-action-button"
                 (click)="onSelectNoExpansions()"
@@ -81,11 +90,11 @@
                 (click)="onSelectAllExpansions()"
                 [disabled]="!canSelectAllExpansions()"
               >All</button>
-            </div>
-          }
+            }
+          </div>
         </div>
 
-        <div class="expansion-list">
+        <div class="expansion-list" [class.show-names]="showExpansionNames()">
           @let expansionItems = expansionList();
           @let expansionLookup = selectedExpansionLookup();
           @for (expansion of expansionItems; track expansion.name) {
@@ -103,6 +112,9 @@
                 alt="{{expansion.title}} icon"
                 class="expansion-icon"
               />
+              @if (showExpansionNames()) {
+                <span class="expansion-name">{{ expansion.title }}</span>
+              }
             </div>
           }
         </div>

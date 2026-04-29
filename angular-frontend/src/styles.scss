@@ -182,6 +182,58 @@ hr {
   font-weight: 500;
 }
 
+// Shared themed checkbox. Suppresses native browser chrome and renders the
+// box, fill, and check using theme tokens so checkboxes look consistent on
+// the parchment surfaces. Uses `--theme-border-strong` (warm bronze) for the
+// checked fill — components that need a different semantic color (e.g. the
+// "ready" green on the player roster) override locally.
+.form-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  position: relative;
+  margin: 0;
+  border: 1.5px solid var(--theme-border-action);
+  border-radius: var(--theme-radius-sm);
+  background: var(--theme-surface-panel);
+  cursor: pointer;
+  transition: background 150ms ease, border-color 120ms ease;
+
+  // Checkmark drawn via a rotated right+bottom border on a pseudo element.
+  &:checked {
+    background: var(--theme-border-strong);
+    border-color: var(--theme-border-strong);
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 4px;
+      top: 1px;
+      width: 5px;
+      height: 9px;
+      border: 2px solid var(--theme-text-on-dark);
+      border-top: none;
+      border-left: none;
+      transform: rotate(45deg);
+    }
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    background: var(--theme-action-disabled-bg);
+    border-color: var(--theme-border-disabled);
+    opacity: var(--theme-action-disabled-opacity);
+    filter: saturate(0.45);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--theme-border-strong);
+    outline-offset: 2px;
+  }
+}
+
 // ── Shared button classes ─────────────────────────────────────────────────
 //
 // One base class plus four variants matching the Buttons section of

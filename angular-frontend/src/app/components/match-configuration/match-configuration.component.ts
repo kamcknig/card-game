@@ -111,6 +111,9 @@ export class MatchConfigurationComponent implements OnDestroy {
   private readonly _saveNameInput$ = new Subject<string>();
   @ViewChild('saveDialogNameInput') private readonly _saveDialogNameInput?: ElementRef<HTMLInputElement>;
 
+  // When true, expansion names render below their icons in the expansion list.
+  readonly showExpansionNames = signal(false);
+
   // Tracks active modal type and settings for a single reusable search dialog.
   readonly activeSelectionModal = signal<SelectionModalState | undefined>(undefined);
   // Controls save-configuration dialog visibility.
