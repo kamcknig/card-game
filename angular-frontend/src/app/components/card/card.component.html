@@ -17,11 +17,18 @@
         <div class="card-count-badge card-count-badge-corner">x{{ count() }}</div>
       }
     } @else {
-      <!-- Face-up: top filler bar (same gradient as type bar) + naturally-sized
-           image bottom-aligned to the type bar + bottom type bar with name.
-           Cost cluster and count badge sit inside the top filler bar so they
-           are vertically centred within it. -->
-      <div class="card-art-frame-top" [style.background]="typeBarBackground()">
+      <!-- Face-up: top type bar carrying the card name + naturally-sized art
+           image + bottom filler bar that absorbs remaining vertical space and
+           hosts the cost cluster and count badge, both vertically centred. -->
+      <div class="card-type-bar" [style.background]="typeBarBackground()">
+        <span class="card-name" [title]="cardModel.cardName">{{ cardModel.cardName }}</span>
+      </div>
+
+      <div class="card-art">
+        <img class="card-art-image" [src]="path() ?? ''" alt="" />
+      </div>
+
+      <div class="card-art-frame-bottom" [style.background]="typeBarBackground()">
         @if (showCost()) {
           <div class="card-cost-cluster">
             <div class="card-cost-badge">{{ treasureCost() }}</div>
@@ -43,14 +50,6 @@
         @if (count() > 0) {
           <div class="card-count-badge">x{{ count() }}</div>
         }
-      </div>
-
-      <div class="card-art">
-        <img class="card-art-image" [src]="path() ?? ''" alt="" />
-      </div>
-
-      <div class="card-type-bar" [style.background]="typeBarBackground()">
-        <span class="card-name" [title]="cardModel.cardName">{{ cardModel.cardName }}</span>
       </div>
     }
 

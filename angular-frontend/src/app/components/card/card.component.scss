@@ -85,13 +85,13 @@
   display: block;
 }
 
-// Top filler bar. Mirrors the bottom .card-type-bar gradient (template binds
+// Bottom filler bar. Mirrors the top .card-type-bar gradient (template binds
 // the same typeBarBackground() to both). flex: 1 1 0 + min-height: 0 lets it
-// absorb whatever vertical space the natural-height image leaves above. The
-// optional value indicator sits centered via flex; the cost cluster and count
-// badge are absolutely positioned against this bar so they vertically center
-// within it regardless of how tall the bar happens to be.
-.card-art-frame-top {
+// absorb whatever vertical space the natural-height image leaves below. The
+// cost cluster and count badge are absolutely positioned against this bar so
+// they vertically centre within it regardless of how tall the bar happens to
+// be.
+.card-art-frame-bottom {
   position: relative;
   flex: 1 1 0;
   min-height: 0;

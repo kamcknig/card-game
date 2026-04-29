@@ -42,14 +42,14 @@
   height: auto;
 }
 
-// Top filler bar. Mirrors the bottom .card-like-accent-strip color via the
+// Bottom filler bar. Mirrors the top .card-like-accent-strip colour via the
 // shared --card-like-accent variable, muted by ~45% (55% source + 45% gray)
 // so the bar reads softer than the vibrant accent used for borders/hover.
 // flex: 1 1 0 + min-height: 0 lets it absorb whatever vertical space the
-// natural-height image leaves above. The cost cluster is absolutely
+// natural-height image leaves below. The cost cluster is absolutely
 // positioned against this bar so it vertically centres within whatever
 // height the bar happens to be.
-.card-like-art-frame-top {
+.card-like-art-frame-bottom {
   position: relative;
   flex: 1 1 0;
   min-height: 0;
