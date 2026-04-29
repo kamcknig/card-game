@@ -173,7 +173,7 @@ const registerCheapTraitEvents = (registrar: GameEventRegistrar, config: Compute
         continue;
       }
 
-      // Collect all cards in the affected kingdom pile (split-pile safe via pile key matching).
+      // Collect all cards in the affected kingdoms pile (split-pile safe via pile key matching).
       const pileCards = args.findCardService
         .findCards({ all: [{ location: 'kingdomSupply' }] })
         .filter(card => getCardPileKey(card) === pileKey);

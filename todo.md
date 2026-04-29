@@ -6,6 +6,14 @@
 
 ---
 
+use proper card images for selection on match configuration
+
+---
+
+expansions on match configuration do 6 or 8
+
+---
+
 add settings to the match screen
 - toggle light/dark mode
 - toggle timestamps on ui log

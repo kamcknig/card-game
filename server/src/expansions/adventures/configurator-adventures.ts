@@ -369,7 +369,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
       }
     });
   }
-  // Only grant the vanilla bonus tokens when Teacher is in the kingdom.
+  // Only grant the vanilla bonus tokens when Teacher is in the kingdoms.
   if (!config.kingdomSupply.some(supply => supply.name === 'teacher')) {
     return;
   }

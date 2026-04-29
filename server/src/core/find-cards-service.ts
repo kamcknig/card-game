@@ -45,7 +45,7 @@ export class FindCardsService implements FindCardService {
    *
    * Supported filter leaves:
    * - Source filter: `{ location, playerId? }`
-   * - Card-data filter: `{ cardIds?, tags?, cardKeys?, cardType?, excludedCardType?, owner?, kingdom? }`
+   * - Card-data filter: `{ cardIds?, tags?, cardKeys?, cardType?, excludedCardType?, owner?, kingdoms? }`
    * - Cost filter: `{ kind: 'exact' | 'upTo', amount, playerId, from? }`
    *
    * Supported logical combinators:
@@ -114,7 +114,7 @@ export class FindCardsService implements FindCardService {
     return this.findCards({ location: ['playArea', 'activeDuration'] });
   }
 
-  // Returns count of non-empty basic/kingdom supply piles.
+  // Returns count of non-empty basic/kingdoms supply piles.
   public getRemainingSupplyCount(): number {
     const remainingSupplyPileKeys = this.findCards({ location: ['kingdomSupply', 'basicSupply'] })
       .map(card => getCardPileKey(card))
@@ -144,7 +144,7 @@ export class FindCardsService implements FindCardService {
       .slice(-1)[0];
   }
 
-  // Finds the current top card in a named non-supply pile (using kingdom as pile name).
+  // Finds the current top card in a named non-supply pile (using kingdoms as pile name).
   public findTopNonSupplyCardForPileName(args: { pileName: string }): Card | undefined {
     return this.findCards({ location: 'nonSupplyCards' })
       .filter(card => card.kingdom === args.pileName)

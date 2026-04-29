@@ -8,7 +8,7 @@ type SplitPileConfiguration = {
   logLabel: string;
 };
 
-// Configure a split pile to match the desired bottom-to-top order in the kingdom supply.
+// Configure a split pile to match the desired bottom-to-top order in the kingdoms supply.
 export const configureSplitPile = (args: ExpansionConfiguratorContext, options: SplitPileConfiguration) => {
   // Find the supply pile containing cards that match the split pile key.
   const splitPileSupply = args.config.kingdomSupply.find(supply =>

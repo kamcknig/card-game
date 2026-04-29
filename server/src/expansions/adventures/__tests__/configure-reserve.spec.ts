@@ -44,7 +44,7 @@ const createContext = (kingdomSupply: Supply[]) => {
   return { args, registerCalls, infoLogs };
 };
 
-Deno.test('configureReserve registers tavern mat when a RESERVE card is in the kingdom', () => {
+Deno.test('configureReserve registers tavern mat when a RESERVE card is in the kingdoms', () => {
   const { args, registerCalls } = createContext([createSupply('guide', ['ACTION', 'RESERVE'])]);
 
   configureReserve(args);
@@ -55,7 +55,7 @@ Deno.test('configureReserve registers tavern mat when a RESERVE card is in the k
   ]);
 });
 
-Deno.test('configureReserve registers tavern mat when miser is in the kingdom (non-RESERVE tavern user)', () => {
+Deno.test('configureReserve registers tavern mat when miser is in the kingdoms (non-RESERVE tavern user)', () => {
   const { args, registerCalls } = createContext([createSupply('miser', ['ACTION'])]);
 
   configureReserve(args);
@@ -66,7 +66,7 @@ Deno.test('configureReserve registers tavern mat when miser is in the kingdom (n
   ]);
 });
 
-Deno.test('configureReserve skips tavern mat when neither RESERVE cards nor non-RESERVE tavern users are in the kingdom', () => {
+Deno.test('configureReserve skips tavern mat when neither RESERVE cards nor non-RESERVE tavern users are in the kingdoms', () => {
   const { args, registerCalls } = createContext([
     createSupply('village', ['ACTION']),
     createSupply('smithy', ['ACTION']),

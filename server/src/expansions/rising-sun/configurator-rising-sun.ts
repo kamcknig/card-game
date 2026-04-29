@@ -54,7 +54,7 @@ const SICKNESS_PROPHECY_KEY: CardKey = 'sickness';
 const RIVERBOAT_CARD_KEY: CardKey = 'riverboat';
 const RIVERBOAT_RUNTIME_SET_ASIDE_PREFIX = 'riverboat-set-aside:';
 
-// Returns true when at least one selected kingdom pile contains an Omen card.
+// Returns true when at least one selected kingdoms pile contains an Omen card.
 const hasOmenInKingdom = (config: ComputedMatchConfiguration): boolean => {
   return config.kingdomSupply.some(supply =>
     supply.cards.some(card => {
@@ -88,7 +88,7 @@ const isConfiguredProphecyKey = (config: ComputedMatchConfiguration, prophecyKey
   return config.prophecies?.[0]?.cardKey === prophecyKey;
 };
 
-// Returns true when a configured kingdom pile was created by Approaching Army setup.
+// Returns true when a configured kingdoms pile was created by Approaching Army setup.
 const isApproachingArmySyntheticPile = (supply: Supply): boolean => {
   if (supply.cards.length < 1) {
     return false;
@@ -192,7 +192,7 @@ type RiverboatCardMetadata = BaseCardMetadata & {
   };
 };
 
-// Reads and creates Riverboat metadata on kingdom card entries.
+// Reads and creates Riverboat metadata on kingdoms card entries.
 const getRiverboatMetadata = (card: CardNoId): RiverboatSelectionMetadata => {
   const metadata = (card.metadata as RiverboatCardMetadata | undefined) ?? {};
   metadata.risingSun ??= {};
@@ -1656,7 +1656,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     const hasOmen = hasOmenInKingdom(args.config);
     if (!hasOmen) {
       if ((args.config.prophecies ?? []).length > 0) {
-        args.loggerService.info('[rising-sun configurator] no Omen cards in kingdom; clearing configured prophecy');
+        args.loggerService.info('[rising-sun configurator] no Omen cards in kingdoms; clearing configured prophecy');
       }
       args.config.prophecies = [];
       configureApproachingArmySetupPile(args);

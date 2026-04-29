@@ -38,7 +38,7 @@ export const configureFerryman = (args: ExpansionConfiguratorContext) => {
     expansions: selectedExpansions,
     excludedPileKeys: existingPileKeys,
     bannedPileKeys,
-    // Ferryman uses an extra kingdom card costing exactly 3 or 4.
+    // Ferryman uses an extra kingdoms card costing exactly 3 or 4.
     cardFilter: card => card.cost.treasure === 3 || card.cost.treasure === 4,
   });
 
