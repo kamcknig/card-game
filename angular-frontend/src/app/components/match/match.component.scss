@@ -31,8 +31,8 @@
   --card-width: 135px;
   --card-height: 220px;
   --card-small-height: 140px;
-  --card-landscape-width: 252px;
-  --card-landscape-height: 158px;
+  --card-landscape-width: 214px;
+  --card-landscape-height: 134px;
   --match-row-spacing: 10px;
 }
 
@@ -70,7 +70,8 @@
   padding: 2px 7px;
 }
 
-:host ::ng-deep .card-like-accent-strip {
+:host ::ng-deep .card-like-accent-strip,
+:host ::ng-deep .card-like-art-frame-bottom {
   min-height: 27px;
 }
 

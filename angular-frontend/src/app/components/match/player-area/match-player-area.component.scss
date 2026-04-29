@@ -127,6 +127,17 @@
   min-height: var(--card-height);
 }
 
+// Half-size stack panels (deck, discard) match the supply / non-supply /
+// play-area / hand cards so the entire match screen reads at one card
+// scale.
+.stack-panel-half .stack-card {
+  min-height: var(--card-small-height);
+}
+
+.stack-panel-half .empty-stack {
+  height: var(--card-small-height);
+}
+
 .stack-label {
   color: var(--theme-text-on-dark);
   font-size: 12px;

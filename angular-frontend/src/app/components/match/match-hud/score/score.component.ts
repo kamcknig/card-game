@@ -34,23 +34,15 @@ export class ScoreComponent {
         const score = scores.find((entry) => entry.id === id);
         if (!score) return undefined;
         const playerColor = tinycolor(playerStore(id).get()?.color ?? '#7f6746');
-        const accentColor = playerColor.toHexString();
-        const accentSoft = playerColor.clone().setAlpha(.18).toRgbString();
-        const accentMuted = playerColor.clone().setAlpha(.10).toRgbString();
-        // Active row uses stronger color stops so turn ownership is visually obvious.
-        const accentActiveStrong = playerColor.clone().setAlpha(.46).toRgbString();
-        const accentActiveSoft = playerColor.clone().setAlpha(.28).toRgbString();
-        const accentGlow = playerColor.clone().setAlpha(.48).toRgbString();
+        // Soft glow halo around the active row's dot — the player's own
+        // color at higher alpha so the layered box-shadow reads as a
+        // prominent lit halo rather than a faint tint.
+        const accentGlow = playerColor.clone().setAlpha(.75).toRgbString();
         // The score-row dot uses brightness to signal active turn ownership.
         const accentDotInactive = playerColor.clone().darken(24).setAlpha(.55).toRgbString();
         const accentDotActive = playerColor.clone().brighten(16).setAlpha(.95).toRgbString();
         return {
           ...score,
-          accentColor,
-          accentSoft,
-          accentMuted,
-          accentActiveStrong,
-          accentActiveSoft,
           accentGlow,
           accentDotInactive,
           accentDotActive,
@@ -60,11 +52,6 @@ export class ScoreComponent {
         id: number;
         score: number;
         name: string;
-        accentColor: string;
-        accentSoft: string;
-        accentMuted: string;
-        accentActiveStrong: string;
-        accentActiveSoft: string;
         accentGlow: string;
         accentDotInactive: string;
         accentDotActive: string;

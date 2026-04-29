@@ -24,16 +24,20 @@
   box-sizing: border-box;
 }
 
-// Art window. Sized by the inner image's natural aspect ratio so the image's
-// bottom edge is flush with the top of the accent strip. Any remaining
-// vertical space above the image is absorbed by .card-like-art-frame-top,
-// which carries the same kind-keyed color as the strip.
+// Art window. Grows to fill whatever vertical space the accent strip and
+// bottom bar don't claim, and crops the image at the bottom (overflow:
+// hidden) if its natural aspect at full width exceeds the available
+// height. Background mirrors the bottom-bar tint so card-art images that
+// happen to be shorter than the art container blend visually into the
+// bar instead of revealing the underlying panel surface.
 .card-like-art {
   position: relative;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  min-height: 0;
   width: 100%;
   display: block;
   overflow: hidden;
+  background: color-mix(in srgb, var(--card-like-accent) 55%, gray);
 }
 
 .card-like-art-image {
@@ -45,14 +49,14 @@
 // Bottom filler bar. Mirrors the top .card-like-accent-strip colour via the
 // shared --card-like-accent variable, muted by ~45% (55% source + 45% gray)
 // so the bar reads softer than the vibrant accent used for borders/hover.
-// flex: 1 1 0 + min-height: 0 lets it absorb whatever vertical space the
-// natural-height image leaves below. The cost cluster is absolutely
-// positioned against this bar so it vertically centres within whatever
-// height the bar happens to be.
+// flex: 0 0 auto + min-height claims a fixed slice of the frame height so
+// the bar always renders even when the natural-aspect image is tall enough
+// to fill the rest. The cost cluster is absolutely positioned against this
+// bar so it vertically centres within it.
 .card-like-art-frame-bottom {
   position: relative;
-  flex: 1 1 0;
-  min-height: 0;
+  flex: 0 0 auto;
+  min-height: 30px;
   background: color-mix(in srgb, var(--card-like-accent) 55%, gray);
   overflow: hidden;
 }

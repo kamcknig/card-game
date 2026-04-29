@@ -190,7 +190,7 @@
        its top/bottom dividers reach the column borders. -->
   <section class="player-bottom-row">
     @let deck = deckPile();
-    <section class="stack-panel">
+    <section class="stack-panel stack-panel-half">
       <div class="stack-label stack-label-top">DECK</div>
       <button
         type="button"
@@ -206,7 +206,7 @@
         @if (deck.cardId !== null) {
           <app-card
             [cardId]="deck.cardId"
-            [size]="'full'"
+            [size]="'half'"
             [forceFacing]="deck.forceFacing"
             [count]="deck.showCount ? deck.count : 0"
           ></app-card>
@@ -302,7 +302,7 @@
           >
             <app-card
               [cardId]="handGroup.cardId"
-              [size]="'full'"
+              [size]="'half'"
               [forceFacing]="'front'"
               [context]="'hand'"
               [count]="handGroup.count"
@@ -313,7 +313,7 @@
     </section>
 
     @let discard = discardPile();
-    <section class="stack-panel">
+    <section class="stack-panel stack-panel-half">
       <div class="stack-label stack-label-top">DISCARD</div>
       <button
         type="button"
@@ -329,7 +329,7 @@
         @if (discard.cardId !== null) {
           <app-card
             [cardId]="discard.cardId"
-            [size]="'full'"
+            [size]="'half'"
             [forceFacing]="'front'"
             [count]="discard.showCount ? discard.count : 0"
           ></app-card>
