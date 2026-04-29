@@ -15,7 +15,7 @@ function makeCard(overrides: Record<string, unknown> = {}): Record<string, unkno
     type: ['ACTION'],
     cost: { treasure: 3 },
     fullImagePath: '/img/village-full.jpg',
-    halfImagePath: '/img/village-half.jpg',
+    artImagePath: '/img/village-art.jpg',
     detailImagePath: '/img/village-detail.jpg',
     expansionName: 'Base',
     isBasic: false,
@@ -365,13 +365,13 @@ describe('SelectCardLikeModalComponent', () => {
         selectableSearchCatalogStore.set(makeCatalog([makeCard()]) as any);
       });
 
-      it('uses halfImagePath when imageSize is "half"', () => {
+      it('uses artImagePath when imageSize is "half"', () => {
         fixture = TestBed.createComponent(SelectCardLikeModalComponent);
         component = fixture.componentInstance;
         fixture.componentRef.setInput('catalogKind', 'cards');
         fixture.componentRef.setInput('imageSize', 'half');
         fixture.detectChanges();
-        expect((component.displaySearchResults()[0] as any).imagePath).toBe('/img/village-half.jpg');
+        expect((component.displaySearchResults()[0] as any).imagePath).toBe('/img/village-art.jpg');
       });
 
       it('uses fullImagePath when imageSize is "full"', () => {
