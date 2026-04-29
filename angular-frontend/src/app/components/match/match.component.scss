@@ -8,6 +8,77 @@
   overflow: hidden;
 }
 
+/* Match-screen-only card sizing. All cards and card-likes rendered anywhere
+   inside the match screen render at 90% of the standard dimensions, with
+   internal pixel sizes (bar heights, cost badges, name font) scaled to
+   match so the smaller frames don't feel cramped. Other screens (match
+   config, etc.) are unaffected — the dimension overrides cascade only
+   through the match component's :host, and the internal-size overrides are
+   scoped by the leading :host. ::ng-deep pierces Angular's emulated
+   encapsulation because <app-card> elements are emitted by nested child
+   components (supply, hand, landscape, etc.). */
+:host {
+  --card-width: 135px;
+  --card-height: 220px;
+  --card-small-height: 140px;
+  --card-landscape-width: 252px;
+  --card-landscape-height: 158px;
+}
+
+:host ::ng-deep .card-type-bar {
+  min-height: 22px;
+}
+
+:host ::ng-deep .card-name,
+:host ::ng-deep .card-like-name {
+  font-size: 0.9rem;
+}
+
+:host ::ng-deep .card-cost-badge {
+  width: 23px;
+  height: 23px;
+  font-size: 0.79rem;
+}
+
+:host ::ng-deep .card-cost-chip {
+  width: 20px;
+  height: 20px;
+}
+
+:host ::ng-deep .card-cost-chip-potion {
+  width: 23px;
+  height: 23px;
+}
+
+:host ::ng-deep .card-cost-chip span {
+  font-size: 0.675rem;
+}
+
+:host ::ng-deep .card-count-badge {
+  font-size: 0.79rem;
+  padding: 2px 7px;
+}
+
+:host ::ng-deep .card-like-accent-strip {
+  min-height: 27px;
+}
+
+:host ::ng-deep .card-like-cost-badge {
+  width: 25px;
+  height: 25px;
+  font-size: 0.86rem;
+}
+
+:host ::ng-deep .card-like-cost-chip {
+  width: 20px;
+  height: 20px;
+}
+
+:host ::ng-deep .card-like-cost-chip-potion {
+  width: 25px;
+  height: 25px;
+}
+
 /* Top-level flex row that separates the three layout columns. Zero padding
    and zero gap so column dividers reach screen edges (vertically) and
    adjacent column borders sit flush against the next column (horizontally).
