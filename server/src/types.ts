@@ -476,7 +476,7 @@ export type FindCardService = {
     pileKey: CardKey;
     from?: ('basicSupply' | 'kingdomSupply') | ('basicSupply' | 'kingdomSupply')[];
   }) => Card | undefined;
-  // Finds the current top card in a named non-supply pile (by pile/kingdom name).
+  // Finds the current top card in a named non-supply pile (by pile/kingdoms name).
   findTopNonSupplyCardForPileName: (args: { pileName: string }) => Card | undefined;
 };
 
@@ -703,7 +703,7 @@ export type TriggerEventTypeContext = {
     cardId: CardId;
     playerId: PlayerId;
     previousLocation: { location: CardLocation; playerId?: PlayerId };
-    // Present when this trash emptied a configured Supply pile (basic/kingdom).
+    // Present when this trash emptied a configured Supply pile (basic/kingdoms).
     emptiedSupplyPileKey?: CardKey;
     // Optional source landscape for trigger attribution.
     source?: CardId;
@@ -716,7 +716,7 @@ export type TriggerEventTypeContext = {
     cardId: CardId;
     bought: boolean;
     previousLocation?: { location: CardLocation; playerId?: PlayerId };
-    // Present when this gain emptied a configured Supply pile (basic/kingdom).
+    // Present when this gain emptied a configured Supply pile (basic/kingdoms).
     emptiedSupplyPileKey?: CardKey;
     // Destination where the card was gained before any cardGained reactions resolve.
     gainedLocation?: { location: CardLocation; playerId?: PlayerId };

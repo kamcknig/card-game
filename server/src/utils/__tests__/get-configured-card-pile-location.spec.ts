@@ -27,7 +27,7 @@ Deno.test('getConfiguredCardPileLocation resolves basic supply by pile key', () 
   assertEquals(result, { location: 'basicSupply', pileName: 'copper' });
 });
 
-Deno.test('getConfiguredCardPileLocation resolves kingdom supply by randomizer pile key', () => {
+Deno.test('getConfiguredCardPileLocation resolves kingdoms supply by randomizer pile key', () => {
   const match = {
     config: {
       basicSupply: [],
@@ -47,7 +47,7 @@ Deno.test('getConfiguredCardPileLocation resolves kingdom supply by randomizer p
   assertEquals(result, { location: 'kingdomSupply', pileName: 'castles' });
 });
 
-Deno.test('getConfiguredCardPileLocation resolves non-supply by kingdom pile name', () => {
+Deno.test('getConfiguredCardPileLocation resolves non-supply by kingdoms pile name', () => {
   const match = {
     config: {
       basicSupply: [],

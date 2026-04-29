@@ -97,7 +97,7 @@ export class ExpansionSearchService {
     }
   }
 
-  // Returns kingdom-selectable cards across all loaded expansions for a search term.
+  // Returns kingdoms-selectable cards across all loaded expansions for a search term.
   public searchKingdomCards(searchStr: string): CardNoId[] {
     if (searchStr.trim().length < 1) {
       return this._selectableCatalog.cards;
@@ -197,7 +197,7 @@ export class ExpansionSearchService {
     });
   }
 
-  // Ensures kingdom search only returns legal supply kingdom cards.
+  // Ensures kingdoms search only returns legal supply kingdoms cards.
   private isCardEligibleForKingdomSearch(card: CardNoId): boolean {
     if (card.isBasic) {
       return false;

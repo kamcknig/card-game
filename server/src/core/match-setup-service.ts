@@ -76,7 +76,7 @@ export class MatchSetupService {
   }
 
   public createKingdom(config: ComputedMatchConfiguration): void {
-    this.loggerService.info('[match] creating kingdom cards');
+    this.loggerService.info('[match] creating kingdoms cards');
     const cardSource = this.cardSourceController.getSource('kingdomSupply');
 
     for (const kingdom of Object.values(config.kingdomSupply)) {
@@ -243,12 +243,12 @@ export class MatchSetupService {
     }
   }
 
-  // Returns true when a kingdom pile can receive a Trait (Action/Treasure piles only).
+  // Returns true when a kingdoms pile can receive a Trait (Action/Treasure piles only).
   private isTraitEligiblePile(cards: ReadonlyArray<{ type: string[]; kingdom: CardKey }>): boolean {
     return cards.some(card => card.type.includes('ACTION') || card.type.includes('TREASURE'));
   }
 
-  // Assigns each configured trait to a unique eligible kingdom pile.
+  // Assigns each configured trait to a unique eligible kingdoms pile.
   private assignTraitPileKeys(
     traits: ReadonlyArray<TraitNoId>,
     kingdomPileCards: ReadonlyArray<ReadonlyArray<{ type: string[]; kingdom: CardKey }>>,

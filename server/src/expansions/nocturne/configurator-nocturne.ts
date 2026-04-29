@@ -18,7 +18,7 @@ import { registerNocturneHexEffects } from './hex-effects-nocturne.ts';
 import { getConfiguredCardPileLocation } from '../../utils/get-configured-card-pile-location.ts';
 import { returnCardToConfiguredPileTop } from '../../utils/return-card-to-configured-pile-top.ts';
 
-// Seeds boons when Fate cards are present in the selected kingdom.
+// Seeds boons when Fate cards are present in the selected kingdoms.
 const configurator: ExpansionConfiguratorFactory = () => {
   // Track boon effect registration to avoid duplicates across configurator iterations.
   let boonEffectsRegistered = false;
@@ -44,17 +44,17 @@ const configurator: ExpansionConfiguratorFactory = () => {
       hexEffectsRegistered = true;
     }
 
-    // Gather all selected kingdom cards for boons and heirloom-linked piles.
+    // Gather all selected kingdoms cards for boons and heirloom-linked piles.
     const kingdomCards = args.config.kingdomSupply.flatMap(supply => supply.cards);
     const hasCemetery = kingdomCards.some(card => getCardPileKey(card) === 'cemetery');
     const hasExorcist = kingdomCards.some(card => getCardPileKey(card) === 'exorcist');
     const hasFool = kingdomCards.some(card => getCardPileKey(card) === 'fool');
     const hasVampire = kingdomCards.some(card => getCardPileKey(card) === 'vampire');
-    // Track which kingdom cards require the Imp pile.
+    // Track which kingdoms cards require the Imp pile.
     const impSources = new Set(['devils-workshop', 'tormentor', 'exorcist']);
     const hasImpSource = kingdomCards.some(card => impSources.has(getCardPileKey(card)));
     const hasGhostSource = hasCemetery || hasExorcist;
-    // Track which kingdom cards require the Wish pile.
+    // Track which kingdoms cards require the Wish pile.
     const wishSources = new Set(['leprechaun', 'secret-cave']);
     const hasWishSource = kingdomCards.some(card => wishSources.has(getCardPileKey(card)));
 
@@ -78,7 +78,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
       args.config.nonSupply = args.config.nonSupply.filter(supply => supply.name !== 'wish');
     }
 
-    // Ensure the Bat pile is present only when Vampire is in the kingdom.
+    // Ensure the Bat pile is present only when Vampire is in the kingdoms.
     if (hasVampire) {
       configureBat(args);
     } else if (args.config.nonSupply?.some(supply => supply.name === 'bat')) {
@@ -222,7 +222,7 @@ export const registerScoringFunctions = (registrar: PlayerScoreDecoratorRegistra
   });
 };
 
-// Registers the Cemetery heirloom swap at game start when present in the kingdom.
+// Registers the Cemetery heirloom swap at game start when present in the kingdoms.
 export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (
   registrar,
   config,
@@ -571,7 +571,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
     });
   }
 
-  // Register Changeling exchange rules when Changeling is in the kingdom supply.
+  // Register Changeling exchange rules when Changeling is in the kingdoms supply.
   const hasChangeling = config.kingdomSupply.some(supply =>
     supply.cards.some(card => getCardPileKey(card) === 'changeling'),
   );

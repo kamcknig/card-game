@@ -141,7 +141,7 @@ const WIZARDS_ORDER: CardKey[] = [
   'student',
 ];
 
-// Returns true when at least one selected kingdom pile contains a Liaison card.
+// Returns true when at least one selected kingdoms pile contains a Liaison card.
 const hasLiaisonInKingdom = (config: ComputedMatchConfiguration): boolean => {
   return config.kingdomSupply.some(supply => supply.cards.some(card => card.type.includes('LIAISON')));
 };
@@ -199,7 +199,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     const hasLiaison = hasLiaisonInKingdom(args.config);
     if (!hasLiaison) {
       if ((args.config.allies ?? []).length > 0) {
-        args.loggerService.info('[ally configurator] no Liaison cards in kingdom; clearing computed ally');
+        args.loggerService.info('[ally configurator] no Liaison cards in kingdoms; clearing computed ally');
       }
       args.config.allies = [];
       return args.config;

@@ -14,7 +14,7 @@ type GetAvailableKingdomRandomizerGroupsArgs = {
   cardFilter?: (card: CardNoId) => boolean;
 };
 
-// Builds available kingdom randomizer groups using consistent pile-key semantics across configurators.
+// Builds available kingdoms randomizer groups using consistent pile-key semantics across configurators.
 export const getAvailableKingdomRandomizerGroups = (
   args: GetAvailableKingdomRandomizerGroupsArgs,
 ): KingdomRandomizerGroup[] => {
@@ -24,7 +24,7 @@ export const getAvailableKingdomRandomizerGroups = (
 
   for (const expansion of args.expansions) {
     for (const card of Object.values(expansion.cardData.kingdomSupply)) {
-      // Never include cards disabled from random kingdom selection.
+      // Never include cards disabled from random kingdoms selection.
       if (card.kingdomSelectable === false) {
         continue;
       }

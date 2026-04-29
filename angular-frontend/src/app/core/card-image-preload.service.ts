@@ -38,14 +38,14 @@ export class CardImagePreloadService {
       }
     };
 
-    // Priority 1: half-size images for supply piles — immediately visible on load.
+    // Priority 1: art images for supply piles — immediately visible on load.
     const supplyIds = [
       ...(match.cardSources['basicSupply'] ?? []),
       ...(match.cardSources['kingdomSupply'] ?? []),
     ];
     for (const id of supplyIds) {
       const card = cardsById[id];
-      if (card) collect(card.halfImagePath);
+      if (card) collect(card.artImagePath);
     }
 
     // Priority 2: detail + full images for card-likes shown in landscape panels.
@@ -63,13 +63,13 @@ export class CardImagePreloadService {
       ...(match.artifacts?.cards ?? []),
     ];
     for (const cl of cardLikes) {
-      collect(cl.detailImagePath, cl.fullImagePath);
+      collect(cl.detailImagePath, cl.artImagePath);
     }
 
-    // Priority 3: full + detail + half images for all cards in the library
+    // Priority 3: art + detail images for all cards in the library
     // (hand, play area, detail views). Supply images already deduplicated above.
     for (const card of Object.values(cardsById)) {
-      collect(card.fullImagePath, card.detailImagePath, card.halfImagePath);
+      collect(card.artImagePath, card.detailImagePath);
     }
 
     void this._dispatchBatches(paths);

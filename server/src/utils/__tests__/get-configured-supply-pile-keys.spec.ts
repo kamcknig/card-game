@@ -57,7 +57,7 @@ Deno.test('getConfiguredSupplyPileKeys handles undefined kingdomSupply', () => {
   assertEquals(result, ['copper']);
 });
 
-Deno.test('getConfiguredSupplyPileKeys preserves basic-before-kingdom ordering', () => {
+Deno.test('getConfiguredSupplyPileKeys preserves basic-before-kingdoms ordering', () => {
   const match = createMatch({
     basicNames: ['copper', 'silver', 'gold'],
     kingdomNames: ['village', 'market'],

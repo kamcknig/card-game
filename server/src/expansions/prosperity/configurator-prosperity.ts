@@ -18,7 +18,7 @@ const configurator: ExpansionConfiguratorFactory = () => {
     registerProsperityTokenDefinitions(args.expansionRegistration.registerTokenDefinition);
 
     const kingdomCards = args.config.kingdomSupply;
-    // Standard Dominion rule: add Colony/Platinum when any Prosperity kingdom card is present.
+    // Standard Dominion rule: add Colony/Platinum when any Prosperity kingdoms card is present.
     const hasProsperityKingdom = kingdomCards.some(supply =>
       supply.cards.some(card => card.expansionName === 'prosperity'),
     );

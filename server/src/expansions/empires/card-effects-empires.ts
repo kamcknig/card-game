@@ -22,7 +22,7 @@ const countOwnedCastles = (args: { cardLibrary: CardEffectFunctionContext['cardL
   return ownedCards.filter(card => card.type.includes('CASTLE')).length;
 };
 
-// Resolve the top Castle card ID from the Castle split pile in the kingdom supply.
+// Resolve the top Castle card ID from the Castle split pile in the kingdoms supply.
 const getTopCastleCardId = (findCardService: CardEffectFunctionContext['findCardService']) => {
   const castleCards = findCardService.findCards({
     all: [

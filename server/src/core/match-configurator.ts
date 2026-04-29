@@ -252,8 +252,8 @@ export class MatchConfigurator {
         `[match configurator] banned kingdoms ${bannedKingdomRandomizers.join(', ') ?? '- no banned kingdoms'}`,
       );
 
-      // Build kingdom candidates once so all configurators can share pile-key selection semantics.
-      // This intentionally includes only kingdom piles so kingdom-only selectors (e.g. Bane) never pull landscapes.
+      // Build kingdoms candidates once so all configurators can share pile-key selection semantics.
+      // This intentionally includes only kingdoms piles so kingdoms-only selectors (e.g. Bane) never pull landscapes.
       const availableKingdomRandomizerGroups = getAvailableKingdomRandomizerGroups({
         expansions: selectedExpansions,
         bannedPileKeys: bannedKingdomRandomizers,
@@ -344,7 +344,7 @@ export class MatchConfigurator {
           const cardsInRandomizer = selectedRandomizer.cardsInRandomizer;
 
           // this makes an assumption that if there are more cards within a randomizer group (such as knights from dark
-          // ages) that they will all be in the same kingdom.
+          // ages) that they will all be in the same kingdoms.
           const kingdom = cardsInRandomizer[0].kingdom;
 
           let cards: CardNoId[] = [];
@@ -385,7 +385,7 @@ export class MatchConfigurator {
             );
           }
 
-          // reduce the counter because events don't count against kingdom selection
+          // reduce the counter because events don't count against kingdoms selection
           i--;
         } else if (selectedRandomizer.type === 'landmark') {
           // Landmarks are treated as "others" alongside events for random selection limits.
@@ -411,7 +411,7 @@ export class MatchConfigurator {
             );
           }
 
-          // reduce the counter because landmarks don't count against kingdom selection
+          // reduce the counter because landmarks don't count against kingdoms selection
           i--;
         } else if (selectedRandomizer.type === 'project') {
           // Projects are treated as "others" alongside events for random selection limits.
@@ -435,7 +435,7 @@ export class MatchConfigurator {
             );
           }
 
-          // reduce the counter because projects don't count against kingdom selection
+          // reduce the counter because projects don't count against kingdoms selection
           i--;
         } else if (selectedRandomizer.type === 'way') {
           // Ways are treated as "others" alongside events for random selection limits.
@@ -459,7 +459,7 @@ export class MatchConfigurator {
             );
           }
 
-          // reduce the counter because ways don't count against kingdom selection
+          // reduce the counter because ways don't count against kingdoms selection
           i--;
         } else if (selectedRandomizer.type === 'trait') {
           // Traits are treated as "others" alongside events for random selection limits.
@@ -483,7 +483,7 @@ export class MatchConfigurator {
             );
           }
 
-          // reduce the counter because traits don't count against kingdom selection
+          // reduce the counter because traits don't count against kingdoms selection
           i--;
         }
 
@@ -576,7 +576,7 @@ export class MatchConfigurator {
     const selectedKingdomExpansions = this._config.kingdomSupply.flatMap(supply =>
       supply.cards.map(card => card.expansionName),
     );
-    // Card-likes can require expansion configurators even when no kingdom card from that expansion is selected.
+    // Card-likes can require expansion configurators even when no kingdoms card from that expansion is selected.
     const selectedCardLikeKeys = [
       ...(this._config.events ?? []).map(event => event.cardKey),
       ...(this._config.allies ?? []).map(ally => ally.cardKey),

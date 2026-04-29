@@ -67,24 +67,38 @@
   display: block;
 }
 
-// Card art window. The existing card image is the source — object-fit covers
-// the window and object-position is shifted up so the printed card art (which
-// sits in the upper-middle of the source image) is what appears in the swatch.
+// Card art window. Sized by the inner image's natural aspect ratio so the
+// image's bottom edge is flush with the top of the type bar. The frame's
+// flex-column distribution puts any remaining vertical space above the image
+// into .card-art-frame-top, which carries the same gradient as the type bar.
 .card-art {
   position: relative;
   flex: 0 0 auto;
   width: 100%;
-  height: 42%;
+  display: block;
   overflow: hidden;
-  background: #000;
 }
 
 .card-art-image {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 32%;
+  height: auto;
   display: block;
+}
+
+// Top filler bar. Mirrors the bottom .card-type-bar gradient (template binds
+// the same typeBarBackground() to both). flex: 1 1 0 + min-height: 0 lets it
+// absorb whatever vertical space the natural-height image leaves above. The
+// optional value indicator sits centered via flex; the cost cluster and count
+// badge are absolutely positioned against this bar so they vertically center
+// within it regardless of how tall the bar happens to be.
+.card-art-frame-top {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
 // Card name rendered inline inside the type bar (gradient strip at the
@@ -99,45 +113,13 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   text-align: center;
-  color: #ffffff;
+  color: #000000;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.1;
-  // Tight, opaque layered shadow — lower blur radius than before so the
-  // halo doesn't bleed across the bar, but every layer at full alpha so
-  // the name still pops against any gradient stop.
-  text-shadow:
-    0 1px 0 rgba(0, 0, 0, 1),
-    0 0 2px rgba(0, 0, 0, 1),
-    0 0 1px rgba(0, 0, 0, 1);
 }
 
-// Spacer row that holds the optional value indicator. flex: 1 fills the gap
-// between name and type bar so layout works whether or not the value is shown.
-.card-value-row {
-  flex: 1 1 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
-  min-height: 0;
-}
-
-.card-value {
-  font-family: var(--theme-font-display);
-  font-weight: 700;
-  font-size: 2rem;
-  line-height: 1;
-  color: var(--card-accent);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
-}
-
-// Half-sized cards have less vertical room — shrink the value to fit the
-// compact frame.
-.card-frame.size-half .card-value {
-  font-size: 1.4rem;
-}
 
 // Type bar at the bottom of the card — a colored gradient strip (set inline
 // by the template) that hosts the card name as a centered label.
@@ -151,13 +133,14 @@
   overflow: hidden;
 }
 
-// Cluster anchored top-left holding the main cost badge plus optional potion
-// and debt chips next to it. Stacked horizontally so multi-currency costs
-// stay visible without crowding the card art.
+// Cluster anchored to the left edge of the top filler bar, vertically centered
+// within it. Holds the main cost badge plus optional potion and debt chips
+// stacked horizontally so multi-currency costs stay visible without crowding.
 .card-cost-cluster {
   position: absolute;
-  top: 4px;
+  top: 50%;
   left: 4px;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   gap: 3px;
@@ -238,13 +221,15 @@
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
-// Count pill in the top-right corner. Shows "xN" for stacked groups of
-// identical cards (hand groups, deck stack) or pile remaining counts.
-// Background opacity matches the cost badges so all chrome reads consistent.
+// Count pill anchored to the right edge of the top filler bar, vertically
+// centered within it. Shows "xN" for stacked groups of identical cards (hand
+// groups, deck stack) or pile remaining counts. Background opacity matches
+// the cost badges so all chrome reads consistent.
 .card-count-badge {
   position: absolute;
-  top: 4px;
+  top: 50%;
   right: 4px;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -259,6 +244,15 @@
   line-height: 1;
   z-index: 2;
   pointer-events: none;
+}
+
+// Face-down variant: pinned to the top-right corner of the back image since
+// there is no top filler bar to centre against. Rendered as a direct child of
+// .card-frame in the face-down branch.
+.card-count-badge-corner {
+  top: 4px;
+  right: 4px;
+  transform: none;
 }
 
 // Token badges container — reused from the previous card layout. Drops below
