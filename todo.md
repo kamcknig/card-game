@@ -10,10 +10,6 @@ use proper card images for selection on match configuration
 
 ---
 
-expansions on match configuration do 6 or 8
-
----
-
 add settings to the match screen
 - toggle light/dark mode
 - toggle timestamps on ui log
@@ -38,19 +34,7 @@ should appear
 
 ---
 
-When no cards in hand, the hand should not collapse vertically
-
----
-
 show the version number in the app somewhere
-
----
-
-These cards have original assets but are missing full/half/detail images in public assets
-
-- hunter - from allies
-- way of the turtle - from menagerie
-- way of the worm - from menagerie
 
 # Lower priority
 

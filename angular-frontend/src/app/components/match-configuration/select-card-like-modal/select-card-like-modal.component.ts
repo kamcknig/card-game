@@ -25,12 +25,12 @@ import {
   TraitNoId,
   WayNoId,
 } from 'shared/types';
-import { NgOptimizedImage } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { selectableSearchCatalogStore } from '../../../state/selectable-search-state';
-import { openCardDetailDialog } from '../../../state/card-detail-dialog-state';
 import { Subject, debounceTime, startWith } from 'rxjs';
 import { LucideAngularModule, Search, X, Check } from 'lucide-angular';
+import { CardComponent } from '../../card/card.component';
+import { CardLikeComponent, CardLikeKind } from '../../card-like/card-like.component';
 
 export type SelectableCardLikeNoId =
   | EventNoId
@@ -44,32 +44,31 @@ export type SelectableCardLikeNoId =
 export type SelectableSearchResult = CardNoId | SelectableCardLikeNoId;
 export type SearchCatalogKind = keyof SelectableSearchCatalog;
 
-/** Card tile enriched with display-ready computed properties. */
-type DisplaySearchResult = SelectableSearchResult & {
-  imagePath: string;
-  imageWidth: number;
-  imageHeight: number;
-  /** Treasure (gold) cost shown in the info area. */
-  costValue: number;
-  /** Potion cost; 0 when none. */
-  potionCost: number;
-  /** Debt cost; 0 when none. */
-  debtCost: number;
-  /** Primary type label shown in the info area. */
-  primaryTypeLabel: string;
+// Maps a non-card catalog kind to the CardLikeKind input expected by
+// <app-card-like>. The 'cards' catalog renders via <app-card> instead and
+// is not represented here.
+const CATALOG_KIND_TO_CARD_LIKE_KIND: Record<Exclude<SearchCatalogKind, 'cards'>, CardLikeKind> = {
+  events: 'event',
+  landmarks: 'landmark',
+  artifacts: 'artifact',
+  projects: 'project',
+  ways: 'way',
+  traits: 'trait',
+  allies: 'ally',
+  prophecies: 'prophecy',
 };
 
-/** Returns the display-friendly primary type label (e.g. 'ACTION' → 'Action'). */
-function getPrimaryTypeLabel(types: CardType[]): string {
-  const priority: CardType[] = ['DURATION', 'TREASURE', 'VICTORY', 'CURSE', 'NIGHT', 'ATTACK', 'REACTION', 'ACTION'];
-  const primary = priority.find((t) => types.includes(t)) ?? types[0];
-  if (!primary) return '';
-  return primary.charAt(0) + primary.slice(1).toLowerCase();
-}
+// Catalog kinds whose <app-card-like> renderings should display the cost
+// cluster. Matches the same showCost choices used on the match-configuration
+// landscape slots so the modal preview matches the eventual selected slot.
+const CATALOG_KINDS_WITH_COST: ReadonlySet<SearchCatalogKind> = new Set<SearchCatalogKind>([
+  'events',
+  'projects',
+]);
 
 @Component({
   selector: 'app-select-card-like-modal',
-  imports: [NgOptimizedImage, LucideAngularModule],
+  imports: [LucideAngularModule, CardComponent, CardLikeComponent],
   templateUrl: './select-card-like-modal.component.html',
   styleUrl: './select-card-like-modal.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -151,48 +150,58 @@ export class SelectCardLikeModalComponent implements OnInit {
     return [...typeSet].sort();
   });
 
-  /** Filtered, display-enriched result list driven by search term and type filter. */
-  readonly displaySearchResults = computed<readonly DisplaySearchResult[]>(() => {
+  /** Filtered result list driven by search term and type filter. */
+  readonly displaySearchResults = computed<readonly SelectableSearchResult[]>(() => {
     const searchTerm = this.searchTermValue().trim().toLowerCase();
     const typeFilter = this.activeTypeFilter();
-    const imageSize = this.imageSize();
 
-    return this.allCatalogResults()
-      .filter((result) => {
-        if (typeFilter.size > 0) {
-          const types = 'type' in result ? (result.type as CardType[]) : [];
-          if (!types.some((t) => typeFilter.has(t))) return false;
-        }
-        if (searchTerm.length < 1) return true;
-        if (result.cardName.toLowerCase().includes(searchTerm)) return true;
-        if (result.cardKey.toLowerCase().includes(searchTerm)) return true;
-        if ('type' in result && Array.isArray(result.type)) {
-          if ((result.type as string[]).some((t) => t.toLowerCase().includes(searchTerm))) return true;
-        }
-        if ('expansionName' in result && typeof result.expansionName === 'string') {
-          if (result.expansionName.toLowerCase().includes(searchTerm)) return true;
-        }
-        return false;
-      })
-      .map((result) => {
-        const types: CardType[] = 'type' in result && Array.isArray(result.type)
-          ? (result.type as CardType[])
-          : [];
-        const imagePath = imageSize === 'half' && 'artImagePath' in result
-          ? (result as CardNoId).artImagePath
-          : result.artImagePath;
-        return {
-          ...result,
-          imagePath,
-          imageWidth: imageSize === 'half' ? 150 : 280,
-          imageHeight: imageSize === 'half' ? 150 : 124,
-          costValue: result.cost?.treasure ?? 0,
-          potionCost: result.cost?.potion ?? 0,
-          debtCost: result.cost?.debt ?? 0,
-          primaryTypeLabel: getPrimaryTypeLabel(types),
-        };
-      });
+    return this.allCatalogResults().filter((result) => {
+      if (typeFilter.size > 0) {
+        const types = 'type' in result ? (result.type as CardType[]) : [];
+        if (!types.some((t) => typeFilter.has(t))) return false;
+      }
+      if (searchTerm.length < 1) return true;
+      if (result.cardName.toLowerCase().includes(searchTerm)) return true;
+      if (result.cardKey.toLowerCase().includes(searchTerm)) return true;
+      if ('type' in result && Array.isArray(result.type)) {
+        if ((result.type as string[]).some((t) => t.toLowerCase().includes(searchTerm))) return true;
+      }
+      if ('expansionName' in result && typeof result.expansionName === 'string') {
+        if (result.expansionName.toLowerCase().includes(searchTerm)) return true;
+      }
+      return false;
+    });
   });
+
+  // Narrowed view of displaySearchResults() for the half-image (cards) branch
+  // of the template — the 'cards' catalog is the only one that ever sets
+  // imageSize='half', so every entry in the filtered list is a CardNoId.
+  // Returning the narrowed type lets <app-card [cardData]> accept items
+  // directly without a template-level cast.
+  readonly displayCardResults = computed<readonly CardNoId[]>(() => {
+    if (this.imageSize() !== 'half') return [];
+    return this.displaySearchResults() as readonly CardNoId[];
+  });
+
+  // Mirror narrowing for the landscape branch — every catalog except 'cards'
+  // produces a SelectableCardLikeNoId.
+  readonly displayCardLikeResults = computed<readonly SelectableCardLikeNoId[]>(() => {
+    if (this.imageSize() !== 'full') return [];
+    return this.displaySearchResults() as readonly SelectableCardLikeNoId[];
+  });
+
+  // CardLikeKind passed to <app-card-like> for the active catalog (undefined
+  // when rendering plain cards via <app-card>).
+  readonly cardLikeKind = computed<CardLikeKind | undefined>(() => {
+    const catalogKind = this.catalogKind();
+    if (catalogKind === 'cards') return undefined;
+    return CATALOG_KIND_TO_CARD_LIKE_KIND[catalogKind];
+  });
+
+  // Whether <app-card-like> instances should render their cost cluster for
+  // the active catalog. Matches the match-configuration landscape slot
+  // showCost choices.
+  readonly cardLikeShowCost = computed<boolean>(() => CATALOG_KINDS_WITH_COST.has(this.catalogKind()));
 
   /** True when the search and type filter together yield no results. */
   readonly shouldShowNoResults = computed(() => {
@@ -281,18 +290,6 @@ export class SelectCardLikeModalComponent implements OnInit {
   /** Closes the modal without emitting any selection changes. */
   onCancel(): void {
     this.close.emit();
-  }
-
-  /**
-   * Opens the global card detail overlay for the right-clicked item.
-   * Suppresses the native browser context menu.
-   */
-  onContextMenu(event: MouseEvent, item: DisplaySearchResult): void {
-    event.preventDefault();
-    event.stopPropagation();
-    if (item.detailImagePath?.trim()) {
-      openCardDetailDialog(item.detailImagePath);
-    }
   }
 
   /** Returns the display label for a type string (title-cased). */

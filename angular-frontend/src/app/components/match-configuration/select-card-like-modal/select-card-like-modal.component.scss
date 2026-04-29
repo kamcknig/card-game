@@ -1,5 +1,11 @@
+// Default container sized for the landscape (card-like) catalogs — 3 cards
+// per row at --card-landscape-width (238px) plus the 12px (--theme-space-md)
+// gaps, the 20px (--theme-space-xl) modal-body horizontal padding on each
+// side, the 1px container border on each side, and a ~10px buffer for the
+// thin scrollbar gutter the modal-body draws when content overflows.
+//   3 × 238 + 2 × 12 + 2 × 20 + 2 × 1 + 10 = 790  → round to 800.
 .modal-container {
-  width: 720px;
+  width: 800px;
   height: 540px;
   max-width: calc(100vw - 32px);
   max-height: calc(100vh - 32px);
@@ -10,6 +16,15 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+// Card (kingdom / banned) catalog — 5 cards per row at --card-width (150px),
+// using the same padding/border/scrollbar accounting as the default. Taller
+// so at least three full rows of card tiles are visible without scrolling.
+//   5 × 150 + 4 × 12 + 2 × 20 + 2 × 1 + 10 = 850  → round to 860.
+.modal-container--cards {
+  width: 860px;
+  height: 760px;
 }
 
 /* ── Header ── */
@@ -177,47 +192,34 @@
   }
 }
 
-/* ── Card tile grid (half-image / kingdom mode) ── */
+/* ── Card tile grid (half / kingdom mode — wraps <app-card>) ── */
 .card-tile-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--theme-space-md);
   align-content: start;
 }
 
+// Wraps an inner <app-card>. The card supplies its own border, art, name,
+// type bar, and cost cluster — the wrapper only carries the click target,
+// the selection ring (drawn as an offset outline so it sits just outside
+// the card's own border without affecting layout), and the corner check.
 .card-tile {
   position: relative;
   cursor: pointer;
-  border-radius: var(--theme-radius-lg);
-  overflow: hidden;
-  background: var(--theme-surface-card);
-  border: 2px solid transparent;
-  transition: border-color 120ms, transform 100ms;
+  border-radius: var(--theme-radius-md);
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  transition: outline-color 120ms, transform 100ms;
 
   &.selected {
-    border-color: var(--theme-accent-gold);
+    outline-color: var(--theme-accent-gold);
     transform: scale(1.02);
   }
 
   &:hover:not(.selected) {
-    border-color: var(--theme-border-medium);
+    outline-color: var(--theme-border-medium);
   }
-}
-
-.card-tile-band {
-  position: relative;
-  height: 92px;
-  width: 100%;
-  overflow: hidden;
-  background: var(--theme-surface-card);
-}
-
-.card-tile-image {
-  width: 100%;
-  height: auto;
-  display: block;
-  object-fit: cover;
-  object-position: top center;
 }
 
 .card-tile-checkmark {
@@ -232,76 +234,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 1;
 }
 
-.card-tile-info {
-  padding: var(--theme-space-xs) var(--theme-space-sm);
-  display: flex;
-  align-items: center;
-  gap: var(--theme-space-sm);
-}
-
-.card-tile-cost {
-  display: flex;
-  align-items: center;
-  gap: var(--theme-space-2xs);
-  flex-shrink: 0;
-}
-
-.tile-cost-chip {
-  position: relative;
-  width: 20px;
-  height: 20px;
-
-  img {
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
-
-  // Cost number drawn over the coin icon — dark brown matches the coin
-  // art and stays fixed across themes.
-  span {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    font-weight: 700;
-    color: #3a2a10;
-  }
-}
-
-.card-tile-label {
-  flex: 1;
-  min-width: 0;
-}
-
-.card-tile-name {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1.2;
-  color: var(--theme-text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  transition: color 120ms;
-
-  &.selected {
-    color: var(--theme-text-primary);
-  }
-}
-
-.card-tile-type {
-  display: block;
-  font-size: 11px;
-  color: var(--theme-text-tertiary);
-  margin-top: var(--theme-space-2xs);
-}
-
-/* ── Landscape image grid (full-image mode) ── */
+/* ── Landscape grid (full mode — wraps <app-card-like>) ── */
 .landscape-grid {
   display: flex;
   flex-wrap: wrap;
@@ -313,22 +249,18 @@
   position: relative;
   cursor: pointer;
   border-radius: var(--theme-radius-md);
-  overflow: hidden;
-  border: 2px solid transparent;
-  transition: border-color 120ms, transform 100ms;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  transition: outline-color 120ms, transform 100ms;
 
   &.selected {
-    border-color: var(--theme-accent-gold);
+    outline-color: var(--theme-accent-gold);
     transform: scale(1.02);
   }
 
   &:hover:not(.selected) {
-    border-color: var(--theme-border-medium);
+    outline-color: var(--theme-border-medium);
   }
-}
-
-.landscape-image {
-  display: block;
 }
 
 .landscape-checkmark {
@@ -343,6 +275,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 1;
 }
 
 /* ── Shared ── */
