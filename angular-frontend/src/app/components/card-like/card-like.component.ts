@@ -97,8 +97,9 @@ export class CardLikeComponent {
   // Detail image path for right-click detail modal.
   readonly detailPath = computed(() => this.cardLike()?.detailImagePath);
 
-  // Full-size fallback image path for missing half-size assets.
-  readonly fallbackPath = computed(() => this.cardLike()?.fullImagePath);
+  // Detail-resolution fallback for the rare case where the in-card art image
+  // fails to load — swap to the larger detail image so something still renders.
+  readonly fallbackPath = computed(() => this.cardLike()?.detailImagePath);
 
   // Primary resolved image path before fallback override.
   readonly resolvedPath = computed(() => {
@@ -161,7 +162,7 @@ export class CardLikeComponent {
     void displayCardDetail({ detailImagePath: this.detailPath()! });
   }
 
-  // Falls back to full-size art if the requested image fails to load.
+  // Falls back to the detail image if the requested art image fails to load.
   onImageError() {
     const fallbackPath = this.fallbackPath();
     const resolvedPath = this.resolvedPath();
@@ -170,9 +171,10 @@ export class CardLikeComponent {
     this._fallbackOverridePath.set(fallbackPath);
   }
 
-  // Card-likes always use full-size art until half-size assets exist.
-  private resolveImagePath(cardLike: { fullImagePath: string; detailImagePath: string }, size: CardSize): string {
+  // Card-likes use the small art image in-card and the large detail image
+  // for the right-click zoom view.
+  private resolveImagePath(cardLike: { artImagePath: string; detailImagePath: string }, size: CardSize): string {
     if (size === 'detail') return cardLike.detailImagePath;
-    return cardLike.fullImagePath;
+    return cardLike.artImagePath;
   }
 }

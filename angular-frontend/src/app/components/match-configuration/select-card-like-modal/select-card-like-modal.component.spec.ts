@@ -14,7 +14,6 @@ function makeCard(overrides: Record<string, unknown> = {}): Record<string, unkno
     cardName: 'Village',
     type: ['ACTION'],
     cost: { treasure: 3 },
-    fullImagePath: '/img/village-full.jpg',
     artImagePath: '/img/village-art.jpg',
     detailImagePath: '/img/village-detail.jpg',
     expansionName: 'Base',
@@ -28,7 +27,7 @@ function makeEvent(overrides: Record<string, unknown> = {}): Record<string, unkn
   return {
     cardKey: 'tournament',
     cardName: 'Tournament',
-    fullImagePath: '/img/tournament-full.jpg',
+    artImagePath: '/img/tournament-art.jpg',
     detailImagePath: '/img/tournament-detail.jpg',
     expansionName: 'Cornucopia',
     ...overrides,
@@ -374,9 +373,9 @@ describe('SelectCardLikeModalComponent', () => {
         expect((component.displaySearchResults()[0] as any).imagePath).toBe('/img/village-art.jpg');
       });
 
-      it('uses fullImagePath when imageSize is "full"', () => {
+      it('uses artImagePath when imageSize is "full"', () => {
         createComponent();
-        expect((component.displaySearchResults()[0] as any).imagePath).toBe('/img/village-full.jpg');
+        expect((component.displaySearchResults()[0] as any).imagePath).toBe('/img/village-art.jpg');
       });
     });
   });

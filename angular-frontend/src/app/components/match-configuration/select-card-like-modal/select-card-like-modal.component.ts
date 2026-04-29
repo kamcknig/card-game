@@ -180,7 +180,7 @@ export class SelectCardLikeModalComponent implements OnInit {
           : [];
         const imagePath = imageSize === 'half' && 'artImagePath' in result
           ? (result as CardNoId).artImagePath
-          : result.fullImagePath;
+          : result.artImagePath;
         return {
           ...result,
           imagePath,

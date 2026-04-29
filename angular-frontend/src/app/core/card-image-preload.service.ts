@@ -63,7 +63,7 @@ export class CardImagePreloadService {
       ...(match.artifacts?.cards ?? []),
     ];
     for (const cl of cardLikes) {
-      collect(cl.detailImagePath, cl.fullImagePath);
+      collect(cl.detailImagePath, cl.artImagePath);
     }
 
     // Priority 3: art + detail images for all cards in the library
