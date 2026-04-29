@@ -25,6 +25,25 @@
   gap: var(--theme-space-md);
 }
 
+// Compact mode (more than 3 card-likes): cascade them on a single row,
+// each card offset by 50% of the card-like width so the leftmost half
+// of every card except the rightmost is visible. DOM order already
+// paints later siblings on top, so the rightmost card is fully visible
+// and each prior card has its leading 50% peeking out. Hovering any
+// card lifts it via z-index so it draws above its neighbours.
+.landscape-grid.compact {
+  flex-wrap: nowrap;
+  gap: 0;
+}
+
+.landscape-grid.compact .landscape-entry + .landscape-entry {
+  margin-left: calc(var(--card-landscape-width) * -0.5);
+}
+
+.landscape-grid.compact .landscape-entry:hover {
+  z-index: 10;
+}
+
 .landscape-entry {
   position: relative;
   border: none;

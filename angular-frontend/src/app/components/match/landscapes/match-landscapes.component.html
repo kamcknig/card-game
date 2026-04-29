@@ -1,6 +1,6 @@
 @if (visible() && hasLandscapes()) {
   <section class="landscape-panel">
-    <div class="landscape-grid">
+    <div class="landscape-grid" [class.compact]="landscapes().length > 3">
       @for (landscape of landscapes(); track landscape.trackKey) {
         <button
           type="button"
