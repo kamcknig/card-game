@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
+import { ChevronDown, LucideAngularModule } from 'lucide-angular';
 import { Card, CardId, CardKey, CardLikeId, Match, PlayerId, TokenDefinition, TokenId, Trait } from 'shared/types';
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { CardComponent } from '../../card/card.component';
@@ -90,12 +91,16 @@ const WAY_PICKER_EDGE_OVERLAP_PX = 5;
   imports: [
     CardComponent,
     TokenImageBadgeComponent,
+    LucideAngularModule,
   ],
   templateUrl: './match-non-supply.component.html',
   styleUrl: './match-non-supply.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MatchNonSupplyComponent {
+  // Lucide icon reference for the multi-row stack indicator.
+  readonly ChevronDownIcon = ChevronDown;
+
   private readonly _nanoStores = inject(NanostoresService);
   private readonly _socketService = inject(SocketService);
   private readonly _wayPickerOverlay = inject(WayPickerOverlayService);

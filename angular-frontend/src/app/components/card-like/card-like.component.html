@@ -1,14 +1,30 @@
-<!-- Card-like layout: top filler bar (same kind-keyed color as the bottom
-     accent strip) + naturally-sized image bottom-aligned to the strip + the
-     bottom accent strip carrying the card name, plus the optional cost
-     cluster overlay. -->
+<!-- Card-like layout: top accent strip carrying the card name + naturally-
+     sized image + bottom filler bar (same kind-keyed colour) that absorbs
+     remaining vertical space and hosts the optional cost cluster. -->
 @let model = cardLike();
 <div
   class="card-like-frame"
   [style]="hostStyle()"
   (contextmenu)="onContextMenu($event)"
 >
-  <div class="card-like-art-frame-top">
+  @if (showAccentStrip()) {
+    <div class="card-like-accent-strip">
+      @if (model) {
+        <span class="card-like-name" [title]="model.cardName">{{ model.cardName }}</span>
+      }
+    </div>
+  }
+
+  <div class="card-like-art">
+    <img
+      class="card-like-art-image"
+      [src]="path() ?? ''"
+      (error)="onImageError()"
+      alt=""
+    />
+  </div>
+
+  <div class="card-like-art-frame-bottom">
     @if (showCost()) {
       <div class="card-like-cost-cluster">
         <div class="card-like-cost-badge">{{ treasureCost() }}</div>
@@ -27,21 +43,4 @@
       </div>
     }
   </div>
-
-  <div class="card-like-art">
-    <img
-      class="card-like-art-image"
-      [src]="path() ?? ''"
-      (error)="onImageError()"
-      alt=""
-    />
-  </div>
-
-  @if (showAccentStrip()) {
-    <div class="card-like-accent-strip">
-      @if (model) {
-        <span class="card-like-name" [title]="model.cardName">{{ model.cardName }}</span>
-      }
-    </div>
-  }
 </div>

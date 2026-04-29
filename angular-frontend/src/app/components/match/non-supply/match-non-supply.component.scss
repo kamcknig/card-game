@@ -29,17 +29,53 @@
   pointer-events: auto;
 }
 
+// Single-row sections render as a normal flex column with no offset.
+// Loot piles (single face-down deck) render as a single tile too — the
+// .multi-row modifier never applies because section.rows.length === 1.
 .kingdom-piles {
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
-.kingdom-piles .non-supply-pile + .non-supply-pile {
-  margin-top: -125px;
+// Multi-row non-loot piles (e.g. Knights) overlap fully so only the top
+// card is visible at rest. The container's height stays locked to one
+// card at all times — even when expanded — so hovering doesn't push
+// siblings (other kingdom sections, the play area, the hand row) down
+// the page. Expanded cards overflow the container visually via their
+// translated `top` values, which is allowed because the container
+// inherits `overflow: visible`. The whole stack lifts above other match
+// content via z-index. The expand uses transition-delay so a passing
+// hover doesn't trigger; the collapse has no delay so leaving feels
+// instant.
+.kingdom-piles.multi-row {
+  height: var(--card-small-height);
+  transition: z-index 0s linear 220ms;
+  z-index: auto;
 }
 
-.kingdom-piles.loot-piles .non-supply-pile + .non-supply-pile {
-  margin-top: 0;
+.kingdom-piles.multi-row .non-supply-pile {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  margin: 0;
+  // Stack order: first row at the bottom of the z-stack, last row on top.
+  // Index is set inline via [style.--row-index] in the template so we
+  // don't have to special-case nth-child counts.
+  z-index: var(--row-index, 0);
+  transition: top 220ms ease 0s;
+}
+
+.kingdom-piles.multi-row:hover {
+  z-index: 100;
+  transition: z-index 0s linear 0s;
+}
+
+.kingdom-piles.multi-row:hover .non-supply-pile {
+  top: calc(var(--row-index, 0) * var(--card-small-height));
+  // Delay the expand so a brief hover-through doesn't trigger animation.
+  transition: top 220ms ease 220ms;
 }
 
 .non-supply-pile {
@@ -97,3 +133,27 @@
 }
 
 @include pile.pile-decorations;
+
+// Down-arrow indicator that only renders on multi-row stacks. Lives at
+// the top-right of the top (visible) card and signals to the player that
+// hovering will expand the stack. Game-art chrome — fixed white-on-black
+// regardless of theme.
+// Sized + positioned to vertically centre within the card's 22px top bar
+// (match-screen scope). line-height: 1 prevents inline-baseline padding
+// from offsetting the lucide SVG inside the flex container.
+.pile-stack-indicator {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  pointer-events: none;
+  z-index: 3;
+}

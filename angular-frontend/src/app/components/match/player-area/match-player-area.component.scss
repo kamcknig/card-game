@@ -127,6 +127,17 @@
   min-height: var(--card-height);
 }
 
+// Half-size stack panels (deck, discard) match the supply / non-supply /
+// play-area / hand cards so the entire match screen reads at one card
+// scale.
+.stack-panel-half .stack-card {
+  min-height: var(--card-small-height);
+}
+
+.stack-panel-half .empty-stack {
+  height: var(--card-small-height);
+}
+
 .stack-label {
   color: var(--theme-text-on-dark);
   font-size: 12px;
@@ -199,13 +210,37 @@
 
 // Stats cluster and action cluster share the row centered as a single
 // group rather than being pushed to opposite edges, so the bar reads as
-// one cohesive unit instead of two separated halves.
+// one cohesive unit instead of two separated halves. Positioning context
+// for the absolutely-pinned token tray (left edge) — the tray must not
+// shift the centered cluster off-axis, so it overlays the flow rather
+// than participating in it.
 .phase-status-row {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--theme-space-md);
   flex-wrap: wrap;
+}
+
+// Token tray container pinned to the left edge of the status row. Uses
+// absolute positioning so the centered phase-stats / phase-status-actions
+// cluster stays optically centered regardless of the tray's width.
+// align-items: flex-end aligns multiple tray groups along their token
+// rows so the labels stack above without shifting the chips.
+.phase-status-tokens {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: flex-end;
+  gap: var(--theme-space-md);
+  pointer-events: auto;
+}
+
+.phase-status-tokens .token-tray-group {
+  margin-top: 0;
 }
 
 .phase-stats {

@@ -28,16 +28,19 @@
     font-size: 12px;
   }
 
-  // Pile-level token decorations (embargoes, trade route, etc.). Lives in the
-  // bottom-left corner so it doesn't conflict with the card's cost cluster
-  // (top-left) or count badge (top-right).
+  // Pile-level token decorations (embargoes, trade route, Aqueduct VP, etc.).
+  // Lives centred horizontally along the bottom of the card so they sit in the
+  // bottom bar between the cost cluster (left) and the count badge (right).
+  // Multiple stacks lay out side-by-side so the cluster grows horizontally
+  // rather than stacking vertically out of the bar's height.
   .pile-indicators {
     position: absolute;
     bottom: 4px;
-    left: 4px;
+    left: 50%;
+    transform: translateX(-50%);
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    align-items: center;
     gap: var(--theme-space-xs);
     pointer-events: none;
   }
@@ -72,7 +75,8 @@
 
   .pile-token-badges {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
     gap: var(--theme-space-xs);
     overflow: visible;
   }
@@ -147,7 +151,8 @@
 
   .pile-token-chips {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
     gap: var(--theme-space-2xs);
   }
 

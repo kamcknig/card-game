@@ -16,16 +16,11 @@
 .player-scores-container {
   display: flex;
   flex-direction: column;
-  gap: var(--theme-space-sm);
+  gap: 0;
 }
 
 .player-score-row {
   /* Player color is provided per row through CSS custom properties. */
-  --player-accent: #7f6746;
-  --player-accent-soft: rgba(127, 103, 70, 0.18);
-  --player-accent-muted: rgba(127, 103, 70, 0.10);
-  --player-accent-active-strong: rgba(127, 103, 70, 0.46);
-  --player-accent-active-soft: rgba(127, 103, 70, 0.28);
   --player-accent-glow: rgba(127, 103, 70, 0.48);
   --player-accent-dot-inactive: rgba(127, 103, 70, 0.55);
   --player-accent-dot-active: rgba(188, 168, 125, 0.95);
@@ -34,20 +29,18 @@
   grid-template-columns: 12px 1fr;
   align-items: center;
   gap: var(--theme-space-md);
-  min-height: 52px;
-  padding: var(--theme-space-sm) var(--theme-space-md);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-left: 4px solid var(--player-accent);
+  padding: var(--theme-space-xs) var(--theme-space-sm);
+  /* Always-present transparent border keeps the row's height + width
+     identical between active/inactive states so toggling doesn't shift
+     layout. The border becomes visible only on the active row. */
+  border: 1px solid transparent;
   border-radius: var(--theme-radius-lg);
-  background: linear-gradient(90deg, var(--player-accent-soft) 0%, var(--player-accent-muted) 100%);
+  background: transparent;
 }
 
 .player-score-row.current-player {
-  border-color: var(--player-accent);
-  background:
-    linear-gradient(90deg, var(--player-accent-active-strong) 0%, var(--player-accent-active-soft) 58%, var(--player-accent-muted) 100%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0) 100%);
-  box-shadow: 0 0 0 1px var(--player-accent), 0 0 12px var(--player-accent-glow);
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.35);
 }
 
 .player-accent-dot {
@@ -55,12 +48,15 @@
   height: 10px;
   border-radius: 50%;
   background: var(--player-accent-dot-inactive);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.22);
 }
 
 .player-score-row.current-player .player-accent-dot {
   background: var(--player-accent-dot-active);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.32), 0 0 10px var(--player-accent-glow);
+  /* Stacked glow: sharper inner halo plus a softer outer wash so the
+     dot reads as actively lit rather than a flat tint. */
+  box-shadow:
+    0 0 6px var(--player-accent-glow),
+    0 0 14px var(--player-accent-glow);
 }
 
 .player-main {

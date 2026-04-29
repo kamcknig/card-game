@@ -1,6 +1,6 @@
 @if (visible() && hasLandscapes()) {
   <section class="landscape-panel">
-    <div class="landscape-grid">
+    <div class="landscape-grid" [class.compact]="landscapes().length > 3">
       @for (landscape of landscapes(); track landscape.trackKey) {
         <button
           type="button"
@@ -14,7 +14,6 @@
             [cardLikeId]="landscape.id"
             [kind]="landscape.kind"
             [showCost]="landscape.showCost"
-            [displayWidthPx]="landscapeCardWidthPx"
           ></app-card-like>
 
           @if (landscape.cubeTokens.length > 0 || landscape.sinisterBadges.length > 0) {
