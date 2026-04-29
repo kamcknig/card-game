@@ -5,11 +5,16 @@
         <div class="kingdom-column">
           @for (section of column.sections; track section.trackKey) {
             <div class="kingdom-section">
-              <div class="kingdom-piles" [class.loot-piles]="section.isLoot">
+              <div
+                class="kingdom-piles"
+                [class.loot-piles]="section.isLoot"
+                [class.multi-row]="!section.isLoot && section.rows.length > 1"
+              >
                 @for (pile of section.rows; track pile.trackKey) {
                   <button
                     type="button"
                     class="non-supply-pile"
+                    [style.--row-index]="$index"
                     [class.selectable-card]="pile.selectableCard"
                     [class.selected-card]="pile.selectedCard"
                     [class.way-selectable]="pile.waySelectable"
@@ -72,6 +77,11 @@
                     @if (pile.trait) {
                       <div class="pile-trait-tag" (contextmenu)="onTraitContextMenu($event, pile)">
                         {{ pile.trait.cardName }}
+                      </div>
+                    }
+                    @if ($last && section.rows.length > 1 && !section.isLoot) {
+                      <div class="pile-stack-indicator" aria-hidden="true">
+                        <lucide-icon [img]="ChevronDownIcon" [size]="14" />
                       </div>
                     }
                   </button>

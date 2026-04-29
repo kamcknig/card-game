@@ -46,6 +46,58 @@
     <div class="phase-label">{{ phaseLabel() }}</div>
 
     <div class="phase-status-row">
+      @if (availableCubeTokens().length > 0 || availableTokenBadges().length > 0 || activeTokenBadges().length > 0) {
+        <div class="phase-status-tokens">
+          @if (availableCubeTokens().length > 0 || availableTokenBadges().length > 0) {
+            <div class="token-tray-group">
+              <div class="token-tray-label">Available Tokens</div>
+              <div class="token-tray">
+                @for (cube of availableCubeTokens(); track cube.id) {
+                  <div class="cube-token" [style.background]="cube.color"></div>
+                }
+                @for (badge of availableTokenBadges(); track badge.id) {
+                  @if (badge.imagePath) {
+                    <app-token-image-badge
+                      [imagePath]="badge.imagePath"
+                      [highlightColor]="badge.color"
+                    ></app-token-image-badge>
+                  } @else {
+                    <div class="token-badge" [style.background]="badge.color">
+                      {{ badge.label }}
+                      @if (badge.count > 1) {
+                        <span>{{ badge.count }}</span>
+                      }
+                    </div>
+                  }
+                }
+              </div>
+            </div>
+          }
+          @if (activeTokenBadges().length > 0) {
+            <div class="token-tray-group">
+              <div class="token-tray-label">Active Tokens</div>
+              <div class="token-tray">
+                @for (badge of activeTokenBadges(); track badge.id) {
+                  @if (badge.imagePath) {
+                    <app-token-image-badge
+                      [imagePath]="badge.imagePath"
+                      [highlightColor]="badge.color"
+                    ></app-token-image-badge>
+                  } @else {
+                    <div class="token-badge" [style.background]="badge.color">
+                      {{ badge.label }}
+                      @if (badge.count > 1) {
+                        <span>{{ badge.count }}</span>
+                      }
+                    </div>
+                  }
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+
       <div class="phase-stats">
         <div
           class="phase-stat phase-stat-actions"
@@ -190,7 +242,7 @@
        its top/bottom dividers reach the column borders. -->
   <section class="player-bottom-row">
     @let deck = deckPile();
-    <section class="stack-panel">
+    <section class="stack-panel stack-panel-half">
       <div class="stack-label stack-label-top">DECK</div>
       <button
         type="button"
@@ -206,7 +258,7 @@
         @if (deck.cardId !== null) {
           <app-card
             [cardId]="deck.cardId"
-            [size]="'full'"
+            [size]="'half'"
             [forceFacing]="deck.forceFacing"
             [count]="deck.showCount ? deck.count : 0"
           ></app-card>
@@ -239,55 +291,6 @@
       #handPanel
       class="hand-panel"
     >
-      @if (availableCubeTokens().length > 0 || availableTokenBadges().length > 0) {
-        <div class="token-tray-group">
-          <div class="token-tray-label">Available Tokens</div>
-          <div class="token-tray">
-            @for (cube of availableCubeTokens(); track cube.id) {
-              <div class="cube-token" [style.background]="cube.color"></div>
-            }
-            @for (badge of availableTokenBadges(); track badge.id) {
-              @if (badge.imagePath) {
-                <app-token-image-badge
-                  [imagePath]="badge.imagePath"
-                  [highlightColor]="badge.color"
-                ></app-token-image-badge>
-              } @else {
-                <div class="token-badge" [style.background]="badge.color">
-                  {{ badge.label }}
-                  @if (badge.count > 1) {
-                    <span>{{ badge.count }}</span>
-                  }
-                </div>
-              }
-            }
-          </div>
-        </div>
-      }
-
-      @if (activeTokenBadges().length > 0) {
-        <div class="token-tray-group">
-          <div class="token-tray-label">Active Tokens</div>
-          <div class="token-tray">
-            @for (badge of activeTokenBadges(); track badge.id) {
-              @if (badge.imagePath) {
-                <app-token-image-badge
-                  [imagePath]="badge.imagePath"
-                  [highlightColor]="badge.color"
-                ></app-token-image-badge>
-              } @else {
-                <div class="token-badge" [style.background]="badge.color">
-                  {{ badge.label }}
-                  @if (badge.count > 1) {
-                    <span>{{ badge.count }}</span>
-                  }
-                </div>
-              }
-            }
-          </div>
-        </div>
-      }
-
       <div class="hand-cards" [class.compact]="resolvedLayout.handCompact">
         @for (handGroup of handGroups(); track handGroup.trackKey; let index = $index) {
           <button
@@ -302,7 +305,7 @@
           >
             <app-card
               [cardId]="handGroup.cardId"
-              [size]="'full'"
+              [size]="'half'"
               [forceFacing]="'front'"
               [context]="'hand'"
               [count]="handGroup.count"
@@ -313,7 +316,7 @@
     </section>
 
     @let discard = discardPile();
-    <section class="stack-panel">
+    <section class="stack-panel stack-panel-half">
       <div class="stack-label stack-label-top">DISCARD</div>
       <button
         type="button"
@@ -329,7 +332,7 @@
         @if (discard.cardId !== null) {
           <app-card
             [cardId]="discard.cardId"
-            [size]="'full'"
+            [size]="'half'"
             [forceFacing]="'front'"
             [count]="discard.showCount ? discard.count : 0"
           ></app-card>
