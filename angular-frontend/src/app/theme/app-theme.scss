@@ -59,6 +59,10 @@
   --theme-surface-card: #f2e9da;
   --theme-surface-danger-soft: #f9dfd8;
   --theme-surface-count-badge: #c1a277;
+  /* Game log background — light theme leaves the log transparent so the
+     body gradient shows through; the dark theme overrides this with a
+     solid darker gradient (see :root[data-theme="dark"]). */
+  --theme-surface-log-bg: transparent;
 
   /* Border roles */
   --theme-border-subtle: #bca98d;
@@ -67,6 +71,11 @@
   --theme-border-strong: #7f6746;
   --theme-border-action: #826a48;
   --theme-border-danger: #b84d38;
+  /* Match-screen layout dividers (column verticals + row horizontals).
+     Light theme reuses subtle; dark theme overrides this to a lighter
+     mid-warm tone (matching button border-action) so the dividers stay
+     visible against the lifted dark body. */
+  --theme-border-divider: #bca98d;
 
   /* Interactive/action roles */
   --theme-action-secondary-bg: #f4ecde;
@@ -163,8 +172,12 @@
   --theme-color-phase: #4ab0bd;
   --theme-color-winner: #e6c54a;
 
-  --theme-surface-app-start: #1a1714;
-  --theme-surface-app-end: #231f1a;
+  --theme-surface-app-start: #2a2620;
+  --theme-surface-app-end: #332e27;
+  /* Restate the log background here so the dark log uses the pre-lift
+     body gradient — this gives the log a visibly deeper panel against
+     the now-lighter body. */
+  --theme-surface-log-bg: linear-gradient(150deg, #1a1714 0%, #231f1a 100%);
   --theme-surface-header: #3d3226;
   --theme-surface-nav: #231f1a;
   --theme-surface-panel: #2c2620;
@@ -178,6 +191,10 @@
   --theme-border-strong: #8b7a62;
   --theme-border-action: #6b5d48;
   --theme-border-danger: #c45a42;
+  /* Match-screen dividers — lifted from the very-dark subtle to the
+     button border-action tone so columns/rows stay visible against the
+     lighter dark body. */
+  --theme-border-divider: #6b5d48;
 
   --theme-accent-gold: #c9a84c;
   --theme-accent-gold-soft: rgba(201, 168, 76, 0.15);

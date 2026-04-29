@@ -16,13 +16,24 @@
    through the match component's :host, and the internal-size overrides are
    scoped by the leading :host. ::ng-deep pierces Angular's emulated
    encapsulation because <app-card> elements are emitted by nested child
-   components (supply, hand, landscape, etc.). */
+   components (supply, hand, landscape, etc.).
+
+   --match-row-spacing: shared layout constant used everywhere a row
+   gap, column gap, padding, or divider extension needs to stay in sync
+   across the match screen. Theme tokens skip from 8px (sm) to 12px (md);
+   the match layout was tuned around 10px, so it lives here as a
+   component-scoped variable instead of a theme token. Edit this single
+   value to retune all related spacing at once — column padding/gap,
+   per-row horizontal padding, the supply-row gap, the horizontal row
+   divider's top padding, and the supply-row vertical divider's
+   top/bottom extensions all reference it. */
 :host {
   --card-width: 135px;
   --card-height: 220px;
   --card-small-height: 140px;
   --card-landscape-width: 252px;
   --card-landscape-height: 158px;
+  --match-row-spacing: 10px;
 }
 
 :host ::ng-deep .card-type-bar {
@@ -102,20 +113,21 @@
 .match-column {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--match-row-spacing);
   min-width: 0;
-  padding: 10px 0;
+  padding: var(--match-row-spacing) 0;
   box-sizing: border-box;
 }
 
 /* Per-row horizontal content padding. Each row's box-sizing is border-box
    so the border-top added by the divider rule below spans the row's full
-   width including the padding — that is, the full column width. */
+   width including the padding — that is, the full column width. The
+   right column is intentionally excluded so the HUD log can extend
+   flush to its container edges. */
 .match-column-left > *,
-.match-column-center > *,
-.match-column-right > * {
-  padding-left: 10px;
-  padding-right: 10px;
+.match-column-center > * {
+  padding-left: var(--match-row-spacing);
+  padding-right: var(--match-row-spacing);
   box-sizing: border-box;
 }
 
@@ -124,7 +136,7 @@
    so horizontal row dividers inside the column extend right up to the line. */
 .match-column-left {
   flex: 0 0 auto;
-  border-right: 1px solid var(--theme-border-subtle);
+  border-right: 1px solid var(--theme-border-divider);
 }
 
 /* Column 2 (center): kingdom, non-supply, landscapes, play area, hand row.
@@ -134,21 +146,44 @@
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
-  border-right: 1px solid var(--theme-border-subtle);
+  border-right: 1px solid var(--theme-border-divider);
 }
 
-/* Column 3 (right): HUD log, HUD menu, mat tabs. Sized to content. */
+/* Column 3 (right): HUD log, HUD menu, mat tabs. Sized to content. No
+   internal padding so the HUD log fills the full column width and
+   reaches the column's vertical edges. */
 .match-column-right {
   flex: 0 0 auto;
+  padding: 0;
 }
 
 /* Horizontal row inside column 2 that hosts the kingdom and non-supply
-   panels side by side with the standard gap. */
+   panels side by side with the standard gap. The non-supply panel (any
+   child after the first) renders a vertical divider via ::before so the
+   line can extend beyond the row — upward into the column's padding-top
+   (reaching the screen top) and downward to meet the horizontal divider
+   on the next row sibling, which sits at row-bottom + one column gap.
+   Both extensions equal --match-row-spacing so they track together. */
 .match-row-supply {
   display: flex;
   flex-direction: row;
-  align-items: flex-start;
-  gap: 10px;
+  align-items: stretch;
+  gap: var(--match-row-spacing);
+}
+
+.match-row-supply > *:not(:first-child) {
+  position: relative;
+  padding-left: var(--match-row-spacing);
+}
+
+.match-row-supply > *:not(:first-child)::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: calc(var(--match-row-spacing) * -1);
+  bottom: calc(var(--match-row-spacing) * -1);
+  width: 1px;
+  background: var(--theme-border-divider);
 }
 
 /* Horizontal section dividers between rows in each column. Targets every
@@ -161,6 +196,6 @@
    column, so they participate in this selector. */
 .match-column-left > *:not(:first-child),
 .match-column-center > *:not(:first-child) {
-  border-top: 1px solid var(--theme-border-subtle);
-  padding-top: 10px;
+  border-top: 1px solid var(--theme-border-divider);
+  padding-top: var(--match-row-spacing);
 }
