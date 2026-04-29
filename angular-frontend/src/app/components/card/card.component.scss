@@ -87,9 +87,12 @@
 
 // Top filler bar. Mirrors the bottom .card-type-bar gradient (template binds
 // the same typeBarBackground() to both). flex: 1 1 0 + min-height: 0 lets it
-// absorb whatever vertical space the natural-height image leaves above. When
-// the card has a value indicator, it lives here, centered.
+// absorb whatever vertical space the natural-height image leaves above. The
+// optional value indicator sits centered via flex; the cost cluster and count
+// badge are absolutely positioned against this bar so they vertically center
+// within it regardless of how tall the bar happens to be.
 .card-art-frame-top {
+  position: relative;
   flex: 1 1 0;
   min-height: 0;
   display: flex;
@@ -145,13 +148,14 @@
   overflow: hidden;
 }
 
-// Cluster anchored top-left holding the main cost badge plus optional potion
-// and debt chips next to it. Stacked horizontally so multi-currency costs
-// stay visible without crowding the card art.
+// Cluster anchored to the left edge of the top filler bar, vertically centered
+// within it. Holds the main cost badge plus optional potion and debt chips
+// stacked horizontally so multi-currency costs stay visible without crowding.
 .card-cost-cluster {
   position: absolute;
-  top: 4px;
+  top: 50%;
   left: 4px;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   gap: 3px;
@@ -232,13 +236,15 @@
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
-// Count pill in the top-right corner. Shows "xN" for stacked groups of
-// identical cards (hand groups, deck stack) or pile remaining counts.
-// Background opacity matches the cost badges so all chrome reads consistent.
+// Count pill anchored to the right edge of the top filler bar, vertically
+// centered within it. Shows "xN" for stacked groups of identical cards (hand
+// groups, deck stack) or pile remaining counts. Background opacity matches
+// the cost badges so all chrome reads consistent.
 .card-count-badge {
   position: absolute;
-  top: 4px;
+  top: 50%;
   right: 4px;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -253,6 +259,15 @@
   line-height: 1;
   z-index: 2;
   pointer-events: none;
+}
+
+// Face-down variant: pinned to the top-right corner of the back image since
+// there is no top filler bar to centre against. Rendered as a direct child of
+// .card-frame in the face-down branch.
+.card-count-badge-corner {
+  top: 4px;
+  right: 4px;
+  transform: none;
 }
 
 // Token badges container — reused from the previous card layout. Drops below

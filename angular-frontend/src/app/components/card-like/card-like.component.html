@@ -8,7 +8,25 @@
   [style]="hostStyle()"
   (contextmenu)="onContextMenu($event)"
 >
-  <div class="card-like-art-frame-top"></div>
+  <div class="card-like-art-frame-top">
+    @if (showCost()) {
+      <div class="card-like-cost-cluster">
+        <div class="card-like-cost-badge">{{ treasureCost() }}</div>
+        @if (potionCost() > 0) {
+          <div class="card-like-cost-chip card-like-cost-chip-potion">
+            <img src="/assets/ui-icons/potion.png" alt="" />
+            @if (potionCost() > 1) { <span>{{ potionCost() }}</span> }
+          </div>
+        }
+        @if (debtCost() > 0) {
+          <div class="card-like-cost-chip">
+            <img src="/assets/ui-icons/debt-icon.png" alt="" />
+            <span>{{ debtCost() }}</span>
+          </div>
+        }
+      </div>
+    }
+  </div>
 
   <div class="card-like-art">
     <img
@@ -23,24 +41,6 @@
     <div class="card-like-accent-strip">
       @if (model) {
         <span class="card-like-name" [title]="model.cardName">{{ model.cardName }}</span>
-      }
-    </div>
-  }
-
-  @if (showCost()) {
-    <div class="card-like-cost-cluster">
-      <div class="card-like-cost-badge">{{ treasureCost() }}</div>
-      @if (potionCost() > 0) {
-        <div class="card-like-cost-chip card-like-cost-chip-potion">
-          <img src="/assets/ui-icons/potion.png" alt="" />
-          @if (potionCost() > 1) { <span>{{ potionCost() }}</span> }
-        </div>
-      }
-      @if (debtCost() > 0) {
-        <div class="card-like-cost-chip">
-          <img src="/assets/ui-icons/debt-icon.png" alt="" />
-          <span>{{ debtCost() }}</span>
-        </div>
       }
     </div>
   }
