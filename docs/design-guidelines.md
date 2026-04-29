@@ -92,14 +92,15 @@ Surfaces are background fills for containers, panels, and page regions.
 
 | Token | Light | Dark | When to use |
 |---|---|---|---|
-| `--theme-surface-app-start` | `#efe7da` | `#1a1714` | App background gradient start (top-left) |
-| `--theme-surface-app-end` | `#e4d7c1` | `#231f1a` | App background gradient end (bottom-right) |
+| `--theme-surface-app-start` | `#efe7da` | `#2a2620` | App background gradient start (top-left) |
+| `--theme-surface-app-end` | `#e4d7c1` | `#332e27` | App background gradient end (bottom-right) |
 | `--theme-surface-header` | `#c1a277` | `#3d3226` | Banner header bar background |
 | `--theme-surface-nav` | `#e6dac6` | `#231f1a` | Sidebar navigation background |
 | `--theme-surface-panel` | `#e8d8c1` | `#2c2620` | Panel, form, dialog, card container backgrounds |
 | `--theme-surface-card` | `#f2e9da` | `#342d25` | Card/row item backgrounds (lobby rows, config items) |
 | `--theme-surface-danger-soft` | `#f9dfd8` | `#4a2620` | Soft danger surface (behind error or destructive content) |
 | `--theme-surface-count-badge` | `#c1a277` | `#5a4e3e` | Count badge backgrounds |
+| `--theme-surface-log-bg` | `transparent` | `linear-gradient(150deg,#1a1714,#231f1a)` | Game-log panel background. Light theme is transparent (body shows through); dark theme reuses the pre-lift body gradient so the log reads as a deeper-toned block. |
 
 **When to use which surface:**
 - **App background** (`app-start` → `app-end`): always the page body, applied as `linear-gradient(150deg, ...)`.
@@ -138,6 +139,7 @@ Surfaces are background fills for containers, panels, and page regions.
 | `--theme-border-section-light` | `#c8b798` | `#4a3f32` | Config section outlines, grouped content borders |
 | `--theme-border-strong` | `#7f6746` | `#8b7a62` | Focus rings, overlay panel borders, banner bottom border |
 | `--theme-border-action` | `#826a48` | `#6b5d48` | Input borders, primary/muted button borders, interactive element borders |
+| `--theme-border-divider` | `#bca98d` | `#6b5d48` | Match-screen layout dividers (column verticals + row horizontals). Light theme matches `border-subtle`; dark theme is lifted to the `border-action` tone so dividers stay visible against the lighter dark body. |
 | `--theme-border-danger` | `#b84d38` | `#c45a42` | Danger button borders, error messages, destructive action outlines |
 | `--theme-border-disabled` | `#a99981` | `#4a4238` | Borders on disabled inputs and buttons |
 
@@ -219,13 +221,24 @@ Used for card-type indicators, log entries, and source-labeled tabs. These are s
 
 ### Card Dimensions (no `--theme-` prefix)
 
-| Token | Value | When to use |
-|---|---|---|
-| `--card-width` | `150px` | Standard card width in supply/hand |
-| `--card-height` | `240px` | Standard card height |
-| `--card-small-height` | `150px` | Compressed card height (supply piles) |
-| `--card-landscape-width` | `280px` | Landscape card width (events, landmarks) |
-| `--card-landscape-height` | `124px` | Landscape card height |
+Base dimensions are defined on `:root` in `app-theme.scss`. The match
+screen scopes its own narrower overrides on `app-match`'s `:host` so all
+cards/card-likes inside a match render ~10% smaller without affecting
+other screens (match config, etc.).
+
+| Token | Base value | Match override | When to use |
+|---|---|---|---|
+| `--card-width` | `150px` | `135px` | Standard card width in supply/hand |
+| `--card-height` | `245px` | `220px` | Standard card height |
+| `--card-small-height` | `155px` | `140px` | Compressed card height (supply piles, half-size stacks) |
+| `--card-landscape-width` | `238px` | `214px` | Landscape (card-like) width (events, landmarks, projects, ways, prophecies) |
+| `--card-landscape-height` | `149px` | `134px` | Landscape (card-like) height |
+
+The match component additionally exposes `--match-row-spacing` (`10px`)
+on its host so the column gap, column padding, per-row padding, the
+supply-row gap, the row-divider top padding, and the supply-row vertical
+divider extension all read from one variable. Edit it once to retune
+all match-screen layout spacing together.
 
 ---
 
