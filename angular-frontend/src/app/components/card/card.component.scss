@@ -67,24 +67,35 @@
   display: block;
 }
 
-// Card art window. The existing card image is the source — object-fit covers
-// the window and object-position is shifted up so the printed card art (which
-// sits in the upper-middle of the source image) is what appears in the swatch.
+// Card art window. Sized by the inner image's natural aspect ratio so the
+// image's bottom edge is flush with the top of the type bar. The frame's
+// flex-column distribution puts any remaining vertical space above the image
+// into .card-art-frame-top, which carries the same gradient as the type bar.
 .card-art {
   position: relative;
   flex: 0 0 auto;
   width: 100%;
-  height: 42%;
+  display: block;
   overflow: hidden;
-  background: #000;
 }
 
 .card-art-image {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 32%;
+  height: auto;
   display: block;
+}
+
+// Top filler bar. Mirrors the bottom .card-type-bar gradient (template binds
+// the same typeBarBackground() to both). flex: 1 1 0 + min-height: 0 lets it
+// absorb whatever vertical space the natural-height image leaves above. When
+// the card has a value indicator, it lives here, centered.
+.card-art-frame-top {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
 // Card name rendered inline inside the type bar (gradient strip at the
@@ -106,16 +117,6 @@
   line-height: 1.1;
 }
 
-// Spacer row that holds the optional value indicator. flex: 1 fills the gap
-// between name and type bar so layout works whether or not the value is shown.
-.card-value-row {
-  flex: 1 1 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
-  min-height: 0;
-}
 
 .card-value {
   font-family: var(--theme-font-display);
