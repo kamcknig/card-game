@@ -1,12 +1,15 @@
-<!-- Card-like display structured to match the portrait card pattern: art
-     window on top, card name below, kind-keyed accent strip at the bottom,
-     plus the optional cost cluster overlay. -->
+<!-- Card-like layout: top filler bar (same kind-keyed color as the bottom
+     accent strip) + naturally-sized image bottom-aligned to the strip + the
+     bottom accent strip carrying the card name, plus the optional cost
+     cluster overlay. -->
 @let model = cardLike();
 <div
   class="card-like-frame"
   [style]="hostStyle()"
   (contextmenu)="onContextMenu($event)"
 >
+  <div class="card-like-art-frame-top"></div>
+
   <div class="card-like-art">
     <img
       class="card-like-art-image"
