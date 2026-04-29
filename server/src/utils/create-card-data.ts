@@ -2,15 +2,10 @@ import { CardKey, CardLikeNoId, CardNoId } from 'shared/types/index.ts';
 import { formatCardName } from './format-card-name.ts';
 
 export const createCardData = (cardKey: CardKey, expansionName: string, templateData: Partial<CardNoId>) => {
+  // Cards inherit artImagePath and detailImagePath from createCardLike, both
+  // already in the flat asset layout. Only the kingdom default is card-specific.
   const data = {
     ...createCardLike(cardKey, expansionName, templateData),
-    // Cards use the flat asset layout: <expansion>/<key>-art.jpg and
-    // <key>-detail.jpg. createCardLike emits the legacy sub-directory
-    // detailImagePath; we override it here so cards resolve to the flat path.
-    // fullImagePath is inherited from CardLike and is unused by card consumers
-    // after the frontend migration.
-    artImagePath: `./assets/card-images/${expansionName}/${cardKey}-art.jpg`,
-    detailImagePath: `./assets/card-images/${expansionName}/${cardKey}-detail.jpg`,
     kingdom: templateData.kingdom ?? cardKey,
   };
 
@@ -30,8 +25,8 @@ export const createCardLike = (
   const data = {
     cardKey,
     expansionName,
-    detailImagePath: `./assets/card-images/${expansionName}/detail/${cardKey}.jpg`,
-    fullImagePath: `./assets/card-images/${expansionName}/full-size/${cardKey}.jpg`,
+    artImagePath: `./assets/card-images/${expansionName}/${cardKey}-art.jpg`,
+    detailImagePath: `./assets/card-images/${expansionName}/${cardKey}-detail.jpg`,
     ...(templateData ?? {}),
     // Default card names follow the standard format rules unless overridden by card data.
     cardName: templateData.cardName ?? formatCardName(cardKey),

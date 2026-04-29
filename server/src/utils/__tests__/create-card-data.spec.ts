@@ -5,8 +5,8 @@ Deno.test('createCardLike derives display name and image paths from key/expansio
   const cardLike = createCardLike('haunted-woods', 'adventures', {});
 
   assertEquals(cardLike.cardName, 'Haunted Woods');
-  assertEquals(cardLike.fullImagePath, './assets/card-images/adventures/full-size/haunted-woods.jpg');
-  assertEquals(cardLike.detailImagePath, './assets/card-images/adventures/detail/haunted-woods.jpg');
+  assertEquals(cardLike.artImagePath, './assets/card-images/adventures/haunted-woods-art.jpg');
+  assertEquals(cardLike.detailImagePath, './assets/card-images/adventures/haunted-woods-detail.jpg');
   assertEquals((cardLike as unknown as { kingdom: string }).kingdom, 'haunted-woods');
 });
 
@@ -26,12 +26,9 @@ Deno.test('createCardData adds flat art/detail image paths and preserves explici
 
   assertEquals(card.cardName, 'Village+');
   assertEquals(card.kingdom, 'custom-pile');
-  // Cards use the flat asset layout; artImagePath replaces the legacy halfImagePath.
+  // Cards inherit flat-layout paths from createCardLike.
   assertEquals(card.artImagePath, './assets/card-images/base-v2/village-art.jpg');
-  // detailImagePath is overridden to the flat path for cards.
   assertEquals(card.detailImagePath, './assets/card-images/base-v2/village-detail.jpg');
-  // fullImagePath is still inherited from createCardLike (legacy sub-directory).
-  assertEquals(card.fullImagePath, './assets/card-images/base-v2/full-size/village.jpg');
 });
 
 Deno.test('createCardData defaults kingdom to cardKey when no explicit kingdom or randomizer', () => {

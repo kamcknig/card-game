@@ -23,7 +23,7 @@ const createCardLikeArgs = (overrides: Partial<CardLike> = {}): CardLike => ({
   cardKey: 'test-card',
   cardName: 'Test Card',
   cost: { treasure: 3 },
-  fullImagePath: '/full/test-card.jpg',
+  artImagePath: '/full/test-card.jpg',
   detailImagePath: '/detail/test-card.jpg',
   metadata: {},
   ...overrides,
@@ -126,7 +126,7 @@ Deno.test('CardLike constructor defaults optional fields when not provided', () 
   assertEquals(cardLike.cardKey, '');
   assertEquals(cardLike.cardName, '');
   assertEquals(cardLike.abilityText, '');
-  assertEquals(cardLike.fullImagePath, '');
+  assertEquals(cardLike.artImagePath, '');
   assertEquals(cardLike.detailImagePath, '');
   assertEquals(cardLike.kingdomSelectable, true);
   assertEquals(cardLike.cost, { treasure: 0 });
