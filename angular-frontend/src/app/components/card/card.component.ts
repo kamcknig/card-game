@@ -60,7 +60,7 @@ export type CardRenderContext = 'default' | 'hand';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CardComponent {
-  private static readonly CARD_BACK_DETAIL_IMAGE_PATH = '/assets/card-images/base-v2/detail/card-back.jpg';
+  private static readonly CARD_BACK_DETAIL_IMAGE_PATH = '/assets/card-images/base-v2/card-back-detail.jpg';
 
   private readonly _nanoStores = inject(NanostoresService);
   private readonly _sanitizer = inject(DomSanitizer);
@@ -113,21 +113,16 @@ export class CardComponent {
     return effectiveFacing === 'back';
   });
 
-  // Sanitized image URL — full card art when face up, card-back image when face down.
+  // Sanitized image URL — flat art image when face up, card-back art when face down.
+  // The `size` input no longer influences the source URL; it only affects CSS sizing.
   readonly path = computed<SafeUrl | undefined>(() => {
     const card = this.card();
     if (!card) return undefined;
 
-    const size = this.size();
     if (this.isFaceDown()) {
-      return this._sanitizer.bypassSecurityTrustUrl(
-        `/assets/card-images/base-v2/${size}-size/card-back.jpg`,
-      );
+      return this._sanitizer.bypassSecurityTrustUrl('/assets/card-images/base-v2/card-back-art.jpg');
     }
-    const path = size === 'half' ? card.halfImagePath
-      : size === 'full' ? card.fullImagePath
-      : card.detailImagePath;
-    return this._sanitizer.bypassSecurityTrustUrl(path);
+    return this._sanitizer.bypassSecurityTrustUrl(card.artImagePath);
   });
 
   // Detail image path for right-click detail modal.
