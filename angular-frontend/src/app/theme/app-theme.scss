@@ -59,10 +59,11 @@
   --theme-surface-card: #f2e9da;
   --theme-surface-danger-soft: #f9dfd8;
   --theme-surface-count-badge: #c1a277;
-  /* Game log background — light theme leaves the log transparent so the
-     body gradient shows through; the dark theme overrides this with a
-     solid darker gradient (see :root[data-theme="dark"]). */
-  --theme-surface-log-bg: transparent;
+  /* Game log background — both themes give the log a panel that's
+     visibly deeper than the body so it reads as a distinct surface. The
+     dark theme overrides this with its own darker gradient (see
+     :root[data-theme="dark"]). */
+  --theme-surface-log-bg: linear-gradient(150deg, #d6c5a4 0%, #c8b58c 100%);
 
   /* Border roles */
   --theme-border-subtle: #bca98d;

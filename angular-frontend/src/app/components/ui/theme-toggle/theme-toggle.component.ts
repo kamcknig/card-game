@@ -2,7 +2,7 @@ import { Component, inject } from '@angular/core';
 import { ThemeService, ThemeMode } from '../../../core/theme.service';
 
 /**
- * Pill-style radiogroup toggle for Light / Dark / Auto theme modes.
+ * Pill-style radiogroup toggle for Light / Dark theme modes.
  * Rendered inside SceneBannerComponent on every non-match screen.
  */
 @Component({
@@ -75,6 +75,5 @@ export class ThemeToggleComponent {
   readonly options: { value: ThemeMode; label: string; icon: string }[] = [
     { value: 'light', label: 'Light', icon: '☀' },
     { value: 'dark',  label: 'Dark',  icon: '☾' },
-    { value: 'auto',  label: 'Auto',  icon: '◐' },
   ];
 }

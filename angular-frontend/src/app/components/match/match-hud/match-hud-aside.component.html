@@ -1,30 +1,8 @@
 <div class="hud-log-stack">
-  <app-game-log [entries]="logEntries()"></app-game-log>
-
-  <div class="hud-menu">
-    <button
-      class="hud-menu-icon resign-button"
-      title="Resign and leave game"
-      aria-label="Resign and leave game"
-      (click)="onResignMatch()"
-    >
-      <lucide-icon [img]="FlagIcon" [size]="20" />
-    </button>
-    @if (isAdmin()) {
-      <button
-        class="hud-menu-icon debug-toggle"
-        [attr.aria-pressed]="debugOverlayVisible()"
-        [class.active]="debugOverlayVisible()"
-        [title]="debugOverlayVisible() ? 'Debug overlay: ON' : 'Debug overlay: OFF'"
-        aria-label="Toggle debug overlay"
-        (click)="toggleDebugOverlay()"
-      >
-        <span class="debug-icon-gear"><lucide-icon [img]="SettingsIcon" [size]="18" /></span>
-        <span class="debug-icon-question"><lucide-icon [img]="CircleQuestionMarkIcon" [size]="10" /></span>
-        <span class="debug-icon-state">{{ debugOverlayVisible() ? 'ON' : 'OFF' }}</span>
-      </button>
-    }
-  </div>
+  <app-game-log
+    [entries]="logEntries()"
+    (resignRequested)="onResignMatch()"
+  ></app-game-log>
 </div>
 
 <div class="mat-tab-content">
