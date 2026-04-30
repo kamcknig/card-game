@@ -13,6 +13,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { SocketService } from '../../core/socket-service/socket.service';
 import { PromptDialogCoordinatorService } from '../../core/prompt-dialog/prompt-dialog-coordinator.service';
 import { WayPickerOverlayService } from '../../core/way-picker/way-picker-overlay.service';
+import { SoundService } from '../../core/sound.service';
 import { MatchScene } from './views/scenes/match-scene';
 import { MatchSupplyComponent } from './supply/match-supply.component';
 import { MatchLandscapesComponent } from './landscapes/match-landscapes.component';
@@ -49,6 +50,7 @@ export class MatchComponent implements OnDestroy {
   private readonly _socketService = inject(SocketService);
   private readonly _promptDialogCoordinator = inject(PromptDialogCoordinatorService);
   private readonly _wayPickerOverlay = inject(WayPickerOverlayService);
+  private readonly _soundService = inject(SoundService);
   private readonly _nanoStores = inject(NanostoresService);
   private readonly _imagePreload = inject(CardImagePreloadService);
 
@@ -98,6 +100,7 @@ export class MatchComponent implements OnDestroy {
       this._socketService,
       this._promptDialogCoordinator,
       this._wayPickerOverlay,
+      this._soundService,
     );
     await scene.initialize();
     this.matchScene.set(scene);

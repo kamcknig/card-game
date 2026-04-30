@@ -22,6 +22,7 @@ import {
   pileSelectionOverlayActionStore,
   pileSelectionOverlayStore
 } from '../../../../state/pile-selection-overlay-state';
+import { SoundService } from '../../../../core/sound.service';
 
 export class MatchScene {
   private _cleanup: (() => void)[] = [];
@@ -37,6 +38,7 @@ export class MatchScene {
     private _socketService: SocketService,
     private readonly _promptDialogCoordinator: PromptDialogCoordinatorService,
     private readonly _wayPickerOverlay: WayPickerOverlayService,
+    private readonly _soundService: SoundService,
   ) {
     if (!this._selfId) throw new Error('self id not set in match scene');
   }
@@ -82,14 +84,8 @@ export class MatchScene {
   }
 
   private onPing = async (pingCount: number) => {
-    try {
-      const s = new Audio(`./assets/sounds/your-turn.mp3`);
-      s.volume = Math.min(.3 + .12 * pingCount, 1);
-      await s?.play();
-    } catch (error) {
-      console.error('Could not play start turn sound');
-      console.debug(error);
-    }
+    const volume = Math.min(0.3 + 0.12 * pingCount, 1);
+    await this._soundService.play('./assets/sounds/your-turn.mp3', volume);
   }
 
   private onCurrentPlayerTurnUpdated = async (playerId: number) => {
@@ -97,13 +93,7 @@ export class MatchScene {
 
     if (playerId !== selfPlayerIdStore.get()) return;
 
-    try {
-      const s = new Audio(`./assets/sounds/your-turn.mp3`);
-      s.volume = .3;
-      await s?.play();
-    } catch {
-      console.error('Could not play start turn sound');
-    }
+    await this._soundService.play('./assets/sounds/your-turn.mp3', 0.3);
   }
 
   // Triggers the "next phase" action using the shared server-lock behavior.
@@ -158,13 +148,7 @@ export class MatchScene {
     const waitForInput = args.waitForInput ?? true;
 
     if (currentPlayerTurnIdStore.get() !== this._selfId) {
-      try {
-        const s = new Audio(`./assets/sounds/your-turn.mp3`);
-        s.volume = .3;
-        await s?.play();
-      } catch {
-        console.error('Could not play start turn sound');
-      }
+      await this._soundService.play('./assets/sounds/your-turn.mp3', 0.3);
     }
     if (waitForInput && args.content?.type === 'select-pile') {
       await this.doSelectPiles(signalId, args);
