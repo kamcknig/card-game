@@ -10,6 +10,7 @@
       "npm:@types/jest@^30.0.0"
     ]
   },
+  "version": "1.0.0",
   "nodeModulesDir": "manual",
   "tasks": {
     "dev:watch": "deno run --inspect --check --env-file --allow-sys --allow-read --allow-write --allow-net --allow-env --allow-ffi --unstable-ffi --watch src/server.ts",

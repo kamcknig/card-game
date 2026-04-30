@@ -24,6 +24,10 @@ export class ServerBootstrapService {
     private readonly serverShutdownHandlerService: ServerShutdownHandlerService,
     private readonly serverAuthRouteHandlerService: ServerAuthRouteHandlerService,
     private readonly serverStatusRouteHandlerService: ServerStatusRouteHandlerService,
+    // Resolved from the root container's `serverVersion` value registration
+    // so the running version is part of the DI graph rather than a global
+    // import. Awilix CLASSIC mode resolves by parameter name.
+    private readonly serverVersion: string,
   ) {}
 
   // Starts socket handling, shutdown wiring, HTTP serving, and expansion startup loading.
@@ -33,6 +37,10 @@ export class ServerBootstrapService {
       return;
     }
     this.started = true;
+
+    // Surface the running version on every restart so operators correlate
+    // log output with deployed image tags without grepping container labels.
+    this.loggerService.log(`[server bootstrap] starting Dominion server v${this.serverVersion}`);
 
     try {
       // Validate all startup environment inputs before binding listeners.
