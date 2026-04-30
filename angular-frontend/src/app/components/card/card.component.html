@@ -3,9 +3,7 @@
   <div
     class="card-frame"
     [class.face-down]="isFaceDown()"
-    [class.size-half]="size() === 'half'"
-    [class.size-full]="size() === 'full'"
-    [style]="'--card-accent: ' + accentColor() + '; --card-token-size: ' + tokenSizePx() + 'px'"
+    [style]="'--card-accent: ' + accentColor() + '; --card-token-size: ' + tokenSizePx + 'px'"
     (contextmenu)="onContextMenu($event)"
   >
     @if (isFaceDown()) {

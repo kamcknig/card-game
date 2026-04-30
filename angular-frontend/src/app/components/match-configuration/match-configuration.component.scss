@@ -310,8 +310,17 @@ $match-config-single-column-breakpoint: 940px;
   flex-wrap: wrap;
   justify-content: flex-start;
   gap: var(--theme-space-md);
-  // Cap expansion icon list so at most 5 icons render per row.
-  max-width: calc((50px * 5) + (10px * 4));
+  // Cap expansion icon list so at most 8 icons render per row.
+  // 50px items + 12px (--theme-space-md) gaps × 7.
+  max-width: calc((50px * 8) + (12px * 7));
+}
+
+// When the "Show names" toggle is on, items grow wider to fit the label
+// below the icon. Row cap is widened in lockstep so the list still wraps
+// at 8 per row.
+// 70px items + 12px (--theme-space-md) gaps × 7.
+.expansion-list.show-names {
+  max-width: calc((70px * 8) + (12px * 7));
 }
 
 /* ——— Expansion items ———————————————— */
@@ -362,17 +371,55 @@ $match-config-single-column-breakpoint: 940px;
 
 .expansion-item {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   width: 50px;
   height: 50px;
-  gap: var(--theme-space-lg);
+  gap: 2px;
   cursor: pointer;             /* will become pointer when you add logic */
+}
+
+// Fixed 70px item slot when names are shown — wide enough to fit most
+// expansion titles on one or two short lines while still wrapping at 8 per
+// row. Height grows to accommodate the label below the icon.
+.expansion-list.show-names .expansion-item {
+  width: 70px;
+  height: auto;
+  min-height: 50px;
+  padding: var(--theme-space-xs) 2px;
 }
 
 .expansion-item.selected {
   outline: 2px solid var(--theme-border-strong);     /* highlight border */
   outline-offset: -3px;
+}
+
+.expansion-name {
+  font-size: 10px;
+  line-height: 1.15;
+  text-align: center;
+  color: var(--theme-text-secondary);
+  word-break: break-word;
+  hyphens: auto;
+}
+
+.expansion-item.selected .expansion-name {
+  color: var(--theme-text-primary);
+  font-weight: 600;
+}
+
+// Inline checkbox label paired with the None/All buttons in the section
+// header. Sized to read as a low-emphasis viewer preference. The actual
+// checkbox styling comes from the shared `.form-checkbox` class.
+.show-names-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--theme-space-xs);
+  font-size: 12px;
+  color: var(--theme-text-secondary);
+  cursor: pointer;
+  user-select: none;
 }
 
 .kingdom {

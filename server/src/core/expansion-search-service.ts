@@ -13,6 +13,9 @@ import {
 import Fuse, { IFuseOptions } from 'fuse.js';
 import { ExpansionCatalogService } from './expansion-catalog-service.ts';
 import { LoggerService } from './logger-service.ts';
+import { getCardPileKey } from '../utils/get-card-pile-key.ts';
+import { getPileDefinitionCard } from '../utils/get-pile-definition-card.ts';
+import { formatCardName } from '../utils/format-card-name.ts';
 
 // Owns all search indexes used by lobby selection UI.
 export class ExpansionSearchService {
@@ -51,14 +54,55 @@ export class ExpansionSearchService {
     this.loggerService.info('[expansion search] rebuilding all indexes');
     const rawCardLibrary = this.expansionCatalogService.getRawCardLibrary();
     const expansionLibrary = this.expansionCatalogService.getExpansionLibrary();
-    const cards = Object.values(rawCardLibrary);
+    const allCards = Object.values(rawCardLibrary);
+
+    // Collapse multi-card piles to a single randomizer entry per pile key. Single-card
+    // piles (no randomizerData, or randomizer === cardKey) pass through unchanged.
+    // getPileDefinitionCard applies pile-level cost/type overrides so the randomizer
+    // tile matches the real pile (e.g. Castles = $3 Victory/Castle, not the cheapest
+    // member). This ensures the modal sees exactly one selectable entry per pile.
+    const cardsByPileKey = new Map<string, CardNoId[]>();
+    for (const card of allCards) {
+      const pileKey = getCardPileKey(card);
+      const bucket = cardsByPileKey.get(pileKey) ?? [];
+      bucket.push(card);
+      cardsByPileKey.set(pileKey, bucket);
+    }
+    const dedupedCards: CardNoId[] = [];
+    for (const [pileKey, members] of cardsByPileKey) {
+      const representative = getPileDefinitionCard(members, pileKey);
+      if (representative) {
+        // For JSON-defined pile randomizers, point the modal's art and detail
+        // image lookups at the pile-level image (e.g. 'castles-art.jpg') and
+        // override the display name so the row reads as the pile, not the
+        // first member. randomizerData is set only for cards loaded from a
+        // `pile` JSON block; single-card kingdoms have no randomizerData and
+        // fall through with no override. Slashes in randomizer keys
+        // (e.g. 'catapult/rocks') are converted to hyphens for filesystem-safe
+        // asset paths but preserved in the display name with each side
+        // title-cased ("Catapult / Rocks").
+        const randomizerKey = representative.randomizerData?.randomizer;
+        if (randomizerKey) {
+          representative.imageKeyOverride = randomizerKey.replace(/\//g, '-');
+          representative.cardName = randomizerKey
+            .split('/')
+            .map(segment => formatCardName(segment))
+            .join(' / ');
+        }
+        dedupedCards.push(representative);
+      }
+    }
+
     const events = Object.values(expansionLibrary).flatMap(expansion => Object.values(expansion.events ?? {}));
     const landmarks = Object.values(expansionLibrary).flatMap(expansion => Object.values(expansion.landmarks ?? {}));
     const projects = Object.values(expansionLibrary).flatMap(expansion => Object.values(expansion.projects ?? {}));
     const traits = Object.values(expansionLibrary).flatMap(expansion => Object.values(expansion.traits ?? {}));
     const allies = Object.values(expansionLibrary).flatMap(expansion => Object.values(expansion.allies ?? {}));
     const prophecies = Object.values(expansionLibrary).flatMap(expansion => Object.values(expansion.prophecies ?? {}));
-    this._cardFuse = this.createFuse(cards);
+
+    // Build the card Fuse index from the deduped set so search results are aligned
+    // with the catalog — searching "castles" returns the one pile entry, not all 8 members.
+    this._cardFuse = this.createFuse(dedupedCards);
     this._eventFuse = this.createFuse(events);
     this._landmarkFuse = this.createFuse(landmarks);
     this._projectFuse = this.createFuse(projects);
@@ -78,7 +122,7 @@ export class ExpansionSearchService {
     const ways = [...wayByKey.values()];
     this._wayFuse = this.createFuse(ways);
     this._selectableCatalog = {
-      cards: this.sortByName(cards.filter(card => this.isCardEligibleForKingdomSearch(card))),
+      cards: this.sortByName(dedupedCards.filter(card => this.isCardEligibleForKingdomSearch(card))),
       events: this.sortByName(events),
       landmarks: this.sortByName(landmarks),
       artifacts: [],
@@ -89,7 +133,7 @@ export class ExpansionSearchService {
       prophecies: this.sortByName(prophecies),
     };
     this.loggerService.debug(
-      `[expansion search] index sizes cards=${cards.length} events=${events.length} landmarks=${landmarks.length} projects=${projects.length} ways=${ways.length} traits=${traits.length} allies=${allies.length} prophecies=${prophecies.length}`,
+      `[expansion search] index sizes cards=${dedupedCards.length} (deduped from ${allCards.length}) events=${events.length} landmarks=${landmarks.length} projects=${projects.length} ways=${ways.length} traits=${traits.length} allies=${allies.length} prophecies=${prophecies.length}`,
     );
     if (ways.length < 1) {
       // Surface empty-way index explicitly to make way-search diagnostics obvious.

@@ -1,4 +1,4 @@
-<div class="modal-container">
+<div class="modal-container" [class.modal-container--cards]="imageSize() === 'half'">
   <!-- ── Header ── -->
   <div class="modal-header">
     <div class="header-title-row">
@@ -53,62 +53,24 @@
   <!-- ── Card grid (scrollable body) ── -->
   <div class="modal-body">
     @if (imageSize() === 'half') {
-      <!-- Kingdom / banned card tile grid -->
+      <!-- Kingdom / banned card tile grid — renders the same <app-card>
+           used elsewhere on the match-configuration screen. The catalog is
+           narrowed to CardNoId by the imageSize === 'half' branch (only the
+           'cards' catalog ever uses 'half'); cast for the template type
+           checker since SelectableSearchResult is a wider union. -->
       <div class="card-tile-grid">
-        @for (item of displaySearchResults(); track item.cardKey) {
+        @for (item of displayCardResults(); track item.cardKey) {
           <div
             class="card-tile"
             [class.selected]="isSelected(item.cardKey)"
             (click)="toggleCard(item.cardKey)"
-            (contextmenu)="onContextMenu($event, item)"
           >
-            <!-- Card image masked by the tile's border-radius -->
-            <div class="card-tile-band">
-              <img
-                class="card-tile-image"
-                [ngSrc]="item.imagePath"
-                [width]="item.imageWidth"
-                [height]="item.imageHeight"
-                [alt]="item.cardName"
-              />
-              @if (isSelected(item.cardKey)) {
-                <div class="card-tile-checkmark">
-                  <lucide-icon [img]="CheckIcon" [size]="10" />
-                </div>
-              }
-            </div>
-
-            <!-- Cost + name + type row -->
-            <div class="card-tile-info">
-              <div class="card-tile-cost">
-                @if (item.costValue > 0 || (item.potionCost === 0 && item.debtCost === 0)) {
-                  <div class="tile-cost-chip">
-                    <img src="/assets/ui-icons/coin.png" alt="gold" />
-                    <span>{{ item.costValue }}</span>
-                  </div>
-                }
-                @if (item.potionCost > 0) {
-                  <div class="tile-cost-chip">
-                    <img src="/assets/ui-icons/potion.png" alt="potion" />
-                    @if (item.potionCost > 1) {
-                      <span>{{ item.potionCost }}</span>
-                    }
-                  </div>
-                }
-                @if (item.debtCost > 0) {
-                  <div class="tile-cost-chip">
-                    <img src="/assets/ui-icons/debt-icon.png" alt="debt" />
-                    <span>{{ item.debtCost }}</span>
-                  </div>
-                }
+            <app-card [cardData]="item" [forceFacing]="'front'" />
+            @if (isSelected(item.cardKey)) {
+              <div class="card-tile-checkmark">
+                <lucide-icon [img]="CheckIcon" [size]="10" />
               </div>
-              <div class="card-tile-label">
-                <span class="card-tile-name" [class.selected]="isSelected(item.cardKey)">{{ item.cardName }}</span>
-                @if (item.primaryTypeLabel) {
-                  <span class="card-tile-type">{{ item.primaryTypeLabel }}</span>
-                }
-              </div>
-            </div>
+            }
           </div>
         }
 
@@ -117,21 +79,19 @@
         }
       </div>
     } @else {
-      <!-- Landscape / event / project image grid -->
+      <!-- Landscape grid — renders the same <app-card-like> used elsewhere
+           on the match-configuration screen. -->
       <div class="landscape-grid">
-        @for (item of displaySearchResults(); track item.cardKey) {
+        @for (item of displayCardLikeResults(); track item.cardKey) {
           <div
             class="landscape-tile"
             [class.selected]="isSelected(item.cardKey)"
             (click)="toggleCard(item.cardKey)"
-            (contextmenu)="onContextMenu($event, item)"
           >
-            <img
-              [ngSrc]="item.imagePath"
-              [height]="item.imageHeight"
-              [width]="item.imageWidth"
-              [alt]="item.cardName"
-              class="landscape-image"
+            <app-card-like
+              [cardLikeData]="item"
+              [kind]="cardLikeKind()"
+              [showCost]="cardLikeShowCost()"
             />
             @if (isSelected(item.cardKey)) {
               <div class="landscape-checkmark">

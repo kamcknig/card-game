@@ -401,7 +401,7 @@ transition: border-color 120ms ease, transform 120ms ease;
 | Password field | `.form-input-wrapper` with visibility toggle (`.form-input-toggle`) |
 | Select from a short list (2–5 items) | Tab bar / segmented control (like Sign In / Register) |
 | Select from a long list | Dialog with search + filter chips (like Banned Cards) |
-| Toggle a setting on/off | Checkbox or toggle switch |
+| Toggle a setting on/off | `.form-checkbox` (themed checkbox — see Inputs) |
 | Primary action | `.btn .btn-primary` (one per visual group) |
 | Secondary/cancel action | `.btn .btn-secondary` |
 | Destructive action | `.btn .btn-danger` |
@@ -453,6 +453,27 @@ color: var(--theme-text-primary);
 **Disabled:** `opacity: 0.5; cursor: not-allowed;`
 
 Use shared classes: `.form-field`, `.form-label`, `.form-input`, `.form-input-wrapper`, `.form-input-toggle`, `.form-field-error` (defined in `styles.scss`).
+
+#### Checkboxes
+
+Native browser checkboxes are visually inconsistent with the parchment theme — never render an `<input type="checkbox">` without the shared `.form-checkbox` class.
+
+```css
+width: 16px;
+height: 16px;
+appearance: none;
+border: 1.5px solid var(--theme-border-action);
+border-radius: var(--theme-radius-sm);
+background: var(--theme-surface-panel);
+```
+
+**Checked:** background and border switch to `var(--theme-border-strong)`; the check is drawn via a rotated right+bottom border on `::after` in `var(--theme-text-on-dark)`.
+**Disabled:** `var(--theme-action-disabled-bg)` background, `var(--theme-border-disabled)` border, `var(--theme-action-disabled-opacity)` opacity, `saturate(0.45)` filter.
+**Focus:** `outline: 2px solid var(--theme-border-strong); outline-offset: 2px;`
+
+Use the shared class: `.form-checkbox` (defined in `styles.scss`). When pairing with a label, wrap both inside a `<label>` so the click target spans the text.
+
+**Semantic exceptions:** A component may override the checked fill locally only when the color carries meaning (e.g. `--theme-color-ready` green on the player roster's "ready" checkbox signals match-readiness). Add a comment explaining the semantic when overriding.
 
 ### Cards / Rows
 

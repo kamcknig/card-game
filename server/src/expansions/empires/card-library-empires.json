@@ -97,7 +97,7 @@
       }
     ]
   },
-  "catapult/rocks": {
+  "catapult-rocks": {
     "pile": {
       "randomizer": "catapult/rocks",
       "cost": {
@@ -155,7 +155,7 @@
       "treasure": 5
     }
   },
-  "encampment/plunder": {
+  "encampment-plunder": {
     "pile": {
       "randomizer": "encampment/plunder",
       "cost": {
@@ -212,7 +212,7 @@
     "type": ["ACTION"],
     "abilityText": "+3 Cards\n+1 Action\nDiscard 2 cards.\nWhen you gain this, +1 Buy."
   },
-  "gladiator/fortune": {
+  "gladiator-fortune": {
     "pile": {
       "randomizer": "gladiator/fortune",
       "type": ["ACTION"],
@@ -240,7 +240,7 @@
       }
     ]
   },
-  "patrician/emporium": {
+  "patrician-emporium": {
     "pile": {
       "randomizer": "patrician/emporium",
       "cost": {
@@ -267,7 +267,7 @@
       }
     ]
   },
-  "settlers/bustling-village": {
+  "settlers-bustling-village": {
     "pile": {
       "randomizer": "settlers/bustling-village",
       "cost": {

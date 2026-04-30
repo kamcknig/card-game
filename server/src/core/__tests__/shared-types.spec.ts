@@ -129,7 +129,17 @@ Deno.test('CardLike constructor defaults optional fields when not provided', () 
   assertEquals(cardLike.artImagePath, '');
   assertEquals(cardLike.detailImagePath, '');
   assertEquals(cardLike.kingdomSelectable, true);
+  assertEquals(cardLike.imageKeyOverride, undefined);
   assertEquals(cardLike.cost, { treasure: 0 });
+});
+
+Deno.test('CardLike constructor preserves imageKeyOverride when provided', () => {
+  const cardLike = new CardLike(createCardLikeArgs({
+    id: 12,
+    imageKeyOverride: 'castles',
+  }));
+
+  assertEquals(cardLike.imageKeyOverride, 'castles');
 });
 
 Deno.test('CardLike.toString returns formatted string', () => {
