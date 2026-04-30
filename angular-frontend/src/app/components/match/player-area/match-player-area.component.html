@@ -100,7 +100,6 @@
       <div class="phase-stats">
         <div
           class="phase-stat phase-stat-actions"
-          [class.depleted]="resources.actions === 0"
           [class.phase-active]="turnPhase() === 'action'"
         >
           <span class="phase-stat-icon" aria-hidden="true">+</span>
@@ -110,7 +109,6 @@
 
         <div
           class="phase-stat phase-stat-treasure"
-          [class.depleted]="resources.treasure === 0"
           [class.phase-active]="turnPhase() === 'buy'"
         >
           <span class="phase-stat-icon" aria-hidden="true">●</span>
@@ -120,7 +118,6 @@
 
         <div
           class="phase-stat phase-stat-buys"
-          [class.depleted]="resources.buys === 0"
           [class.phase-active]="turnPhase() === 'buy'"
         >
           <span class="phase-stat-icon" aria-hidden="true">◆</span>

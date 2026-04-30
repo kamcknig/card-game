@@ -263,9 +263,13 @@
   align-items: center;
   gap: var(--theme-space-xs);
   padding: var(--theme-space-2xs) var(--theme-space-md);
-  border: 1px solid var(--theme-border-subtle);
+  // Tint border and base background with the per-chip --stat-color so each
+  // pill reads in its accent (red for actions, gold for treasure, blue for
+  // buys) at all times — phase-active below intensifies the border and adds
+  // a glow on top of this base.
+  border: 1px solid color-mix(in srgb, var(--stat-color) 50%, var(--theme-border-subtle));
   border-radius: 999px;
-  background: rgba(0, 0, 0, var(--theme-overlay-alpha-soft));
+  background: color-mix(in srgb, var(--stat-color) 12%, transparent);
   color: var(--theme-text-on-dark);
   font-family: var(--theme-font-body);
   font-size: 0.875rem;
@@ -317,18 +321,12 @@
   line-height: 1;
 }
 
-// Depleted: zero value — icon and number drop to disabled grey.
-.phase-stat.depleted {
-  --stat-color: var(--theme-text-disabled);
-  opacity: var(--theme-action-disabled-opacity, 0.65);
-}
-
-// Phase-active: subtle tint background + colored border so the relevant
-// stats for the current phase pop. color-mix lets the tint track --stat-color
-// without per-stat alpha tokens.
+// Phase-active: bumps the colored border, deepens the tint, and adds a
+// subtle outer glow so the relevant stats for the current phase pop above
+// the always-on base tint.
 .phase-stat.phase-active {
   border-color: color-mix(in srgb, var(--stat-color) 50%, var(--theme-border-subtle));
-  background: color-mix(in srgb, var(--stat-color) 12%, transparent);
+  background: color-mix(in srgb, var(--stat-color) 20%, transparent);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--stat-color) 25%, transparent);
 }
 
