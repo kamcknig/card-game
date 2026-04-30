@@ -3,22 +3,9 @@ import { TestBed } from '@angular/core/testing';
 
 import { ThemeService } from './theme.service';
 
-/** Stub window.matchMedia — jsdom does not implement the MediaQueryList API. */
-const mockMatchMedia = (matches: boolean) =>
-  Object.defineProperty(window, 'matchMedia', {
-    writable: true,
-    value: jest.fn().mockReturnValue({
-      matches,
-      media: '(prefers-color-scheme: dark)',
-      addEventListener: jest.fn(),
-      removeEventListener: jest.fn(),
-    }),
-  });
-
 describe('ThemeService', () => {
   beforeEach(() => {
     localStorage.clear();
-    mockMatchMedia(false);
     TestBed.configureTestingModule({
       // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
       providers: [provideExperimentalZonelessChangeDetection()],
@@ -33,8 +20,8 @@ describe('ThemeService', () => {
     expect(TestBed.inject(ThemeService)).toBeTruthy();
   });
 
-  it('defaults to "auto" when localStorage has no stored value', () => {
-    expect(TestBed.inject(ThemeService).mode()).toBe('auto');
+  it('defaults to "dark" when localStorage has no stored value', () => {
+    expect(TestBed.inject(ThemeService).mode()).toBe('dark');
   });
 
   it('restores a saved "light" mode from localStorage', () => {
@@ -47,35 +34,15 @@ describe('ThemeService', () => {
     expect(TestBed.inject(ThemeService).mode()).toBe('dark');
   });
 
-  it('ignores an invalid stored value and defaults to "auto"', () => {
+  it('ignores an invalid stored value and defaults to "dark"', () => {
     localStorage.setItem('dominion-theme', 'bogus');
-    expect(TestBed.inject(ThemeService).mode()).toBe('auto');
+    expect(TestBed.inject(ThemeService).mode()).toBe('dark');
   });
 
   it('setMode updates the mode signal', () => {
     const service = TestBed.inject(ThemeService);
-    service.setMode('dark');
-    expect(service.mode()).toBe('dark');
-  });
-
-  it('resolved returns "light" when mode is explicitly "light"', () => {
-    localStorage.setItem('dominion-theme', 'light');
-    expect(TestBed.inject(ThemeService).resolved()).toBe('light');
-  });
-
-  it('resolved returns "dark" when mode is explicitly "dark"', () => {
-    localStorage.setItem('dominion-theme', 'dark');
-    expect(TestBed.inject(ThemeService).resolved()).toBe('dark');
-  });
-
-  it('resolved returns "dark" in auto mode when the OS prefers dark', () => {
-    mockMatchMedia(true);
-    expect(TestBed.inject(ThemeService).resolved()).toBe('dark');
-  });
-
-  it('resolved returns "light" in auto mode when the OS does not prefer dark', () => {
-    mockMatchMedia(false);
-    expect(TestBed.inject(ThemeService).resolved()).toBe('light');
+    service.setMode('light');
+    expect(service.mode()).toBe('light');
   });
 
   it('setMode persists the chosen mode to localStorage', () => {
@@ -86,8 +53,14 @@ describe('ThemeService', () => {
     expect(spy).toHaveBeenCalledWith('dominion-theme', 'light');
   });
 
-  it('writes the resolved theme to data-theme on <html>', () => {
-    localStorage.setItem('dominion-theme', 'dark');
+  it('writes the active mode to data-theme on <html>', () => {
+    localStorage.setItem('dominion-theme', 'light');
+    TestBed.inject(ThemeService);
+    TestBed.flushEffects();
+    expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+  });
+
+  it('writes "dark" to data-theme on <html> when defaulting', () => {
     TestBed.inject(ThemeService);
     TestBed.flushEffects();
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');

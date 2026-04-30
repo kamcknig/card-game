@@ -1,5 +1,9 @@
 .content {
-  color: var(--theme-text-on-dark);
+  // theme-text-primary adapts (dark in light mode, light cream in dark mode)
+  // so the log's plain text reads correctly against the body gradient in
+  // light mode without affecting the cost/count chrome elsewhere on the
+  // match screen that still want pure white via theme-text-on-dark.
+  color: var(--theme-text-primary);
   width: 300px;
   height: 55vh;
   position: relative;
@@ -7,33 +11,230 @@
   font-size: 1rem;
   line-height: 1.1;
   background: var(--theme-surface-log-bg);
+  display: flex;
+  flex-direction: column;
+}
 
-  .log-content {
-    height: 100%;
-    padding: var(--theme-space-md) var(--theme-space-lg);
-    box-sizing: border-box;
-    overflow: auto;
-    scrollbar-width: thin;
-    scrollbar-color: var(--theme-border-strong) transparent;
+.log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--theme-space-sm) var(--theme-space-lg);
+  border-bottom: 1px solid var(--theme-border-divider);
+  flex: 0 0 auto;
+}
+
+.log-title {
+  font-family: var(--theme-font-body);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--theme-text-secondary);
+  text-transform: uppercase;
+  // Inline-flex with line-height: 1 puts the glyph ink at the geometric
+  // center of the flex row; without it, inherited line-height adds asymmetric
+  // descender padding that pushes the title visually off-center.
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.settings-trigger {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--theme-text-secondary);
+  border-radius: var(--theme-radius-sm);
+  cursor: pointer;
+  padding: 0;
+  // line-height: 1 collapses inline-baseline padding so the icon's bounding
+  // box is exactly the SVG height, letting flex-center land on the geometric
+  // middle of the button.
+  line-height: 1;
+
+  // Force the inner SVG to block flow so it sits at the flex-center of the
+  // button instead of inheriting inline baseline alignment.
+  ::ng-deep svg {
+    display: block;
   }
 
-  :not(:last-child) {
+  // Same tint trick as the settings-row so the gear's hover state stays
+  // visible in dark mode (where theme-action-secondary-bg matches the
+  // surrounding surface).
+  &:hover {
+    color: var(--theme-text-primary);
+    background: color-mix(in srgb, var(--theme-text-primary) 10%, transparent);
+  }
+
+  &.is-open {
+    color: var(--theme-text-primary);
+    background: var(--theme-action-primary-bg);
+    border-color: var(--theme-border-strong);
+  }
+}
+
+// Overlay panel — positioned absolutely below the header so it visually
+// covers the log entries instead of pushing them down. The .content host
+// is `position: relative`, so `top: <header-height>` is anchored to it.
+.settings-panel {
+  position: absolute;
+  top: 41px;          // log-header height (sm padding × 2 + 1px border + ~13px text)
+  left: 0;
+  right: 0;
+  z-index: 5;
+  background: var(--theme-surface-panel);
+  border-bottom: 1px solid var(--theme-border-divider);
+  box-shadow: var(--theme-shadow-medium);
+  padding: var(--theme-space-sm) 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: var(--theme-space-sm);
+  width: 100%;
+  padding: var(--theme-space-sm) var(--theme-space-lg);
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  color: var(--theme-text-primary);
+  font-family: var(--theme-font-body);
+  font-size: 14px;
+
+  // Tint the hover surface using a fraction of the theme's primary text
+  // color so it always contrasts against the panel — dark mode's
+  // theme-action-secondary-bg happens to equal theme-surface-panel, which
+  // made the previous hover state invisible.
+  &:hover {
+    background: color-mix(in srgb, var(--theme-text-primary) 10%, transparent);
+  }
+
+  &.is-danger {
+    color: var(--theme-border-danger);
+
+    .row-leading {
+      color: var(--theme-border-danger);
+    }
+  }
+}
+
+.row-leading {
+  flex: 0 0 auto;
+  // Fixed square keeps the icon column width consistent across rows so the
+  // labels line up regardless of which Lucide glyph is rendered.
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--theme-text-secondary);
+
+  // Force the inner SVG to block flow so it sits at the flex-center of the
+  // host instead of inheriting inline baseline alignment (which leaves a
+  // descender gap below the glyph).
+  ::ng-deep svg {
+    display: block;
+  }
+}
+
+.row-label {
+  flex: 1 1 auto;
+  // line-height: 1 collapses the inline glyph-box to its visual height so the
+  // label centers against the icon and switch instead of riding on its own
+  // descender padding.
+  line-height: 1;
+}
+
+// Pill-style toggle switch. The track is the outer span; the knob is the
+// `::before` pseudo-element that translates 16px when the switch is on.
+.row-switch {
+  flex: 0 0 auto;
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--theme-action-disabled-bg);
+  border: 1px solid var(--theme-border-medium);
+  transition: background-color 120ms ease, border-color 120ms ease;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--theme-text-on-dark);
+    transition: transform 120ms ease;
+  }
+
+  &.is-on {
+    background: var(--theme-action-primary-bg);
+    border-color: var(--theme-border-action);
+
+    &::before {
+      transform: translateX(16px);
+    }
+  }
+}
+
+.settings-divider {
+  margin: var(--theme-space-xs) var(--theme-space-lg);
+  border: none;
+  border-top: 1px solid var(--theme-border-divider);
+}
+
+.log-content {
+  flex: 1 1 auto;
+  padding: var(--theme-space-md) var(--theme-space-lg);
+  box-sizing: border-box;
+  overflow: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--theme-border-strong) transparent;
+
+  // Spacing between log entries. Scoped to .log-content so the rule does NOT
+  // bleed onto the header / settings-panel / row children, where it would
+  // grow flex-item bounding boxes asymmetrically and break vertical
+  // alignment of icons against labels and toggles.
+  > :not(:last-child) {
     margin-bottom: var(--theme-space-sm);
   }
+}
 
-  ::ng-deep .log-entry {
-    user-select: text;
+// Light-mode log darkening. The log entries embed inline color values from
+// two sources: card-source accents (theme-aware) and player.color (raw hex
+// baked in by the server). To keep the player-color hexes readable on the
+// light beige body without rebuilding entries, knock down brightness for
+// log content as a whole and bump saturation to keep colors lively.
+:host-context([data-theme="light"]) .log-content {
+  filter: brightness(0.55) saturate(1.5);
+}
 
-    hr {
-      width: 100%;
-      border-top: 1px solid rgba(255, 255, 255, 0.35);
-      display: inline-block;
-      height: 8px;
-    }
+::ng-deep .log-entry {
+  user-select: text;
 
-    hr.new-player-turn {
-      border-top: 1px dashed rgba(255, 255, 255, 0.5);
-      width: 75%;
-    }
+  hr {
+    width: 100%;
+    border-top: 1px solid rgba(255, 255, 255, 0.35);
+    display: inline-block;
+    height: 8px;
   }
+
+  hr.new-player-turn {
+    border-top: 1px dashed rgba(255, 255, 255, 0.5);
+  }
+}
+
+// Turn-header entries get double the default bottom spacing so the new turn
+// visually breathes from its first action below it.
+::ng-deep .log-entry:has(hr.new-player-turn) {
+  margin-bottom: calc(var(--theme-space-sm) * 2) !important;
 }

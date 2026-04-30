@@ -1,4 +1,90 @@
 <div class="content">
+  <div class="log-header">
+    <span class="log-title">GAME LOG</span>
+    <button
+      type="button"
+      class="settings-trigger"
+      [class.is-open]="settingsOpen()"
+      [attr.aria-expanded]="settingsOpen()"
+      aria-label="Game log settings"
+      title="Game log settings"
+      (click)="toggleSettings()"
+    >
+      <lucide-icon [img]="SettingsIcon" [size]="18" />
+    </button>
+  </div>
+
+  @if (settingsOpen()) {
+    <div class="settings-panel" role="menu">
+      <button
+        type="button"
+        class="settings-row"
+        role="menuitemcheckbox"
+        [attr.aria-checked]="theme.mode() === 'dark'"
+        (click)="toggleDarkMode()"
+      >
+        <lucide-icon [img]="MoonIcon" [size]="18" class="row-leading" />
+        <span class="row-label">Dark Mode</span>
+        <span
+          class="row-switch"
+          [class.is-on]="theme.mode() === 'dark'"
+          aria-hidden="true"
+        ></span>
+      </button>
+
+      <button
+        type="button"
+        class="settings-row"
+        role="menuitemcheckbox"
+        [attr.aria-checked]="sound.enabled()"
+        (click)="toggleSound()"
+      >
+        <lucide-icon
+          [img]="sound.enabled() ? Volume2Icon : VolumeXIcon"
+          [size]="18"
+          class="row-leading"
+        />
+        <span class="row-label">Sound</span>
+        <span
+          class="row-switch"
+          [class.is-on]="sound.enabled()"
+          aria-hidden="true"
+        ></span>
+      </button>
+
+      <hr class="settings-divider" />
+
+      <button
+        type="button"
+        class="settings-row is-danger"
+        role="menuitem"
+        (click)="onResignClick()"
+      >
+        <lucide-icon [img]="FlagIcon" [size]="18" class="row-leading" />
+        <span class="row-label">Resign Game</span>
+      </button>
+
+      @if (isAdmin()) {
+        <hr class="settings-divider" />
+        <button
+          type="button"
+          class="settings-row"
+          role="menuitemcheckbox"
+          [attr.aria-checked]="debugOverlayVisible()"
+          (click)="toggleDebugOverlay()"
+        >
+          <lucide-icon [img]="SettingsIcon" [size]="18" class="row-leading" />
+          <span class="row-label">Debug Overlay</span>
+          <span
+            class="row-switch"
+            [class.is-on]="debugOverlayVisible()"
+            aria-hidden="true"
+          ></span>
+        </button>
+      }
+    </div>
+  }
+
   <div #logContent class="log-content">
     @for (entry of sanitizedEntries(); track entry.id) {
       <div class="log-entry" [innerHTML]="entry.safeMessage"></div>

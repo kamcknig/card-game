@@ -6,7 +6,7 @@ import {
   signal,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { CircleQuestionMark, Flag, LucideAngularModule, Settings } from 'lucide-angular';
+import { LucideAngularModule } from 'lucide-angular';
 import { NanostoresService } from '@nanostores/angular';
 import {
   combineLatest,
@@ -44,18 +44,18 @@ type Mat = MatTabModel;
 /**
  * Right-column aside for the match screen.
  *
- * Renders the game log, HUD menu (resign + debug toggle), mat tabs
- * (trash, set-aside, self mats), and the debug runtime overlay. All
- * nanostore subscriptions are owned locally so this component can be
- * placed freely in the layout without coupling to MatchHudComponent.
+ * Renders the game log (which owns its own header, settings gear, resign
+ * trigger, and admin debug-overlay toggle), mat tabs (trash, set-aside,
+ * self mats), and the debug runtime overlay panel. All nanostore
+ * subscriptions are owned locally so this component can be placed freely
+ * in the layout without coupling to MatchHudComponent.
  *
  * Dialogs (waiting, paused, disconnect, resign confirmation, mat preview)
  * remain in MatchHudComponent because they are full-screen overlays that
  * need to be at the top of the stacking context.
  *
  * Outputs:
- * - `resignRequested` — emitted when the user clicks the resign button.
- * - `matSelected` — emitted when a mat tab is clicked or hovered.
+ * - `resignRequested` — relayed from GameLogComponent up to MatchComponent.
  */
 @Component({
   selector: 'app-match-hud-aside',
@@ -74,11 +74,6 @@ type Mat = MatTabModel;
 })
 export class MatchHudAsideComponent {
   private readonly _nanoService = inject(NanostoresService);
-
-  // Lucide icon references exposed to the template.
-  readonly FlagIcon = Flag;
-  readonly SettingsIcon = Settings;
-  readonly CircleQuestionMarkIcon = CircleQuestionMark;
 
   /** Emitted when the user requests to resign the match. */
   readonly resignRequested = output<void>();
@@ -212,11 +207,6 @@ export class MatchHudAsideComponent {
   // ---------------------------------------------------------------------------
   // Debug
   // ---------------------------------------------------------------------------
-
-  /** Toggles the HUD debug identity overlay. */
-  toggleDebugOverlay(): void {
-    debugOverlayVisibleStore.set(!debugOverlayVisibleStore.get());
-  }
 
   /**
    * Sends a POST to the debug end-game endpoint, forcibly ending the active

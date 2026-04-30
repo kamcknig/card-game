@@ -155,7 +155,9 @@ export const logManager = {
         break;
       }
       case 'newPlayerTurn': {
-        msg = `<br><span style="color: ${playerColor}">${playerName}</span> - turn ${logEntry.turn}<hr class="new-player-turn">`;
+        // Dashed separator precedes the turn header so it visually divides the
+        // previous turn's entries from the new turn's header line.
+        msg = `<hr class="new-player-turn"><span style="color: ${playerColor}">${playerName}</span> - turn ${logEntry.turn}`;
         break;
       }
     }

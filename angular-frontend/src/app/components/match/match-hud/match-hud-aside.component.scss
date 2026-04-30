@@ -31,96 +31,17 @@ app-game-log {
   pointer-events: auto;
 }
 
-// HUD menu sits directly on the unified match-screen background — no per-panel
-// chrome.
-.hud-menu {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--theme-space-sm);
-  width: 300px;
-  padding: var(--theme-space-xs);
-  box-sizing: border-box;
-  pointer-events: auto;
-}
-
-.hud-menu-icon {
-  // Keep icon controls at fixed intrinsic widths; do not stretch to fill the menu row.
-  width: 34px;
-  height: 34px;
-  // Flex-center the Lucide icon; absolutely positioned children inside
-  // (.debug-icon-question, .debug-icon-state) bypass flex and stay pinned to
-  // the button corners regardless.
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--theme-border-strong);
-  background: var(--theme-surface-panel);
-  color: var(--theme-text-primary);
-  border-radius: var(--theme-radius-sm);
-  cursor: pointer;
-  font-family: var(--theme-font-body);
-  font-weight: 600;
-  font-size: 10px;
-  letter-spacing: 0.2px;
-  padding: 0;
-  position: relative;
-}
-
-.debug-toggle {
-  width: 44px;
-}
-
-.debug-toggle.active {
-  border-color: var(--theme-border-action);
-  background: var(--theme-action-primary-bg);
-  color: var(--theme-text-primary);
-}
-
-.resign-button {
-  font-size: 16px;
-}
-
-// Gear / question wrap Lucide <lucide-icon [size]="..." /> — sizing is owned
-// by the icon component, not font-size. These wrappers only carry layout
-// positioning for the badge-style question overlay.
-.debug-icon-gear {
-  display: inline-flex;
-  align-items: center;
-  line-height: 1;
-}
-
-.debug-icon-question {
-  position: absolute;
-  top: 4px;
-  right: 5px;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-}
-
-.debug-icon-state {
-  position: absolute;
-  left: 4px;
-  bottom: 2px;
-  font-size: 8px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0.2px;
-  color: var(--theme-text-secondary);
-}
-
-.debug-toggle.active .debug-icon-state {
-  color: var(--theme-text-primary);
-}
-
 .debug-runtime-overlay {
   min-width: 210px;
   max-width: 360px;
   padding: var(--theme-space-sm) var(--theme-space-md);
   border: 1px solid var(--theme-border-strong);
   border-radius: var(--theme-radius-md);
-  background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
-  color: var(--theme-text-on-dark);
+  // Theme-adaptive surface and text — replaces the prior fixed-black
+  // overlay + always-white text that ignored the active theme.
+  background: var(--theme-surface-panel);
+  color: var(--theme-text-primary);
+  box-shadow: var(--theme-shadow-medium);
   font-size: 12px;
   line-height: 1.35;
   // Keep runtime ids copyable when the debug overlay is visible.
@@ -157,14 +78,17 @@ app-game-log {
   background: transparent;
   border: 1px solid var(--theme-border-strong);
   border-radius: var(--theme-radius-sm);
-  color: var(--theme-text-on-dark);
+  color: var(--theme-text-primary);
   font-family: var(--theme-font-body);
   font-size: 11px;
   cursor: pointer;
   text-align: left;
 
+  // text-primary tint adapts to the active theme: a soft dark tint in light
+  // mode, a soft cream tint in dark mode. Replaces the prior fixed white
+  // overlay that disappeared on a light surface.
   &:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--theme-text-primary) 10%, transparent);
   }
 }
 

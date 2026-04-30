@@ -7,13 +7,13 @@
 ---
 
 add settings to the match screen
+
 - toggle light/dark mode
-- toggle timestamps on ui log
 
 ---
 
 ui log
-- add optional timestamps
+
 - card names should be pressable to show the card
 
 ---
@@ -32,10 +32,8 @@ show the version number in the app somewhere
 - add pre commit to lint and or fmt
 - undo turn/steps
 - when using overpay feature, you can overpay with potions. this matters for
-  stone mason. don't know how to do the UI
+  stonemason. don't know how to do the UI
   for this yet, and doesn't seem super important to get done right away
-- The wiki for the Spoils card states. I don't have a solution for that and how
-  to prevent yet
 - If you play an Ambassador and reveal a Spoils, the Spoils is not returned to
   the Supply (since it is not in the
   Supply) and other players do not gain Spoils.
@@ -53,30 +51,21 @@ show the version number in the app somewhere
 - Lobby ban identity currently uses `sessionId`; replace with durable
   authenticated identity and provide a migration path.
 - cards like throne room need to have log entries updated so that the cards
-  they play show the source (the throne room) in paranethesis. maybe then they
-  dont need to be indented?
+  they play show the source (the throne room) in parentheses. maybe then they
+  don't need to be indented?
 - document application from developers point of view
 - once all game data is added, update all effects that set aside cards to add
   source and properly be face up or down so that they are sorted correctly in
   tabs
 - once all game data is added, need to make sure to update all
-  card/landscapes effects to use the new choose ability functionality from edler
+  card/landscapes effects to use the new choose ability functionality from elder
   from allies expansion.
-- need to be able to search for and select split piles. shouldn't be able to
-  search for individual cards in a split pile. i think i'll need images for the
-  piles for this
-- there are a lot of patterns where non duration reactions are registered, and then a 2nd reaction has to be registered
-  for endTurn to remove them. Can we automate reemoving these types of reactions instead of always having to have the
-  endTurn cleanup manually within the card/landscape effects?
 
 # Higher priority
 
 - stop following rule
   - need to figure how to implement this across entire app rather than in each place.
-- logging is not nearly detailed enough
-- safety so that when a game or mtach crashes, the ret of the server doesn't
-  crash and can recover
-- check duration behvavior. the offical rules say this "Additionally, if a
+- check duration behavior. the official rules say this "Additionally, if a
   Duration card is played extra times by a card
   such as [Throne Room, Scepter, Mastermind, Specialist, Flagship, or Daimyo],
   that card also stays in play until the
@@ -93,7 +82,7 @@ show the version number in the app somewhere
     that player - when they reconnected they
     need to be asked for their input again
 - when "waiting on player input" displays, cards are selectable. i played
-  warchest, and while waiting on someone to name
+  war chest, and while waiting on someone to name
   cards, it showed highlights on cards. don't know if they were selectable
 - some mats have rules that indicate cards are moved to the deck at the end of
   the game before scoring e.g., native

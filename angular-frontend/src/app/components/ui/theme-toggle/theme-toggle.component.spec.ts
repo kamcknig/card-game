@@ -10,7 +10,7 @@ import { ThemeToggleComponent } from './theme-toggle.component';
  * so component tests remain isolated from ThemeService internals.
  */
 class ThemeServiceStub {
-  mode = signal<ThemeMode>('auto');
+  mode = signal<ThemeMode>('dark');
   setMode = jest.fn((m: ThemeMode) => this.mode.set(m));
 }
 
@@ -40,12 +40,11 @@ describe('ThemeToggleComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('renders three mode buttons — Light, Dark, and Auto', () => {
+  it('renders two mode buttons — Light and Dark', () => {
     const buttons = fixture.nativeElement.querySelectorAll('.theme-opt');
-    expect(buttons).toHaveLength(3);
+    expect(buttons).toHaveLength(2);
     expect(buttons[0].textContent).toContain('Light');
     expect(buttons[1].textContent).toContain('Dark');
-    expect(buttons[2].textContent).toContain('Auto');
   });
 
   it('applies is-active only to the button matching the current mode', () => {
@@ -55,7 +54,6 @@ describe('ThemeToggleComponent', () => {
     const buttons = fixture.nativeElement.querySelectorAll('.theme-opt');
     expect(buttons[0].classList).not.toContain('is-active'); // Light
     expect(buttons[1].classList).toContain('is-active');     // Dark
-    expect(buttons[2].classList).not.toContain('is-active'); // Auto
   });
 
   it('clicking a button calls theme.setMode with the correct value', () => {
@@ -66,7 +64,7 @@ describe('ThemeToggleComponent', () => {
 
   it('each button passes its own mode value to setMode when clicked', () => {
     const buttons: NodeListOf<HTMLButtonElement> = fixture.nativeElement.querySelectorAll('.theme-opt');
-    const modes: ThemeMode[] = ['light', 'dark', 'auto'];
+    const modes: ThemeMode[] = ['light', 'dark'];
     modes.forEach((mode, i) => {
       buttons[i].click();
       expect(themeStub.setMode).toHaveBeenCalledWith(mode);

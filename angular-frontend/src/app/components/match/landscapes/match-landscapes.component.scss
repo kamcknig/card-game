@@ -3,7 +3,11 @@
 // Host participates in the column 2 flex flow. Stretches the full column
 // width so the row divider above it (added by the column-level rule)
 // reaches the column borders on both sides; the inner grid still wraps
-// landscape cards naturally on the left.
+// landscape cards naturally on the left. When hasLandscapes() is false
+// the host hides itself via the [style.display] binding in the
+// component (see match-landscapes.component.ts host metadata) so the
+// column's row-divider rule does not paint an empty bordered strip
+// between the supply row and the player area.
 :host {
   display: block;
 }

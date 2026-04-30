@@ -52,6 +52,14 @@ const CUBE_TOKEN_ID = 'cube-token';
   templateUrl: './match-landscapes.component.html',
   styleUrl: './match-landscapes.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    // Hide the host entirely when there are no landscapes so the
+    // column-level row-divider rule does not render an empty bordered
+    // strip between the supply row and the player area. The expression
+    // re-evaluates whenever hasLandscapes() changes because it reads a
+    // signal during change detection.
+    '[style.display]': "hasLandscapes() ? null : 'none'",
+  },
 })
 export class MatchLandscapesComponent {
   private readonly _nanoStores = inject(NanostoresService);
