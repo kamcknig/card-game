@@ -1,6 +1,5 @@
 import { NO_ERRORS_SCHEMA, provideExperimentalZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { NgOptimizedImage } from '@angular/common';
 import { NanostoresService } from '@nanostores/angular';
 import { of } from 'rxjs';
 
@@ -71,11 +70,11 @@ describe('SelectCardLikeModalComponent', () => {
         { provide: NanostoresService, useClass: NanostoresServiceStub },
       ],
     })
-      // Remove NgOptimizedImage and add NO_ERRORS_SCHEMA directly to the standalone component
-      // so [ngSrc] bindings are suppressed at the component level (standalone components ignore
-      // the TestBed-level schema).
+      // Add NO_ERRORS_SCHEMA directly to the standalone component so unknown
+      // child elements (<app-card>, <app-card-like>) are tolerated without
+      // bringing in their full dependency graph; standalone components ignore
+      // the TestBed-level schema.
       .overrideComponent(SelectCardLikeModalComponent, {
-        remove: { imports: [NgOptimizedImage] },
         add: { schemas: [NO_ERRORS_SCHEMA] },
       })
       .compileComponents();
@@ -303,27 +302,6 @@ describe('SelectCardLikeModalComponent', () => {
         expect(keys).not.toContain('smithy');
       });
 
-      it('enriches each result with costValue from the treasure cost', () => {
-        const result = component.displaySearchResults().find((r) => r.cardKey === 'village') as any;
-        expect(result.costValue).toBe(3);
-      });
-
-      it('enriches each result with potionCost defaulting to 0 when absent', () => {
-        const result = component.displaySearchResults().find((r) => r.cardKey === 'village') as any;
-        expect(result.potionCost).toBe(0);
-      });
-
-      it('enriches each result with debtCost defaulting to 0 when absent', () => {
-        const result = component.displaySearchResults().find((r) => r.cardKey === 'village') as any;
-        expect(result.debtCost).toBe(0);
-      });
-
-      it('enriches each result with the correct primaryTypeLabel', () => {
-        // 'village' has type ['ACTION'] → label 'Action'
-        const result = component.displaySearchResults().find((r) => r.cardKey === 'village') as any;
-        expect(result.primaryTypeLabel).toBe('Action');
-      });
-
       it('excludes basic cards when filterBasicCards input is true', () => {
         fixture.componentRef.setInput('filterBasicCards', true);
         fixture.detectChanges();
@@ -332,51 +310,84 @@ describe('SelectCardLikeModalComponent', () => {
         expect(keys).toContain('village');
       });
     });
+  });
 
-    describe('when a card has a potion cost', () => {
-      beforeEach(() => {
-        selectableSearchCatalogStore.set(makeCatalog([
-          makeCard({ cardKey: 'transmute', cost: { treasure: 0, potion: 1 } }),
-        ]) as any);
-        createComponent();
-      });
+  // ── Narrowed display lists used by the template ───────────────────────────
+  // The modal template iterates `displayCardResults()` for the half/cards
+  // branch and `displayCardLikeResults()` for the full/landscape branch so
+  // <app-card> / <app-card-like> get a properly narrowed type without a
+  // template-level cast.
 
-      it('enriches results with the potion cost value', () => {
-        expect((component.displaySearchResults()[0] as any).potionCost).toBe(1);
-      });
+  describe('displayCardResults / displayCardLikeResults', () => {
+    beforeEach(() => {
+      selectableSearchCatalogStore.set(makeCatalog([makeCard({ cardKey: 'village' })]) as any);
     });
 
-    describe('when a card has a debt cost', () => {
-      beforeEach(() => {
-        selectableSearchCatalogStore.set(makeCatalog([
-          makeCard({ cardKey: 'engineers', cost: { treasure: 0, debt: 4 } }),
-        ]) as any);
-        createComponent();
-      });
+    it('populates displayCardResults only when imageSize is "half"', () => {
+      fixture = TestBed.createComponent(SelectCardLikeModalComponent);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('catalogKind', 'cards');
+      fixture.componentRef.setInput('imageSize', 'half');
+      fixture.detectChanges();
 
-      it('enriches results with the debt cost value', () => {
-        expect((component.displaySearchResults()[0] as any).debtCost).toBe(4);
-      });
+      expect(component.displayCardResults().length).toBe(1);
+      expect(component.displayCardLikeResults().length).toBe(0);
     });
 
-    describe('imageSize input', () => {
-      beforeEach(() => {
-        selectableSearchCatalogStore.set(makeCatalog([makeCard()]) as any);
-      });
+    it('populates displayCardLikeResults only when imageSize is "full"', () => {
+      // Cardlike catalog populated for the events kind.
+      selectableSearchCatalogStore.set(makeCatalog([], [makeEvent()]) as any);
+      fixture = TestBed.createComponent(SelectCardLikeModalComponent);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('catalogKind', 'events');
+      fixture.componentRef.setInput('imageSize', 'full');
+      fixture.detectChanges();
 
-      it('uses artImagePath when imageSize is "half"', () => {
-        fixture = TestBed.createComponent(SelectCardLikeModalComponent);
-        component = fixture.componentInstance;
-        fixture.componentRef.setInput('catalogKind', 'cards');
-        fixture.componentRef.setInput('imageSize', 'half');
-        fixture.detectChanges();
-        expect((component.displaySearchResults()[0] as any).imagePath).toBe('/img/village-art.jpg');
-      });
+      expect(component.displayCardLikeResults().length).toBe(1);
+      expect(component.displayCardResults().length).toBe(0);
+    });
+  });
 
-      it('uses artImagePath when imageSize is "full"', () => {
-        createComponent();
-        expect((component.displaySearchResults()[0] as any).imagePath).toBe('/img/village-art.jpg');
-      });
+  // ── cardLikeKind / cardLikeShowCost (drive <app-card-like> inputs) ────────
+
+  describe('cardLikeKind', () => {
+    it('returns undefined for the cards catalog (which renders via <app-card>)', () => {
+      createComponent('cards');
+      expect(component.cardLikeKind()).toBeUndefined();
+    });
+
+    it('maps each landscape catalog kind to its CardLikeKind', () => {
+      const cases: Array<[string, string]> = [
+        ['events', 'event'],
+        ['landmarks', 'landmark'],
+        ['artifacts', 'artifact'],
+        ['projects', 'project'],
+        ['ways', 'way'],
+        ['traits', 'trait'],
+        ['allies', 'ally'],
+        ['prophecies', 'prophecy'],
+      ];
+      for (const [catalogKind, expectedCardLikeKind] of cases) {
+        createComponent(catalogKind);
+        expect(component.cardLikeKind()).toBe(expectedCardLikeKind);
+      }
+    });
+  });
+
+  describe('cardLikeShowCost', () => {
+    it('is true for events and projects (which carry costs)', () => {
+      createComponent('events');
+      expect(component.cardLikeShowCost()).toBe(true);
+      createComponent('projects');
+      expect(component.cardLikeShowCost()).toBe(true);
+    });
+
+    it('is false for catalogs whose entries have no printed cost', () => {
+      const noCostKinds = ['cards', 'landmarks', 'ways', 'traits', 'allies', 'prophecies'];
+      for (const kind of noCostKinds) {
+        createComponent(kind);
+        expect(component.cardLikeShowCost()).toBe(false);
+      }
     });
   });
 
@@ -481,32 +492,10 @@ describe('SelectCardLikeModalComponent', () => {
     });
   });
 
-  // ── onContextMenu ─────────────────────────────────────────────────────────
-  // Note: openCardDetailDialog is a module-level function; the Angular Jest
-  // builder bundles sources before running tests, making jest.mock() path
-  // resolution unreliable. Its invocation is covered by integration tests.
-  // These unit tests verify the DOM event suppression behavior.
-
-  describe('onContextMenu', () => {
-    let event: MouseEvent;
-
-    beforeEach(() => {
-      createComponent();
-      event = { preventDefault: jest.fn(), stopPropagation: jest.fn() } as unknown as MouseEvent;
-    });
-
-    it('always prevents the native browser context menu', () => {
-      component.onContextMenu(event, { detailImagePath: '/img/detail.jpg' } as any);
-      expect(event.preventDefault).toHaveBeenCalled();
-      expect(event.stopPropagation).toHaveBeenCalled();
-    });
-
-    it('prevents default even when detailImagePath is empty', () => {
-      component.onContextMenu(event, { detailImagePath: '' } as any);
-      expect(event.preventDefault).toHaveBeenCalled();
-      expect(event.stopPropagation).toHaveBeenCalled();
-    });
-  });
+  // Right-click → detail dialog is now handled by the inner <app-card> /
+  // <app-card-like> components themselves (they call event.stopPropagation),
+  // so the modal no longer owns its own onContextMenu method. Verified by the
+  // CardComponent / CardLikeComponent unit tests.
 
   // ── toTypeLabel ───────────────────────────────────────────────────────────
 
