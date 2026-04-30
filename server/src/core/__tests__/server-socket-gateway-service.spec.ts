@@ -6,6 +6,14 @@ import { LoggerService } from '../logger-service.ts';
 import { AuthSessionService } from '../auth/auth-session-service.ts';
 import type { ServerEmitEvents, ServerListenEvents } from 'shared/types/index.ts';
 
+// Fixture version used in place of the real SERVER_VERSION constant. Chosen
+// to be visibly synthetic so assertion failures point straight at the test.
+const SERVER_VERSION_FIXTURE = '9.9.9-test';
+
+// The serverHello payload that every successful auth path emits first.
+// Captured here so tests assert against a single canonical record.
+const HELLO_EMIT = { event: 'serverHello', args: [{ version: SERVER_VERSION_FIXTURE }] };
+
 // Minimal logger stub that silences output during tests.
 const makeLoggerStub = (): LoggerService =>
   ({
@@ -130,6 +138,7 @@ Deno.test('ServerSocketGatewayService — first connection registers without kic
     lobby,
     makeLoggerStub(),
     makeAuthStub('alice'),
+    SERVER_VERSION_FIXTURE,
   );
   gateway.registerConnectionHandler();
 
@@ -137,10 +146,11 @@ Deno.test('ServerSocketGatewayService — first connection registers without kic
   connect(server, a);
 
   // No prior socket existed, so the lobby is registered cleanly and the
-  // socket receives no `sessionTakenOver` event.
+  // socket receives the serverHello handshake but no `sessionTakenOver`
+  // event.
   assertEquals(lobby.registered.length, 1);
   assertEquals(lobby.registered[0]?.username, 'alice');
-  assertEquals(a.emitted.length, 0);
+  assertEquals(a.emitted, [HELLO_EMIT]);
   assertEquals(a.disconnected, false);
 });
 
@@ -152,6 +162,7 @@ Deno.test('ServerSocketGatewayService — second connection for same user kicks 
     lobby,
     makeLoggerStub(),
     makeAuthStub('alice'),
+    SERVER_VERSION_FIXTURE,
   );
   gateway.registerConnectionHandler();
 
@@ -161,11 +172,12 @@ Deno.test('ServerSocketGatewayService — second connection for same user kicks 
   connect(server, b);
 
   // The new socket triggers a sessionTakenOver emit on the prior socket
-  // followed by a forced disconnect. Both tabs cannot stay connected
-  // under the one-user one-tab policy.
-  assertEquals(a.emitted, [{ event: 'sessionTakenOver', args: [] }]);
+  // (after its own serverHello handshake) followed by a forced
+  // disconnect. Both tabs cannot stay connected under the one-user
+  // one-tab policy.
+  assertEquals(a.emitted, [HELLO_EMIT, { event: 'sessionTakenOver', args: [] }]);
   assertEquals(a.disconnected, true);
-  assertEquals(b.emitted.length, 0);
+  assertEquals(b.emitted, [HELLO_EMIT]);
   assertEquals(b.disconnected, false);
   // The new socket is the one registered with the lobby.
   assertEquals(lobby.registered.length, 2);
@@ -181,7 +193,7 @@ Deno.test('ServerSocketGatewayService — different users do not kick each other
     validateToken: (token: string) => (token === 'token-socket-A' ? 'alice' : 'bob'),
   } as unknown as AuthSessionService;
 
-  const gateway = new ServerSocketGatewayService(server.io, lobby, makeLoggerStub(), auth);
+  const gateway = new ServerSocketGatewayService(server.io, lobby, makeLoggerStub(), auth, SERVER_VERSION_FIXTURE);
   gateway.registerConnectionHandler();
 
   const a = makeFakeSocket('socket-A');
@@ -190,10 +202,10 @@ Deno.test('ServerSocketGatewayService — different users do not kick each other
   connect(server, b);
 
   // Distinct usernames must not collide; alice's socket stays open when
-  // bob connects.
-  assertEquals(a.emitted.length, 0);
+  // bob connects. Each receives only the serverHello handshake.
+  assertEquals(a.emitted, [HELLO_EMIT]);
   assertEquals(a.disconnected, false);
-  assertEquals(b.emitted.length, 0);
+  assertEquals(b.emitted, [HELLO_EMIT]);
 });
 
 Deno.test('ServerSocketGatewayService — takeover-kick disconnect does not erase the new socket binding', () => {
@@ -204,6 +216,7 @@ Deno.test('ServerSocketGatewayService — takeover-kick disconnect does not eras
     lobby,
     makeLoggerStub(),
     makeAuthStub('alice'),
+    SERVER_VERSION_FIXTURE,
   );
   gateway.registerConnectionHandler();
 
@@ -218,7 +231,9 @@ Deno.test('ServerSocketGatewayService — takeover-kick disconnect does not eras
   const c = makeFakeSocket('socket-C');
   connect(server, c);
 
-  assertEquals(b.emitted, [{ event: 'sessionTakenOver', args: [] }]);
+  // b first received its own serverHello, then the takeover-kick emit
+  // when c connected.
+  assertEquals(b.emitted, [HELLO_EMIT, { event: 'sessionTakenOver', args: [] }]);
   assertEquals(b.disconnected, true);
 });
 
@@ -230,6 +245,7 @@ Deno.test('ServerSocketGatewayService — natural disconnect clears the binding'
     lobby,
     makeLoggerStub(),
     makeAuthStub('alice'),
+    SERVER_VERSION_FIXTURE,
   );
   gateway.registerConnectionHandler();
 
@@ -245,6 +261,54 @@ Deno.test('ServerSocketGatewayService — natural disconnect clears the binding'
   connect(server, b);
 
   // No prior socket survives, so b must connect without kicking anything.
-  assertEquals(b.emitted.length, 0);
+  // Only the serverHello handshake is emitted.
+  assertEquals(b.emitted, [HELLO_EMIT]);
   assertEquals(b.disconnected, false);
+});
+
+Deno.test('ServerSocketGatewayService — rejects connection without sessionId and does not emit serverHello', () => {
+  const server = makeFakeServer();
+  const lobby = makeLobbyDirectoryStub();
+  const gateway = new ServerSocketGatewayService(
+    server.io,
+    lobby,
+    makeLoggerStub(),
+    makeAuthStub('alice'),
+    SERVER_VERSION_FIXTURE,
+  );
+  gateway.registerConnectionHandler();
+
+  const a = makeFakeSocket('socket-A');
+  // Simulate a malformed handshake by clearing sessionId from the query
+  // map. The gateway must reject before reaching the auth check or the
+  // serverHello emit.
+  a.handshake.query.delete('sessionId');
+  connect(server, a);
+
+  assertEquals(a.disconnected, true);
+  assertEquals(a.emitted.length, 0);
+  assertEquals(lobby.registered.length, 0);
+});
+
+Deno.test('ServerSocketGatewayService — rejects invalid auth token and does not emit serverHello', () => {
+  const server = makeFakeServer();
+  const lobby = makeLobbyDirectoryStub();
+  // Auth stub resolves to undefined for any token, simulating a revoked
+  // or unrecognized session.
+  const gateway = new ServerSocketGatewayService(
+    server.io,
+    lobby,
+    makeLoggerStub(),
+    makeAuthStub(undefined),
+    SERVER_VERSION_FIXTURE,
+  );
+  gateway.registerConnectionHandler();
+
+  const a = makeFakeSocket('socket-A');
+  connect(server, a);
+
+  // Auth rejection must short-circuit before serverHello fires.
+  assertEquals(a.disconnected, true);
+  assertEquals(a.emitted.length, 0);
+  assertEquals(lobby.registered.length, 0);
 });
