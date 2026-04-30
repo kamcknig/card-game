@@ -4,7 +4,6 @@ import { NanostoresService } from '@nanostores/angular';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { CardLike, CardLikeId, CardLikeNoId } from 'shared/types';
 import { findCardLikeInMatch } from 'shared/find-card-like-in-match';
-import { CardSize } from '../../../types';
 import { cardStore } from '../../state/card-state';
 import { matchStore } from '../../state/match-state';
 import { displayCardDetail } from '../match/views/modal/display-card-detail';
@@ -61,7 +60,6 @@ export class CardLikeComponent {
   // screen, where landscape templates exist before the match starts).
   cardLikeId = input<CardLikeId | undefined>(undefined);
   cardLikeData = input<CardLike | CardLikeNoId | undefined>(undefined);
-  size = input<CardSize>('half');
   // When unset, the SCSS default (--card-landscape-width) takes effect, so
   // landscape cards render at their intrinsic width. Pass an explicit value
   // only for surfaces that need a non-default width (e.g. way-picker overlay).
@@ -95,13 +93,15 @@ export class CardLikeComponent {
   });
 
   // Detail image path for right-click detail modal. Derived from expansionName
-  // + cardKey to bypass stale paths in saved configurations.
+  // + (imageKeyOverride ?? cardKey) to bypass stale paths in saved configurations
+  // and to honor pile-level image overrides on catalog representatives.
   readonly detailPath = computed(() => {
     const cardLike = this.cardLike();
     if (!cardLike) return undefined;
     const expansionName = (cardLike as { expansionName?: string }).expansionName;
     if (!expansionName) return cardLike.detailImagePath;
-    return `/assets/card-images/${expansionName}/${cardLike.cardKey}-detail.jpg`;
+    const imageKey = (cardLike as { imageKeyOverride?: string }).imageKeyOverride ?? cardLike.cardKey;
+    return `/assets/card-images/${expansionName}/${imageKey}-detail.jpg`;
   });
 
   // Detail-resolution fallback for the rare case where the in-card art image
@@ -112,7 +112,7 @@ export class CardLikeComponent {
   readonly resolvedPath = computed(() => {
     const cardLike = this.cardLike();
     if (!cardLike) return undefined;
-    return this.resolveImagePath(cardLike, this.size());
+    return this.resolveImagePath(cardLike);
   });
 
   // Final image path honoring load-error fallback override.
@@ -153,11 +153,10 @@ export class CardLikeComponent {
   // Optional debt cost (Empires expansion).
   readonly debtCost = computed<number>(() => this.cardLike()?.cost?.debt ?? 0);
 
-  // Reset fallback override whenever source card-like or desired size changes.
+  // Reset fallback override whenever the source card-like changes.
   private readonly _resetFallbackOverrideEffect = effect(() => {
     this.cardLikeId();
     this.cardLikeData();
-    this.size();
     this._fallbackOverridePath.set(undefined);
   });
 
@@ -178,19 +177,18 @@ export class CardLikeComponent {
     this._fallbackOverridePath.set(fallbackPath);
   }
 
-  // Card-likes use the small art image in-card and the large detail image
-  // for the right-click zoom view. URLs are derived from expansionName +
-  // cardKey rather than read from stored fields so saved configurations with
-  // legacy paths still resolve to the current flat asset layout.
+  // Card-likes always render the flat art image in-card; the detail image is
+  // loaded separately by the right-click zoom flow (see displayCardDetail).
+  // URL is derived from expansionName + (imageKeyOverride ?? cardKey) rather
+  // than the stored artImagePath so saved configurations with legacy paths
+  // still resolve to the current flat asset layout, and pile catalog
+  // representatives can render the pile cover image.
   private resolveImagePath(
-    cardLike: { artImagePath: string; detailImagePath: string; expansionName?: string; cardKey: string },
-    size: CardSize,
+    cardLike: { artImagePath: string; expansionName?: string; cardKey: string; imageKeyOverride?: string },
   ): string {
     const expansionName = cardLike.expansionName;
-    if (!expansionName) {
-      return size === 'detail' ? cardLike.detailImagePath : cardLike.artImagePath;
-    }
-    const suffix = size === 'detail' ? 'detail' : 'art';
-    return `/assets/card-images/${expansionName}/${cardLike.cardKey}-${suffix}.jpg`;
+    if (!expansionName) return cardLike.artImagePath;
+    const imageKey = cardLike.imageKeyOverride ?? cardLike.cardKey;
+    return `/assets/card-images/${expansionName}/${imageKey}-art.jpg`;
   }
 }

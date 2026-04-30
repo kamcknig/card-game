@@ -91,13 +91,11 @@
                 <div class="card-item">
                   @if (currentVisibleMat.mat === 'set-aside' && !isCardInstance(cardId)) {
                     <app-card-like
-                      [size]="'half'"
                       [cardLikeId]="cardId"
                     ></app-card-like>
                   }
                   @else {
                     <app-card
-                      [size]="'half'"
                       [cardId]="cardId"
                       [forceFacing]="currentVisibleMat.mat === 'set-aside' ? undefined : 'front'"
                     ></app-card>

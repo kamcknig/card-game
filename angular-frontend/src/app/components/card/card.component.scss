@@ -20,6 +20,7 @@
   display: flex;
   flex-direction: column;
   width: var(--card-width);
+  height: var(--card-small-height);
   border: 1px solid var(--theme-border-strong);
   border-radius: var(--theme-radius-md);
   background: var(--theme-surface-panel);
@@ -27,14 +28,6 @@
   box-sizing: border-box;
   isolation: isolate;
   transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
-}
-
-.card-frame.size-half {
-  height: var(--card-small-height);
-}
-
-.card-frame.size-full {
-  height: var(--card-height);
 }
 
 // Hover styling — accent-tinted shadow + border. The scale transform lives on

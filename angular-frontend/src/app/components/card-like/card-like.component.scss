@@ -63,9 +63,10 @@
 
 // Card name rendered inline inside the accent strip. Single-line and
 // truncated with an ellipsis when the name is wider than the bar; min-width:
-// 0 lets the flex item shrink so text-overflow can kick in. Left-aligned so
-// when card-likes cascade in compact mode, the name sits in the visible
-// leftmost portion of each overlapping card.
+// 0 lets the flex item shrink so text-overflow can kick in. Centered by
+// default; switches to left-aligned only inside the match landscape grid's
+// compact (cascade) layout, where the leading half of each overlapping card
+// is the only portion visible.
 .card-like-name {
   min-width: 0;
   max-width: 100%;
@@ -73,7 +74,7 @@
   font-size: 1rem;
   font-weight: 700;
   letter-spacing: 0.04em;
-  text-align: left;
+  text-align: center;
   color: #000000;
   white-space: nowrap;
   overflow: hidden;
@@ -81,19 +82,28 @@
   line-height: 1.1;
 }
 
-// Accent strip at the bottom of the frame echoing the portrait card type-bar
-// treatment. Hosts the card name as a left-aligned label; color is driven by
-// the card-like's kind via --card-like-accent, muted by ~45% to match the
-// bottom filler bar.
+:host-context(.landscape-grid.compact) .card-like-name {
+  text-align: left;
+}
+
+// Accent strip at the top of the frame echoing the portrait card type-bar
+// treatment. Hosts the card name; color is driven by the card-like's kind
+// via --card-like-accent, muted by ~45% to match the bottom filler bar.
+// Center-justified by default; switches to flex-start under the compact
+// match landscape grid so the name lines up with its visible leading half.
 .card-like-accent-strip {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   min-height: 30px;
   padding: 0 var(--theme-space-sm);
   background: color-mix(in srgb, var(--card-like-accent) 55%, gray);
   overflow: hidden;
+}
+
+:host-context(.landscape-grid.compact) .card-like-accent-strip {
+  justify-content: flex-start;
 }
 
 .card-like-frame:hover {

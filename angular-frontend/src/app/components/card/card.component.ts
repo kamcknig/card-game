@@ -3,7 +3,6 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
 import { cardStore } from '../../state/card-state';
 import { Card, CardFacing, CardId, CardNoId, CardType, Match, TokenDefinition, TokenId, TokenInstance } from 'shared/types';
-import { CardSize } from '../../../types';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { selfPlayerIdStore } from '../../state/player-state';
 import { matchStore } from '../../state/match-state';
@@ -72,7 +71,6 @@ export class CardComponent {
   // as pre-selected templates without a runtime id yet).
   cardId = input<CardId | undefined>(undefined);
   cardData = input<Card | CardNoId | undefined>(undefined);
-  size = input<CardSize>('full');
   // Optional override to force a card to render face up/down regardless of ownership.
   forceFacing = input<CardFacing | undefined>(undefined);
   // When false, the structured cost badge inside the card is suppressed. Parent
@@ -115,10 +113,11 @@ export class CardComponent {
   });
 
   // Sanitized image URL — flat art image when face up, card-back art when face down.
-  // The `size` input no longer influences the source URL; it only affects CSS sizing.
   // The URL is derived from expansionName + cardKey rather than read from
   // card.artImagePath so stale saved configurations (with legacy paths or no
   // artImagePath at all) still resolve to the current flat asset layout.
+  // imageKeyOverride wins over cardKey when present — set on multi-card pile
+  // catalog representatives so the kingdom modal renders the pile cover image.
   readonly path = computed<SafeUrl | undefined>(() => {
     const card = this.card();
     if (!card) return undefined;
@@ -126,8 +125,9 @@ export class CardComponent {
     if (this.isFaceDown()) {
       return this._sanitizer.bypassSecurityTrustUrl('/assets/card-images/base-v2/card-back-art.jpg');
     }
+    const imageKey = card.imageKeyOverride ?? card.cardKey;
     return this._sanitizer.bypassSecurityTrustUrl(
-      `/assets/card-images/${card.expansionName}/${card.cardKey}-art.jpg`,
+      `/assets/card-images/${card.expansionName}/${imageKey}-art.jpg`,
     );
   });
 
@@ -203,8 +203,9 @@ export class CardComponent {
     return this.buildTokenBadges(this._match() ?? null, this._tokenDefinitions(), cardId);
   });
 
-  // Token size mirrors pile badges: smaller for half-sized cards.
-  readonly tokenSizePx = computed(() => this.size() === 'half' ? 25 : 35);
+  // Token badge size — small to match the half-size card frame the rest of
+  // the app renders.
+  readonly tokenSizePx = 25;
 
   // Opens a detail view when right-clicking the card.
   onContextMenu(event: MouseEvent) {
@@ -216,11 +217,13 @@ export class CardComponent {
       return;
     }
 
-    // Derive the detail URL from expansionName + cardKey for the same reason
-    // path() does — saved configurations may carry stale legacy paths.
+    // Derive the detail URL from expansionName + (override ?? cardKey) for the
+    // same reason path() does — saved configurations may carry stale legacy
+    // paths, and pile catalog representatives need the pile-level detail image.
+    const imageKey = card.imageKeyOverride ?? card.cardKey;
     const detailImagePath = this.isFaceDown()
       ? CardComponent.CARD_BACK_DETAIL_IMAGE_PATH
-      : `/assets/card-images/${card.expansionName}/${card.cardKey}-detail.jpg`;
+      : `/assets/card-images/${card.expansionName}/${imageKey}-detail.jpg`;
 
     if (!detailImagePath) {
       return;
