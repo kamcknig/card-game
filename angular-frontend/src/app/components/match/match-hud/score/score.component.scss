@@ -6,7 +6,11 @@
 // per-panel chrome (background / border / shadow) so the whole screen reads
 // as one surface separated only by the column / row dividers.
 .score-panel {
-  color: var(--theme-text-on-dark);
+  // theme-text-primary adapts (dark in light mode, light cream in dark mode)
+  // so the player name reads against either body without affecting the
+  // cost/count chrome elsewhere on the match screen that still uses
+  // theme-text-on-dark.
+  color: var(--theme-text-primary);
   display: flex;
   flex-direction: column;
   gap: var(--theme-space-md);
@@ -89,4 +93,19 @@
   text-align: right;
   color: var(--theme-color-source-victory);
   font-family: var(--theme-font-body);
+}
+
+// Light-mode overrides. The source-victory token is a bright lime that's
+// unreadable on the warm-beige body, and the active-row chrome uses
+// semi-transparent white that disappears entirely. Mix the VP green with
+// black for legibility and flip the active-row chrome to a soft dark wash.
+:host-context([data-theme="light"]) {
+  .score-value {
+    color: color-mix(in srgb, var(--theme-color-source-victory) 45%, black);
+  }
+
+  .player-score-row.current-player {
+    border-color: rgba(0, 0, 0, 0.18);
+    background: rgba(0, 0, 0, 0.06);
+  }
 }

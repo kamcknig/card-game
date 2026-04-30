@@ -119,8 +119,11 @@ app-game-log {
   padding: var(--theme-space-sm) var(--theme-space-md);
   border: 1px solid var(--theme-border-strong);
   border-radius: var(--theme-radius-md);
-  background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
-  color: var(--theme-text-on-dark);
+  // Theme-adaptive surface and text — replaces the prior fixed-black
+  // overlay + always-white text that ignored the active theme.
+  background: var(--theme-surface-panel);
+  color: var(--theme-text-primary);
+  box-shadow: var(--theme-shadow-medium);
   font-size: 12px;
   line-height: 1.35;
   // Keep runtime ids copyable when the debug overlay is visible.
@@ -157,14 +160,17 @@ app-game-log {
   background: transparent;
   border: 1px solid var(--theme-border-strong);
   border-radius: var(--theme-radius-sm);
-  color: var(--theme-text-on-dark);
+  color: var(--theme-text-primary);
   font-family: var(--theme-font-body);
   font-size: 11px;
   cursor: pointer;
   text-align: left;
 
+  // text-primary tint adapts to the active theme: a soft dark tint in light
+  // mode, a soft cream tint in dark mode. Replaces the prior fixed white
+  // overlay that disappeared on a light surface.
   &:hover {
-    background: rgba(255, 255, 255, 0.08);
+    background: color-mix(in srgb, var(--theme-text-primary) 10%, transparent);
   }
 }
 
