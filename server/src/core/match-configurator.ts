@@ -492,12 +492,44 @@ export class MatchConfigurator {
       }
     }
 
+    // Resolve the full member list for each pile so that a preselected randomizer
+    // card (e.g. Castles, Knights, Augurs) expands to the full pile in the supply
+    // instead of producing N copies of just the randomizer card. Mirrors how the
+    // random-kingdom path treats multi-card piles (see the cardsInRandomizer branch above).
+    const allSelectedExpansions = this._config.expansions.reduce((acc, allowedExpansion) => {
+      const expansionData = this._expansionCatalogService.getExpansion(allowedExpansion.name);
+      if (!expansionData) {
+        this._loggerService.warn(`[match configurator] expansion ${allowedExpansion.name} not found`);
+        return acc;
+      }
+      acc.push(expansionData);
+      return acc;
+    }, [] as ExpansionData[]);
+
+    const randomizerGroups = getAvailableKingdomRandomizerGroups({
+      expansions: allSelectedExpansions,
+    });
+    const groupByPileKey = new Map(randomizerGroups.map(group => [group.pileKey, group]));
+
     this._config.kingdomSupply = structuredClone(
       selectedKingdoms
         .map(card => {
+          const pileKey = getCardPileKey(card);
+          const group = groupByPileKey.get(pileKey);
+          const members = group?.cards ?? [card];
+
+          // Single-card pile: keep the existing N-copies behaviour.
+          if (members.length === 1) {
+            return {
+              name: pileKey,
+              cards: new Array(getDefaultKingdomSupplySize(members[0], this._config)).fill(members[0]),
+            };
+          }
+
+          // Multi-card pile: every member appears once, mirroring the random-kingdom path.
           return {
-            name: card.cardKey,
-            cards: new Array(getDefaultKingdomSupplySize(card, this._config)).fill(card),
+            name: pileKey,
+            cards: structuredClone(members),
           };
         })
         .concat(additionalKingdoms),

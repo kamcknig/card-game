@@ -113,10 +113,11 @@ export class CardComponent {
   });
 
   // Sanitized image URL — flat art image when face up, card-back art when face down.
-  // The `size` input no longer influences the source URL; it only affects CSS sizing.
   // The URL is derived from expansionName + cardKey rather than read from
   // card.artImagePath so stale saved configurations (with legacy paths or no
   // artImagePath at all) still resolve to the current flat asset layout.
+  // imageKeyOverride wins over cardKey when present — set on multi-card pile
+  // catalog representatives so the kingdom modal renders the pile cover image.
   readonly path = computed<SafeUrl | undefined>(() => {
     const card = this.card();
     if (!card) return undefined;
@@ -124,8 +125,9 @@ export class CardComponent {
     if (this.isFaceDown()) {
       return this._sanitizer.bypassSecurityTrustUrl('/assets/card-images/base-v2/card-back-art.jpg');
     }
+    const imageKey = card.imageKeyOverride ?? card.cardKey;
     return this._sanitizer.bypassSecurityTrustUrl(
-      `/assets/card-images/${card.expansionName}/${card.cardKey}-art.jpg`,
+      `/assets/card-images/${card.expansionName}/${imageKey}-art.jpg`,
     );
   });
 
@@ -215,11 +217,13 @@ export class CardComponent {
       return;
     }
 
-    // Derive the detail URL from expansionName + cardKey for the same reason
-    // path() does — saved configurations may carry stale legacy paths.
+    // Derive the detail URL from expansionName + (override ?? cardKey) for the
+    // same reason path() does — saved configurations may carry stale legacy
+    // paths, and pile catalog representatives need the pile-level detail image.
+    const imageKey = card.imageKeyOverride ?? card.cardKey;
     const detailImagePath = this.isFaceDown()
       ? CardComponent.CARD_BACK_DETAIL_IMAGE_PATH
-      : `/assets/card-images/${card.expansionName}/${card.cardKey}-detail.jpg`;
+      : `/assets/card-images/${card.expansionName}/${imageKey}-detail.jpg`;
 
     if (!detailImagePath) {
       return;

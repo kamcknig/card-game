@@ -15,6 +15,7 @@ import { ExpansionCatalogService } from './expansion-catalog-service.ts';
 import { LoggerService } from './logger-service.ts';
 import { getCardPileKey } from '../utils/get-card-pile-key.ts';
 import { getPileDefinitionCard } from '../utils/get-pile-definition-card.ts';
+import { formatCardName } from '../utils/format-card-name.ts';
 
 // Owns all search indexes used by lobby selection UI.
 export class ExpansionSearchService {
@@ -71,6 +72,23 @@ export class ExpansionSearchService {
     for (const [pileKey, members] of cardsByPileKey) {
       const representative = getPileDefinitionCard(members, pileKey);
       if (representative) {
+        // For JSON-defined pile randomizers, point the modal's art and detail
+        // image lookups at the pile-level image (e.g. 'castles-art.jpg') and
+        // override the display name so the row reads as the pile, not the
+        // first member. randomizerData is set only for cards loaded from a
+        // `pile` JSON block; single-card kingdoms have no randomizerData and
+        // fall through with no override. Slashes in randomizer keys
+        // (e.g. 'catapult/rocks') are converted to hyphens for filesystem-safe
+        // asset paths but preserved in the display name with each side
+        // title-cased ("Catapult / Rocks").
+        const randomizerKey = representative.randomizerData?.randomizer;
+        if (randomizerKey) {
+          representative.imageKeyOverride = randomizerKey.replace(/\//g, '-');
+          representative.cardName = randomizerKey
+            .split('/')
+            .map(segment => formatCardName(segment))
+            .join(' / ');
+        }
         dedupedCards.push(representative);
       }
     }

@@ -816,6 +816,12 @@ export class CardLike<M = unknown> {
   randomizerData?: RandomizerData;
   // Indicates whether the card is eligible for kingdom selection.
   kingdomSelectable?: boolean;
+  // Pile-level image lookup override. When set, the frontend image resolvers
+  // derive art and detail URLs from this key instead of cardKey. Used on the
+  // search-catalog representatives for multi-card piles so the kingdom modal
+  // shows e.g. 'castles-art.jpg' rather than the first member's art. Real
+  // in-play cards do not set this — they always render their own art.
+  imageKeyOverride?: string;
   metadata: M;
 
   constructor(args: CardLike) {
@@ -838,6 +844,7 @@ export class CardLike<M = unknown> {
     }
     this.randomizerData = args.randomizerData;
     this.kingdomSelectable = args.kingdomSelectable ?? true;
+    this.imageKeyOverride = args.imageKeyOverride;
     this.cost = args.cost ?? { treasure: 0 };
     const metadata = args.metadata ?? {};
     this.metadata = metadata as M;

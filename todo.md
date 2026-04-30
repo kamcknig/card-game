@@ -6,10 +6,6 @@
 
 ---
 
-use proper card images for selection on match configuration
-
----
-
 add settings to the match screen
 - toggle light/dark mode
 - toggle timestamps on ui log
@@ -26,11 +22,6 @@ Send configuration to front-end include things like
 
 - regex for email
 - regex for username
-
----
-
-Knights appear in search for kingdoms when adding cards - only randomizers
-should appear
 
 ---
 

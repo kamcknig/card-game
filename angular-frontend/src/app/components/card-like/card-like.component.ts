@@ -93,13 +93,15 @@ export class CardLikeComponent {
   });
 
   // Detail image path for right-click detail modal. Derived from expansionName
-  // + cardKey to bypass stale paths in saved configurations.
+  // + (imageKeyOverride ?? cardKey) to bypass stale paths in saved configurations
+  // and to honor pile-level image overrides on catalog representatives.
   readonly detailPath = computed(() => {
     const cardLike = this.cardLike();
     if (!cardLike) return undefined;
     const expansionName = (cardLike as { expansionName?: string }).expansionName;
     if (!expansionName) return cardLike.detailImagePath;
-    return `/assets/card-images/${expansionName}/${cardLike.cardKey}-detail.jpg`;
+    const imageKey = (cardLike as { imageKeyOverride?: string }).imageKeyOverride ?? cardLike.cardKey;
+    return `/assets/card-images/${expansionName}/${imageKey}-detail.jpg`;
   });
 
   // Detail-resolution fallback for the rare case where the in-card art image
@@ -177,14 +179,16 @@ export class CardLikeComponent {
 
   // Card-likes always render the flat art image in-card; the detail image is
   // loaded separately by the right-click zoom flow (see displayCardDetail).
-  // URL is derived from expansionName + cardKey rather than the stored field
-  // so saved configurations with legacy paths still resolve to the current
-  // flat asset layout.
+  // URL is derived from expansionName + (imageKeyOverride ?? cardKey) rather
+  // than the stored artImagePath so saved configurations with legacy paths
+  // still resolve to the current flat asset layout, and pile catalog
+  // representatives can render the pile cover image.
   private resolveImagePath(
-    cardLike: { artImagePath: string; expansionName?: string; cardKey: string },
+    cardLike: { artImagePath: string; expansionName?: string; cardKey: string; imageKeyOverride?: string },
   ): string {
     const expansionName = cardLike.expansionName;
     if (!expansionName) return cardLike.artImagePath;
-    return `/assets/card-images/${expansionName}/${cardLike.cardKey}-art.jpg`;
+    const imageKey = cardLike.imageKeyOverride ?? cardLike.cardKey;
+    return `/assets/card-images/${expansionName}/${imageKey}-art.jpg`;
   }
 }
