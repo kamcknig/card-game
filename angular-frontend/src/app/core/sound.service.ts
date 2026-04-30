@@ -15,6 +15,13 @@ const STORAGE_KEY = 'dominion-sound';
 export class SoundService {
   readonly enabled = signal<boolean>(this._loadInitial());
 
+  // Holds strong refs to in-flight Audio objects. Without this, the only
+  // reference disappears when the caller's `await soundService.play(...)`
+  // resolves — which can let Chromium GC the Audio mid-playback so the user
+  // hears nothing on the second-and-later invocation. Each entry is removed
+  // when the audio finishes (or errors) so the set never grows unbounded.
+  private readonly _activeAudios = new Set<HTMLAudioElement>();
+
   constructor() {
     // Persist the user's choice on every change.
     effect(() => {
@@ -39,12 +46,17 @@ export class SoundService {
    */
   async play(src: string, volume: number): Promise<HTMLAudioElement | null> {
     if (!this.enabled()) return null;
+    const audio = new Audio(src);
+    audio.volume = Math.max(0, Math.min(1, volume));
+    this._activeAudios.add(audio);
+    const release = () => this._activeAudios.delete(audio);
+    audio.addEventListener('ended', release, { once: true });
+    audio.addEventListener('error', release, { once: true });
     try {
-      const audio = new Audio(src);
-      audio.volume = Math.max(0, Math.min(1, volume));
       await audio.play();
       return audio;
     } catch (error) {
+      release();
       console.debug('[sound-service] playback failed', src, error);
       return null;
     }

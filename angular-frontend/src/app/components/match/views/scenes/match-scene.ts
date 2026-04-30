@@ -12,7 +12,7 @@ import {
 } from '../../../../state/interactive-state';
 import {resolveCountSpec} from 'shared/resolve-count-spec';
 import {validateCountSpec} from 'shared/validate-count-spec';
-import {currentPlayerTurnIdStore, turnPhaseStore} from '../../../../state/turn-state';
+import {currentPlayerTurnIdStore, turnNumberStore, turnPhaseStore} from '../../../../state/turn-state';
 import {SocketService} from '../../../../core/socket-service/socket.service';
 import {waySelectableCardStore} from '../../../../state/interactive-logic';
 import {SelectCardArgs} from '../../../../../types';
@@ -29,6 +29,9 @@ export class MatchScene {
   private _selecting: boolean = false;
   private _selectingPiles: boolean = false;
   private _selfId: PlayerId = selfPlayerIdStore.get()!;
+  // Tracks the turn number the start-of-turn sound has been played for so we
+  // don't replay it when matchStore updates within the same turn.
+  private _lastPlayedTurnNumber: number | undefined = undefined;
 
   private get uiInteractive(): boolean {
     return !this._selecting && !this._selectingPiles && !awaitingServerLockReleaseStore.get();
@@ -58,7 +61,17 @@ export class MatchScene {
       this._socketService.off('userPrompt');
     });
 
+    // Drive document.title off the current-player id (it can stay subscribed
+    // here even with batched patches because the title is only meaningful for
+    // the latest value).
     this._cleanup.push(currentPlayerTurnIdStore.subscribe(this.onCurrentPlayerTurnUpdated));
+
+    // Drive the start-of-turn sound off turnNumber instead of the
+    // current-player id. When a computer-only round is delivered as a single
+    // batched patch (user → AI1 → AI2 → AI3 → user), currentPlayerTurnIdStore
+    // sees the same id as before the patch and never notifies — turnNumber
+    // always advances per turn, so this fires reliably even across batches.
+    this._cleanup.push(turnNumberStore.subscribe(this.onTurnNumberChanged));
     // Close any active Way picker when phase flow changes.
     this._cleanup.push(turnPhaseStore.subscribe(() => this.closeWayPicker()));
     this._cleanup.push(promptInteractionLockStore.subscribe((locked) => {
@@ -88,11 +101,19 @@ export class MatchScene {
     await this._soundService.play('./assets/sounds/your-turn.mp3', volume);
   }
 
-  private onCurrentPlayerTurnUpdated = async (playerId: number) => {
+  private onCurrentPlayerTurnUpdated = (playerId: number) => {
     document.title = `Dominion - ${playerStore(playerId).get()?.name}`;
+  }
 
-    if (playerId !== selfPlayerIdStore.get()) return;
-
+  // Plays the start-of-turn sound the first time we observe a given turn
+  // number (and only when that turn belongs to the local player). Listening
+  // to turnNumber rather than currentPlayerTurnId is what survives batched
+  // patches that compress an entire computer-only round into a single
+  // matchStore update.
+  private onTurnNumberChanged = async (turnNumber: number) => {
+    if (turnNumber === this._lastPlayedTurnNumber) return;
+    this._lastPlayedTurnNumber = turnNumber;
+    if (currentPlayerTurnIdStore.get() !== this._selfId) return;
     await this._soundService.play('./assets/sounds/your-turn.mp3', 0.3);
   }
 
