@@ -139,7 +139,10 @@
 }
 
 .stack-label {
-  color: var(--theme-text-on-dark);
+  // theme-text-primary adapts (dark in light mode, light cream in dark mode)
+  // so DECK / DISCARD labels remain readable on either body without changing
+  // the cost/count chrome elsewhere on the match screen.
+  color: var(--theme-text-primary);
   font-size: 12px;
   letter-spacing: 0.2px;
   font-weight: 700;
@@ -442,8 +445,10 @@
 }
 
 .token-tray-label {
-  color: var(--theme-text-on-dark);
-  font-size: 12px;
+  // theme-text-primary adapts so "Available Tokens" / "Active Tokens"
+  // headings read on either body without affecting the cost/count chrome.
+  color: var(--theme-text-primary);
+  font-size: 16px;
   margin-bottom: var(--theme-space-xs);
 }
 
@@ -504,13 +509,15 @@
 }
 
 // PLAY ALL TREASURE / END BUYS / END ACTIONS buttons rendered inline at the
-// right end of the phase status bar.
+// right end of the phase status bar. theme-surface-panel + text-primary so
+// the button picks up either theme; the play-all-treasures variant below
+// overrides the fill to the gold accent.
 .turn-action-button {
   border: 1px solid var(--theme-border-strong);
   border-radius: var(--theme-radius-md);
   padding: var(--theme-space-sm) var(--theme-space-md);
-  color: var(--theme-text-on-dark);
-  background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
+  color: var(--theme-text-primary);
+  background: var(--theme-surface-panel);
   font-family: var(--theme-font-body);
   font-size: 12px;
   font-weight: 600;
@@ -521,6 +528,10 @@
 
 .next-phase-button:hover {
   border-color: var(--theme-border-action);
+  // text-primary tint shows a soft contrast against the panel surface in
+  // either theme — same trick used by the game-log settings rows where
+  // theme-action-secondary-bg matches the panel in dark mode.
+  background: color-mix(in srgb, var(--theme-text-primary) 10%, var(--theme-surface-panel));
 }
 
 // Filled gold button — the treasure-themed primary CTA in the buy phase.
