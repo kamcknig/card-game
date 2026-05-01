@@ -34,6 +34,9 @@ export class ServerSocketGatewayService {
     private readonly lobbyDirectoryService: LobbyDirectoryService,
     private readonly loggerService: LoggerService,
     private readonly authSessionService: AuthSessionService,
+    // Resolved from the root container's `serverVersion` value registration
+    // so the version travels through DI rather than a global import.
+    private readonly serverVersion: string,
   ) {}
 
   // Registers the socket connection handler exactly once.
@@ -75,6 +78,11 @@ export class ServerSocketGatewayService {
       }
 
       this.loggerService.info(`[SERVER] authenticated user '${username}' for session ${sessionId}`);
+
+      // Emit serverHello before any other server-driven event so the
+      // client has the running version in its store before features that
+      // render it begin firing.
+      socket.emit('serverHello', { version: this.serverVersion });
 
       // Enforce one-user one-tab: kick any prior socket for the same
       // username before recording this socket as the active one. The

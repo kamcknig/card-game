@@ -192,6 +192,37 @@
   border-top: 1px solid var(--theme-border-divider);
 }
 
+// Version footer at the bottom of the settings panel. Mirrors the
+// scene-banner pill format with a top divider so it visually separates
+// from the toggle rows above. Uses flex so the text is vertically
+// centered against the row's padded height instead of sitting at the
+// top.
+.settings-version {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: var(--theme-space-xs);
+  // Cancel the panel's bottom padding so the version row's box reaches
+  // the panel's bottom edge. Without this the panel's padding-bottom
+  // sits below the row and makes the centered text look pushed up.
+  margin-bottom: calc(-1 * var(--theme-space-sm));
+  // Match the visual height of the toggle rows above, which are sized
+  // by their 18px lucide icon plus sm-vertical padding.
+  min-height: calc(18px + var(--theme-space-sm) * 2);
+  padding: var(--theme-space-sm) var(--theme-space-lg);
+  border-top: 1px solid var(--theme-border-divider);
+  font-family: var(--theme-font-mono, var(--theme-font-body));
+  font-size: 11px;
+  // line-height: 1 collapses the inline glyph-box to its visual height
+  // so flex centering lands on the geometric middle instead of riding
+  // on inherited 1.1 descender padding from .content (matches the
+  // .row-label fix in this same file).
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--theme-text-secondary);
+  user-select: text;
+}
+
 .log-content {
   flex: 1 1 auto;
   padding: var(--theme-space-md) var(--theme-space-lg);

@@ -528,6 +528,12 @@ export type MatchConfigurationDeleteResult = {
 
 export type ServerEmitEvents = {
   addLogEntry: (logEntry: LogEntry[]) => void;
+  // Sent to a freshly-authenticated client immediately after the socket
+  // connection is accepted. Carries the server's running semver so the
+  // client can display it next to its own version. Always fires before
+  // any feature event so client UI that gates on the server version
+  // doesn't have to wait.
+  serverHello: (info: { version: string }) => void;
   // Sent by the server immediately before disconnecting a socket whose user
   // session has been claimed by a newer connection. Enforces the one-user
   // one-tab policy: when the same username authenticates a second socket,
