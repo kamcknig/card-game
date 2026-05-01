@@ -53,11 +53,14 @@ az containerapp logs show \
 
 ### Automatic (CI/CD)
 
-Merging to master triggers the full pipeline automatically:
-1. **Build and Push** builds Docker images and pushes them to ACR tagged with the short commit SHA and `latest`
-2. **Deploy** pulls the SHA-tagged image, updates each Container App creating a new revision, then rebinds the custom domain
+Publishing a component-prefixed GitHub release triggers the matching half of the pipeline:
 
-Each deploy uses a unique SHA tag (not `latest`) so Azure always creates a new revision. See `.github/workflows/deploy.yml` for details.
+1. **Build and Push** runs the build job whose tag prefix matches:
+   - `server-vX.Y.Z`   → builds `dominion-clone-server:X.Y.Z` and `:latest`.
+   - `frontend-vX.Y.Z` → builds `dominion-clone-frontend:X.Y.Z` and `:latest`.
+2. **Deploy** resolves the component and stripped version from the release tag and updates only the matching Container App, creating a new revision on that one app. The frontend deploy also rebinds the custom domain.
+
+Each deploy uses the bare semver tag (e.g. `:1.0.0`, not `:latest`) so Azure always creates a new revision. Releases that match neither prefix flow through with no images built and no deploys run. To roll out a coordinated server + frontend update, publish two releases — one for each component. See `.github/workflows/deploy.yml` for details.
 
 ### Manual Update
 
@@ -83,7 +86,7 @@ az containerapp update \
 
 New revisions typically take 30-60 seconds to start serving traffic.
 
-**Important:** Do not deploy with the `:latest` tag. Azure Container Apps only creates a new revision when the image reference string changes. Since `:latest` is always the same string, Azure skips the update. Always use a specific tag (e.g., a short SHA).
+**Important:** Do not deploy with the `:latest` tag. Azure Container Apps only creates a new revision when the image reference string changes. Since `:latest` is always the same string, Azure skips the update. Always use a specific release tag (e.g., `1.0.0` — published from a `server-v1.0.0` or `frontend-v1.0.0` release).
 
 ## Custom Domain
 

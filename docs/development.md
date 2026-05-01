@@ -237,16 +237,33 @@ CI runs on every push and pull request, scoped by path filters so only relevant 
 
 ### Continuous Deployment
 
-CD triggers when a GitHub release is published and flows through two workflows:
+CD is triggered by publishing a GitHub release. The release tag selects which component is built and deployed:
+
+| Tag pattern | Built image | Deployed Container App |
+|-------------|-------------|------------------------|
+| `server-vX.Y.Z` | `dominion-clone-server:X.Y.Z` (and `:latest`) | `dominion-clone-server` |
+| `frontend-vX.Y.Z` | `dominion-clone-frontend:X.Y.Z` (and `:latest`) | `dominion-clone-frontend` |
 
 | Workflow | File | Trigger | What It Does |
 |----------|------|---------|--------------|
-| Build and Push | `.github/workflows/build-and-push.yml` | GitHub release published | Builds Docker images and pushes to ACR with the release tag and `latest` |
-| Deploy | `.github/workflows/deploy.yml` | Successful Build and Push run | Deploys the release-tagged images to Azure Container Apps |
+| Build and Push | `.github/workflows/build-and-push.yml` | GitHub release published | Gates the server and frontend build jobs on the release-tag prefix and pushes the matching image to ACR |
+| Deploy | `.github/workflows/deploy.yml` | Successful Build and Push run | Resolves the component + version from the upstream tag and updates only the matching Azure Container App |
 
 ```
-GitHub release published → Build & Push (ACR) → Deploy (Azure Container Apps)
+GitHub release `server-vX.Y.Z`    → Build server image    → Deploy `dominion-clone-server`
+GitHub release `frontend-vX.Y.Z`  → Build frontend image  → Deploy `dominion-clone-frontend`
 ```
+
+Bumping a version: edit `server/deno.json#version` (server) or `angular-frontend/package.json#version` (frontend), commit, then create a `server-vX.Y.Z` or `frontend-vX.Y.Z` GitHub release pointing at the commit. The runtime version surfaced in logs and the UI reads from those two files, so the file change must precede the release tag.
+
+### Version Sources
+
+The server and the Angular frontend track their own semver independently:
+
+| Component | Source field | Surfaced where |
+|-----------|--------------|----------------|
+| Server | `server/deno.json` → `version` | Startup log line, `serverHello` socket event, `GET /status` JSON |
+| Frontend | `angular-frontend/package.json` → `version` | Scene-banner header pill, in-match game-log settings footer, admin debug runtime overlay |
 
 ### Required GitHub Secrets
 
