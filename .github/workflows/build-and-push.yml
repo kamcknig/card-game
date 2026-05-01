@@ -1,4 +1,11 @@
-# Builds and pushes Docker images to Azure Container Registry when a GitHub release is published.
+# Builds and pushes Docker images to Azure Container Registry when a
+# component-prefixed GitHub release is published. The release tag selects
+# which component is built:
+#   - tag `server-vX.Y.Z`   → builds dominion-clone-server only
+#   - tag `frontend-vX.Y.Z` → builds dominion-clone-frontend only
+# The component prefix is stripped from the resulting image tag, so a
+# `server-v1.2.3` release publishes `dominion-clone-server:1.2.3` (and
+# `:latest`).
 name: Build and Push Docker Images
 
 on:
@@ -9,6 +16,7 @@ jobs:
   build-server:
     name: Build Server Image
     runs-on: ubuntu-latest
+    if: startsWith(github.event.release.tag_name, 'server-v')
 
     steps:
       - name: Checkout repository
@@ -29,15 +37,17 @@ jobs:
         with:
           driver: docker
 
-      # Generates two tags: the release tag (e.g., v1.0.0) for traceability and
-      # `latest` for deployment convenience.
+      # Generates two tags: the stripped semver (e.g., 1.2.3 from
+      # server-v1.2.3) for traceability and `latest` for deployment
+      # convenience. The match pattern captures group(1) as the version,
+      # dropping the `server-v` prefix so the image carries a clean tag.
       - name: Extract image metadata
         id: meta
         uses: docker/metadata-action@v6
         with:
           images: ${{ secrets.ACR_LOGIN_SERVER }}/dominion-clone-server
           tags: |
-            type=ref,event=tag
+            type=match,pattern=^server-v(\d+\.\d+\.\d+)$,group=1
             type=raw,value=latest
 
       - name: Build server image
@@ -52,6 +62,7 @@ jobs:
   build-frontend:
     name: Build Frontend Image
     runs-on: ubuntu-latest
+    if: startsWith(github.event.release.tag_name, 'frontend-v')
 
     steps:
       - name: Checkout repository
@@ -72,15 +83,17 @@ jobs:
         with:
           driver: docker
 
-      # Generates two tags: the release tag (e.g., v1.0.0) for traceability and
-      # `latest` for deployment convenience.
+      # Generates two tags: the stripped semver (e.g., 1.2.3 from
+      # frontend-v1.2.3) for traceability and `latest` for deployment
+      # convenience. The match pattern captures group(1) as the version,
+      # dropping the `frontend-v` prefix so the image carries a clean tag.
       - name: Extract image metadata
         id: meta
         uses: docker/metadata-action@v6
         with:
           images: ${{ secrets.ACR_LOGIN_SERVER }}/dominion-clone-frontend
           tags: |
-            type=ref,event=tag
+            type=match,pattern=^frontend-v(\d+\.\d+\.\d+)$,group=1
             type=raw,value=latest
 
       - name: Build frontend image
