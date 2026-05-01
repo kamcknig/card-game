@@ -28,7 +28,9 @@ import { LogEntryMessage } from '../../../../types';
 import { MatPlayerContent } from './types';
 import { cardSourceStore, cardSourceTagMapStore, getCardSourceStore } from '../../../state/card-source-store';
 import { debugOverlayVisibleStore, debugRuntimeContextStore } from '../../../state/debug-runtime-state';
+import { serverVersionStore } from '../../../state/server-version-state';
 import { authIsAdminStore, authTokenStore } from '../../../core/auth/auth.service';
+import { APP_VERSION } from '../../../core/app-version';
 import { cardStore } from '../../../state/card-state';
 import { matchStore } from '../../../state/match-state';
 import { findCardLikeEntryInMatch, MatchCardLikeEntry } from 'shared/find-card-like-in-match';
@@ -160,6 +162,14 @@ export class MatchHudAsideComponent {
   /** Whether the current user has admin privileges — gates the debug toggle. */
   readonly isAdmin = toSignal(this._nanoService.useStore(authIsAdminStore), {
     initialValue: authIsAdminStore.get(),
+  });
+
+  /** Frontend bundle version — baked in at build time from package.json. */
+  readonly clientVersion = APP_VERSION;
+
+  /** Server version received via /status (pre-auth) and refreshed by serverHello. */
+  readonly serverVersion = toSignal(this._nanoService.useStore(serverVersionStore), {
+    initialValue: serverVersionStore.get(),
   });
 
   // ---------------------------------------------------------------------------
