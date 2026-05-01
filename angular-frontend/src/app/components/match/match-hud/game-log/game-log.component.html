@@ -89,7 +89,7 @@
     </div>
   }
 
-  <div #logContent class="log-content">
+  <div #logContent class="log-content" (click)="onLogContentClick($event)">
     @for (entry of sanitizedEntries(); track entry.id) {
       <div class="log-entry" [innerHTML]="entry.safeMessage"></div>
     }

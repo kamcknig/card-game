@@ -24,6 +24,9 @@ import { authIsAdminStore } from '../../../../core/auth/auth.service';
 import { APP_VERSION } from '../../../../core/app-version';
 import { debugOverlayVisibleStore } from '../../../../state/debug-runtime-state';
 import { serverVersionStore } from '../../../../state/server-version-state';
+import { displayCardDetail } from '../../views/modal/display-card-detail';
+import { matchStore } from '../../../../state/match-state';
+import { findCardLikeEntryInMatch } from 'shared/find-card-like-in-match';
 
 type SanitizedLogEntry = LogEntryMessage & { safeMessage: SafeHtml; };
 
@@ -150,9 +153,48 @@ export class GameLogComponent implements AfterViewInit {
     this.resignRequested.emit();
   }
 
+  /**
+   * Delegated click handler for card-name buttons embedded in log entries via
+   * `[innerHTML]`. Walks from the click target up to the nearest
+   * `.log-card-link` element and dispatches to the global card detail dialog
+   * with a card id (regular cards) or a detail-image path (card-likes resolved
+   * via match state). Stops propagation so the click does not bubble to the
+   * host-listener that closes the settings panel.
+   */
+  onLogContentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+    if (!target) return;
+
+    const link = target.closest<HTMLElement>('.log-card-link');
+    // Guard: only handle links that are actually inside our log container.
+    if (!link || !this.logContent.nativeElement.contains(link)) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const cardIdAttr = link.dataset['cardId'];
+    if (cardIdAttr) {
+      const cardId = Number(cardIdAttr);
+      if (!Number.isFinite(cardId)) return;
+      void displayCardDetail(cardId);
+      return;
+    }
+
+    const cardLikeIdAttr = link.dataset['cardLikeId'];
+    if (cardLikeIdAttr) {
+      const cardLikeId = Number(cardLikeIdAttr);
+      if (!Number.isFinite(cardLikeId)) return;
+      const match = matchStore.get();
+      const entry = findCardLikeEntryInMatch(match, cardLikeId);
+      const detailImagePath = entry?.cardLike.detailImagePath;
+      if (!detailImagePath) return;
+      void displayCardDetail({ detailImagePath });
+    }
+  }
+
   /** Closes the menu when clicking outside the component bounds. */
   @HostListener('document:click', ['$event'])
-  private _onDocumentClick(event: MouseEvent): void {
+  protected _onDocumentClick(event: MouseEvent): void {
     if (!this.settingsOpen()) return;
     const target = event.target as Node | null;
     if (target && this._hostElement.nativeElement.contains(target)) return;
@@ -161,7 +203,7 @@ export class GameLogComponent implements AfterViewInit {
 
   /** Closes the menu on Escape key. */
   @HostListener('document:keydown.escape')
-  private _onEscape(): void {
+  protected _onEscape(): void {
     if (this.settingsOpen()) this.closeSettings();
   }
 }

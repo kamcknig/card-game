@@ -6,12 +6,6 @@
 
 ---
 
-ui log
-
-- card names should be pressable to show the card
-
----
-
 Send configuration to front-end include things like
 
 - regex for email
