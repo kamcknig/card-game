@@ -1,4 +1,4 @@
-import { NO_ERRORS_SCHEMA, provideExperimentalZonelessChangeDetection } from '@angular/core';
+import { NO_ERRORS_SCHEMA, provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NanostoresService } from '@nanostores/angular';
 import { of } from 'rxjs';
@@ -13,8 +13,8 @@ describe('CardComponent', () => {
     await TestBed.configureTestingModule({
       imports: [CardComponent],
       providers: [
-        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
-        provideExperimentalZonelessChangeDetection(),
+        // App uses provideZonelessChangeDetection; TestBed must match.
+        provideZonelessChangeDetection(),
         // NanostoresService stub — CardComponent uses several store subscriptions;
         // return a static observable so Angular's toSignal() resolves without errors.
         {

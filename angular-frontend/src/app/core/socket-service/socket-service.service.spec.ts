@@ -1,4 +1,4 @@
-import { provideExperimentalZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 
 import { SocketService } from './socket.service';
@@ -8,8 +8,8 @@ describe('SocketService', () => {
 
   beforeEach(() => {
     TestBed.configureTestingModule({
-      // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
-      providers: [provideExperimentalZonelessChangeDetection()],
+      // App uses provideZonelessChangeDetection; TestBed must match.
+      providers: [provideZonelessChangeDetection()],
     });
     service = TestBed.inject(SocketService);
   });
