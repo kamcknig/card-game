@@ -17,7 +17,7 @@ import { selectablePileStore } from '../../../state/interactive-pile-logic';
 import { selectableCardStore, waySelectableCardStore } from '../../../state/interactive-logic';
 import { getSupplyPileTokenVisualMap } from '../views/token-utils';
 import { displayCardDetail } from '../views/modal/display-card-detail';
-import { WayPickerOverlayService } from '../../../core/way-picker/way-picker-overlay.service';
+import { WAY_PICKER_PANEL_WIDTH_PX, WayPickerOverlayService } from '../../../core/way-picker/way-picker-overlay.service';
 import { SUPPLY_PANEL_GAP_PX } from '../supply/supply-layout.constants';
 
 type NonSupplyTokenBadgeViewModel = {
@@ -83,7 +83,6 @@ const PILE_ROW_OFFSET_PX = 30;
 const PANEL_SECTION_GAP_PX = 10;
 const PANEL_SECTION_TITLE_HEIGHT_PX = 24;
 const PANEL_SECTION_PADDING_PX = 10;
-const WAY_PICKER_PANEL_WIDTH_PX = 220;
 const WAY_PICKER_EDGE_OVERLAP_PX = 5;
 
 @Component({

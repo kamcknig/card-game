@@ -1,6 +1,17 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { CardId, CardLikeId } from 'shared/types';
+import { STANDARD_GAP } from '../app-contants';
 import { debugRuntimeContextStore } from '../../state/debug-runtime-state';
+
+// Panel width matches calc(var(--card-landscape-width) + 2 * var(--theme-space-sm) + 2px) at default theme (238 + 16 + 2).
+// Exported so callers can use it for horizontal viewport clamping before calling showPicker.
+export const WAY_PICKER_PANEL_WIDTH_PX = 256;
+// Default --card-landscape-height; drives the panel height estimate for vertical clamping.
+const WAY_PICKER_CARD_HEIGHT_PX = 149;
+// --theme-space-sm gap between way entries.
+const WAY_PICKER_CARD_GAP_PX = 8;
+// Panel overhead: 2×8px padding + 2px border.
+const WAY_PICKER_PANEL_OVERHEAD_PX = 18;
 
 export type WayPickerOverlayState = {
   cardId: CardId;
@@ -24,13 +35,14 @@ export class WayPickerOverlayService {
   readonly activePicker = computed(() => this._activePicker());
 
   // Shows/updates the way picker for one hovered card and registers the selection callback.
+  // Clamps the supplied top so the panel stays within the visible viewport.
   public showPicker(
     picker: WayPickerOverlayState,
     onWaySelected: (cardId: CardId, wayId: CardLikeId) => void
   ): void {
     this.cancelScheduledClose();
     this._panelHovering = false;
-    this._activePicker.set(picker);
+    this._activePicker.set({ ...picker, top: this.clampTop(picker.top, picker.wayCardLikeIds.length) });
     this._waySelectionHandler = onWaySelected;
   }
 
@@ -84,6 +96,18 @@ export class WayPickerOverlayService {
     const handler = this._waySelectionHandler;
     this.hidePicker();
     handler?.(cardId, wayId);
+  }
+
+  // Clamps the panel top so it stays within the visible viewport, based on an
+  // estimated panel height derived from the number of way entries.
+  private clampTop(top: number, wayCount: number): number {
+    const estimatedHeight = WAY_PICKER_CARD_HEIGHT_PX * wayCount
+      + WAY_PICKER_CARD_GAP_PX * Math.max(0, wayCount - 1)
+      + WAY_PICKER_PANEL_OVERHEAD_PX;
+    return Math.max(
+      STANDARD_GAP,
+      Math.min(top, window.innerHeight - estimatedHeight - STANDARD_GAP)
+    );
   }
 
   // Resolves close-delay precedence: call override -> server env payload -> default.
