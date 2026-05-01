@@ -581,7 +581,7 @@ $match-config-single-column-breakpoint: 940px;
   display: flex;
   flex-direction: column;
   gap: var(--theme-space-sm);
-  max-height: 320px;
+  max-height: 500px;
   overflow: auto;
   padding: var(--theme-space-2xs);
 }
@@ -604,22 +604,27 @@ $match-config-single-column-breakpoint: 940px;
   flex: 1;
   min-width: 0;
   width: 100%;
-  border: 1px solid transparent;
+  border: none;
   border-radius: var(--theme-radius-md);
   padding: var(--theme-space-sm);
   background: transparent;
   color: var(--theme-text-primary);
   text-align: left;
   cursor: pointer;
+  transition: background-color 120ms;
 }
 
+// Hovered list item gets a distinct surface background instead of a border
+// swap so the row doesn't visually shift when the pointer enters/leaves.
 .saved-config-choice:hover {
-  border-color: var(--theme-border-action);
+  background: var(--theme-surface-app-start);
 }
 
+// Active (currently-loading) entry uses a slightly stronger background so it
+// stays distinguishable from a hovered row without re-introducing the
+// border outline.
 .saved-config-choice.active {
-  border-color: var(--theme-border-action);
-  box-shadow: 0 0 0 1px var(--theme-border-subtle);
+  background: var(--theme-surface-elevated, var(--theme-surface-app-start));
 }
 
 .saved-config-delete-button {
@@ -646,3 +651,62 @@ $match-config-single-column-breakpoint: 940px;
 
 // Save / Cancel dialog buttons use the shared `.btn .btn-primary` and
 // `.btn .btn-secondary` classes from styles.scss. No local rules needed.
+
+// ── Load-dialog search input ──
+.search-wrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: var(--theme-space-sm);
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--theme-text-tertiary);
+  pointer-events: none;
+}
+
+.config-dialog-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--theme-space-sm) var(--theme-space-3xl) var(--theme-space-sm) var(--theme-space-3xl);
+  background: var(--theme-surface-app-start);
+  border: 1px solid var(--theme-border-subtle);
+  border-radius: var(--theme-radius-lg);
+  color: var(--theme-text-primary);
+  font-size: 14px;
+  font-family: var(--theme-font-body);
+  outline: none;
+  transition: border-color 120ms;
+
+  &::placeholder {
+    color: var(--theme-text-tertiary);
+  }
+
+  &:focus {
+    border-color: var(--theme-border-strong);
+  }
+}
+
+.search-clear-button {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--theme-text-tertiary);
+  cursor: pointer;
+  padding: var(--theme-space-2xs);
+  line-height: 1;
+  transition: color 120ms;
+
+  &:hover {
+    color: var(--theme-text-primary);
+  }
+}
