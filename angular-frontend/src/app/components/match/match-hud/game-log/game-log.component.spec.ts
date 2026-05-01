@@ -1,4 +1,4 @@
-import { provideExperimentalZonelessChangeDetection, signal } from '@angular/core';
+import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { GameLogComponent } from './game-log.component';
@@ -24,7 +24,7 @@ describe('GameLogComponent', () => {
     await TestBed.configureTestingModule({
       imports: [GameLogComponent],
       providers: [
-        provideExperimentalZonelessChangeDetection(),
+        provideZonelessChangeDetection(),
         { provide: ThemeService, useClass: ThemeServiceStub },
         { provide: SoundService, useClass: SoundServiceStub },
       ],

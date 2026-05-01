@@ -1,4 +1,4 @@
-import { provideExperimentalZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { MatchSummary } from 'shared/types';
 
@@ -12,8 +12,8 @@ describe('GameSummaryComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [GameSummaryComponent],
-      // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
-      providers: [provideExperimentalZonelessChangeDetection()],
+      // App uses provideZonelessChangeDetection; TestBed must match.
+      providers: [provideZonelessChangeDetection()],
     })
     .compileComponents();
 

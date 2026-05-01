@@ -6,6 +6,10 @@
     "outDir": "./out-tsc/app",
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
+    // shared/ lives at ../shared and is consumed as raw TS via path mapping.
+    // Anchor rootDir at the monorepo root so its files are considered in-scope
+    // (TS 6 surfaces TS6059 here; TS 5.x silently allowed it).
+    "rootDir": "..",
     "types": []
   },
   "files": [

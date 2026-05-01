@@ -1,4 +1,4 @@
-import { provideExperimentalZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router, UrlTree } from '@angular/router';
 
@@ -31,7 +31,7 @@ describe('serverHealthGuard', () => {
     routerStub = new RouterStub();
     TestBed.configureTestingModule({
       providers: [
-        provideExperimentalZonelessChangeDetection(),
+        provideZonelessChangeDetection(),
         { provide: Router, useValue: routerStub },
       ],
     });
@@ -89,7 +89,7 @@ describe('serverStatusRedirectGuard', () => {
     routerStub = new RouterStub();
     TestBed.configureTestingModule({
       providers: [
-        provideExperimentalZonelessChangeDetection(),
+        provideZonelessChangeDetection(),
         { provide: Router, useValue: routerStub },
       ],
     });

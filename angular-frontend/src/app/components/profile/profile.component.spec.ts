@@ -1,4 +1,4 @@
-import { provideExperimentalZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NanostoresService } from '@nanostores/angular';
@@ -43,8 +43,8 @@ describe('ProfileComponent', () => {
     await TestBed.configureTestingModule({
       imports: [ProfileComponent],
       providers: [
-        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
-        provideExperimentalZonelessChangeDetection(),
+        // App uses provideZonelessChangeDetection; TestBed must match.
+        provideZonelessChangeDetection(),
         { provide: NanostoresService, useClass: NanostoresServiceStub },
         { provide: Router, useValue: routerStub },
         { provide: ActivatedRoute, useValue: { firstChild: null } },
