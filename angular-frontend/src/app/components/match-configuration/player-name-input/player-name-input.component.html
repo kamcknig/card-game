@@ -1,32 +1,30 @@
-<div class="content" *ngIf="player() as player">
-  <!-- Single icon slot: crown for owner, robot for computer, blank placeholder otherwise -->
-  <span class="player-icon">
-    @if (isOwner()) {
-      👑
-    } @else if (player.isComputer) {
-      🤖
+@if (player(); as player) {
+  <div class="content">
+    <!-- Single icon slot: crown for owner, robot for computer, blank placeholder otherwise -->
+    <span class="player-icon">
+      @if (isOwner()) {
+        👑
+      } @else if (player.isComputer) {
+        🤖
+      }
+    </span>
+    <input
+      #readyCheckbox
+      type="checkbox"
+      [disabled]="playerId() !== selfId()"
+      [checked]="player.ready"
+      (input)="onReadyChange($any($event.target).checked)"
+      />
+    <!-- Player name is always read-only; it is set from the authenticated username on login. -->
+    <span class="player-name readonly">{{ player.name }}</span>
+    @if (!player.connected) {
+      <span>⚠️</span>
     }
-  </span>
-
-  <input
-    #readyCheckbox
-    type="checkbox"
-    [disabled]="playerId() !== selfId()"
-    [checked]="player.ready"
-    (input)="onReadyChange($any($event.target).checked)"
-  />
-
-  <!-- Player name is always read-only; it is set from the authenticated username on login. -->
-  <span class="player-name readonly">{{ player.name }}</span>
-
-  @if (!player.connected) {
-    <span>⚠️</span>
-  }
-
-  @if (canModeratePlayer()) {
-    @if (!player.isComputer) {
-      <button type="button" class="btn btn-danger moderation-button" (click)="onBanPlayer()">Ban</button>
+    @if (canModeratePlayer()) {
+      @if (!player.isComputer) {
+        <button type="button" class="btn btn-danger moderation-button" (click)="onBanPlayer()">Ban</button>
+      }
+      <button type="button" class="btn btn-secondary moderation-button" (click)="onKickPlayer()">Kick</button>
     }
-    <button type="button" class="btn btn-secondary moderation-button" (click)="onKickPlayer()">Kick</button>
-  }
-</div>
+  </div>
+}
