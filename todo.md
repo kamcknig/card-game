@@ -6,12 +6,6 @@
 
 ---
 
-add settings to the match screen
-
-- toggle light/dark mode
-
----
-
 ui log
 
 - card names should be pressable to show the card
@@ -24,8 +18,6 @@ Send configuration to front-end include things like
 - regex for username
 
 ---
-
-show the version number in the app somewhere
 
 # Lower priority
 

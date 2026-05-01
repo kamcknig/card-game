@@ -52,6 +52,7 @@ import { InMemoryUserStore } from '../core/auth/in-memory-user-store.ts';
 import { SupabaseUserStore } from '../core/auth/supabase-user-store.ts';
 import type { UserStore } from '../core/auth/user-store.ts';
 import { UserAccountAuthProvider } from '../core/auth/user-account-auth-provider.ts';
+import { SERVER_VERSION } from '../version.ts';
 
 export interface RegisterRootServicesArgs {
   io: Server<ServerListenEvents, ServerEmitEvents>;
@@ -71,6 +72,10 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
   container.register({
     rootContainer: asValue(container),
     io: asValue(args.io),
+    // Process-wide server version. Read once at module load from deno.json
+    // and exposed via DI so feature services receive it as a constructor
+    // parameter rather than reaching for a global.
+    serverVersion: asValue(SERVER_VERSION),
     serverConfigService: asClass(ServerConfigService).singleton(),
     loggerBackendProvider: asClass(LoggerBackendProvider).singleton(),
     // Root/server logger context for non-game-specific startup/runtime services.
