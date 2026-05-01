@@ -50,7 +50,8 @@ import { SceneContentComponent } from '../scene-content/scene-content.component'
 import { UiDialogComponent } from '../ui/dialog/ui-dialog.component';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { compare } from 'fast-json-patch';
-import { FolderOpen, LogOut, LucideAngularModule, Save, Trash2, X } from 'lucide-angular';
+import { FolderOpen, LogOut, LucideAngularModule, Save, Search, Trash2, X } from 'lucide-angular';
+import Fuse from 'fuse.js';
 import { displayCardDetail } from '../match/views/modal/display-card-detail';
 import { CardComponent } from '../card/card.component';
 import { CardLikeComponent } from '../card-like/card-like.component';
@@ -104,6 +105,8 @@ export class MatchConfigurationComponent implements OnDestroy {
   readonly LeaveIcon = LogOut;
   // Per-slot remove affordance shown on hover over a chosen card.
   readonly RemoveIcon = X;
+  // Lucide icon used in the load-dialog search input.
+  readonly SearchIcon = Search;
 
   private readonly _router = inject(Router);
   private readonly _nanoStoreService = inject(NanostoresService);
@@ -132,6 +135,36 @@ export class MatchConfigurationComponent implements OnDestroy {
   readonly savedConfigurations = signal<SavedMatchConfigurationEntry[]>([]);
   // Currently selected saved configuration key in load dialog.
   readonly selectedLoadConfigurationKey = signal<string | null>(null);
+  // Raw search term entered in the load-configuration dialog. Drives the
+  // filtered list and the visibility of the clear button. Cleared whenever
+  // the dialog is opened or closed.
+  readonly loadDialogSearchTerm = signal('');
+
+  // Fuse index over the current saved-configuration list. Rebuilt only when
+  // the underlying list changes (server push after save/delete/initial fetch).
+  // `threshold` is loosened from Fuse's default 0.6 → 0.4 for a typical
+  // type-as-you-go filtering UX, and `ignoreLocation` is enabled so a match
+  // can occur anywhere in the entry name.
+  private readonly _loadConfigurationsFuse = computed(() => new Fuse(
+    this.savedConfigurations(),
+    {
+      keys: ['name'],
+      threshold: 0.4,
+      ignoreLocation: true,
+      minMatchCharLength: 1,
+    },
+  ));
+
+  // Filtered saved configuration list driven by the load-dialog search term.
+  // When the term is empty, returns the full list unchanged so the dialog
+  // still shows everything before the user types.
+  readonly filteredSavedConfigurations = computed(() => {
+    const term = this.loadDialogSearchTerm().trim();
+    if (term.length < 1) {
+      return this.savedConfigurations();
+    }
+    return this._loadConfigurationsFuse().search(term).map((result) => result.item);
+  });
   // Last successfully loaded on-disk configuration display name for save-dialog defaults.
   readonly loadedConfigurationName = signal<string | null>(null);
   // Baseline snapshot used to determine if configuration has changed since last save/load baseline.
@@ -451,6 +484,7 @@ export class MatchConfigurationComponent implements OnDestroy {
     this.saveDialogVisible.set(false);
     this.dialogStatusMessage.set(null);
     this.selectedLoadConfigurationKey.set(null);
+    this.loadDialogSearchTerm.set('');
     this._socketService.emit('requestSavedMatchConfigurationList');
   }
 
@@ -481,6 +515,7 @@ export class MatchConfigurationComponent implements OnDestroy {
     this.loadDialogVisible.set(false);
     this.selectedLoadConfigurationKey.set(null);
     this.dialogStatusMessage.set(null);
+    this.loadDialogSearchTerm.set('');
   }
 
   // Loads one saved configuration directly from its list entry click.
@@ -489,6 +524,16 @@ export class MatchConfigurationComponent implements OnDestroy {
     this.selectedLoadConfigurationKey.set(key);
     this.dialogStatusMessage.set(null);
     this._socketService.emit('loadSavedMatchConfiguration', key);
+  }
+
+  // Updates the load-dialog search term from raw input events.
+  updateLoadDialogSearchTerm(term: string) {
+    this.loadDialogSearchTerm.set(term);
+  }
+
+  // Clears the load-dialog search term, restoring the full saved list.
+  clearLoadDialogSearch() {
+    this.loadDialogSearchTerm.set('');
   }
 
   // Deletes a saved configuration entry from the load dialog list.

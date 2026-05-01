@@ -460,21 +460,40 @@
       @if (savedConfigurations().length < 1) {
         <div class="config-dialog-meta">No saved configurations found.</div>
       } @else {
-        <div class="saved-config-list">
-          @for (entry of savedConfigurations(); track entry.key) {
-            <div class="saved-config-item">
-              <button
-                class="saved-config-choice"
-                type="button"
-                [class.active]="selectedLoadConfigurationKey() === entry.key"
-                (click)="loadSavedConfiguration(entry.key)"
-              >
-                <span>{{ entry.name }}</span>
-              </button>
-              <button class="saved-config-delete-button" type="button" (click)="deleteSavedConfiguration(entry.key, $event)">x</button>
-            </div>
+        <div class="search-wrapper">
+          <lucide-icon class="search-icon" [img]="SearchIcon" [size]="14" />
+          <input
+            class="config-dialog-search-input"
+            type="text"
+            placeholder="Search configurations..."
+            [value]="loadDialogSearchTerm()"
+            (input)="updateLoadDialogSearchTerm($any($event.target).value)"
+          />
+          @if (loadDialogSearchTerm().length > 0) {
+            <button class="search-clear-button" type="button" (click)="clearLoadDialogSearch()" aria-label="Clear search">
+              <lucide-icon [img]="RemoveIcon" [size]="12" />
+            </button>
           }
         </div>
+        @if (filteredSavedConfigurations().length < 1) {
+          <div class="config-dialog-meta">No matches for '{{ loadDialogSearchTerm() }}'.</div>
+        } @else {
+          <div class="saved-config-list">
+            @for (entry of filteredSavedConfigurations(); track entry.key) {
+              <div class="saved-config-item">
+                <button
+                  class="saved-config-choice"
+                  type="button"
+                  [class.active]="selectedLoadConfigurationKey() === entry.key"
+                  (click)="loadSavedConfiguration(entry.key)"
+                >
+                  <span>{{ entry.name }}</span>
+                </button>
+                <button class="saved-config-delete-button" type="button" (click)="deleteSavedConfiguration(entry.key, $event)">x</button>
+              </div>
+            }
+          </div>
+        }
       }
       @if (dialogStatusMessage(); as statusMessage) {
         <div class="config-dialog-error">{{ statusMessage }}</div>
