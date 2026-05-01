@@ -24,6 +24,7 @@ import {
   lobbyStatusMessageStore,
 } from '../../state/lobby-state';
 import { debugRuntimeContextStore } from '../../state/debug-runtime-state';
+import { serverVersionStore } from '../../state/server-version-state';
 import { selectableSearchCatalogStore } from '../../state/selectable-search-state';
 import { waitingOnPlayerIdStore } from '../../state/match-ui-overlay-state';
 import { logEntryIdsStore, logStore } from '../../state/log-state';
@@ -95,6 +96,13 @@ export class SocketEventMapService {
       for (const logEntry of logEntries) {
         logManager.addLogEntry(logEntry);
       }
+    };
+
+    // Populate the server version store as soon as the server identifies
+    // itself, so the scene banner and in-match version readouts have data
+    // available before any feature event fires.
+    map['serverHello'] = ({ version }) => {
+      serverVersionStore.set(version);
     };
 
     // Server-initiated forced logout: a newer socket has authenticated for

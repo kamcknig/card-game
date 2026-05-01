@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { atom } from 'nanostores';
 import { environment } from '../../../environments/environment';
+import { serverVersionStore } from '../../state/server-version-state';
 
 // A single runtime issue reported by the server health system.
 export interface Issue {
@@ -15,6 +16,10 @@ export interface ServerStatusSnapshot {
   issues: Issue[];
   backend: string;
   startedAt: number;
+  // Running server semver — present on every healthy /status response.
+  // Optional in the type so older servers that predate the field don't
+  // break parsing; missing values just leave the version store empty.
+  version?: string;
 }
 
 // Module-level nanostore atom holding the last fetched server status snapshot.
@@ -43,6 +48,14 @@ export class ServerStatusService {
       const res = await fetch(`${environment.wsHost}/status`);
       const data: ServerStatusSnapshot = await res.json();
       serverStatusStore.set(data);
+
+      // Surface the server version on pre-auth screens (login, /server-status)
+      // by populating the same store the socket `serverHello` handler writes
+      // to. The socket path takes over once the user authenticates and
+      // overwrites with the value from the live connection.
+      if (data.version) {
+        serverVersionStore.set(data.version);
+      }
 
       // Log each warning-level issue so developers see them in the console
       // without blocking the app.

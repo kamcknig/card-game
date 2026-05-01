@@ -11,6 +11,10 @@ export interface ServerStatusSnapshot {
   issues: Issue[];
   backend: string;
   startedAt: number;
+  // Running server semver — included so the frontend can display the
+  // server version on screens that fetch /status before the socket has
+  // connected (e.g. the login page).
+  version: string;
 }
 
 /**
@@ -25,6 +29,13 @@ export class ServerHealthService {
   private readonly issues: Issue[] = [];
   private backend: string = 'unknown';
   private readonly startedAt: number = Date.now();
+
+  constructor(
+    // Resolved from the root container's `serverVersion` value
+    // registration so the version flows through DI rather than a global
+    // import. Awilix CLASSIC mode resolves by parameter name.
+    private readonly serverVersion: string,
+  ) {}
 
   // Sets the active storage backend label for inclusion in snapshots.
   public setBackend(backend: string): void {
@@ -53,6 +64,12 @@ export class ServerHealthService {
       : this.issues.some(i => i.level === 'warning')
         ? 'warning'
         : 'healthy';
-    return { status, issues: [...this.issues], backend: this.backend, startedAt: this.startedAt };
+    return {
+      status,
+      issues: [...this.issues],
+      backend: this.backend,
+      startedAt: this.startedAt,
+      version: this.serverVersion,
+    };
   }
 }

@@ -1,10 +1,13 @@
 <header class="scene-banner-header">
-  <!-- Decorative banner image — unchanged -->
+  <!-- Decorative banner image. The version pill is positioned absolutely
+       within the banner so it stays beneath the title/subtitle and
+       bottom-anchors against the banner image's lower edge. -->
   <div class="scene-banner" role="img" aria-label="Dominion Clone banner">
     <h1>Dominion Clone</h1>
     @if (subtitle()) {
       <p>{{ subtitle() }}</p>
     }
+    <span class="version-pill" [title]="versionLine()">{{ versionLine() }}</span>
   </div>
 
   <!-- Action bar below the banner -->
@@ -18,8 +21,8 @@
       </div>
       <span class="action-bar-divider"></span>
       <app-theme-toggle />
-      <span class="action-bar-divider"></span>
       @if (username()) {
+        <span class="action-bar-divider"></span>
         <app-profile-menu />
       }
     </div>
