@@ -18,7 +18,7 @@ import { selfPlayerIdStore } from '../../../state/player-state';
 import { tokenDefinitionStore } from '../../../state/token-definition-state';
 import { displayCardDetail } from '../views/modal/display-card-detail';
 import { getSupplyPileTokenVisualMap } from '../views/token-utils';
-import { WayPickerOverlayService } from '../../../core/way-picker/way-picker-overlay.service';
+import { WAY_PICKER_PANEL_WIDTH_PX, WayPickerOverlayService } from '../../../core/way-picker/way-picker-overlay.service';
 import { SUPPLY_PANEL_GAP_PX } from './supply-layout.constants';
 
 /**
@@ -83,7 +83,6 @@ type SupplyPileViewModel = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class MatchSupplyComponent {
-  private static readonly WAY_PICKER_PANEL_WIDTH_PX = 220;
   private static readonly WAY_PICKER_EDGE_OVERLAP_PX = 5;
 
   private readonly _nanoStores = inject(NanostoresService);
@@ -268,7 +267,7 @@ export class MatchSupplyComponent {
     }
 
     const rect = anchorElement.getBoundingClientRect();
-    const panelWidth = MatchSupplyComponent.WAY_PICKER_PANEL_WIDTH_PX;
+    const panelWidth = WAY_PICKER_PANEL_WIDTH_PX;
     const maxLeft = Math.max(SUPPLY_PANEL_GAP_PX, window.innerWidth - panelWidth - SUPPLY_PANEL_GAP_PX);
     let left = Math.floor(rect.right - MatchSupplyComponent.WAY_PICKER_EDGE_OVERLAP_PX);
     const top = Math.max(SUPPLY_PANEL_GAP_PX, Math.floor(rect.top));

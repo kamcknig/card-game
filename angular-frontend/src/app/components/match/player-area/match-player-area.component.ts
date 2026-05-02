@@ -14,7 +14,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
 import { CardComponent } from '../../card/card.component';
 import { SocketService } from '../../../core/socket-service/socket.service';
-import { WayPickerOverlayService } from '../../../core/way-picker/way-picker-overlay.service';
+import { WAY_PICKER_PANEL_WIDTH_PX, WayPickerOverlayService } from '../../../core/way-picker/way-picker-overlay.service';
 import { PromptDialogCoordinatorService } from '../../../core/prompt-dialog/prompt-dialog-coordinator.service';
 import {
   Card,
@@ -103,7 +103,6 @@ type CardPileViewModel = {
 
 const CUBE_TOKEN_ID = 'cube-token';
 const VICTORY_TOKEN_ID = 'prosperity:victory';
-const WAY_PICKER_PANEL_WIDTH_PX = 220;
 const WAY_PICKER_EDGE_OVERLAP_PX = 5;
 
 @Component({
