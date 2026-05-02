@@ -252,9 +252,11 @@ export class SocketEventMapService {
       // Clear first-match log entries so the second match starts with an empty log.
       logEntryIdsStore.set([]);
       logStore.set({});
-      // No longer in the lobby game phase once the match starts; clear so that
-      // MatchConfigurationComponent.ngOnDestroy does not emit leaveLobbyGame.
-      activeLobbyGameIdStore.set(undefined);
+      // activeLobbyGameIdStore is intentionally NOT cleared here. The store now
+      // remains set throughout the active match phase so Phase 3 (MatchComponent
+      // lifecycle) and Phase 4 (still-in-game dialog) can read it as a sentinel.
+      // The auto-leave gate that used to rely on the cleared value has been moved
+      // into MatchConfigurationComponent._matchStarting (see Phase 2).
       this._clearMatchUiOverlays();
       const cardsById = cardStore.get();
       if (!cardsById || Object.keys(cardsById).length === 0) {
