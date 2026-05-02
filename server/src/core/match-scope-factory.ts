@@ -29,6 +29,7 @@ import { MatchActionRunnerRef, ScopedActionService } from './actions/scoped-acti
 import { ExpansionEffectRegistryService } from './expansion-effect-registry-service.ts';
 import { PlayRulesController } from './play-rules-controller.ts';
 import { MatchUndoService } from './undo/match-undo-service.ts';
+import { PromptAbortRegistry } from './undo/prompt-abort-registry.ts';
 
 /**
  * Runtime handle for one active match scope.
@@ -113,6 +114,7 @@ export class MatchScopeFactory {
       playOptionsResolver: asClass(PlayOptionsResolver).scoped(),
       reactionContextFactory: asClass(ReactionContextFactory).scoped(),
       reactionManager: asClass(ReactionManager).scoped(),
+      promptAbortRegistry: asClass(PromptAbortRegistry).scoped(),
       undoService: asClass(MatchUndoService).scoped(),
       endGameEvaluator: asClass(EndGameEvaluatorService).scoped(),
       interactivityController: asClass(CardInteractivityController).scoped(),

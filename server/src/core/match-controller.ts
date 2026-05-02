@@ -48,6 +48,7 @@ import { RngService } from './rng-service.ts';
 import { ServerConfigService } from './server-config-service.ts';
 import { LoggerService } from './logger-service.ts';
 import { MatchUndoService } from './undo/match-undo-service.ts';
+import { PromptAbortRegistry, UndoAbortError } from './undo/prompt-abort-registry.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
@@ -108,6 +109,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     private readonly serverConfigService: ServerConfigService,
     private readonly loggerService: LoggerService,
     private readonly undoService: MatchUndoService,
+    private readonly promptAbortRegistry: PromptAbortRegistry,
   ) {
     super();
   }
@@ -603,6 +605,31 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       }
 
       return result as Promise<GameActionReturnTypeMap[K]>;
+    } catch (error) {
+      if (error instanceof UndoAbortError) {
+        // Clear the ping timer so it doesn't fire after the abort.
+        clearTimeout(asyncTimeout);
+        asyncTimeout = undefined;
+
+        // Discard any pending log queue from the aborted action so it
+        // doesn't leak into the next broadcast.
+        this.logManager.flushQueue();
+
+        if (isTopLevel) {
+          // Reset patch bookkeeping so the post-restore broadcast diffs
+          // against the right baseline.
+          this._matchSnapshot = null;
+          // Notify the undo service that the call stack has unwound; it
+          // is awaiting this barrier before performing the restore.
+          this.undoService.signalUnwindComplete();
+          // Swallow the abort at the top — restore happens in the undo
+          // service. Returning null mimics a "no-op" action result.
+          return null as unknown as GameActionReturnTypeMap[K];
+        }
+        // Re-throw so outer runGameAction layers also unwind.
+        throw error;
+      }
+      throw error;
     } finally {
       this._actionDepth = Math.max(0, this._actionDepth - 1);
     }
@@ -779,7 +806,8 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
   /**
    * Debug-only: pops the most recent undo snapshot and restores state
-   * without a vote. Assumes no action is currently in flight (actionInFlight=false).
+   * without a vote. Handles both the idle case and the case where a
+   * userPrompt/selectCard is currently in flight.
    * Returns true when a snapshot was available and restored, false otherwise.
    */
   public async debugPerformUndo(): Promise<boolean> {
@@ -791,7 +819,15 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     // Capture state as clients currently see it so the diff broadcasts cleanly.
     const prev = this.getMatchSnapshot();
 
-    const snapshot = await this.undoService.restoreLatest(false);
+    // If a prompt is currently awaiting player input, abort it so the
+    // engine call stack unwinds before we restore state.
+    const inFlight = this.promptAbortRegistry.hasInFlight();
+    if (inFlight) {
+      this.loggerService.debug('[match] debug undo: aborting in-flight prompt before restore');
+      this.promptAbortRegistry.abortAll();
+    }
+
+    const snapshot = await this.undoService.restoreLatest(inFlight);
     if (!snapshot) {
       return false;
     }
