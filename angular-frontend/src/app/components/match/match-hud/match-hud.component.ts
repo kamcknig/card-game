@@ -15,6 +15,7 @@ import { SocketService } from '../../../core/socket-service/socket.service';
 import { gamePausedStore } from '../../../state/game-logic';
 import { waitingOnPlayerIdStore } from '../../../state/match-ui-overlay-state';
 import { undoCompletedSignalStore, undoInFlightStore } from '../../../state/undo-state';
+import { UndoVoteCoordinatorService } from '../../../core/undo/undo-vote-coordinator.service';
 
 @Component({
   selector: 'app-match-hud',
@@ -28,6 +29,13 @@ import { undoCompletedSignalStore, undoInFlightStore } from '../../../state/undo
 export class MatchHudComponent {
   private readonly _nanoService = inject(NanostoresService);
   private readonly _socketService = inject(SocketService);
+
+  /**
+   * Voter-side undo coordinator. Exposed as a field so the template can call
+   * undoVote.vote(allow) directly and read undoVote.originatorName() to
+   * conditionally render the voter dialog.
+   */
+  readonly undoVote = inject(UndoVoteCoordinatorService);
 
   // Controls visibility of the resign confirmation dialog.
   readonly resignDialogVisible = signal(false);

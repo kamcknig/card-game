@@ -80,3 +80,24 @@
     </div>
   </app-ui-dialog>
 }
+
+@let undoVoteOriginator = undoVote.originatorName();
+@if (undoVoteOriginator) {
+  <app-ui-dialog
+    [zIndex]="4260"
+    [backdropVariant]="'strong'"
+    [closeOnBackdrop]="false"
+    [hasBackdrop]="true"
+  >
+    <div class="undo-allow-card">
+      <div class="undo-allow-title">Undo request</div>
+      <div class="undo-allow-body">
+        Allow {{ undoVoteOriginator }} to undo their last action?
+      </div>
+      <div class="undo-allow-actions">
+        <button class="btn btn-danger" (click)="undoVote.vote(false)">Deny</button>
+        <button class="btn btn-primary" (click)="undoVote.vote(true)">Allow</button>
+      </div>
+    </div>
+  </app-ui-dialog>
+}

@@ -28,7 +28,7 @@ import { serverVersionStore } from '../../state/server-version-state';
 import { selectableSearchCatalogStore } from '../../state/selectable-search-state';
 import { waitingOnPlayerIdStore } from '../../state/match-ui-overlay-state';
 import { logEntryIdsStore, logStore } from '../../state/log-state';
-import { undoCompletedSignalStore, undoInFlightStore } from '../../state/undo-state';
+import { undoAvailableStore, undoCompletedSignalStore, undoInFlightStore, undoVoteRequestStore } from '../../state/undo-state';
 import { SocketEventMap, SocketService } from './socket.service';
 
 /**
@@ -382,11 +382,28 @@ export class SocketEventMapService {
       }
     };
 
+    // Keeps the undo button enabled/disabled state in sync with the server
+    // snapshot stack. Emitted after every top-level action and after every
+    // undo restore.
+    map['undoAvailable'] = (canUndo: boolean) => {
+      undoAvailableStore.set(canUndo);
+    };
+
+    // Sets undoVoteRequestStore so UndoVoteCoordinatorService can mirror
+    // the originator id into its local signal and show the voter dialog.
+    map['undoVoteRequested'] = originatorId => {
+      undoVoteRequestStore.set(originatorId);
+    };
+
     // Clears the in-flight flag and signals components subscribed to
-    // undoCompletedSignalStore. The signal is reset to null on the next
-    // microtask so every subscriber gets exactly one delivery per outcome.
+    // undoCompletedSignalStore. Also clears undoVoteRequestStore so any
+    // open voter dialog closes even if UndoVoteCoordinatorService hasn't
+    // had a chance to process the undoCompleted signal yet. The signal
+    // is reset to null on the next microtask so every subscriber gets
+    // exactly one delivery per outcome.
     map['undoCompleted'] = payload => {
       undoInFlightStore.set(false);
+      undoVoteRequestStore.set(null);
       undoCompletedSignalStore.set(payload);
       queueMicrotask(() => undoCompletedSignalStore.set(null));
     };

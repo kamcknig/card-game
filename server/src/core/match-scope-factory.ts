@@ -138,6 +138,7 @@ export class MatchScopeFactory {
       matchController.broadcastPatch.bind(matchController),
       // Expose the private _gameEnding flag via a closure without adding a public accessor.
       () => (matchController as unknown as { _gameEnding: boolean })._gameEnding,
+      matchController.broadcastCanUndo.bind(matchController),
     );
 
     return {

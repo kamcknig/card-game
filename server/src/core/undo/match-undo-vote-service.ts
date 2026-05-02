@@ -45,6 +45,8 @@ export class MatchUndoVoteService {
    * bindControllerMethods() after scope resolution to avoid circular DI.
    */
   private _getMatchSnapshot: (() => Match) | null = null;
+  /** Bound reference to MatchController.broadcastCanUndo. */
+  private _broadcastCanUndo: (() => void) | null = null;
 
   /**
    * Bound reference to MatchController.broadcastPatch. Populated by
@@ -81,10 +83,12 @@ export class MatchUndoVoteService {
     getSnapshot: () => Match,
     broadcastPatch: (prev: Match) => void,
     isGameEnded: () => boolean,
+    broadcastCanUndo: () => void,
   ): void {
     this._getMatchSnapshot = getSnapshot;
     this._broadcastPatch = broadcastPatch;
     this._isGameEndedFn = isGameEnded;
+    this._broadcastCanUndo = broadcastCanUndo;
   }
 
   /** True when an undo vote is currently in progress. */
@@ -299,6 +303,9 @@ export class MatchUndoVoteService {
     // Replace every client's log store with the now-truncated history
     // (which includes the undoApplied entry appended above).
     this.socketMap.forEach(s => s.emit('setLog', this.logManager.getHistory()));
+
+    // Update undo button state after the stack has been popped.
+    this._broadcastCanUndo?.();
 
     this.loggerService.info(`[undo] undo approved and applied for player ${active.originatorId}`);
     this._broadcast({ ok: true, by: active.originatorId });

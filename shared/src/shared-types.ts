@@ -609,6 +609,10 @@ export type ServerEmitEvents = {
   // history so the client log no longer shows entries from the rewound
   // actions.
   setLog: (history: LogEntry[]) => void;
+  // Tells every client whether at least one undo snapshot is currently
+  // available. Emitted after every top-level action and after every
+  // undo restore so the undo button's disabled state stays in sync.
+  undoAvailable: (canUndo: boolean) => void;
   // Pushed to every non-originator human player when an undo vote starts.
   // The voter must respond via undoVote; the modal auto-closes when
   // undoCompleted arrives.

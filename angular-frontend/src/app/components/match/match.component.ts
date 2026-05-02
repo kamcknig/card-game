@@ -27,7 +27,7 @@ import { MatchHudAsideComponent } from './match-hud/match-hud-aside.component';
 import { matchStartedStore, matchSummaryStore } from '../../state/match-state';
 import { selfPlayerIdStore } from '../../state/player-state';
 import { CardImagePreloadService } from '../../core/card-image-preload.service';
-import { undoInFlightStore } from '../../state/undo-state';
+import { undoAvailableStore, undoInFlightStore } from '../../state/undo-state';
 
 /** Container component for the active match screen. Manages MatchScene lifecycle. */
 @Component({
@@ -82,11 +82,17 @@ export class MatchComponent implements OnDestroy {
     { initialValue: undoInFlightStore.get() },
   );
 
+  /** True when the server has at least one snapshot available to restore. */
+  private readonly _undoAvailable = toSignal(
+    this._nanoStores.useStore(undoAvailableStore),
+    { initialValue: undoAvailableStore.get() },
+  );
+
   /**
-   * True when undo is available — the game has not ended and there is no
-   * undo vote already in flight from this client.
+   * True when undo is available — the game has not ended, no undo vote is
+   * already in flight from this client, and the server has a snapshot to pop.
    */
-  readonly canUndo = computed(() => !this._gameOver() && !this._undoInFlight());
+  readonly canUndo = computed(() => !this._gameOver() && !this._undoInFlight() && this._undoAvailable());
 
   constructor() {
     // Begin background image preloading immediately. matchStore and cardStore

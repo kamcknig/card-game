@@ -601,6 +601,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         if (!this._gameEnding) {
           this.broadcastPatch({ ...this._matchSnapshot });
           this.logManager.flushQueue();
+          this.broadcastCanUndo();
         }
         this._matchSnapshot = null;
       }
@@ -638,6 +639,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     } finally {
       this._actionDepth = Math.max(0, this._actionDepth - 1);
     }
+  }
+
+  /** Emits undoAvailable to all sockets so clients can enable/disable the undo button. */
+  public broadcastCanUndo(): void {
+    const canUndo = this.undoService.canUndo();
+    this.socketMap.forEach(s => s.emit('undoAvailable', canUndo));
   }
 
   public broadcastPatch(prev: Match, playerId?: PlayerId) {
@@ -849,6 +856,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
     // Sync clients' log to the truncated history.
     this.socketMap.forEach(s => s.emit('setLog', this.logManager.getHistory()));
+
+    // Update undo button state after the stack has been popped.
+    this.broadcastCanUndo();
 
     this.loggerService.info('[match] debug undo applied');
     return true;
