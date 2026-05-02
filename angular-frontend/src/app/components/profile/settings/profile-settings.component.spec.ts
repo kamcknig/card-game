@@ -1,4 +1,4 @@
-import { provideExperimentalZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ProfileSettingsComponent } from './profile-settings.component';
@@ -11,8 +11,8 @@ describe('ProfileSettingsComponent', () => {
     await TestBed.configureTestingModule({
       imports: [ProfileSettingsComponent],
       providers: [
-        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
-        provideExperimentalZonelessChangeDetection(),
+        // App uses provideZonelessChangeDetection; TestBed must match.
+        provideZonelessChangeDetection(),
       ],
     }).compileComponents();
 

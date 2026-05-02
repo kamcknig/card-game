@@ -1,4 +1,4 @@
-import { provideExperimentalZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NanostoresService } from '@nanostores/angular';
 import { of } from 'rxjs';
@@ -48,8 +48,8 @@ describe('ProfileSecurityComponent', () => {
     await TestBed.configureTestingModule({
       imports: [ProfileSecurityComponent],
       providers: [
-        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
-        provideExperimentalZonelessChangeDetection(),
+        // App uses provideZonelessChangeDetection; TestBed must match.
+        provideZonelessChangeDetection(),
         { provide: NanostoresService, useClass: NanostoresServiceStub },
         { provide: AuthService, useValue: authStub },
       ],
@@ -163,7 +163,7 @@ describe('ProfileSecurityComponent', () => {
     await TestBed.configureTestingModule({
       imports: [ProfileSecurityComponent],
       providers: [
-        provideExperimentalZonelessChangeDetection(),
+        provideZonelessChangeDetection(),
         { provide: NanostoresService, useClass: NanostoresServiceStub },
         { provide: AuthService, useValue: authStub },
       ],

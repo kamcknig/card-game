@@ -44,6 +44,22 @@ export class LogManager {
     return [...this._history];
   }
 
+  /** Returns the current history length — used by the undo service. */
+  public getHistoryLength(): number {
+    return this._history.length;
+  }
+
+  /**
+   * Truncates history to the first `length` entries. Also clears the
+   * pending log queue so any entries queued during the now-aborted
+   * action don't leak into post-restore broadcasts.
+   */
+  public truncateHistory(length: number): void {
+    this._history = this._history.slice(0, length);
+    this._queue = [];
+    this._depth = 0;
+  }
+
   public startChain() {
     this._depth = 0;
   }

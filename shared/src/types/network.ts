@@ -10,4 +10,5 @@ export type {
   SelectableSearchCatalog,
   ServerEmitEvents,
   ServerListenEvents,
+  UndoCompletedPayload,
 } from "../shared-types.ts";

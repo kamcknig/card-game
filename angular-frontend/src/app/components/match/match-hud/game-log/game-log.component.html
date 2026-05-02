@@ -1,17 +1,29 @@
 <div class="content">
   <div class="log-header">
     <span class="log-title">GAME LOG</span>
-    <button
-      type="button"
-      class="settings-trigger"
-      [class.is-open]="settingsOpen()"
-      [attr.aria-expanded]="settingsOpen()"
-      aria-label="Game log settings"
-      title="Game log settings"
-      (click)="toggleSettings()"
-    >
-      <lucide-icon [img]="SettingsIcon" [size]="18" />
-    </button>
+    <div class="log-actions">
+      <button
+        type="button"
+        class="undo-trigger"
+        [disabled]="!canUndo()"
+        aria-label="Undo last action"
+        title="Undo last action"
+        (click)="onUndoClick()"
+      >
+        <lucide-icon [img]="UndoIcon" [size]="18" />
+      </button>
+      <button
+        type="button"
+        class="settings-trigger"
+        [class.is-open]="settingsOpen()"
+        [attr.aria-expanded]="settingsOpen()"
+        aria-label="Game log settings"
+        title="Game log settings"
+        (click)="toggleSettings()"
+      >
+        <lucide-icon [img]="SettingsIcon" [size]="18" />
+      </button>
+    </div>
   </div>
 
   @if (settingsOpen()) {
@@ -89,7 +101,7 @@
     </div>
   }
 
-  <div #logContent class="log-content">
+  <div #logContent class="log-content" (click)="onLogContentClick($event)">
     @for (entry of sanitizedEntries(); track entry.id) {
       <div class="log-entry" [innerHTML]="entry.safeMessage"></div>
     }

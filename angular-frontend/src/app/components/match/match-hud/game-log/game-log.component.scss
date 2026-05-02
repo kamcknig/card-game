@@ -39,6 +39,15 @@
   line-height: 1;
 }
 
+// Wraps the undo and settings buttons as a right-aligned flex group so
+// justify-content: space-between on .log-header pushes them to the far
+// right as a unit.
+.log-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--theme-space-xs);
+}
+
 .settings-trigger {
   width: 28px;
   height: 28px;
@@ -74,6 +83,39 @@
     color: var(--theme-text-primary);
     background: var(--theme-action-primary-bg);
     border-color: var(--theme-border-strong);
+  }
+}
+
+// Undo button — mirrors .settings-trigger visually with an added :disabled
+// state so the button dims when no snapshot is available or the game is over.
+.undo-trigger {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--theme-text-secondary);
+  border-radius: var(--theme-radius-sm);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+
+  // Force the inner SVG to block flow so it centers geometrically inside
+  // the button without inheriting inline baseline padding.
+  ::ng-deep svg {
+    display: block;
+  }
+
+  &:hover:not(:disabled) {
+    color: var(--theme-text-primary);
+    background: color-mix(in srgb, var(--theme-text-primary) 10%, transparent);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
   }
 }
 
@@ -249,6 +291,13 @@
   filter: brightness(0.55) saturate(1.5);
 }
 
+// Dark-mode log body text. Dimming the prose to theme-text-secondary creates
+// contrast against the white (#ffffff) card-name buttons so action card names
+// read as visually distinct without needing a separate accent color.
+:host-context([data-theme="dark"]) .log-content {
+  color: var(--theme-text-secondary);
+}
+
 ::ng-deep .log-entry {
   user-select: text;
 
@@ -268,4 +317,47 @@
 // visually breathes from its first action below it.
 ::ng-deep .log-entry:has(hr.new-player-turn) {
   margin-bottom: calc(var(--theme-space-sm) * 2) !important;
+}
+
+// Counter-filter for card-name buttons in light mode. The parent
+// brightness(0.55) filter would drag white action-card names down to ~#8c8c8c
+// and over-darken other accent colors. Multiplying by the inverse (~1.82)
+// restores each button to its intended color while the surrounding prose text
+// remains darkened by the parent filter.
+:host-context([data-theme="light"]) .log-content ::ng-deep .log-card-link {
+  filter: brightness(1.82) saturate(0.667);
+}
+
+// Inline pressable card / card-like name in log entries. Rendered as a real
+// <button> via [innerHTML] from log-manager.ts; ::ng-deep is required because
+// the button sits inside [innerHTML]-injected content and therefore outside the
+// component's emulated style scope.
+::ng-deep .log-card-link {
+  // Reset native button chrome so the link reads as colored inline text.
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  // Inherit the text-color override the entry sets via the inline style
+  // attribute on the button itself.
+  color: inherit;
+  cursor: pointer;
+  // display: inline keeps the button on the same baseline as surrounding text
+  // and lets it wrap naturally with the line.
+  display: inline;
+  // The colored inline-style on the button supplies foreground color; an
+  // underline on hover/focus provides the pressable affordance without
+  // competing with the player/source accent color.
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--theme-border-action);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
 }

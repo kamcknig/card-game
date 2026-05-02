@@ -1,4 +1,4 @@
-import { NO_ERRORS_SCHEMA, provideExperimentalZonelessChangeDetection } from '@angular/core';
+import { NO_ERRORS_SCHEMA, provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { NanostoresService } from '@nanostores/angular';
 import { of } from 'rxjs';
@@ -66,7 +66,7 @@ describe('SelectCardLikeModalComponent', () => {
     await TestBed.configureTestingModule({
       imports: [SelectCardLikeModalComponent],
       providers: [
-        provideExperimentalZonelessChangeDetection(),
+        provideZonelessChangeDetection(),
         { provide: NanostoresService, useClass: NanostoresServiceStub },
       ],
     })

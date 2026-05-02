@@ -1,4 +1,4 @@
-import { provideExperimentalZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 
@@ -46,8 +46,8 @@ describe('LoginComponent', () => {
     await TestBed.configureTestingModule({
       imports: [LoginComponent],
       providers: [
-        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
-        provideExperimentalZonelessChangeDetection(),
+        // App uses provideZonelessChangeDetection; TestBed must match.
+        provideZonelessChangeDetection(),
         { provide: AuthService, useValue: authStub },
         { provide: Router, useValue: routerStub },
       ],

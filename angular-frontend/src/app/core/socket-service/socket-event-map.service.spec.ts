@@ -1,4 +1,4 @@
-import { provideExperimentalZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
 
@@ -40,7 +40,7 @@ describe('SocketEventMapService', () => {
     auth = new AuthServiceStub();
     TestBed.configureTestingModule({
       providers: [
-        provideExperimentalZonelessChangeDetection(),
+        provideZonelessChangeDetection(),
         { provide: SocketService, useValue: socket },
         { provide: Router, useValue: router },
         { provide: AuthService, useValue: auth },

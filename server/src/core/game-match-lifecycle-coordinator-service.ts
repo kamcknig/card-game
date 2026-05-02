@@ -118,6 +118,21 @@ export class GameMatchLifecycleCoordinatorService {
     return { ok: true };
   }
 
+  /**
+   * Performs a debug undo by popping the most recent snapshot and restoring
+   * state in place. No vote is required. Used exclusively by the debug API.
+   */
+  public async debugPerformUndo(state: GameRuntimeState): Promise<{ ok: boolean; error?: string }> {
+    if (!state.matchController) {
+      return { ok: false, error: 'match not initialized' };
+    }
+    const applied = await state.matchController.debugPerformUndo();
+    if (!applied) {
+      return { ok: false, error: 'no snapshot available to undo' };
+    }
+    return { ok: true };
+  }
+
   // Disposes only match-lifetime resources without touching lobby players/sockets.
   public dispose(state: GameRuntimeState): void {
     state.matchScope?.dispose();

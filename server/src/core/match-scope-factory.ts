@@ -28,6 +28,9 @@ import { PlayerReconnectOrchestrator } from './player-reconnect-orchestrator.ts'
 import { MatchActionRunnerRef, ScopedActionService } from './actions/scoped-action-service.ts';
 import { ExpansionEffectRegistryService } from './expansion-effect-registry-service.ts';
 import { PlayRulesController } from './play-rules-controller.ts';
+import { MatchUndoService } from './undo/match-undo-service.ts';
+import { MatchUndoVoteService } from './undo/match-undo-vote-service.ts';
+import { PromptAbortRegistry } from './undo/prompt-abort-registry.ts';
 
 /**
  * Runtime handle for one active match scope.
@@ -112,6 +115,9 @@ export class MatchScopeFactory {
       playOptionsResolver: asClass(PlayOptionsResolver).scoped(),
       reactionContextFactory: asClass(ReactionContextFactory).scoped(),
       reactionManager: asClass(ReactionManager).scoped(),
+      promptAbortRegistry: asClass(PromptAbortRegistry).scoped(),
+      undoService: asClass(MatchUndoService).scoped(),
+      undoVoteService: asClass(MatchUndoVoteService).scoped(),
       endGameEvaluator: asClass(EndGameEvaluatorService).scoped(),
       interactivityController: asClass(CardInteractivityController).scoped(),
       playerReconnectOrchestrator: asClass(PlayerReconnectOrchestrator).scoped(),
@@ -120,9 +126,20 @@ export class MatchScopeFactory {
     });
 
     const matchController = scope.resolve<MatchController>('matchController');
+    const undoVoteService = scope.resolve<MatchUndoVoteService>('undoVoteService');
 
     // Bind action-service calls to this match controller once the graph is fully resolved.
     matchActionRunnerRef.bind(matchController.runGameAction.bind(matchController));
+
+    // Bind MatchController methods onto the vote service post-resolution to break
+    // the circular DI dependency (MatchController ↔ MatchUndoVoteService).
+    undoVoteService.bindControllerMethods(
+      matchController.getMatchSnapshot.bind(matchController),
+      matchController.broadcastPatch.bind(matchController),
+      // Expose the private _gameEnding flag via a closure without adding a public accessor.
+      () => (matchController as unknown as { _gameEnding: boolean })._gameEnding,
+      matchController.broadcastCanUndo.bind(matchController),
+    );
 
     return {
       matchScopeId,

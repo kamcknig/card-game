@@ -343,6 +343,28 @@ export class LobbyDirectoryService {
   }
 
   /**
+   * Performs a debug undo for the active match of a given game and match scope.
+   * Restores the most recent snapshot without requiring a vote. Used exclusively
+   * by the debug API to verify snapshot/restore plumbing.
+   */
+  public async debugPerformUndoForMatch(
+    gameId: string,
+    matchScopeId: number,
+  ): Promise<{ ok: boolean; error?: string }> {
+    const resolved = this.resolveDebugGameAndMatch(gameId, matchScopeId);
+    if (!resolved.ok) {
+      this.loggerService.warn(
+        `[lobby directory] debug undo rejected for game '${gameId}' matchScopeId=${matchScopeId}: ${resolved.error}`,
+      );
+      return { ok: false, error: resolved.error };
+    }
+    this.loggerService.log(
+      `[lobby directory] debug undo for game '${gameId}' matchScopeId=${matchScopeId}`,
+    );
+    return resolved.record.game.debugPerformUndo();
+  }
+
+  /**
    * Forcibly ends the active match for a given game and match scope.
    * Used exclusively by the debug API.
    */

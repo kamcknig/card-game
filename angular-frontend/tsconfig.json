@@ -21,7 +21,10 @@
     "moduleResolution": "bundler",
     "importHelpers": true,
     "target": "ES2023",
-    "module": "ESNext"
+    "module": "ESNext",
+    // TS 6 deprecates `baseUrl`; keep it in use (paths anchor) until the
+    // Angular toolchain migrates and remove this once `baseUrl` is gone.
+    "ignoreDeprecations": "6.0"
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,

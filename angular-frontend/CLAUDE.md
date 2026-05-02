@@ -24,7 +24,7 @@ npm test
 
 ### Zoneless Change Detection
 
-Angular 19 with `provideExperimentalZonelessChangeDetection()`. All components use `ChangeDetectionStrategy.OnPush` with signals. No Zone.js — change detection is driven entirely by signal updates.
+Angular 21 with `provideZonelessChangeDetection()`. All components use `ChangeDetectionStrategy.OnPush` with signals. No Zone.js — change detection is driven entirely by signal updates.
 
 ### Scene System
 

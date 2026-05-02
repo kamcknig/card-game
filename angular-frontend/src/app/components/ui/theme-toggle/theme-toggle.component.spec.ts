@@ -1,5 +1,5 @@
 import { signal } from '@angular/core';
-import { provideExperimentalZonelessChangeDetection } from '@angular/core';
+import { provideZonelessChangeDetection } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { ThemeService, ThemeMode } from '../../../core/theme.service';
@@ -25,8 +25,8 @@ describe('ThemeToggleComponent', () => {
     await TestBed.configureTestingModule({
       imports: [ThemeToggleComponent],
       providers: [
-        // App uses provideExperimentalZonelessChangeDetection; TestBed must match.
-        provideExperimentalZonelessChangeDetection(),
+        // App uses provideZonelessChangeDetection; TestBed must match.
+        provideZonelessChangeDetection(),
         { provide: ThemeService, useValue: themeStub },
       ],
     }).compileComponents();

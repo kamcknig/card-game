@@ -1,6 +1,6 @@
 import {
   ApplicationConfig,
-  provideExperimentalZonelessChangeDetection,
+  provideZonelessChangeDetection,
 } from '@angular/core';
 import { provideRouter, withDisabledInitialNavigation } from '@angular/router';
 
@@ -9,7 +9,7 @@ import { NANOSTORES, NanostoresService } from '@nanostores/angular';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideExperimentalZonelessChangeDetection(),
+    provideZonelessChangeDetection(),
     // Initial navigation is disabled so main.ts can resolve the server-status
     // and stored-token checks before guards evaluate. With the default
     // enabledNonBlocking mode, authGuard would run against a stale token in

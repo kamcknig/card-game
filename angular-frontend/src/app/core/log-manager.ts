@@ -31,9 +31,8 @@ export const logManager = {
 
     switch (logEntry.type) {
       case 'draw': {
-        const cardName = cardsById[logEntry.cardId]?.cardName;
         msg = selfId === playerId
-          ? `%Y% drew <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`
+          ? `%Y% drew ${cardLink(logEntry.cardId, cardsById)}`
           : `%P${player?.id}% drew a card`;
         break;
       }
@@ -44,17 +43,17 @@ export const logManager = {
         break;
       }
       case 'discard': {
-        const cardName = cardsById[logEntry.cardId]?.cardName;
         const discardCount = logEntry.count ?? 1;
         if (discardCount > 1) {
+          // Multi-discard: show the count prefix then a clickable final card name for both players.
           msg = selfId === playerId
-            ? `%Y% discards ${discardCount} cards and <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`
-            : `%P${player?.id}% discards ${discardCount} cards and <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`;
+            ? `%Y% discards ${discardCount} cards and ${cardLink(logEntry.cardId, cardsById)}`
+            : `%P${player?.id}% discards ${discardCount} cards and ${cardLink(logEntry.cardId, cardsById)}`;
           break;
         }
 
         msg = selfId === playerId
-          ? `%Y% discarded <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`
+          ? `%Y% discarded ${cardLink(logEntry.cardId, cardsById)}`
           : `%P${player?.id}% discarded a card`;
         break;
       }
@@ -79,20 +78,21 @@ export const logManager = {
         break;
       }
       case 'tokenEffect': {
-        const cardName = cardsById[logEntry.cardId]?.cardName;
+        // Card name is clickable; the effectText prose between it and the trigger word stays plain.
         msg = selfId === playerId
-          ? `%Y% triggered ${logEntry.effectText} from <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`
-          : `%P${player?.id}% triggered ${logEntry.effectText} from <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`;
+          ? `%Y% triggered ${logEntry.effectText} from ${cardLink(logEntry.cardId, cardsById)}`
+          : `%P${player?.id}% triggered ${logEntry.effectText} from ${cardLink(logEntry.cardId, cardsById)}`;
         break;
       }
       case 'cardLikeEffect': {
-        const display = getCardLikeDisplay(logEntry.cardLikeId);
+        // effectText is server-supplied prose — keep plain. Only the card-like name is clickable.
         msg = selfId === playerId
-          ? `${logEntry.effectText} from <span style="color: ${display.color}">${display.name}</span>`
-          : `${logEntry.effectText} from <span style="color: ${display.color}">${display.name}</span>`;
+          ? `${logEntry.effectText} from ${cardLikeLink(logEntry.cardLikeId)}`
+          : `${logEntry.effectText} from ${cardLikeLink(logEntry.cardLikeId)}`;
         break;
       }
-      // Token placement and consumption logs.
+      // Token placement and consumption logs — token names are not card or
+      // card-like references and therefore stay as plain text.
       case 'tokenPlaced': {
         const tokenName = tokenDefinitions[logEntry.tokenId]?.name ?? logEntry.tokenId;
         msg = selfId === playerId
@@ -108,31 +108,27 @@ export const logManager = {
         break;
       }
       case 'buyProject': {
-        const display = getCardLikeDisplay(logEntry.cardLikeId);
         msg = selfId === playerId
-          ? `%Y% bought <span style="color: ${display.color}">${display.name}</span>`
-          : `%P${player?.id}% bought <span style="color: ${display.color}">${display.name}</span>`;
+          ? `%Y% bought ${cardLikeLink(logEntry.cardLikeId)}`
+          : `%P${player?.id}% bought ${cardLikeLink(logEntry.cardLikeId)}`;
         break;
       }
       case 'gainCard': {
-        const cardName = cardsById[logEntry.cardId]?.cardName;
         msg = selfId === playerId
-          ? `%Y% gained <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`
-          : `%P${player?.id}% gained a <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`;
+          ? `%Y% gained ${cardLink(logEntry.cardId, cardsById)}`
+          : `%P${player?.id}% gained a ${cardLink(logEntry.cardId, cardsById)}`;
         break;
       }
       case 'cardPlayed': {
-        const cardName = cardsById[logEntry.cardId].cardName;
         msg = selfId === playerId
-          ? `%Y% played <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`
-          : `%P${player?.id}% played a <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`;
+          ? `%Y% played ${cardLink(logEntry.cardId, cardsById)}`
+          : `%P${player?.id}% played a ${cardLink(logEntry.cardId, cardsById)}`;
         break;
       }
       case 'revealCard': {
-        const cardName = cardsById[logEntry.cardId]?.cardName;
         msg = selfId === playerId
-          ? `%Y% revealed <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`
-          : `%P${player?.id}% revealed <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`;
+          ? `%Y% revealed ${cardLink(logEntry.cardId, cardsById)}`
+          : `%P${player?.id}% revealed ${cardLink(logEntry.cardId, cardsById)}`;
         break;
       }
       case 'shuffleDeck': {
@@ -147,11 +143,17 @@ export const logManager = {
           : `%P${player?.id}% resigned and left the game`;
         break;
       }
-      case 'trashCard': {
-        const cardName = cardsById[logEntry.cardId]?.cardName;
+      case 'undoApplied': {
+        // Shown to all players; uses the originator's accent color so it stands out.
         msg = selfId === playerId
-          ? `%Y% trashed <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`
-          : `%P${player?.id}% trashed <span style="color: ${getSourceColor(logEntry.cardId, cardsById)}">${cardName}</span>`;
+          ? `%Y% undid their last action`
+          : `%P${player?.id}% undid their last action`;
+        break;
+      }
+      case 'trashCard': {
+        msg = selfId === playerId
+          ? `%Y% trashed ${cardLink(logEntry.cardId, cardsById)}`
+          : `%P${player?.id}% trashed ${cardLink(logEntry.cardId, cardsById)}`;
         break;
       }
       case 'newPlayerTurn': {
@@ -179,9 +181,10 @@ export const logManager = {
     const indentLevels = Math.max(0, (logEntry.depth ?? 0) - 1);
     msg = `${'&nbsp;'.repeat(indentLevels * 3)}${msg}`;
 
+    // Source attribution: render the source card as a clickable card-link in
+    // parentheses so players can open its detail view too.
     if (logEntry.source) {
-      const sourceCard = cardsById[logEntry.source];
-      msg = `${msg} (<span style="color: ${getSourceColor(logEntry.source, cardsById)}">${sourceCard.cardName}</span>)`;
+      msg = `${msg} (${cardLink(logEntry.source, cardsById)})`;
     }
 
     const ids = logEntryIdsStore.get();
@@ -209,3 +212,30 @@ const getCardLikeDisplay = (cardLikeId: number) => {
     color: getSourceAccentColorForCardLikeKind(entry?.kind),
   };
 }
+
+/**
+ * Builds the inline-button markup for a clickable card name in the log.
+ *
+ * The button is styled by `.log-card-link` in `game-log.component.scss` to
+ * render as colored inline text with a hover/focus affordance. The
+ * `data-card-id` attribute is read by the delegated click handler in
+ * `GameLogComponent` to open the global card detail dialog.
+ */
+const cardLink = (cardId: CardId, cardsById: Record<CardId, Card>): string => {
+  const cardName = cardsById[cardId]?.cardName ?? '';
+  const color = getSourceColor(cardId, cardsById);
+  return `<button type="button" class="log-card-link" data-card-id="${cardId}" style="color: ${color}">${cardName}</button>`;
+};
+
+/**
+ * Builds the inline-button markup for a clickable card-like name in the log
+ * (events, projects, landmarks, boons, hexes, states, artifacts, etc.).
+ *
+ * The `data-card-like-id` attribute is read by the delegated click handler in
+ * `GameLogComponent` to resolve the card-like's detail image path and open the
+ * global card detail dialog.
+ */
+const cardLikeLink = (cardLikeId: number): string => {
+  const display = getCardLikeDisplay(cardLikeId);
+  return `<button type="button" class="log-card-link" data-card-like-id="${cardLikeId}" style="color: ${display.color}">${display.name}</button>`;
+};
