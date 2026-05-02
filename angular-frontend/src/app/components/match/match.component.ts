@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   ViewChild,
+  computed,
   effect,
   inject,
   OnDestroy,
@@ -23,9 +24,10 @@ import { PileSelectionActionComponent } from './pile-selection/pile-selection-ac
 import { MatchHudComponent } from './match-hud/match-hud.component';
 import { MatchScorePanelComponent } from './match-hud/match-score-panel.component';
 import { MatchHudAsideComponent } from './match-hud/match-hud-aside.component';
-import { matchStartedStore } from '../../state/match-state';
+import { matchStartedStore, matchSummaryStore } from '../../state/match-state';
 import { selfPlayerIdStore } from '../../state/player-state';
 import { CardImagePreloadService } from '../../core/card-image-preload.service';
+import { undoInFlightStore } from '../../state/undo-state';
 
 /** Container component for the active match screen. Manages MatchScene lifecycle. */
 @Component({
@@ -67,6 +69,24 @@ export class MatchComponent implements OnDestroy {
     this._nanoStores.useStore(selfPlayerIdStore),
     { initialValue: selfPlayerIdStore.get() },
   );
+
+  /** True once the server has sent a matchSummary (game over). */
+  private readonly _gameOver = toSignal(
+    this._nanoStores.useStore(matchSummaryStore),
+    { initialValue: matchSummaryStore.get() },
+  );
+
+  /** True while the local user has an undo request in flight. */
+  private readonly _undoInFlight = toSignal(
+    this._nanoStores.useStore(undoInFlightStore),
+    { initialValue: undoInFlightStore.get() },
+  );
+
+  /**
+   * True when undo is available — the game has not ended and there is no
+   * undo vote already in flight from this client.
+   */
+  readonly canUndo = computed(() => !this._gameOver() && !this._undoInFlight());
 
   constructor() {
     // Begin background image preloading immediately. matchStore and cardStore
@@ -115,6 +135,15 @@ export class MatchComponent implements OnDestroy {
    */
   onResignRequested(): void {
     this._hud?.requestResign();
+  }
+
+  /**
+   * Relays undo requests from MatchHudAsideComponent to MatchHudComponent.
+   *
+   * MatchHudComponent owns the undo waiting dialog and emits the socket event.
+   */
+  onUndoRequested(): void {
+    this._hud?.requestUndo();
   }
 
   /** Relays HUD next-phase actions to the active match controller. */

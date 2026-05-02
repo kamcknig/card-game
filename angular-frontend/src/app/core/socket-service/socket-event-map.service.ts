@@ -28,6 +28,7 @@ import { serverVersionStore } from '../../state/server-version-state';
 import { selectableSearchCatalogStore } from '../../state/selectable-search-state';
 import { waitingOnPlayerIdStore } from '../../state/match-ui-overlay-state';
 import { logEntryIdsStore, logStore } from '../../state/log-state';
+import { undoCompletedSignalStore, undoInFlightStore } from '../../state/undo-state';
 import { SocketEventMap, SocketService } from './socket.service';
 
 /**
@@ -379,6 +380,15 @@ export class SocketEventMapService {
       if (playerId === undefined || currentWaitingPlayerId === playerId) {
         waitingOnPlayerIdStore.set(null);
       }
+    };
+
+    // Clears the in-flight flag and signals components subscribed to
+    // undoCompletedSignalStore. The signal is reset to null on the next
+    // microtask so every subscriber gets exactly one delivery per outcome.
+    map['undoCompleted'] = payload => {
+      undoInFlightStore.set(false);
+      undoCompletedSignalStore.set(payload);
+      queueMicrotask(() => undoCompletedSignalStore.set(null));
     };
 
     return map;

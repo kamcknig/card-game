@@ -1,7 +1,9 @@
 <div class="hud-log-stack">
   <app-game-log
     [entries]="logEntries()"
+    [canUndo]="canUndo()"
     (resignRequested)="onResignMatch()"
+    (undoRequested)="onUndoRequested()"
   ></app-game-log>
 </div>
 

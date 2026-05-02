@@ -39,6 +39,15 @@
   line-height: 1;
 }
 
+// Wraps the undo and settings buttons as a right-aligned flex group so
+// justify-content: space-between on .log-header pushes them to the far
+// right as a unit.
+.log-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--theme-space-xs);
+}
+
 .settings-trigger {
   width: 28px;
   height: 28px;
@@ -74,6 +83,39 @@
     color: var(--theme-text-primary);
     background: var(--theme-action-primary-bg);
     border-color: var(--theme-border-strong);
+  }
+}
+
+// Undo button — mirrors .settings-trigger visually with an added :disabled
+// state so the button dims when no snapshot is available or the game is over.
+.undo-trigger {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--theme-text-secondary);
+  border-radius: var(--theme-radius-sm);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+
+  // Force the inner SVG to block flow so it centers geometrically inside
+  // the button without inheriting inline baseline padding.
+  ::ng-deep svg {
+    display: block;
+  }
+
+  &:hover:not(:disabled) {
+    color: var(--theme-text-primary);
+    background: color-mix(in srgb, var(--theme-text-primary) 10%, transparent);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
   }
 }
 

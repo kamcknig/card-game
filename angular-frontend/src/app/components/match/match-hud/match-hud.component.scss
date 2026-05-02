@@ -90,3 +90,42 @@
 
 // Cancel/Resign buttons in this dialog use the shared `.btn .btn-secondary`
 // and `.btn .btn-danger` classes from styles.scss. No local rules needed.
+
+// Undo waiting dialog (originator) and undo allow dialog (voter) share the
+// same card chrome. Phase 4 adds .undo-waiting-card; Phase 5 will use
+// .undo-allow-card, which is listed here in advance so both phases share
+// the same rule block.
+.undo-waiting-card,
+.undo-allow-card {
+  pointer-events: auto;
+  background: var(--theme-surface-panel);
+  color: var(--theme-text-primary);
+  padding: var(--theme-space-lg);
+  border-radius: var(--theme-radius-md);
+  border: 1px solid var(--theme-border-strong);
+  box-shadow: var(--theme-shadow-strong);
+  min-width: 320px;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--theme-space-md);
+}
+
+.undo-waiting-title,
+.undo-allow-title {
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.undo-waiting-body,
+.undo-allow-body {
+  font-size: 14px;
+  color: var(--theme-text-secondary);
+}
+
+.undo-waiting-actions,
+.undo-allow-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--theme-space-sm);
+}

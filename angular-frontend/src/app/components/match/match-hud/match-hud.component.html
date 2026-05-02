@@ -61,3 +61,22 @@
     </div>
   </app-ui-dialog>
 }
+
+@if (undoWaitingVisible()) {
+  <app-ui-dialog
+    [zIndex]="4255"
+    [backdropVariant]="'strong'"
+    [closeOnBackdrop]="false"
+    [hasBackdrop]="true"
+  >
+    <div class="undo-waiting-card">
+      <div class="undo-waiting-title">Undo requested</div>
+      <div class="undo-waiting-body">
+        Waiting for other players to approve undo…
+      </div>
+      <div class="undo-waiting-actions">
+        <button class="btn btn-secondary" (click)="onCancelUndo()">Cancel</button>
+      </div>
+    </div>
+  </app-ui-dialog>
+}

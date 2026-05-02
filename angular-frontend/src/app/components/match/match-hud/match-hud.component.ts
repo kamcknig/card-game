@@ -4,7 +4,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
 import { combineLatest, map, of, switchMap } from 'rxjs';
 import { PlayerId } from 'shared/types';
@@ -14,6 +14,7 @@ import { disconnectedHumanIdsStore } from '../../../state/game-state';
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { gamePausedStore } from '../../../state/game-logic';
 import { waitingOnPlayerIdStore } from '../../../state/match-ui-overlay-state';
+import { undoCompletedSignalStore, undoInFlightStore } from '../../../state/undo-state';
 
 @Component({
   selector: 'app-match-hud',
@@ -31,7 +32,21 @@ export class MatchHudComponent {
   // Controls visibility of the resign confirmation dialog.
   readonly resignDialogVisible = signal(false);
 
+  // Controls visibility of the originator's undo-waiting dialog.
+  readonly undoWaitingVisible = signal(false);
+
   private _disconnectedHumanIds: PlayerId[] = [];
+
+  constructor() {
+    // Auto-close the undo waiting dialog when the server resolves the vote
+    // for any outcome (approved, denied, cancelled, etc.).
+    this._nanoService.useStore(undoCompletedSignalStore).pipe(
+      takeUntilDestroyed(),
+    ).subscribe(payload => {
+      if (!payload) return;
+      this.undoWaitingVisible.set(false);
+    });
+  }
 
   // Controls match pause overlay when any human player is disconnected.
   readonly gamePaused = toSignal(this._nanoService.useStore(gamePausedStore), {
@@ -66,6 +81,25 @@ export class MatchHudComponent {
   onConfirmResign(): void {
     this.resignDialogVisible.set(false);
     this._socketService.emit('resignMatch');
+  }
+
+  /**
+   * Opens the undo waiting dialog, marks the undo as in-flight, and emits
+   * the undoRequested event to the server. Called via ViewChild from
+   * MatchComponent when the aside relays an undo request.
+   */
+  requestUndo(): void {
+    undoInFlightStore.set(true);
+    this.undoWaitingVisible.set(true);
+    this._socketService.emit('undoRequested');
+  }
+
+  // Closes the undo waiting dialog and notifies the server that the
+  // originator has cancelled the vote.
+  onCancelUndo(): void {
+    undoInFlightStore.set(false);
+    this.undoWaitingVisible.set(false);
+    this._socketService.emit('undoCancelled');
   }
 
   // Removes the oldest disconnected human player.
