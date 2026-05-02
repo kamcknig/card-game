@@ -602,6 +602,19 @@ export type ServerEmitEvents = {
   searchWayResponse: (wayData: WayNoId[]) => void;
   selectCard: (signalId: string, selectCardArgs: SelectActionCardArgs & { selectableCardIds: CardId[] }) => void;
   setPlayerList: (players: Player[]) => void;
+  // Sends the full ordered log history for clients to replace their local
+  // log state. Used after an undo restore truncates server-side log
+  // history so the client log no longer shows entries from the rewound
+  // actions.
+  setLog: (history: LogEntry[]) => void;
+  // Pushed to every non-originator human player when an undo vote starts.
+  // The voter must respond via undoVote; the modal auto-closes when
+  // undoCompleted arrives.
+  undoVoteRequested: (originatorId: PlayerId) => void;
+  // Pushed to every player when an undo round resolves (approved,
+  // denied, cancelled, or rejected). Carries enough context for the
+  // client to pick the correct UX message.
+  undoCompleted: (payload: UndoCompletedPayload) => void;
   setCardLibrary: (library: Record<CardKey, Card>) => void;
   setTokenDefinitions: (definitions: Record<TokenId, TokenDefinition>) => void;
   setPlayer: (player: Player) => void;
@@ -651,6 +664,12 @@ export interface ServerListenEvents {
   editMatch: () => void;
   // Vote to remove a disconnected human player and resume the match.
   removeDisconnectedPlayer: (playerId: PlayerId) => void;
+  // Originator clicks the undo button; server starts a vote round.
+  undoRequested: () => void;
+  // Originator clicks Cancel on their waiting dialog.
+  undoCancelled: () => void;
+  // Voter responds with allow=true or allow=false.
+  undoVote: (allow: boolean) => void;
   // Requests the preloaded selectable card-like catalog for match-configuration UI.
   requestSelectableSearchCatalog: () => void;
   // Checks whether a match-configuration save name is available.
@@ -805,6 +824,19 @@ export type MatchSummary = {
     deck: number[];
   }[]
 }
+
+/**
+ * Result envelope for a finished undo round. Mirrors back to every
+ * connected client so all undo dialogs (originator waiting + voter
+ * prompts) can pick the right message and close.
+ */
+export type UndoCompletedPayload =
+  | { ok: true; by: PlayerId }
+  | { ok: false; reason: 'denied'; deniedBy: PlayerId }
+  | { ok: false; reason: 'cancelled' }
+  | { ok: false; reason: 'no-snapshot' }
+  | { ok: false; reason: 'already-in-progress' }
+  | { ok: false; reason: 'game-ended' };
 
 export class CardLike<M = unknown> {
   id: CardId;

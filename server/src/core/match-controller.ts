@@ -47,6 +47,7 @@ import { TokenRegistryService } from './tokens/token-registry-service.ts';
 import { RngService } from './rng-service.ts';
 import { ServerConfigService } from './server-config-service.ts';
 import { LoggerService } from './logger-service.ts';
+import { MatchUndoService } from './undo/match-undo-service.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
@@ -106,6 +107,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     private readonly rngService: RngService,
     private readonly serverConfigService: ServerConfigService,
     private readonly loggerService: LoggerService,
+    private readonly undoService: MatchUndoService,
   ) {
     super();
   }
@@ -529,6 +531,25 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._actionDepth += 1;
     this._matchSnapshot ??= this.getMatchSnapshot();
 
+    // Snapshot the engine for undo BEFORE executing the action — only at
+    // the top-level boundary, only when the game isn't ending. We skip
+    // pure-prompt actions because they don't mutate state on their own;
+    // their effects are inside the parent action that ran the prompt.
+    // We also skip checkForRemainingPlayerActions because it is always a
+    // housekeeping follow-up invoked automatically after a user action
+    // (never directly initiated by the player) and must not create its own
+    // undo boundary.
+    if (
+      isTopLevel &&
+      !this._gameEnding &&
+      action !== 'selectCard' &&
+      action !== 'selectSingleCard' &&
+      action !== 'userPrompt' &&
+      action !== 'checkForRemainingPlayerActions'
+    ) {
+      this.undoService.pushSnapshot();
+    }
+
     let asyncTimeout: number | undefined = undefined;
 
     try {
@@ -754,6 +775,41 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   public async forceEndGame(): Promise<void> {
     this.loggerService.log(`[match] force-ending game via debug endpoint`);
     await this.endGame();
+  }
+
+  /**
+   * Debug-only: pops the most recent undo snapshot and restores state
+   * without a vote. Assumes no action is currently in flight (actionInFlight=false).
+   * Returns true when a snapshot was available and restored, false otherwise.
+   */
+  public async debugPerformUndo(): Promise<boolean> {
+    if (!this.undoService.canUndo()) {
+      this.loggerService.warn('[match] debug undo requested but no snapshot available');
+      return false;
+    }
+
+    // Capture state as clients currently see it so the diff broadcasts cleanly.
+    const prev = this.getMatchSnapshot();
+
+    const snapshot = await this.undoService.restoreLatest(false);
+    if (!snapshot) {
+      return false;
+    }
+
+    // Update derived state after restore.
+    this.calculateScores();
+    this.interactivityController.checkCardInteractivity();
+    this.match.cardOverrides = this.cardPriceController.calculateOverrides() ?? {};
+
+    // Broadcast restored state to all clients.
+    this.broadcastPatch(prev);
+    this.logManager.flushQueue();
+
+    // Sync clients' log to the truncated history.
+    this.socketMap.forEach(s => s.emit('setLog', this.logManager.getHistory()));
+
+    this.loggerService.info('[match] debug undo applied');
+    return true;
   }
 
   private async endGame() {

@@ -61,4 +61,23 @@ export class CardSourceController {
 
     return source;
   }
+
+  /**
+   * Re-aliases _sourceMap and _tagMap from the live match.cardSources
+   * and match.cardSourceTagMap. Used by MatchUndoService after a
+   * restore: the snapshot replaces match.cardSources with fresh array
+   * references, and this call brings the controller's caches back in
+   * sync with those references. Safe to call any time the match's
+   * sources record has been replaced wholesale.
+   */
+  public rebuildFromMatch(): void {
+    this._sourceMap.clear();
+    this._tagMap.clear();
+    for (const [key, source] of Object.entries(this.match.cardSources)) {
+      this._sourceMap.set(key, source);
+    }
+    for (const [tag, sourceKeys] of Object.entries(this.match.cardSourceTagMap)) {
+      this._tagMap.set(tag, sourceKeys.slice());
+    }
+  }
 }

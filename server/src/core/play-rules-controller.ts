@@ -19,6 +19,17 @@ export class PlayRulesController {
 
   constructor(private readonly match: Match) {}
 
+  /** Returns a shallow copy of the active play rule registry. */
+  public snapshotRules(): unknown[] {
+    return [...this.rules];
+  }
+
+  /** Restores the play rule registry from a snapshot. */
+  public restoreRules(snapshot: unknown[]): void {
+    this.rules.length = 0;
+    this.rules.push(...(snapshot as typeof this.rules));
+  }
+
   public registerRule(rule: CardPlayRule): () => void {
     this.rules.push(rule);
 

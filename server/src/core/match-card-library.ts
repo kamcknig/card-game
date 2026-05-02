@@ -29,6 +29,11 @@ export class MatchCardLibrary {
     return c as Card<M>;
   };
 
+  // Returns the card if present, or undefined if not in the library.
+  public tryGetCard = <M = unknown>(cardId: CardId): Card<M> | undefined => {
+    return this._library.get(cardId) as Card<M> | undefined;
+  };
+
   public getAllCards = (): Record<number, Card> => {
     return Object.fromEntries(this._library) as Record<number, Card>;
   };

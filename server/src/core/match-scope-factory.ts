@@ -28,6 +28,7 @@ import { PlayerReconnectOrchestrator } from './player-reconnect-orchestrator.ts'
 import { MatchActionRunnerRef, ScopedActionService } from './actions/scoped-action-service.ts';
 import { ExpansionEffectRegistryService } from './expansion-effect-registry-service.ts';
 import { PlayRulesController } from './play-rules-controller.ts';
+import { MatchUndoService } from './undo/match-undo-service.ts';
 
 /**
  * Runtime handle for one active match scope.
@@ -112,6 +113,7 @@ export class MatchScopeFactory {
       playOptionsResolver: asClass(PlayOptionsResolver).scoped(),
       reactionContextFactory: asClass(ReactionContextFactory).scoped(),
       reactionManager: asClass(ReactionManager).scoped(),
+      undoService: asClass(MatchUndoService).scoped(),
       endGameEvaluator: asClass(EndGameEvaluatorService).scoped(),
       interactivityController: asClass(CardInteractivityController).scoped(),
       playerReconnectOrchestrator: asClass(PlayerReconnectOrchestrator).scoped(),

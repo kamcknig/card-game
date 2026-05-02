@@ -223,6 +223,21 @@ export class ServerDebugRouteHandlerService {
         });
     }
 
+    // POST /debug/games/:gameId/matches/:matchScopeId/undo
+    // Debug-only: pops the most recent undo snapshot and restores state
+    // without a vote. Useful for local verification of snapshot/restore
+    // plumbing before the vote flow is wired in.
+    if (parts.length === 6 && parts[5] === 'undo' && req.method === 'POST') {
+      return this.lobbyDirectoryService
+        .debugPerformUndoForMatch(gameId, matchScopeId)
+        .then(result => {
+          if (!result.ok) {
+            return this.jsonResponse({ error: result.error }, 400);
+          }
+          return this.jsonResponse({ ok: true });
+        });
+    }
+
     // GET /debug/games/:gameId/matches/:matchScopeId/card-library
     if (parts.length === 6 && parts[5] === 'card-library' && req.method === 'GET') {
       const exportState = this.lobbyDirectoryService.exportMatchStateForMatch(gameId, matchScopeId);

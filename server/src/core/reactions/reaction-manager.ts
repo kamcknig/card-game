@@ -59,6 +59,37 @@ export class ReactionManager {
 
   public endGame() {}
 
+  /** Returns a shallow copy of the current reaction registrations. */
+  public snapshotReactions(): Reaction[] {
+    return [...this._reactions];
+  }
+
+  /** Returns a deep-ish copy of the duration-trigger map. */
+  public snapshotDurationTriggers(): Map<CardId, Set<string>> {
+    const clone = new Map<CardId, Set<string>>();
+    for (const [cardId, triggerIds] of this._durationTriggerIdsByCardId) {
+      clone.set(cardId, new Set(triggerIds));
+    }
+    return clone;
+  }
+
+  /**
+   * Replaces the current reaction set + duration-trigger registry with
+   * the supplied snapshot. Used by MatchUndoService.
+   */
+  public restoreReactions(
+    reactions: Reaction[],
+    durationTriggerIdsByCardId: Map<CardId, Set<string>>,
+  ): void {
+    this._reactions.length = 0;
+    this._reactions.push(...reactions);
+
+    this._durationTriggerIdsByCardId.clear();
+    for (const [cardId, triggerIds] of durationTriggerIdsByCardId) {
+      this._durationTriggerIdsByCardId.set(cardId, new Set(triggerIds));
+    }
+  }
+
   registerGameEvent(event: GameLifecycleEvent, handler: GameLifecycleCallback) {
     this._expansionGameEventHandlers[event] ??= [];
     this._expansionGameEventHandlers[event].push(handler);

@@ -235,6 +235,14 @@ export class Game {
     return this.gameMatchLifecycleCoordinatorService.forceEndGame(this.runtimeState);
   }
 
+  /**
+   * Performs a debug undo by restoring the most recent snapshot without a vote.
+   * Used exclusively by the debug API to verify snapshot/restore plumbing.
+   */
+  public debugPerformUndo(): Promise<{ ok: boolean; error?: string }> {
+    return this.gameMatchLifecycleCoordinatorService.debugPerformUndo(this.runtimeState);
+  }
+
   // Disposes match-lifetime resources for clean process shutdown.
   public dispose(): void {
     this.gameMatchLifecycleCoordinatorService.dispose(this.runtimeState);

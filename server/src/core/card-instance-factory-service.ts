@@ -39,6 +39,16 @@ export class CardInstanceFactoryService {
     return new Card({ ...card });
   }
 
+  /** Returns the current id-allocator value. Used by the undo service. */
+  public getCardCount(): number {
+    return this._cardCount;
+  }
+
+  /** Restores the id-allocator. Used by the undo service after restore. */
+  public setCardCount(value: number): void {
+    this._cardCount = value;
+  }
+
   // Creates a supply/non-supply card instance.
   public createCard(cardKey: CardKey, card?: Partial<CardNoId>): Card {
     const rawCardLibrary = this.expansionCatalogService.getRawCardLibrary();
