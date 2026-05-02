@@ -8,6 +8,8 @@ COPY server/ ./server/
 WORKDIR /app/server
 
 RUN deno install --entrypoint src/server.ts && \
+    find src -name '*.ts' -print0 | xargs -0 deno cache && \
+    chown -R deno:deno /deno-dir && \
     mkdir -p /app/server/game-data && \
     chown -R deno:deno /app/server/game-data
 
