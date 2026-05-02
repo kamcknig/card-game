@@ -14,6 +14,25 @@ export class CardPriceRulesController {
     private readonly match: Match,
   ) {}
 
+  /** Returns a shallow copy of the active price rule registry. */
+  public snapshotRules(): Record<CardId, unknown[]> {
+    const clone: Record<CardId, unknown[]> = {};
+    for (const [cardId, rules] of Object.entries(this._rules)) {
+      clone[Number(cardId)] = [...rules];
+    }
+    return clone;
+  }
+
+  /** Restores the price rule registry from a snapshot. */
+  public restoreRules(snapshot: Record<CardId, unknown[]>): void {
+    for (const key of Object.keys(this._rules)) {
+      delete this._rules[Number(key)];
+    }
+    for (const [cardId, rules] of Object.entries(snapshot)) {
+      this._rules[Number(cardId)] = [...rules] as typeof this._rules[CardId];
+    }
+  }
+
   registerRule(card: CardLike, rule: CardPriceRule) {
     this._rules[card.id] ??= [];
     this._rules[card.id].push(rule);

@@ -78,6 +78,7 @@ import { CardEffectContextFactory } from './card-effect-context-factory.ts';
 import { TokenRegistryService } from '../tokens/token-registry-service.ts';
 import { RngService } from '../rng-service.ts';
 import { LoggerService } from '../logger-service.ts';
+import { PromptAbortRegistry } from '../undo/prompt-abort-registry.ts';
 
 export class GameActionController implements GameActionDefinitionMap {
   private _customActionHandlers: Partial<GameActionDefinitionMap> = {};
@@ -118,6 +119,7 @@ export class GameActionController implements GameActionDefinitionMap {
     private readonly tokenRegistryService: TokenRegistryService,
     private readonly rngService: RngService,
     private readonly loggerService: LoggerService,
+    private readonly promptAbortRegistry: PromptAbortRegistry,
   ) {}
 
   public registerCardEffect(cardKey: CardKey, tag: string, fn: CardEffectFn) {
@@ -2076,11 +2078,16 @@ export class GameActionController implements GameActionDefinitionMap {
       });
     }
 
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
+      // Register so PromptAbortRegistry can abort this prompt if a vote
+      // approves an undo while we're waiting for input.
+      const unregister = this.promptAbortRegistry.register(signalId, reject);
+
       const onInput = (incomingSignalId: string, response: unknown) => {
         if (incomingSignalId !== signalId) return;
 
         socket.off('userInputReceived', onInput);
+        unregister();
 
         if (playerId !== currentPlayerId) {
           this.socketMap.forEach((socket, id) => {
@@ -2209,13 +2216,18 @@ export class GameActionController implements GameActionDefinitionMap {
       });
     }
 
-    return new Promise<CardId[]>(resolve => {
+    return new Promise<CardId[]>((resolve, reject) => {
+      // Register so PromptAbortRegistry can abort this prompt if a vote
+      // approves an undo while we're waiting for input.
+      const unregister = this.promptAbortRegistry.register(signalId, reject);
+
       const onInput = (incomingSignalId: string, cardIds: unknown) => {
         if (incomingSignalId !== signalId) return;
 
         socket.off('userInputReceived', onInput);
+        unregister();
 
-        // ✅ Clear "waiting" if needed
+        // Clear "waiting" if needed
         if (playerId !== currentPlayerId) {
           this.socketMap.forEach((socket, id) => {
             if (id !== playerId) {

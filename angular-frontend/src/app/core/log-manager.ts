@@ -143,6 +143,13 @@ export const logManager = {
           : `%P${player?.id}% resigned and left the game`;
         break;
       }
+      case 'undoApplied': {
+        // Shown to all players; uses the originator's accent color so it stands out.
+        msg = selfId === playerId
+          ? `%Y% undid their last action`
+          : `%P${player?.id}% undid their last action`;
+        break;
+      }
       case 'trashCard': {
         msg = selfId === playerId
           ? `%Y% trashed ${cardLink(logEntry.cardId, cardsById)}`

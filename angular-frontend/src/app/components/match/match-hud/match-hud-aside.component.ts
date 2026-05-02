@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   inject,
+  input,
   output,
   signal,
 } from '@angular/core';
@@ -58,6 +59,7 @@ type Mat = MatTabModel;
  *
  * Outputs:
  * - `resignRequested` — relayed from GameLogComponent up to MatchComponent.
+ * - `undoRequested` — relayed from GameLogComponent up to MatchComponent.
  */
 @Component({
   selector: 'app-match-hud-aside',
@@ -79,6 +81,12 @@ export class MatchHudAsideComponent {
 
   /** Emitted when the user requests to resign the match. */
   readonly resignRequested = output<void>();
+
+  /** Whether the undo button in the game log should be enabled. Driven by MatchComponent. */
+  readonly canUndo = input<boolean>(true);
+
+  /** Emitted when the user clicks the undo button in the game log. */
+  readonly undoRequested = output<void>();
 
   /** Currently displayed mat in the modal preview. */
   readonly visibleMat = signal<Mat | null>(null);
@@ -212,6 +220,11 @@ export class MatchHudAsideComponent {
   /** Propagates the resign request up to MatchComponent, which forwards it to MatchHudComponent. */
   onResignMatch(): void {
     this.resignRequested.emit();
+  }
+
+  /** Propagates the undo request up to MatchComponent, which forwards it to MatchHudComponent. */
+  onUndoRequested(): void {
+    this.undoRequested.emit();
   }
 
   // ---------------------------------------------------------------------------

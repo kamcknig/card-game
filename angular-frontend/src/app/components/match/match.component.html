@@ -29,7 +29,9 @@
     <!-- Column 3 (right): HUD log, HUD menu, mat tabs, debug overlay -->
     <div class="match-column match-column-right">
       <app-match-hud-aside
+        [canUndo]="canUndo()"
         (resignRequested)="onResignRequested()"
+        (undoRequested)="onUndoRequested()"
       ></app-match-hud-aside>
     </div>
 

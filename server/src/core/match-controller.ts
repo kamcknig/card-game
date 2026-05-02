@@ -47,6 +47,9 @@ import { TokenRegistryService } from './tokens/token-registry-service.ts';
 import { RngService } from './rng-service.ts';
 import { ServerConfigService } from './server-config-service.ts';
 import { LoggerService } from './logger-service.ts';
+import { MatchUndoService } from './undo/match-undo-service.ts';
+import { MatchUndoVoteService } from './undo/match-undo-vote-service.ts';
+import { PromptAbortRegistry, UndoAbortError } from './undo/prompt-abort-registry.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   private _cardLibSnapshot = {};
@@ -106,6 +109,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     private readonly rngService: RngService,
     private readonly serverConfigService: ServerConfigService,
     private readonly loggerService: LoggerService,
+    private readonly undoService: MatchUndoService,
+    private readonly promptAbortRegistry: PromptAbortRegistry,
+    private readonly undoVoteService: MatchUndoVoteService,
   ) {
     super();
   }
@@ -380,6 +386,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   public playerDisconnected(playerId: number) {
+    // Cancel or adjust any in-flight undo vote before cleaning up the socket.
+    this.undoVoteService.handlePlayerDisconnected(playerId);
+
     // Use whichever array is populated depending on phase
     const roster = this.match.players?.length ? this.match.players : this.match.config.players;
 
@@ -529,6 +538,31 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     this._actionDepth += 1;
     this._matchSnapshot ??= this.getMatchSnapshot();
 
+    // Snapshot the engine for undo BEFORE executing the action — only at
+    // the top-level boundary, only when the game isn't ending. We skip
+    // pure-prompt actions because they don't mutate state on their own;
+    // their effects are inside the parent action that ran the prompt.
+    // We also skip checkForRemainingPlayerActions because it is always a
+    // housekeeping follow-up invoked automatically after a user action
+    // (never directly initiated by the player) and must not create its own
+    // undo boundary.
+    // drawHand is called at top-level only during match initialization;
+    // during gameplay it is always nested within another action. Excluding
+    // it here prevents init-phase snapshots from appearing in the undo stack
+    // (the stack is also explicitly cleared after startMatch completes).
+    if (
+      isTopLevel &&
+      !this._gameEnding &&
+      action !== 'selectCard' &&
+      action !== 'selectSingleCard' &&
+      action !== 'userPrompt' &&
+      action !== 'checkForRemainingPlayerActions' &&
+      action !== 'drawHand'
+    ) {
+      const initiatingPlayerId = getCurrentPlayer(this.match)?.id ?? null;
+      this.undoService.pushSnapshot(initiatingPlayerId);
+    }
+
     let asyncTimeout: number | undefined = undefined;
 
     try {
@@ -573,6 +607,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
         if (!this._gameEnding) {
           this.broadcastPatch({ ...this._matchSnapshot });
           this.logManager.flushQueue();
+          this.broadcastCanUndo();
         }
         this._matchSnapshot = null;
       }
@@ -582,8 +617,44 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       }
 
       return result as Promise<GameActionReturnTypeMap[K]>;
+    } catch (error) {
+      if (error instanceof UndoAbortError) {
+        // Clear the ping timer so it doesn't fire after the abort.
+        clearTimeout(asyncTimeout);
+        asyncTimeout = undefined;
+
+        // Discard any pending log queue from the aborted action so it
+        // doesn't leak into the next broadcast.
+        this.logManager.flushQueue();
+
+        if (isTopLevel) {
+          // Reset patch bookkeeping so the post-restore broadcast diffs
+          // against the right baseline.
+          this._matchSnapshot = null;
+          // Notify the undo service that the call stack has unwound; it
+          // is awaiting this barrier before performing the restore.
+          this.undoService.signalUnwindComplete();
+          // Swallow the abort at the top — restore happens in the undo
+          // service. Returning null mimics a "no-op" action result.
+          return null as unknown as GameActionReturnTypeMap[K];
+        }
+        // Re-throw so outer runGameAction layers also unwind.
+        throw error;
+      }
+      throw error;
     } finally {
       this._actionDepth = Math.max(0, this._actionDepth - 1);
+    }
+  }
+
+  /**
+   * Notifies each connected player whether they personally have an undo
+   * snapshot available. Each player's value is computed individually so
+   * ownership is respected — a player who has not yet acted cannot undo.
+   */
+  public broadcastCanUndo(): void {
+    for (const [playerId, socket] of this.socketMap) {
+      socket.emit('undoAvailable', this.undoService.canUndoForPlayer(playerId));
     }
   }
 
@@ -640,10 +711,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     await this.reactionManager.runGameLifecycleEvent('onGameStartSetup', { match: this.match });
     await this.reactionManager.runGameLifecycleEvent('onGameStart', { match: this.match });
 
-    for (const socket of this.socketMap.values()) {
+    for (const [playerId, socket] of this.socketMap.entries()) {
       // Bind card interaction handlers for all active players at match start.
       this.interactivityController.playerAdded(socket);
-      this.playerReconnectOrchestrator.bindGameplaySocketListeners(socket);
+      // Pass playerId so per-player undo socket events are attributed correctly.
+      this.playerReconnectOrchestrator.bindGameplaySocketListeners(socket, playerId);
     }
 
     this._matchSnapshot = this.getMatchSnapshot();
@@ -655,6 +727,10 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     for (const player of this.match.players!) {
       await this.runGameAction('drawHand', { playerId: player.id });
     }
+
+    // Discard any initialisation-phase snapshots so no player's undo
+    // button is enabled before the first real player action.
+    this.undoService.clear();
 
     this.logManager.addLogEntry({
       root: true,
@@ -754,6 +830,53 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   public async forceEndGame(): Promise<void> {
     this.loggerService.log(`[match] force-ending game via debug endpoint`);
     await this.endGame();
+  }
+
+  /**
+   * Debug-only: pops the most recent undo snapshot and restores state
+   * without a vote. Handles both the idle case and the case where a
+   * userPrompt/selectCard is currently in flight.
+   * Returns true when a snapshot was available and restored, false otherwise.
+   */
+  public async debugPerformUndo(): Promise<boolean> {
+    if (!this.undoService.canUndo()) {
+      this.loggerService.warn('[match] debug undo requested but no snapshot available');
+      return false;
+    }
+
+    // Capture state as clients currently see it so the diff broadcasts cleanly.
+    const prev = this.getMatchSnapshot();
+
+    // If a prompt is currently awaiting player input, abort it so the
+    // engine call stack unwinds before we restore state.
+    const inFlight = this.promptAbortRegistry.hasInFlight();
+    if (inFlight) {
+      this.loggerService.debug('[match] debug undo: aborting in-flight prompt before restore');
+      this.promptAbortRegistry.abortAll();
+    }
+
+    const snapshot = await this.undoService.restoreLatest(inFlight);
+    if (!snapshot) {
+      return false;
+    }
+
+    // Update derived state after restore.
+    this.calculateScores();
+    this.interactivityController.checkCardInteractivity();
+    this.match.cardOverrides = this.cardPriceController.calculateOverrides() ?? {};
+
+    // Broadcast restored state to all clients.
+    this.broadcastPatch(prev);
+    this.logManager.flushQueue();
+
+    // Sync clients' log to the truncated history.
+    this.socketMap.forEach(s => s.emit('setLog', this.logManager.getHistory()));
+
+    // Update undo button state after the stack has been popped.
+    this.broadcastCanUndo();
+
+    this.loggerService.info('[match] debug undo applied');
+    return true;
   }
 
   private async endGame() {
