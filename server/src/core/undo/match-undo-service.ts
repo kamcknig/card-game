@@ -1,4 +1,4 @@
-import { Card, CardId, Match } from 'shared/types/index.ts';
+import { Card, CardId, Match, PlayerId } from 'shared/types/index.ts';
 import { CardSourceController } from '../card-source-controller.ts';
 import { MatchCardLibrary } from '../match-card-library.ts';
 import { CardInstanceFactoryService } from '../card-instance-factory-service.ts';
@@ -26,6 +26,9 @@ interface UndoSnapshot {
   cardPriceRulesByCardId: Record<CardId, unknown[]>;             // shallow copy of arrays
   playRules: unknown[];                                          // shallow copy of array
   logHistoryLength: number;
+  /** PlayerId of the player whose action created this snapshot.
+   *  null when the snapshot was taken during system-driven initialisation. */
+  initiatingPlayerId: PlayerId | null;
 }
 
 /**
@@ -67,8 +70,20 @@ export class MatchUndoService {
     return this._snapshots.length;
   }
 
-  /** Captures current state. Called from MatchController.runGameAction. */
-  public pushSnapshot(): void {
+  /**
+   * True when the stack contains at least one snapshot initiated by
+   * `playerId`. Does not require that snapshot to be on top of the stack.
+   */
+  public canUndoForPlayer(playerId: PlayerId): boolean {
+    return this._snapshots.some(s => s.initiatingPlayerId === playerId);
+  }
+
+  /**
+   * Captures current state. `initiatingPlayerId` is the player whose
+   * action created this boundary; null for system-driven calls.
+   * Called from MatchController.runGameAction.
+   */
+  public pushSnapshot(initiatingPlayerId: PlayerId | null): void {
     const snapshot: UndoSnapshot = {
       match: structuredClone(this.match),
       cardLibrary: structuredClone(this.cardLibrary.getAllCards()),
@@ -78,6 +93,7 @@ export class MatchUndoService {
       cardPriceRulesByCardId: this.cardPriceController.snapshotRules(),
       playRules: this.playRulesController.snapshotRules(),
       logHistoryLength: this.logManager.getHistoryLength(),
+      initiatingPlayerId,
     };
 
     this._snapshots.push(snapshot);
@@ -86,7 +102,7 @@ export class MatchUndoService {
     }
 
     this.loggerService.debug(
-      `[undo] snapshot pushed (depth=${this._snapshots.length})`,
+      `[undo] snapshot pushed by player ${initiatingPlayerId} (depth=${this._snapshots.length})`,
     );
   }
 
@@ -114,6 +130,51 @@ export class MatchUndoService {
   public async restoreLatest(actionInFlight: boolean): Promise<UndoSnapshot | null> {
     const snapshot = this._snapshots.pop();
     if (!snapshot) return null;
+
+    if (actionInFlight) {
+      // Wait for runGameAction's outer catch to call signalUnwindComplete.
+      await new Promise<void>(resolve => {
+        this._unwindResolver = resolve;
+      });
+    }
+
+    this._restoreInPlace(snapshot);
+    return snapshot;
+  }
+
+  /**
+   * Finds the most recent snapshot owned by `playerId`, removes it and
+   * every snapshot above it (including those owned by other players), and
+   * restores state in place. If `actionInFlight` is true, waits for the
+   * engine call stack to unwind before restoring.
+   *
+   * Returns the restored snapshot, or null if none owned by `playerId`
+   * exists in the stack.
+   *
+   * NB: Caller (vote service) is responsible for triggering
+   * PromptAbortRegistry.abortAll(...) before calling this so the
+   * in-flight prompt rejects with UndoAbortError.
+   */
+  public async restoreLatestForPlayer(
+    playerId: PlayerId,
+    actionInFlight: boolean,
+  ): Promise<UndoSnapshot | null> {
+    // Walk from the top to find this player's most recent snapshot.
+    let targetIndex = -1;
+    for (let i = this._snapshots.length - 1; i >= 0; i--) {
+      if (this._snapshots[i].initiatingPlayerId === playerId) {
+        targetIndex = i;
+        break;
+      }
+    }
+
+    if (targetIndex === -1) return null;
+
+    // Save the target snapshot before splicing.
+    const snapshot = this._snapshots[targetIndex];
+    // Drop everything from the target index upward (includes the target
+    // and all later snapshots, regardless of who owns them).
+    this._snapshots.splice(targetIndex);
 
     if (actionInFlight) {
       // Wait for runGameAction's outer catch to call signalUnwindComplete.

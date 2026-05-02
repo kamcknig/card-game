@@ -841,6 +841,7 @@ export type UndoCompletedPayload =
   | { ok: false; reason: 'denied'; deniedBy: PlayerId }
   | { ok: false; reason: 'cancelled' }
   | { ok: false; reason: 'no-snapshot' }
+  | { ok: false; reason: 'not-your-action' }
   | { ok: false; reason: 'already-in-progress' }
   | { ok: false; reason: 'game-ended' };
 

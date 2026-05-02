@@ -13,6 +13,35 @@ Send configuration to front-end include things like
 
 ---
 
+when mousing over a card in the hand, it should bring that card to front
+similar to how ways do it in the condensed view.
+
+---
+
+when player leaves game and modal opens to ask to remove player,
+also allow option to simply leave game.
+
+---
+
+- player disconnection
+  - work on the use-case when a player disconnects while waiting on input for
+    that player - when they reconnected they
+    need to be asked for their input again
+
+---
+
+enter should submit forms such as match save dialog
+
+esc should close modals that don't require user interaction
+
+---
+
+logs show this - [object Object]
+
+server-1    | [05-02 18:38:58.278]─[DEBUG] [ctx scope=match gameId=game-mooooki8-45e97d79 matchScopeId=1] [object Object] can select 1 cards
+
+---
+
 # Lower priority
 
 - add pre commit to lint and or fmt
@@ -63,21 +92,12 @@ Send configuration to front-end include things like
 - boon and hex indicator views need to be displayed. they have been created, but
   not displayed to the user
   boon-indicator-view and hex-indicator-view
-- player disconnection
-  - work on the use-case when a player disconnects while waiting on input for
-    that player - when they reconnected they
-    need to be asked for their input again
 - when "waiting on player input" displays, cards are selectable. i played
   war chest, and while waiting on someone to name
   cards, it showed highlights on cards. don't know if they were selectable
 - some mats have rules that indicate cards are moved to the deck at the end of
   the game before scoring e.g., native
   village mat. others don't like the tavern mat
-- there are a lot of reactions that happen where a condition and a trigger query
-  the exact same data. one example is
-  [arena](../dominion-docs/expansion-docs/empires/cardlikes/arena.md). I think
-  maybe we can pass some data from the
-  condition to the trigger.
 
 need to show the context of the kingdom card for something like young witch, and
 ferryman

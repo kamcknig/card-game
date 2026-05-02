@@ -98,7 +98,7 @@ export class MatchUndoVoteService {
 
   /**
    * Originator clicks the undo button. Validates and either:
-   *  - rejects immediately (no snapshot, game over, or vote already running),
+   *  - rejects immediately (no snapshot, not their action, game over, or vote already running),
    *  - completes immediately (no other connected humans to ask),
    *  - or broadcasts undoVoteRequested to all other connected human players.
    */
@@ -110,10 +110,17 @@ export class MatchUndoVoteService {
       return;
     }
 
-    // Reject if there is nothing to undo.
+    // Reject if the stack is completely empty.
     if (!this.undoService.canUndo()) {
       this.loggerService.debug(`[undo] no snapshot available; rejecting undo request from ${originatorId}`);
       this._emitTo(originatorId, { ok: false, reason: 'no-snapshot' });
+      return;
+    }
+
+    // Reject if the originator has no snapshot in the stack at all.
+    if (!this.undoService.canUndoForPlayer(originatorId)) {
+      this.loggerService.debug(`[undo] no snapshot owned by player ${originatorId}; rejecting`);
+      this._emitTo(originatorId, { ok: false, reason: 'not-your-action' });
       return;
     }
 
@@ -277,7 +284,9 @@ export class MatchUndoVoteService {
       this.promptAbortRegistry.abortAll();
     }
 
-    const snapshot = await this.undoService.restoreLatest(inFlight);
+    // Use restoreLatestForPlayer so that snapshots owned by other players
+    // sitting above the originator's snapshot are also discarded from the stack.
+    const snapshot = await this.undoService.restoreLatestForPlayer(active.originatorId, inFlight);
     if (!snapshot) {
       // Race: snapshot was consumed between requestUndo validation and now.
       this.loggerService.warn(`[undo] snapshot disappeared between vote start and restore`);

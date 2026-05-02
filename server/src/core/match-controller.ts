@@ -546,15 +546,21 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     // housekeeping follow-up invoked automatically after a user action
     // (never directly initiated by the player) and must not create its own
     // undo boundary.
+    // drawHand is called at top-level only during match initialization;
+    // during gameplay it is always nested within another action. Excluding
+    // it here prevents init-phase snapshots from appearing in the undo stack
+    // (the stack is also explicitly cleared after startMatch completes).
     if (
       isTopLevel &&
       !this._gameEnding &&
       action !== 'selectCard' &&
       action !== 'selectSingleCard' &&
       action !== 'userPrompt' &&
-      action !== 'checkForRemainingPlayerActions'
+      action !== 'checkForRemainingPlayerActions' &&
+      action !== 'drawHand'
     ) {
-      this.undoService.pushSnapshot();
+      const initiatingPlayerId = getCurrentPlayer(this.match)?.id ?? null;
+      this.undoService.pushSnapshot(initiatingPlayerId);
     }
 
     let asyncTimeout: number | undefined = undefined;
@@ -641,10 +647,15 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     }
   }
 
-  /** Emits undoAvailable to all sockets so clients can enable/disable the undo button. */
+  /**
+   * Notifies each connected player whether they personally have an undo
+   * snapshot available. Each player's value is computed individually so
+   * ownership is respected — a player who has not yet acted cannot undo.
+   */
   public broadcastCanUndo(): void {
-    const canUndo = this.undoService.canUndo();
-    this.socketMap.forEach(s => s.emit('undoAvailable', canUndo));
+    for (const [playerId, socket] of this.socketMap) {
+      socket.emit('undoAvailable', this.undoService.canUndoForPlayer(playerId));
+    }
   }
 
   public broadcastPatch(prev: Match, playerId?: PlayerId) {
@@ -716,6 +727,10 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     for (const player of this.match.players!) {
       await this.runGameAction('drawHand', { playerId: player.id });
     }
+
+    // Discard any initialisation-phase snapshots so no player's undo
+    // button is enabled before the first real player action.
+    this.undoService.clear();
 
     this.logManager.addLogEntry({
       root: true,
