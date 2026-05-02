@@ -48,6 +48,7 @@ import { RngService } from './rng-service.ts';
 import { ServerConfigService } from './server-config-service.ts';
 import { LoggerService } from './logger-service.ts';
 import { MatchUndoService } from './undo/match-undo-service.ts';
+import { MatchUndoVoteService } from './undo/match-undo-vote-service.ts';
 import { PromptAbortRegistry, UndoAbortError } from './undo/prompt-abort-registry.ts';
 
 export class MatchController extends EventEmitter<{ gameOver: [void] }> {
@@ -110,6 +111,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     private readonly loggerService: LoggerService,
     private readonly undoService: MatchUndoService,
     private readonly promptAbortRegistry: PromptAbortRegistry,
+    private readonly undoVoteService: MatchUndoVoteService,
   ) {
     super();
   }
@@ -384,6 +386,9 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   }
 
   public playerDisconnected(playerId: number) {
+    // Cancel or adjust any in-flight undo vote before cleaning up the socket.
+    this.undoVoteService.handlePlayerDisconnected(playerId);
+
     // Use whichever array is populated depending on phase
     const roster = this.match.players?.length ? this.match.players : this.match.config.players;
 
@@ -688,10 +693,11 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
     await this.reactionManager.runGameLifecycleEvent('onGameStartSetup', { match: this.match });
     await this.reactionManager.runGameLifecycleEvent('onGameStart', { match: this.match });
 
-    for (const socket of this.socketMap.values()) {
+    for (const [playerId, socket] of this.socketMap.entries()) {
       // Bind card interaction handlers for all active players at match start.
       this.interactivityController.playerAdded(socket);
-      this.playerReconnectOrchestrator.bindGameplaySocketListeners(socket);
+      // Pass playerId so per-player undo socket events are attributed correctly.
+      this.playerReconnectOrchestrator.bindGameplaySocketListeners(socket, playerId);
     }
 
     this._matchSnapshot = this.getMatchSnapshot();

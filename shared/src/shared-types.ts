@@ -316,7 +316,9 @@ export type LogEntry =
   // Logs when a player leaves the active match (e.g., resigns).
   | { type: 'playerLeft'; playerId: PlayerId; reason: 'resigned'; depth?: number; source?: LogEntrySource }
   | { type: 'newTurn'; turn: number; depth?: number; source?: LogEntrySource }
-  | { type: 'newPlayerTurn'; turn: number; playerId: PlayerId; depth?: number; source?: LogEntrySource };
+  | { type: 'newPlayerTurn'; turn: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
+  // Logged after an approved undo restore so all clients see who triggered the rewind.
+  | { type: 'undoApplied'; playerId: PlayerId; depth?: number; source?: LogEntrySource };
 
 
 /***************

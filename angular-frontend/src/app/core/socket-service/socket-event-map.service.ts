@@ -98,6 +98,18 @@ export class SocketEventMapService {
       }
     };
 
+    // Replaces the client's log state wholesale with the server-supplied history.
+    // Used after an undo restore so the client log no longer shows entries from
+    // actions that were rewound. Clears the stores then re-formats every entry
+    // using the same path as addLogEntry so display parity is guaranteed.
+    map['setLog'] = (history: LogEntry[]) => {
+      logEntryIdsStore.set([]);
+      logStore.set({});
+      for (const entry of history) {
+        logManager.addLogEntry(entry);
+      }
+    };
+
     // Populate the server version store as soon as the server identifies
     // itself, so the scene banner and in-match version readouts have data
     // available before any feature event fires.

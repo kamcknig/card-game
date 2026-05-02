@@ -10,8 +10,13 @@ import { MatchCardLibrary } from './match-card-library.ts';
 import { MatchSocketBindings } from './match-socket-bindings.ts';
 import { TokenRegistryService } from './tokens/token-registry-service.ts';
 import { LoggerService } from './logger-service.ts';
+import { MatchUndoVoteService } from './undo/match-undo-vote-service.ts';
 
-// Owns reconnect-time socket hydration and gameplay socket binding behavior.
+/**
+ * Owns reconnect-time socket hydration and gameplay socket binding behavior.
+ * Also injects MatchUndoVoteService to supply per-player undo socket handlers
+ * when binding gameplay listeners on match start and reconnect.
+ */
 export class PlayerReconnectOrchestrator {
   constructor(
     private readonly socketMap: Map<PlayerId, AppSocket>,
@@ -24,26 +29,45 @@ export class PlayerReconnectOrchestrator {
     private readonly actionService: ActionService,
     private readonly tokenRegistryService: TokenRegistryService,
     private readonly loggerService: LoggerService,
+    private readonly undoVoteService: MatchUndoVoteService,
   ) {}
 
-  // Binds gameplay-phase socket handlers for a connected socket.
-  public bindGameplaySocketListeners(socket: AppSocket) {
+  /**
+   * Binds gameplay-phase socket handlers for one connected player socket.
+   * The playerId parameter identifies which player owns this socket so that
+   * undo and other per-player events can be attributed correctly.
+   * Called at match start for every socket and on reconnect for the
+   * rejoining player.
+   */
+  public bindGameplaySocketListeners(socket: AppSocket, playerId: PlayerId) {
     this.matchSocketBindings.bindGameplaySocketHandlers(socket, {
       onNextPhase: async () => await this.onNextPhase(),
-      onSearchCards: (playerId, searchStr) => this.onSearchCards(playerId, searchStr),
-      onExchangeCoffer: async (playerId, count) => {
-        await this.actionService.run('exchangeCoffer', { playerId, count });
+      onSearchCards: (pid, searchStr) => this.onSearchCards(pid, searchStr),
+      onExchangeCoffer: async (pid, count) => {
+        await this.actionService.run('exchangeCoffer', { playerId: pid, count });
       },
-      onSpendVillager: async (playerId, count) => {
-        await this.actionService.run('spendVillager', { playerId, count });
+      onSpendVillager: async (pid, count) => {
+        await this.actionService.run('spendVillager', { playerId: pid, count });
       },
-      onPayDebt: async (playerId, count) => {
-        await this.actionService.run('payDebt', { playerId, count });
+      onPayDebt: async (pid, count) => {
+        await this.actionService.run('payDebt', { playerId: pid, count });
+      },
+      onUndoRequested: () => {
+        void this.undoVoteService.requestUndo(playerId);
+      },
+      onUndoVote: (allow: boolean) => {
+        void this.undoVoteService.registerVote(playerId, allow);
+      },
+      onUndoCancelled: () => {
+        this.undoVoteService.cancelByOriginator(playerId);
       },
     });
   }
 
-  // Unbinds gameplay listeners from a socket when that player leaves the active match.
+  /**
+   * Removes gameplay-phase socket handlers when a player leaves the active
+   * match or their socket is being cleaned up.
+   */
   public unbindGameplaySocketListeners(socket?: AppSocket) {
     this.matchSocketBindings.unbindGameplaySocketHandlers(socket);
   }
@@ -65,8 +89,9 @@ export class PlayerReconnectOrchestrator {
     // Register readiness listener before matchReady to avoid races.
     socket.on('clientReady', onClientReady);
 
-    // Ensure gameplay socket handlers are active immediately on reconnect.
-    this.bindGameplaySocketListeners(socket);
+    // Ensure gameplay socket handlers are active immediately on reconnect,
+    // using the known playerId so per-player undo events are attributed correctly.
+    this.bindGameplaySocketListeners(socket, playerId);
     this.interactivityController.playerAdded(socket);
 
     // Send current match/card state only to the reconnecting player.
