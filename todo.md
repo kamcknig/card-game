@@ -45,7 +45,6 @@ server-1    | [05-02 18:38:58.278]─[DEBUG] [ctx scope=match gameId=game-mooook
 # Lower priority
 
 - add pre commit to lint and or fmt
-- undo turn/steps
 - when using overpay feature, you can overpay with potions. this matters for
   stonemason. don't know how to do the UI
   for this yet, and doesn't seem super important to get done right away
