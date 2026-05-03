@@ -116,21 +116,21 @@ describe('ProfileMenuComponent', () => {
     expect(component.dropdownOpen()).toBe(true);
   });
 
-  it('openProfile navigates to /profile/security and closes the dropdown', () => {
+  it('openProfile navigates to /profile and closes the dropdown', () => {
     component.dropdownOpen.set(true);
 
     component.openProfile();
 
-    expect(routerStub.navigate).toHaveBeenCalledWith(['/profile/security']);
+    expect(routerStub.navigate).toHaveBeenCalledWith(['/profile']);
     expect(component.dropdownOpen()).toBe(false);
   });
 
-  it('openSettings navigates to /profile/settings and closes the dropdown', () => {
+  it('openSettings navigates to /settings and closes the dropdown', () => {
     component.dropdownOpen.set(true);
 
     component.openSettings();
 
-    expect(routerStub.navigate).toHaveBeenCalledWith(['/profile/settings']);
+    expect(routerStub.navigate).toHaveBeenCalledWith(['/settings']);
     expect(component.dropdownOpen()).toBe(false);
   });
 

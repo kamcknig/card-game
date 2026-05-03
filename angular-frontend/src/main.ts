@@ -35,7 +35,7 @@ bootstrapApplication(AppComponent, appConfig)
     const hasValidToken = await authService.validateStoredToken();
     // Trigger the deferred initial navigation now that server health and auth
     // state are settled. This preserves the URL the user refreshed on (e.g.
-    // /match, /profile/security) but ensures guards evaluate against the
+    // /match, /profile) but ensures guards evaluate against the
     // cleared-or-confirmed token, not the stale localStorage value.
     await router.initialNavigation();
     if (hasValidToken) {

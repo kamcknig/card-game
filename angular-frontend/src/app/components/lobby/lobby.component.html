@@ -46,7 +46,7 @@
 @if (showEmailRequiredDialog()) {
   <!-- Email-required modal: shown when a legacy user tries to create or join a
        game without an email address attached to their account. Links them to
-       /profile/security where they can complete the email-attachment flow. -->
+       /profile where they can complete the email-attachment flow. -->
   <app-ui-dialog
     [backdropVariant]="'soft'"
     (close)="dismissEmailRequiredDialog()"
@@ -59,7 +59,7 @@
       <div class="email-required-dialog__actions">
         <a
           class="btn btn-primary email-required-dialog__link-button"
-          routerLink="/profile/security"
+          routerLink="/profile"
           (click)="dismissEmailRequiredDialog()"
         >
           Open Account settings &rarr;
