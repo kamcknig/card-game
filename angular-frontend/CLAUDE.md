@@ -37,11 +37,14 @@ the full socket connection lifecycle. Auth guards enforce session state at the r
 
 Guards: `authGuard` (redirects unauthenticated users to `/login`), `guestGuard` (redirects authenticated users away from `/login` to `/lobby`). Both live in `src/app/core/guards/`.
 
-The `profile` scene is a settings hub at `/profile` with two child routes: `/profile/security`
-(`ProfileSecurityComponent`) and `/profile/settings` (`ProfileSettingsComponent`). `ProfileComponent`
-is the shell. Navigate directly to `/profile/security` or `/profile/settings` to deep-link to a
-specific tab; bare `/profile` redirects to `/profile/security` by default. Child components live
-under `src/app/components/profile/security/` and `src/app/components/profile/settings/`.
+The settings hub uses `ProfileComponent` as a shared sidebar shell mounted by
+two top-level routes: `/profile` renders `ProfileSecurityComponent` (Profile
+tab — account / change password) and `/settings` renders
+`ProfileSettingsComponent` (Settings tab — user preferences such as sound
+volume). The two routes are siblings in `app.routes.ts`; both reference the
+same `ProfileComponent` so the nav stays visually consistent. Tab content
+components live under `src/app/components/profile/security/` and
+`src/app/components/profile/settings/`.
 
 When the `/match` route activates, `MatchComponent` (`src/app/components/match/match.component.ts`) creates a `MatchScene` instance (plain TypeScript class at `src/app/components/match/views/scenes/match-scene.ts`) that manages game interaction logic, prompt coordination, and way picker overlay. It is destroyed when leaving the match route via `ngOnDestroy`.
 

@@ -22,15 +22,23 @@ export const routes: Routes = [
   { path: 'login', component: LoginComponent, canActivate: [guestGuard], title: 'Dominion' },
   { path: 'lobby', component: LobbyComponent, canActivate: [authGuard, serverHealthGuard], title: 'Dominion - Lobby' },
   {
+    // /profile renders the account / change-password pane (Profile tab) inside
+    // the shared ProfileComponent shell.
     path: 'profile',
     component: ProfileComponent,
     canActivate: [authGuard, serverHealthGuard],
     children: [
-      // Bare /profile falls through to security. Navigation from ProfileMenuComponent
-      // always targets /profile/security or /profile/settings directly.
-      { path: '', redirectTo: 'security', pathMatch: 'full' },
-      { path: 'security', component: ProfileSecurityComponent, title: 'Dominion - Profile' },
-      { path: 'settings', component: ProfileSettingsComponent, title: 'Dominion - Settings' },
+      { path: '', component: ProfileSecurityComponent, title: 'Dominion - Profile' },
+    ],
+  },
+  {
+    // /settings renders the user-preferences pane (Settings tab) inside the
+    // same ProfileComponent shell so the sidebar nav stays consistent.
+    path: 'settings',
+    component: ProfileComponent,
+    canActivate: [authGuard, serverHealthGuard],
+    children: [
+      { path: '', component: ProfileSettingsComponent, title: 'Dominion - Settings' },
     ],
   },
   { path: 'configuration', component: MatchConfigurationComponent, canActivate: [authGuard, serverHealthGuard, noActiveMatchGuard], title: 'Dominion - Match Configuration' },

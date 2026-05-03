@@ -1,3 +1,39 @@
 <section class="settings-section" aria-label="Settings">
-  <h2 class="section-title">Settings page</h2>
+  <h2 class="section-title">Settings</h2>
+
+  <!-- Sound: master volume control. Slider and number input share the same
+       SoundService.volume signal, so editing one updates the other. A value
+       of 0 mutes playback (handled inside SoundService.play). -->
+  <section class="sound-section" aria-label="Sound">
+    <h3>Sound</h3>
+    <div class="form-field volume-field">
+      <span class="form-label">Volume</span>
+      <div class="volume-controls">
+        <input
+          type="range"
+          class="volume-slider"
+          min="0"
+          max="100"
+          step="1"
+          [value]="volume()"
+          (input)="onVolumeChanged($any($event.target).value)"
+          aria-label="Sound volume"
+        />
+        <input
+          type="number"
+          class="form-input volume-number"
+          min="0"
+          max="100"
+          step="1"
+          inputmode="numeric"
+          [value]="volume()"
+          (input)="onVolumeChanged($any($event.target).value)"
+          aria-label="Sound volume value"
+        />
+      </div>
+      @if (volume() === 0) {
+        <p class="volume-muted-note">Muted</p>
+      }
+    </div>
+  </section>
 </section>

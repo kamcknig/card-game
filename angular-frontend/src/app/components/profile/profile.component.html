@@ -1,6 +1,6 @@
 <app-scene-content>
   <!-- Back button projected into the banner header actions area. -->
-  <button sceneHeaderActions type="button" class="btn btn-secondary back-button" (click)="backToLobby()">
+  <button sceneHeaderActions type="button" class="btn btn-secondary" (click)="backToLobby()">
     Back to Lobby
   </button>
 
@@ -9,18 +9,18 @@
       <button
         type="button"
         class="nav-button"
-        routerLink="security"
+        routerLink="/profile"
         routerLinkActive="active"
         [routerLinkActiveOptions]="{ exact: true }"
-        #secLink="routerLinkActive"
-        [attr.aria-pressed]="secLink.isActive"
+        #profileLink="routerLinkActive"
+        [attr.aria-pressed]="profileLink.isActive"
       >
-        Security
+        Profile
       </button>
       <button
         type="button"
         class="nav-button"
-        routerLink="settings"
+        routerLink="/settings"
         routerLinkActive="active"
         [routerLinkActiveOptions]="{ exact: true }"
         #settingsLink="routerLinkActive"

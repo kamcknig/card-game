@@ -7,15 +7,15 @@ import { RouterLink, RouterLinkActive, RouterOutlet, Router } from '@angular/rou
 import { SceneContentComponent } from '../scene-content/scene-content.component';
 
 /**
- * Profile scene shell routed at /profile.
+ * Settings scene shell — sidebar nav with two tabs that swap the routed
+ * content. The same shell is used by two top-level routes:
+ * - /profile renders ProfileSecurityComponent (Profile tab: account /
+ *   change password).
+ * - /settings renders ProfileSettingsComponent (Settings tab: user
+ *   preferences such as sound volume).
  *
- * Hosts two child routes:
- * - /profile/security: change-password form and admin registration codes.
- * - /profile/settings: placeholder for user preferences.
- *
- * Bare /profile is handled by a default child redirect in app.routes.ts.
- * ProfileMenuComponent navigates directly to /profile/security or
- * /profile/settings to deep-link to a specific tab.
+ * ProfileMenuComponent navigates directly to /profile or /settings to
+ * deep-link to a specific tab.
  */
 @Component({
   selector: 'app-profile',

@@ -330,3 +330,18 @@ hr {
   background: var(--theme-action-danger-soft-bg);
   color: var(--theme-text-primary);
 }
+
+// All buttons projected into the scene action bar (header) share a single
+// compact, sentence-case typography scale so primary/secondary/etc. variants
+// only differ by color — not by size or letter-case. Centralizing the rule
+// here keeps Create Game (lobby), Back to Lobby (profile), and any future
+// header action buttons visually consistent without each caller duplicating
+// the same overrides. The .btn defaults (uppercase, 0.06em letter-spacing,
+// weight 600) read too loud for chrome-level navigation affordances.
+.scene-action-bar .btn {
+  padding: var(--theme-space-sm) var(--theme-space-md);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+}
