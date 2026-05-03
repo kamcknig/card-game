@@ -662,6 +662,15 @@ export interface ServerListenEvents {
   playAllTreasure: (playerId: PlayerId) => void;
   // Voluntarily leaves an active match; remaining players continue.
   resignMatch: () => void;
+  // Signals that the player navigated away from the active match scene
+  // without actually disconnecting their socket. Server treats this as a
+  // logical disconnect: marks the player offline and queues the
+  // vote-to-remove modal on every other client.
+  leftMatch: () => void;
+  // Signals that the player navigated back into the active match scene.
+  // Server marks them connected again, removes any pending removal vote,
+  // and broadcasts playerConnected.
+  enteredMatch: () => void;
   // Leaves the post-game summary and returns the player to the lobby.
   returnToLobby: () => void;
   // Owner-only: starts a new match immediately with the same players and configuration.
