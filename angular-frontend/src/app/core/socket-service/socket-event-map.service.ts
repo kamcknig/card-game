@@ -133,13 +133,15 @@ export class SocketEventMapService {
     map['matchConfigurationUpdated'] = config => {
       matchConfigurationStore.set(config);
       this._clearMatchUiOverlays();
-      // Enter configuration route when one lobby game is actively joined.
-      void this._router.navigate(['/configuration']);
     };
 
     map['joinedLobbyGame'] = gameId => {
+      // Set the store before navigating so that the noActiveMatchGuard on
+      // /configuration sees activeLobbyGameIdStore populated synchronously.
       activeLobbyGameIdStore.set(gameId);
       lobbyStatusMessageStore.set(undefined);
+      // Enter configuration route when a lobby game is actively joined.
+      void this._router.navigate(['/configuration']);
     };
 
     map['debugRuntimeContext'] = payload => {
@@ -179,17 +181,18 @@ export class SocketEventMapService {
 
     map['lobbySnapshot'] = games => {
       lobbyGamesStore.set(games);
-      // The server only sends lobbySnapshot when the session is not in any active game
-      // (i.e. the match ended or was aborted — determined server-side based on whether
-      // human players remain and whether the config ends the game on no-humans).
-      // This event is authoritative: clear transient match state and redirect to lobby
-      // if the current route is a game-phase route (/match, /configuration, /game-summary).
-      // /lobby, /profile, and /login are left untouched.
+      // lobbySnapshot can arrive either as a redirect signal from the server (when the
+      // game ended/aborted) or as a response to requestLobbySnapshot from LobbyComponent.
+      // Only clear transient game state and redirect when the client is currently on a
+      // game-phase route. When already at /lobby (e.g. after pressing Back from /match),
+      // the player may still be logically in an active game — do not reset matchStartedStore
+      // or activeLobbyGameIdStore, as those drives the still-in-game dialog correctly.
       this._clearMatchUiOverlays();
       debugRuntimeContextStore.set(undefined);
       const topLevel = '/' + (this._router.url.split('?')[0].split('/')[1] ?? '');
       if (topLevel === '/match' || topLevel === '/configuration' || topLevel === '/game-summary') {
         activeLobbyGameIdStore.set(undefined);
+        matchStartedStore.set(false);
         void this._router.navigate(['/lobby']);
       }
     };
@@ -221,6 +224,7 @@ export class SocketEventMapService {
 
     map['kickedFromGame'] = payload => {
       activeLobbyGameIdStore.set(undefined);
+      matchStartedStore.set(false);
       this._clearMatchUiOverlays();
       debugRuntimeContextStore.set(undefined);
       // Returning to the lobby from the game summary is a voluntary action; suppress
@@ -234,6 +238,7 @@ export class SocketEventMapService {
 
     map['bannedFromGame'] = payload => {
       activeLobbyGameIdStore.set(undefined);
+      matchStartedStore.set(false);
       this._clearMatchUiOverlays();
       debugRuntimeContextStore.set(undefined);
       lobbyStatusMessageStore.set(payload.message);
@@ -252,9 +257,11 @@ export class SocketEventMapService {
       // Clear first-match log entries so the second match starts with an empty log.
       logEntryIdsStore.set([]);
       logStore.set({});
-      // No longer in the lobby game phase once the match starts; clear so that
-      // MatchConfigurationComponent.ngOnDestroy does not emit leaveLobbyGame.
-      activeLobbyGameIdStore.set(undefined);
+      // activeLobbyGameIdStore is intentionally NOT cleared here. The store now
+      // remains set throughout the active match phase so Phase 3 (MatchComponent
+      // lifecycle) and Phase 4 (still-in-game dialog) can read it as a sentinel.
+      // The auto-leave gate that used to rely on the cleared value has been moved
+      // into MatchConfigurationComponent._matchStarting (see Phase 2).
       this._clearMatchUiOverlays();
       const cardsById = cardStore.get();
       if (!cardsById || Object.keys(cardsById).length === 0) {

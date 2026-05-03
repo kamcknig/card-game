@@ -32,7 +32,7 @@ import { NanostoresService } from '@nanostores/angular';
 import { playerIdStore, selfPlayerIdStore } from '../../state/player-state';
 import { NgClass, NgOptimizedImage, NgStyle } from '@angular/common';
 import { expansionListStore } from '../../state/expansion-list-state';
-import { matchConfigurationStore } from '../../state/match-state';
+import { matchConfigurationStore, matchStartedStore } from '../../state/match-state';
 import { SocketService } from '../../core/socket-service/socket.service';
 import { gameOwnerIdStore } from '../../state/game-state';
 import {
@@ -323,6 +323,16 @@ export class MatchConfigurationComponent implements OnDestroy {
       + (count - 1) * MatchConfigurationComponent.BANNED_CARD_STAGGER_PX;
   });
 
+  // Set to true when matchReady is received during this component's lifetime.
+  // Used by ngOnDestroy to skip the auto-leave emit on the /configuration → /match
+  // transition, since the user is not leaving the game — the match is starting.
+  private _matchStarting = false;
+
+  // Bound handler reference for matchReady so it can be unregistered in ngOnDestroy.
+  private readonly _onMatchReady = () => {
+    this._matchStarting = true;
+  };
+
   constructor() {
     // Debounce save-name checks so server validation runs only after typing pauses.
     this._saveNameInput$
@@ -347,6 +357,11 @@ export class MatchConfigurationComponent implements OnDestroy {
     this._socketService.on('savedMatchConfigurationList', this.onSavedConfigurationListReceived);
     this._socketService.on('matchConfigurationLoadCompleted', this.onLoadCompleted);
     this._socketService.on('matchConfigurationDeleteCompleted', this.onDeleteCompleted);
+
+    // matchReady fires immediately before the router navigates from /configuration
+    // to /match. Latch the flag so ngOnDestroy knows not to auto-emit leaveLobbyGame
+    // on that transition (the user is starting a match, not leaving the game).
+    this._socketService.on('matchReady', this._onMatchReady);
 
     // Initialize baseline from first loaded configuration, and refresh it after successful loads.
     effect(() => {
@@ -373,12 +388,28 @@ export class MatchConfigurationComponent implements OnDestroy {
     this._socketService.off('savedMatchConfigurationList', this.onSavedConfigurationListReceived);
     this._socketService.off('matchConfigurationLoadCompleted', this.onLoadCompleted);
     this._socketService.off('matchConfigurationDeleteCompleted', this.onDeleteCompleted);
+    this._socketService.off('matchReady', this._onMatchReady);
+
+    // Skip the auto-leave when transitioning into /match — the user is not
+    // leaving the game, the match is starting. Without this gate every
+    // configuration → match navigation would call leaveLobbyGame because
+    // activeLobbyGameIdStore now stays set throughout the match phase (Phase 2).
+    if (this._matchStarting) {
+      return;
+    }
 
     // If the user navigated away without explicitly clicking "Leave Game", emit
     // the leave event now. leaveGame() clears the store before navigating, so
     // this branch is skipped when that path is taken (no double-emit).
     const activeGameId = activeLobbyGameIdStore.get();
     if (activeGameId) {
+      // During an active match the user may navigate back to /configuration via
+      // browser history — that is not a deliberate leave action. Skip the
+      // auto-leave so the store is preserved and the leftMatch/enteredMatch flow
+      // from MatchComponent continues to work correctly.
+      if (matchStartedStore.get()) {
+        return;
+      }
       activeLobbyGameIdStore.set(undefined);
       lobbyStatusMessageStore.set(undefined);
       this._socketService.emit('leaveLobbyGame', activeGameId);

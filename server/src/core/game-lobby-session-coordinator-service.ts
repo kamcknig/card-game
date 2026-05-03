@@ -48,6 +48,8 @@ export class GameLobbySessionCoordinatorService {
     {
       disconnect: (disconnectReason: unknown) => void;
       resignMatch: () => void;
+      leftMatch: () => void;
+      enteredMatch: () => void;
     }
   >();
   // Tracks post-game socket handlers per socket for clean unbinding.
@@ -177,6 +179,8 @@ export class GameLobbySessionCoordinatorService {
     if (existingHandlers) {
       socket.off('disconnect', existingHandlers.disconnect);
       socket.off('resignMatch', existingHandlers.resignMatch);
+      socket.off('leftMatch', existingHandlers.leftMatch);
+      socket.off('enteredMatch', existingHandlers.enteredMatch);
     }
 
     const disconnectHandler = (disconnectReason: unknown) => {
@@ -197,11 +201,34 @@ export class GameLobbySessionCoordinatorService {
       });
     };
 
+    // Treats /match route exit as a logical disconnect while the socket stays alive.
+    const leftMatchHandler = () => {
+      this.onPlayerDisconnected(state, {
+        playerId,
+        socketId: socket.id,
+        reason: 'left match scene',
+        callbacks,
+      });
+    };
+
+    // Reverses leftMatchHandler when the player returns to /match.
+    const enteredMatchHandler = () => {
+      this.onPlayerEnteredMatch(state, {
+        playerId,
+        socketId: socket.id,
+        callbacks,
+      });
+    };
+
     socket.on('disconnect', disconnectHandler);
     socket.on('resignMatch', resignMatchHandler);
+    socket.on('leftMatch', leftMatchHandler);
+    socket.on('enteredMatch', enteredMatchHandler);
     this.runtimeSocketHandlersBySocketId.set(socket.id, {
       disconnect: disconnectHandler,
       resignMatch: resignMatchHandler,
+      leftMatch: leftMatchHandler,
+      enteredMatch: enteredMatchHandler,
     });
   }
 
@@ -214,6 +241,8 @@ export class GameLobbySessionCoordinatorService {
 
     socket.off('disconnect', existingHandlers.disconnect);
     socket.off('resignMatch', existingHandlers.resignMatch);
+    socket.off('leftMatch', existingHandlers.leftMatch);
+    socket.off('enteredMatch', existingHandlers.enteredMatch);
     this.runtimeSocketHandlersBySocketId.delete(socket.id);
   }
 
@@ -376,6 +405,58 @@ export class GameLobbySessionCoordinatorService {
     }
 
     if (state.players.length > 0) {
+      void state.matchController?.runGameAction('checkForRemainingPlayerActions');
+    }
+
+    callbacks.onGameStateChanged?.();
+  }
+
+  // Reverses onPlayerDisconnected when the player navigates back to /match on the same live
+  // socket. Lighter than full playerReconnected because the client never lost match state.
+  public onPlayerEnteredMatch(
+    state: GameRuntimeState,
+    args: {
+      playerId: PlayerId;
+      socketId: string;
+      callbacks: GameLobbyCallbacks;
+    },
+  ): void {
+    const { playerId, socketId, callbacks } = args;
+
+    if (!state.matchStarted) {
+      this.loggerService.debug(`[game] enteredMatch ignored from ${playerId}; match not started`);
+      return;
+    }
+
+    const player = state.players.find(candidate => candidate.id === playerId);
+    if (!player) {
+      this.loggerService.warn(`[game] enteredMatch from unknown player ${playerId}`);
+      return;
+    }
+
+    if (player.socketId !== socketId) {
+      // The event arrived on a stale socket; the active socket already owns this player.
+      this.loggerService.debug(
+        `[game] ignoring enteredMatch from stale socket ${socketId} for ${player}; active socket is ${player.socketId}`,
+      );
+      return;
+    }
+
+    if (player.connected) {
+      // Already marked connected — nothing to do (covers fresh-match-start case).
+      this.loggerService.debug(`[game] enteredMatch from already-connected player ${player}; ignoring`);
+      return;
+    }
+
+    this.loggerService.info(`[game] ${player} returned to match scene`);
+    player.connected = true;
+    this.disconnectedPlayerVoteService.removePendingRemovalPlayer(state.players, playerId);
+    this.io.in(state.roomName).emit('playerConnected', player);
+
+    // Resume the action engine if every human is now connected. Mirrors the
+    // resume branch in addPlayer (line 145-148).
+    const hasDisconnectedHuman = this.playerSessionService.hasDisconnectedHumanPlayers(state.players);
+    if (!hasDisconnectedHuman) {
       void state.matchController?.runGameAction('checkForRemainingPlayerActions');
     }
 
