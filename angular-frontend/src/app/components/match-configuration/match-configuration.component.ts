@@ -32,7 +32,7 @@ import { NanostoresService } from '@nanostores/angular';
 import { playerIdStore, selfPlayerIdStore } from '../../state/player-state';
 import { NgClass, NgOptimizedImage, NgStyle } from '@angular/common';
 import { expansionListStore } from '../../state/expansion-list-state';
-import { matchConfigurationStore } from '../../state/match-state';
+import { matchConfigurationStore, matchStartedStore } from '../../state/match-state';
 import { SocketService } from '../../core/socket-service/socket.service';
 import { gameOwnerIdStore } from '../../state/game-state';
 import {
@@ -403,6 +403,13 @@ export class MatchConfigurationComponent implements OnDestroy {
     // this branch is skipped when that path is taken (no double-emit).
     const activeGameId = activeLobbyGameIdStore.get();
     if (activeGameId) {
+      // During an active match the user may navigate back to /configuration via
+      // browser history — that is not a deliberate leave action. Skip the
+      // auto-leave so the store is preserved and the leftMatch/enteredMatch flow
+      // from MatchComponent continues to work correctly.
+      if (matchStartedStore.get()) {
+        return;
+      }
       activeLobbyGameIdStore.set(undefined);
       lobbyStatusMessageStore.set(undefined);
       this._socketService.emit('leaveLobbyGame', activeGameId);

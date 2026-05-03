@@ -26,6 +26,7 @@ import { MatchScorePanelComponent } from './match-hud/match-score-panel.componen
 import { MatchHudAsideComponent } from './match-hud/match-hud-aside.component';
 import { matchStartedStore, matchSummaryStore } from '../../state/match-state';
 import { selfPlayerIdStore } from '../../state/player-state';
+import { activeLobbyGameIdStore } from '../../state/lobby-state';
 import { CardImagePreloadService } from '../../core/card-image-preload.service';
 import { undoAvailableStore, undoInFlightStore } from '../../state/undo-state';
 
@@ -99,6 +100,19 @@ export class MatchComponent implements OnDestroy {
     // are guaranteed populated before SocketEventMapService navigates to /match.
     this._imagePreload.preloadMatchImages();
 
+    // If the user is returning to an already-running match (e.g. they pressed
+    // the browser back arrow and are now navigating forward again), tell the
+    // server to mark Player.connected = true and cancel any pending
+    // vote-to-remove. This is the mirror of the leftMatch emit in ngOnDestroy.
+    // - activeLobbyGameIdStore remains set throughout the match (Phase 2).
+    // - matchStartedStore is true once the server confirmed the match is live.
+    // - matchSummaryStore is undefined while the game is still running.
+    // When player.connected is already true on the server the handler returns
+    // early, so this emit is safe to fire on every fresh /match mount.
+    if (activeLobbyGameIdStore.get() && matchStartedStore.get() && !matchSummaryStore.get()) {
+      this._socketService.emit('enteredMatch');
+    }
+
     // Defer MatchScene creation until selfPlayerIdStore is populated. On
     // fresh match entry the store is already set (from when the user joined
     // the lobby game); on page refresh it starts undefined and gets set when
@@ -114,8 +128,27 @@ export class MatchComponent implements OnDestroy {
     });
   }
 
-  /** Destroys the MatchScene controller when leaving the match route. */
+  /**
+   * Destroys the MatchScene controller when leaving the match route.
+   *
+   * If the user navigates away while the match is still running (e.g. via the
+   * browser back arrow), emit `leftMatch` so the server marks this player as
+   * disconnected and queues the vote-to-remove modal on every other client.
+   * The socket itself stays alive, which is how returning to /match (forward
+   * arrow or "Return to game" button) can reverse the state via `enteredMatch`.
+   *
+   * Guards:
+   * - activeLobbyGameIdStore must be set (stays set throughout the match, see Phase 2).
+   * - matchSummaryStore must be undefined — a defined summary means the game has
+   *   ended and the navigate-away is the normal post-game flow, not a mid-game exit.
+   */
   ngOnDestroy(): void {
+    // Treat navigation away from /match mid-game as a logical disconnect.
+    // Other clients receive the existing playerDisconnected + vote-to-remove flow.
+    if (activeLobbyGameIdStore.get() && !matchSummaryStore.get()) {
+      this._socketService.emit('leftMatch');
+    }
+
     this.matchScene()?.destroy();
     this.matchScene.set(undefined);
   }
