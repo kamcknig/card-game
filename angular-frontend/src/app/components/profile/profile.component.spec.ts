@@ -23,7 +23,7 @@ class NanostoresServiceStub {
  * the href; `isActive` is checked by RouterLinkActive to set the active class.
  */
 class RouterStub {
-  url = '/profile/security';
+  url = '/profile';
   navigate = jest.fn().mockResolvedValue(true);
   /** RouterLinkActive subscribes to this in its constructor. */
   events = EMPTY;
