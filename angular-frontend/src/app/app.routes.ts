@@ -10,6 +10,7 @@ import { GameSummaryComponent } from './components/game-summary/game-summary.com
 import { authGuard } from './core/guards/auth.guard';
 import { guestGuard } from './core/guards/guest.guard';
 import { serverHealthGuard, serverStatusRedirectGuard } from './core/guards/server-health.guard';
+import { noActiveMatchGuard } from './core/guards/match-started.guard';
 
 export const routes: Routes = [
   {
@@ -32,7 +33,7 @@ export const routes: Routes = [
       { path: 'settings', component: ProfileSettingsComponent, title: 'Dominion - Settings' },
     ],
   },
-  { path: 'configuration', component: MatchConfigurationComponent, canActivate: [authGuard, serverHealthGuard], title: 'Dominion - Match Configuration' },
+  { path: 'configuration', component: MatchConfigurationComponent, canActivate: [authGuard, serverHealthGuard, noActiveMatchGuard], title: 'Dominion - Match Configuration' },
   // Title is overridden dynamically by match-scene.ts once the player name is known.
   { path: 'match', component: MatchComponent, canActivate: [authGuard, serverHealthGuard], title: 'Dominion' },
   { path: 'game-summary', component: GameSummaryComponent, canActivate: [authGuard, serverHealthGuard], title: 'Dominion - Game Summary' },
