@@ -25,7 +25,7 @@ type PendingIntent =
  *
  * Users without an email address attached to their account (legacy accounts
  * predating email registration) are shown a modal dialog when they attempt to
- * create or join a game. The dialog links them to `/profile/security` where
+ * create or join a game. The dialog links them to `/profile` where
  * they can attach an email. The socket event is never emitted in this case —
  * the server enforces the same gate as defence in depth.
  *
@@ -85,7 +85,7 @@ export class LobbyComponent implements OnInit {
    * Requests server-side creation of a new lobby game.
    *
    * Blocked when the user has no email address attached — shows the email-
-   * required dialog instead so the user can navigate to `/profile/security`.
+   * required dialog instead so the user can navigate to `/profile`.
    * When the user is still attached to an existing game, the still-in-game
    * dialog intercepts the request instead of firing the socket event directly.
    */
@@ -101,7 +101,7 @@ export class LobbyComponent implements OnInit {
    * Attempts to join one selected lobby game.
    *
    * Blocked when the user has no email address attached — shows the email-
-   * required dialog instead so the user can navigate to `/profile/security`.
+   * required dialog instead so the user can navigate to `/profile`.
    * When the user is still attached to an existing game, the still-in-game
    * dialog intercepts the request instead of firing the socket event directly.
    */

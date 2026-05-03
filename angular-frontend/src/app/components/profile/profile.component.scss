@@ -41,20 +41,10 @@
   padding: var(--theme-space-xl);
 }
 
-// Back button injected into the banner header actions slot. Visual
-// identity comes from `.btn .btn-secondary` in styles.scss. Local rule
-// keeps the sentence-case typography typical of chrome navigation
-// affordances — the .btn defaults (uppercase, 0.06em letter-spacing)
-// read too loud for a header back button so they are deliberately
-// overridden here.
-.back-button {
-  padding: var(--theme-space-sm) var(--theme-space-md);
-  font-family: var(--theme-font-body);
-  font-size: 0.875rem;
-  font-weight: 500;
-  letter-spacing: normal;
-  text-transform: none;
-}
+// Back button visual identity comes from `.btn .btn-secondary` in
+// styles.scss; the compact sentence-case sizing is applied globally to
+// any `.btn` inside `.scene-action-bar` (see styles.scss) so no local
+// override is needed here.
 
 @media (max-width: 900px) {
   .profile-shell {

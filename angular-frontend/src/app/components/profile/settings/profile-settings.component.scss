@@ -1,0 +1,55 @@
+// Layout for the /profile/settings pane. Mirrors the spacing and heading
+// idioms from profile-security.component.scss so the settings tabs feel
+// consistent.
+
+.section-title {
+  margin: 0 0 var(--theme-space-lg);
+  font-size: 1.2rem;
+}
+
+// Sound section card. Constrained width matches the security panel forms.
+.sound-section {
+  max-width: 420px;
+
+  h3 {
+    margin: 0 0 var(--theme-space-md);
+    font-size: 1rem;
+    font-weight: 600;
+  }
+}
+
+// Volume row gap is slightly tighter than the default form-field gap so the
+// muted note sits close under the controls.
+.volume-field {
+  gap: var(--theme-space-sm);
+}
+
+// Slider + numeric text input share a row.
+.volume-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--theme-space-md);
+}
+
+// Slider stretches to fill the remaining width next to the fixed number
+// input. Native browser rendering — no project convention exists for theming
+// range tracks/thumbs (matches the prompt-overpay slider).
+.volume-slider {
+  flex: 1;
+  min-width: 0;
+}
+
+// Fixed-width number input keeps three digits visible without growing to
+// match the slider.
+.volume-number {
+  width: 88px;
+  flex-shrink: 0;
+}
+
+// Subtle muted-state hint shown beneath the controls when volume === 0.
+.volume-muted-note {
+  margin: 0;
+  font-size: 0.85rem;
+  font-style: italic;
+  color: var(--theme-text-secondary);
+}

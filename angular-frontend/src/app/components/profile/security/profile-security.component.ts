@@ -15,7 +15,8 @@ import { NewPasswordFieldsComponent } from '../../ui/new-password-fields/new-pas
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
- * Security settings pane routed at /profile/security.
+ * Profile pane routed at /profile (the default Profile tab in the settings
+ * shell). Owns account identity and password-related controls.
  *
  * Handles the following sections:
  * - **Account** (top) — displays the username (always read-only) and the

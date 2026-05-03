@@ -65,16 +65,16 @@ export class ProfileMenuComponent {
     this.dropdownOpen.update(open => !open);
   }
 
-  /** Navigates to the Security tab of the profile route. */
+  /** Navigates to the Profile tab (account / change password). */
   openProfile(): void {
     this.dropdownOpen.set(false);
-    void this._router.navigate(['/profile/security']);
+    void this._router.navigate(['/profile']);
   }
 
-  /** Navigates to the Settings tab of the profile route. */
+  /** Navigates to the Settings tab (user preferences). */
   openSettings(): void {
     this.dropdownOpen.set(false);
-    void this._router.navigate(['/profile/settings']);
+    void this._router.navigate(['/settings']);
   }
 
   /**
