@@ -186,3 +186,42 @@
 // Dismiss button uses the global `.btn .btn-primary-muted` recipe from
 // styles.scss; CDK overlay teleportation breaks emulated view-encapsulation
 // scoping, so any local rule wouldn't apply anyway.
+
+// Still-in-game dialog panel: shown when the user attempts to create or join
+// a game while still attached to an existing game on the server. Mirrors the
+// layout language of .email-required-dialog so both dialogs feel coherent.
+.still-in-game-dialog {
+  padding: var(--theme-space-3xl) var(--theme-space-2xl) var(--theme-space-xl);
+  max-width: 460px;
+  background: var(--theme-surface-card);
+  border: 1px solid var(--theme-border-subtle);
+  border-radius: var(--theme-radius-pill);
+  display: flex;
+  flex-direction: column;
+  gap: var(--theme-space-md);
+}
+
+.still-in-game-dialog__title {
+  margin: 0;
+  font-family: var(--theme-font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--theme-text-primary);
+}
+
+.still-in-game-dialog__body {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--theme-text-secondary);
+  line-height: 1.5;
+}
+
+.still-in-game-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--theme-space-md);
+  margin-top: var(--theme-space-xs);
+}

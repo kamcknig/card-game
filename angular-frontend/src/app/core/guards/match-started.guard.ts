@@ -1,11 +1,17 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { matchStartedStore } from '../../state/match-state';
+import { activeLobbyGameIdStore } from '../../state/lobby-state';
 
-/** Redirects to /lobby when a match is already in progress.
- * Prevents the user from landing on /configuration via browser history or
- * direct URL entry while an active match is running. */
+/** Guards the /configuration route. Allows access only when the player is in
+ * a lobby game that has not yet started. Any other state redirects to /lobby:
+ * - match already in progress → use /match, not /configuration
+ * - not in any lobby game → navigating away from /configuration in the pre-match
+ *   phase removes the player from the game, so re-entry via history or URL bar
+ *   is blocked until they explicitly rejoin. */
 export const noActiveMatchGuard: CanActivateFn = () => {
   const router = inject(Router);
-  return matchStartedStore.get() ? router.createUrlTree(['/lobby']) : true;
+  return (activeLobbyGameIdStore.get() && !matchStartedStore.get())
+    ? true
+    : router.createUrlTree(['/lobby']);
 };
