@@ -1,0 +1,72 @@
+# Unraid production deployment.
+#
+# Pulls prebuilt images from GHCR (built by .github/workflows/build-and-push.yml
+# on a server-vX.Y.Z / frontend-vX.Y.Z release). The frontend container is NOT
+# port-published — the cloudflared container on Unraid reaches it via the
+# shared external `cloudflare` network. nginx inside the frontend image
+# reverse-proxies /auth, /socket.io, /debug, /status to the `server` compose
+# service (upstream baked into docker/nginx.conf as of Phase 0).
+#
+# Secrets live in a sibling .env file (gitignored). Pin image tags via
+# .env (SERVER_VERSION / FRONTEND_VERSION) and `docker compose pull` to roll.
+name: dominion
+
+services:
+  frontend:
+    image: ghcr.io/${OWNER}/dominion-clone-frontend:${FRONTEND_VERSION:-latest}
+    container_name: dominion-frontend
+    pull_policy: always
+    networks:
+      - app
+      - cloudflare
+    depends_on:
+      - server
+    restart: unless-stopped
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost/ >/dev/null || exit 1']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  server:
+    # Same fallback as frontend — :latest if SERVER_VERSION is unset.
+    image: ghcr.io/${OWNER}/dominion-clone-server:${SERVER_VERSION:-latest}
+    container_name: dominion-server
+    pull_policy: always
+    environment:
+      PORT: '3000'
+      LOG_TO_FILE: 'false'
+      GAME_DATA_ROOT: './game-data'
+      MATCH_STATE_EXPORT_ENABLED: 'true'
+      END_MATCH_ON_NO_HUMANS: 'true'
+      MATCH_STATE_MERGE_ENABLED: 'true'
+      LOG_COLOR: 'true'
+      AUTH_ALLOWED_ORIGINS: 'https://dominion.turkeysunite-local.org'
+      AUTH_RATE_LIMIT_MAX_ATTEMPTS: '10'
+      AUTH_RATE_LIMIT_WINDOW_MS: '60000'
+      AUTH_MIN_PASSWORD_LENGTH: '10'
+      AUTH_LOCKOUT_THRESHOLD: '10'
+      AUTH_LOCKOUT_DURATION_MS: '600000'
+      STORAGE_BACKEND: 'supabase'
+      # Loaded from sibling .env (never committed).
+      SUPABASE_URL: '${SUPABASE_URL}'
+      SUPABASE_SERVICE_ROLE_KEY: '${SUPABASE_SERVICE_ROLE_KEY}'
+    volumes:
+      # Persist exported match state + any on-disk game-data writes.
+      # Path matches the user-chosen Unraid appdata layout.
+      - /mnt/docker/appdata/dominion/game-data:/app/server/game-data
+    networks:
+      - app
+    restart: unless-stopped
+
+networks:
+  # Internal-only network between frontend and server. No external attach.
+  app:
+    driver: bridge
+  # External network shared with the cloudflared container so the tunnel
+  # can reach the frontend via DNS name `frontend` (or `dominion-frontend`).
+  # Created out-of-band in Phase 2.4 — do not let compose auto-create it.
+  cloudflare:
+    external: true
+    name: cloudflared

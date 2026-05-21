@@ -4,7 +4,7 @@ dist/
 *.tsbuildinfo
 logs/
 /server/game-data/
-**/.env
+**/.env*
 banned-kingdoms.json
 preselected-kingdoms.json
 preselected-events.json
