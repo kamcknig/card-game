@@ -60,6 +60,13 @@ jobs:
       # the image tag. Edit only happens inside the runner's workspace — never
       # committed back to git; the dev keeps source files at whatever the
       # repo's working version is.
+      #
+      # Uses sed (not jq) because deno.json is CRLF-terminated in this repo
+      # and a full-file rewrite via jq converts to LF — which Deno's import
+      # resolver treats as a different file and rejects local path imports
+      # ("Import shared/types/... not a dependency"). sed -i edits a single
+      # line in place and leaves the rest of the file's bytes (including the
+      # CRLF endings everywhere else) untouched.
       - name: Stamp server version into deno.json
         run: |
           VERSION='${{ steps.meta.outputs.version }}'
@@ -67,9 +74,7 @@ jobs:
             echo "::error::No semver tag resolved from release tag '${{ github.event.release.tag_name }}'; refusing to stamp."
             exit 1
           fi
-          tmp=$(mktemp)
-          jq --arg v "$VERSION" '.version = $v' server/deno.json > "$tmp"
-          mv "$tmp" server/deno.json
+          sed -i -E 's/("version"[[:space:]]*:[[:space:]]*")[^"]*(")/\1'"$VERSION"'\2/' server/deno.json
           echo "Stamped server/deno.json with version $VERSION"
           grep '"version"' server/deno.json
 
@@ -127,6 +132,10 @@ jobs:
       # Edit only happens inside the runner's workspace — never committed back
       # to git; the dev keeps source files at whatever the repo's working
       # version is.
+      #
+      # Uses sed for the same reason as the server step: avoid rewriting the
+      # whole file's bytes (preserves the existing CRLF/LF line-ending
+      # convention).
       - name: Stamp frontend version into package.json
         run: |
           VERSION='${{ steps.meta.outputs.version }}'
@@ -134,9 +143,7 @@ jobs:
             echo "::error::No semver tag resolved from release tag '${{ github.event.release.tag_name }}'; refusing to stamp."
             exit 1
           fi
-          tmp=$(mktemp)
-          jq --arg v "$VERSION" '.version = $v' angular-frontend/package.json > "$tmp"
-          mv "$tmp" angular-frontend/package.json
+          sed -i -E 's/("version"[[:space:]]*:[[:space:]]*")[^"]*(")/\1'"$VERSION"'\2/' angular-frontend/package.json
           echo "Stamped angular-frontend/package.json with version $VERSION"
           grep '"version"' angular-frontend/package.json
 
