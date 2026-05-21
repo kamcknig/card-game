@@ -18,8 +18,6 @@ services:
     environment:
       # Write env.js to Angular's public/ dir so ng serve serves it
       ENV_JS_DIR: /app/angular-frontend/public
-      # Empty wsHost so socket.io connects to same origin, proxied by ng serve
-      WS_HOST: ""
     ports:
       - "51455:51455"
     depends_on:

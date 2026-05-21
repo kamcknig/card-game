@@ -1,11 +1,12 @@
-# Builds and pushes Docker images to Azure Container Registry when a
-# component-prefixed GitHub release is published. The release tag selects
+# Builds and pushes Docker images to GitHub Container Registry (GHCR) when
+# a component-prefixed GitHub release is published. The release tag selects
 # which component is built:
 #   - tag `server-vX.Y.Z`   → builds dominion-clone-server only
 #   - tag `frontend-vX.Y.Z` → builds dominion-clone-frontend only
 # The component prefix is stripped from the resulting image tag, so a
-# `server-v1.2.3` release publishes `dominion-clone-server:1.2.3` (and
-# `:latest`).
+# `server-v1.2.3` release publishes
+# `ghcr.io/<owner>/dominion-clone-server:1.2.3` and also updates the
+# floating `:latest` tag for convenience pulls on the Unraid host.
 name: Build and Push Docker Images
 
 on:
@@ -17,38 +18,60 @@ jobs:
     name: Build Server Image
     runs-on: ubuntu-latest
     if: startsWith(github.event.release.tag_name, 'server-v')
+    # GHCR pushes use the workflow's GITHUB_TOKEN; packages:write grants it
+    # the right to push to ghcr.io/<owner>/<repo-or-image>.
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Log in to Azure Container Registry
+      - name: Log in to GHCR
         uses: docker/login-action@v4
         with:
-          registry: ${{ secrets.ACR_LOGIN_SERVER }}
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Sets up a buildx builder using the docker driver (pre-installed on the
-      # runner). Avoids pulling the buildkit image from Docker Hub, which is
-      # prone to rate-limit failures on shared GHA runner IPs.
+      # Pinned to the docker driver to skip a buildkit image pull on the
+      # shared runner IP pool (rate-limit-prone). Same rationale as before.
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
         with:
           driver: docker
 
-      # Generates two tags: the stripped semver (e.g., 1.2.3 from
-      # server-v1.2.3) for traceability and `latest` for deployment
-      # convenience. The match pattern captures group(1) as the version,
-      # dropping the `server-v` prefix so the image carries a clean tag.
+      # Publishes the bare semver (e.g. 1.2.3 from server-v1.2.3) AND the
+      # floating :latest tag. Unraid pins exact tags via .env
+      # (SERVER_VERSION) for deterministic rolls; :latest is a convenience
+      # fallback when SERVER_VERSION is unset / on a fresh host.
       - name: Extract image metadata
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ${{ secrets.ACR_LOGIN_SERVER }}/dominion-clone-server
+          images: ghcr.io/${{ github.repository_owner }}/dominion-clone-server
           tags: |
             type=match,pattern=^server-v(\d+\.\d+\.\d+)$,group=1
             type=raw,value=latest
+
+      # Stamp the release semver into server/deno.json so SERVER_VERSION
+      # (resolved at runtime from that file via server/src/version.ts) matches
+      # the image tag. Edit only happens inside the runner's workspace — never
+      # committed back to git; the dev keeps source files at whatever the
+      # repo's working version is.
+      - name: Stamp server version into deno.json
+        run: |
+          VERSION='${{ steps.meta.outputs.version }}'
+          if [ -z "$VERSION" ] || [ "$VERSION" = "latest" ]; then
+            echo "::error::No semver tag resolved from release tag '${{ github.event.release.tag_name }}'; refusing to stamp."
+            exit 1
+          fi
+          tmp=$(mktemp)
+          jq --arg v "$VERSION" '.version = $v' server/deno.json > "$tmp"
+          mv "$tmp" server/deno.json
+          echo "Stamped server/deno.json with version $VERSION"
+          grep '"version"' server/deno.json
 
       - name: Build server image
         uses: docker/build-push-action@v7
@@ -63,38 +86,59 @@ jobs:
     name: Build Frontend Image
     runs-on: ubuntu-latest
     if: startsWith(github.event.release.tag_name, 'frontend-v')
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Log in to Azure Container Registry
+      - name: Log in to GHCR
         uses: docker/login-action@v4
         with:
-          registry: ${{ secrets.ACR_LOGIN_SERVER }}
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Sets up a buildx builder using the docker driver (pre-installed on the
-      # runner). Avoids pulling the buildkit image from Docker Hub, which is
-      # prone to rate-limit failures on shared GHA runner IPs.
+      # Pinned to the docker driver to skip a buildkit image pull on the
+      # shared runner IP pool (rate-limit-prone). Same rationale as before.
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
         with:
           driver: docker
 
-      # Generates two tags: the stripped semver (e.g., 1.2.3 from
-      # frontend-v1.2.3) for traceability and `latest` for deployment
-      # convenience. The match pattern captures group(1) as the version,
-      # dropping the `frontend-v` prefix so the image carries a clean tag.
+      # Publishes the bare semver (e.g. 1.2.3 from frontend-v1.2.3) AND the
+      # floating :latest tag. Unraid pins exact tags via .env
+      # (FRONTEND_VERSION) for deterministic rolls; :latest is a convenience
+      # fallback when FRONTEND_VERSION is unset / on a fresh host.
       - name: Extract image metadata
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ${{ secrets.ACR_LOGIN_SERVER }}/dominion-clone-frontend
+          images: ghcr.io/${{ github.repository_owner }}/dominion-clone-frontend
           tags: |
             type=match,pattern=^frontend-v(\d+\.\d+\.\d+)$,group=1
             type=raw,value=latest
+
+      # Stamp the release semver into angular-frontend/package.json so
+      # APP_VERSION (resolved at build time from that file via
+      # angular-frontend/src/app/core/app-version.ts) matches the image tag.
+      # Edit only happens inside the runner's workspace — never committed back
+      # to git; the dev keeps source files at whatever the repo's working
+      # version is.
+      - name: Stamp frontend version into package.json
+        run: |
+          VERSION='${{ steps.meta.outputs.version }}'
+          if [ -z "$VERSION" ] || [ "$VERSION" = "latest" ]; then
+            echo "::error::No semver tag resolved from release tag '${{ github.event.release.tag_name }}'; refusing to stamp."
+            exit 1
+          fi
+          tmp=$(mktemp)
+          jq --arg v "$VERSION" '.version = $v' angular-frontend/package.json > "$tmp"
+          mv "$tmp" angular-frontend/package.json
+          echo "Stamped angular-frontend/package.json with version $VERSION"
+          grep '"version"' angular-frontend/package.json
 
       - name: Build frontend image
         uses: docker/build-push-action@v7
