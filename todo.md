@@ -1,5 +1,12 @@
 # Randoms
 
+add stats tracking
+cards played on board not for current player - such as black cat - have some indication of who they belong to
+in active duration cards modal - show which player owns which cards
+reconnection didn't work.
+
+---
+
 - add email registration via supabase
   - add password reset
   - email change after registration
