@@ -21,6 +21,7 @@ export class ServerConfigService {
     this.getAuthLockoutThreshold();
     this.getAuthLockoutDurationMs();
     this.getAuthMinPasswordLength();
+    this.isAuthDevBypassEnabled();
     this.isFileLoggingEnabled();
     this.getLogFileMaxBytes();
     this.isMatchStateExportEnabled();
@@ -141,6 +142,23 @@ export class ServerConfigService {
    */
   public getAuthMinPasswordLength(): number {
     return this.parseIntEnv('AUTH_MIN_PASSWORD_LENGTH', 10, { min: 1, max: 256 });
+  }
+
+  /**
+   * Returns true when the local-development authentication bypass is enabled.
+   *
+   * Configurable via AUTH_DEV_BYPASS ('true' | 'false'). Defaults to false.
+   *
+   * DANGER: When enabled, the `user` auth provider accepts ANY non-empty
+   * username/password combination without verifying a password hash, and the
+   * user store synthesizes a synthetic admin identity for unknown usernames
+   * (see DevBypassUserStore). This exists solely to remove login friction
+   * during local development and MUST NEVER be enabled in any shared or
+   * production environment. The server logs a prominent warning at startup
+   * whenever this is on.
+   */
+  public isAuthDevBypassEnabled(): boolean {
+    return this.parseBooleanEnv('AUTH_DEV_BYPASS', false);
   }
 
   // Returns the configured server port or default port 3001.

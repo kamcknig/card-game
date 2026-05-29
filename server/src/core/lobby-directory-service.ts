@@ -639,8 +639,12 @@ export class LobbyDirectoryService {
 
     socket.leave(LobbyDirectoryService.LOBBY_ROOM_NAME);
     this.sessionToGameId.set(sessionId, gameId);
-    // Notify client-side routing/state which game is now active.
-    socket.emit('joinedLobbyGame', gameId);
+    // Notify client-side routing/state which game is now active. Pass the
+    // match-in-progress flag so a reconnect into a live match routes the client
+    // to /match (driven by the matchReady events emitted during addPlayer above)
+    // instead of the pre-match /configuration screen — navigating to
+    // /configuration here would clobber the match scene and bounce the player out.
+    socket.emit('joinedLobbyGame', gameId, record.game.matchStarted);
     socket.emit('debugRuntimeContext', record.game.getDebugRuntimeContext());
     // Ensure clients entering a game room still receive the latest searchable catalog.
     this.emitSelectableSearchCatalog(socket);

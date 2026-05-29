@@ -50,6 +50,7 @@ import { SupabaseClientProvider } from '../core/storage/supabase-client-provider
 import { Argon2idHasher, BcryptHasher } from '../core/auth/password-hasher.ts';
 import { InMemoryUserStore } from '../core/auth/in-memory-user-store.ts';
 import { SupabaseUserStore } from '../core/auth/supabase-user-store.ts';
+import { DevBypassUserStore } from '../core/auth/dev-bypass-user-store.ts';
 import type { UserStore } from '../core/auth/user-store.ts';
 import { UserAccountAuthProvider } from '../core/auth/user-account-auth-provider.ts';
 import { SERVER_VERSION } from '../version.ts';
@@ -169,13 +170,28 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
     userStore: asFunction(
       (serverConfigService: ServerConfigService, loggerService: LoggerService): UserStore => {
         const backend = serverConfigService.getStorageBackend();
+        let store: UserStore;
         if (backend === 'supabase') {
           loggerService.log('[auth] user store: supabase (persistent)');
-          return new SupabaseUserStore(loggerService);
+          store = new SupabaseUserStore(loggerService);
+        } else {
+          // 'in-memory' or undefined (error state — health service will surface the issue).
+          loggerService.log('[auth] user store: in-memory (non-persistent)');
+          store = new InMemoryUserStore();
         }
-        // 'in-memory' or undefined (error state — health service will surface the issue).
-        loggerService.log('[auth] user store: in-memory (non-persistent)');
-        return new InMemoryUserStore();
+
+        // DANGER: local-dev auth bypass. When AUTH_DEV_BYPASS=true, wrap the
+        // real store so unknown usernames resolve to a synthetic admin identity,
+        // which (together with the provider's password bypass) lets any
+        // username/password combination sign in. Never enable outside local dev.
+        if (serverConfigService.isAuthDevBypassEnabled()) {
+          loggerService.warn(
+            '[auth] *** AUTH_DEV_BYPASS ENABLED *** any username/password will sign in as an admin — do NOT use in production',
+          );
+          store = new DevBypassUserStore(store, loggerService);
+        }
+
+        return store;
       },
     ).singleton(),
     // Multi-user account provider. Sole auth provider registered with

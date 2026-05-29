@@ -90,6 +90,19 @@ export class UserAccountAuthProvider implements AuthProvider {
       return { ok: false, message: 'Username/password does not match' };
     }
 
+    // DANGER: local-dev auth bypass. When AUTH_DEV_BYPASS=true, accept any
+    // non-empty username/password without touching the user store, password
+    // hashes, lockout counters, or Supabase. Downstream identity (admin flag,
+    // email) is resolved by the DevBypassUserStore decorator. Guarded so the
+    // provider behaves identically to production when the flag is off. This
+    // must never be enabled in a shared or production environment.
+    if (this.serverConfigService.isAuthDevBypassEnabled()) {
+      this.loggerService.warn(
+        `[auth:user] DEV BYPASS active — accepting '${username}' without password verification (AUTH_DEV_BYPASS)`,
+      );
+      return { ok: true, username };
+    }
+
     const user = await this.userStore.getByUsername(username);
 
     // Run a dummy verify even when the user is missing to avoid leaking
