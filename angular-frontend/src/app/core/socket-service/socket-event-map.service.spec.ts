@@ -165,13 +165,28 @@ describe('SocketEventMapService', () => {
       // Setting it after navigate() would race against the guard.
       const map = captureEventMap();
 
-      map['joinedLobbyGame']!('game-7');
+      map['joinedLobbyGame']!('game-7', false);
 
       expect(activeLobbyGameIdStore.get()).toBe('game-7');
       expect(router.navigate).toHaveBeenCalledWith(['/configuration']);
       // Also clears any leftover lobby status so a previous "kicked"/"resigned"
       // banner doesn't linger over the configuration screen.
       expect(lobbyStatusMessageStore.get()).toBeUndefined();
+    });
+
+    it('routes a reconnect into a live match to /match, not /configuration', () => {
+      // When matchInProgress is true the player is rejoining an already-started
+      // match. Navigating to /configuration would clobber the match scene
+      // (emitting leftMatch) and bounce them out, so the handler must route to
+      // /match and mark the match started instead.
+      const map = captureEventMap();
+
+      map['joinedLobbyGame']!('game-7', true);
+
+      expect(activeLobbyGameIdStore.get()).toBe('game-7');
+      expect(matchStartedStore.get()).toBe(true);
+      expect(router.navigate).toHaveBeenCalledWith(['/match']);
+      expect(router.navigate).not.toHaveBeenCalledWith(['/configuration']);
     });
   });
 
