@@ -135,12 +135,24 @@ export class SocketEventMapService {
       this._clearMatchUiOverlays();
     };
 
-    map['joinedLobbyGame'] = gameId => {
+    map['joinedLobbyGame'] = (gameId, matchInProgress) => {
       // Set the store before navigating so that the noActiveMatchGuard on
       // /configuration sees activeLobbyGameIdStore populated synchronously.
       activeLobbyGameIdStore.set(gameId);
       lobbyStatusMessageStore.set(undefined);
-      // Enter configuration route when a lobby game is actively joined.
+
+      // Reconnecting into an already-started match: the match-scene events
+      // (matchReady) own navigation to /match, and they arrive just before this
+      // event. Navigating to /configuration here would tear down the match
+      // scene — emitting `leftMatch` and bouncing the player out of their
+      // in-progress game — so mark the match started and route to /match.
+      if (matchInProgress) {
+        matchStartedStore.set(true);
+        void this._router.navigate(['/match']);
+        return;
+      }
+
+      // Enter configuration route when a lobby game is actively joined pre-match.
       void this._router.navigate(['/configuration']);
     };
 

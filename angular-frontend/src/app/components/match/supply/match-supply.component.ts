@@ -162,11 +162,14 @@ export class MatchSupplyComponent {
 
   private readonly _tokenVisualByPile = computed(() => this.buildTokenVisualByPile(this._match() ?? null, this._tokenDefinitions()));
 
-  // Victory piles excluding Curse — rendered under the VICTORY label in the basic supply.
+  // Victory piles excluding Curse — rendered highest-value-first under the
+  // VICTORY label in the basic supply (e.g. Colony above Province).
   readonly basicVictoryPiles = computed(() => {
     const supplies = this._basicSupplies();
+    const cardIds = this._basicSupplyCardIds() ?? [];
     const victoryKeys = (supplies?.[0] ?? []).filter((key) => key !== 'curse');
-    return this.buildSupplyPileModels(victoryKeys, this._basicSupplyCardIds() ?? []);
+    const sortedKeys = this.sortKeysByCostDescending(victoryKeys, cardIds);
+    return this.buildSupplyPileModels(sortedKeys, cardIds);
   });
 
   // Curse pile rendered under its own CURSE label below the victory piles.
@@ -176,29 +179,21 @@ export class MatchSupplyComponent {
     return this.buildSupplyPileModels(curseKeys, this._basicSupplyCardIds() ?? []);
   });
 
+  // Treasure piles rendered highest-value-first under the TREASURE label in the
+  // basic supply (e.g. Platinum above Gold).
   readonly basicTreasurePiles = computed(() => {
     const supplies = this._basicSupplies();
+    const cardIds = this._basicSupplyCardIds() ?? [];
     const treasureKeys = supplies?.[1] ?? [];
-    return this.buildSupplyPileModels(treasureKeys, this._basicSupplyCardIds() ?? []);
+    const sortedKeys = this.sortKeysByCostDescending(treasureKeys, cardIds);
+    return this.buildSupplyPileModels(sortedKeys, cardIds);
   });
 
   readonly kingdomPiles = computed(() => {
     const keys = this._kingdomSupplies() ?? [];
-    const cardsById = this._cardsById() ?? {};
-    const groupedByKey = this.groupCardIdsByKingdom(this._kingdomSupplyCardIds() ?? [], cardsById);
-    const sortedKeys = [...keys].sort((leftKey, rightKey) => {
-      const leftCard = this.getRepresentativeCard(leftKey, groupedByKey[leftKey] ?? [], cardsById);
-      const rightCard = this.getRepresentativeCard(rightKey, groupedByKey[rightKey] ?? [], cardsById);
-      if (!leftCard || !rightCard) {
-        return leftKey.localeCompare(rightKey);
-      }
-      const costResult = (rightCard.cost?.treasure ?? 0) - (leftCard.cost?.treasure ?? 0);
-      if (costResult !== 0) {
-        return costResult;
-      }
-      return rightCard.cardName.localeCompare(leftCard.cardName);
-    });
-    return this.buildSupplyPileModels(sortedKeys, this._kingdomSupplyCardIds() ?? []);
+    const cardIds = this._kingdomSupplyCardIds() ?? [];
+    const sortedKeys = this.sortKeysByCostDescending(keys, cardIds);
+    return this.buildSupplyPileModels(sortedKeys, cardIds);
   });
 
   readonly pileSelectionModeActive = computed(() => (this._selectablePiles()?.length ?? 0) > 0);
@@ -337,6 +332,26 @@ export class MatchSupplyComponent {
     };
     this._socketService.on('cardTappedComplete', updated);
     emitTap();
+  }
+
+  // Sorts supply pile keys by representative-card treasure cost descending, then
+  // by card name descending. Shared by the kingdom grid and the basic supply
+  // victory/treasure columns so the highest-value pile renders first (top).
+  private sortKeysByCostDescending(keys: readonly CardKey[], cardIds: readonly CardId[]): CardKey[] {
+    const cardsById = this._cardsById() ?? {};
+    const groupedByKey = this.groupCardIdsByKingdom(cardIds, cardsById);
+    return [...keys].sort((leftKey, rightKey) => {
+      const leftCard = this.getRepresentativeCard(leftKey, groupedByKey[leftKey] ?? [], cardsById);
+      const rightCard = this.getRepresentativeCard(rightKey, groupedByKey[rightKey] ?? [], cardsById);
+      if (!leftCard || !rightCard) {
+        return leftKey.localeCompare(rightKey);
+      }
+      const costResult = (rightCard.cost?.treasure ?? 0) - (leftCard.cost?.treasure ?? 0);
+      if (costResult !== 0) {
+        return costResult;
+      }
+      return rightCard.cardName.localeCompare(leftCard.cardName);
+    });
   }
 
   // Converts one source-key list and card-source ids into render-ready supply pile models.

@@ -1,5 +1,17 @@
 # Randoms
 
+add stats tracking
+cards played on board not for current player - such as black cat - have some indication of who they belong to
+in active duration cards modal - show which player owns which cards
+
+---
+
+voting on players leaving
+ - when one player leaves pressing the button to kick them gives no visual feedback (button doesn't disable, dialog doesn't disappear)
+ - if two or more players leave at the same time, it show splayers name in the dialog but same as above, no visual indication
+
+---
+
 - add email registration via supabase
   - add password reset
   - email change after registration

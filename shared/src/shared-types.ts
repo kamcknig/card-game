@@ -570,7 +570,11 @@ export type ServerEmitEvents = {
   // Removes one game from the lobby list.
   lobbyGameRemoved: (gameId: string) => void;
   // Confirms that this client session is now attached to one specific lobby game.
-  joinedLobbyGame: (gameId: string) => void;
+  // `matchInProgress` is true when this attach is a reconnect into an
+  // already-started match, so the client routes to /match instead of the
+  // pre-match /configuration screen (navigating to /configuration would clobber
+  // the match scene and bounce the player out of their in-progress game).
+  joinedLobbyGame: (gameId: string, matchInProgress: boolean) => void;
   // Join request failed; client remains in lobby view.
   joinLobbyRejected: (payload: LobbyJoinRejectedPayload) => void;
   // Client was removed from a lobby game by owner kick.
