@@ -14,7 +14,6 @@
   "nodeModulesDir": "manual",
   "tasks": {
     "dev:watch": "deno run --inspect --check --env-file --allow-sys --allow-read --allow-write --allow-net --allow-env --allow-ffi --unstable-ffi --watch src/server.ts",
-    "dev:runbrowsers": "deno run scripts/run-browsers.js",
     "auth:users": "deno run --allow-env --allow-read --allow-write --allow-ffi --allow-net scripts/auth-user-mgmt.ts",
     "auth:create-reg-code": "deno run --allow-env --allow-read --allow-write scripts/auth-create-reg-code.ts",
     "fmt": "oxfmt --write src/",

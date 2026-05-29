@@ -6,9 +6,11 @@
   "scripts": {
     "server:watch": "cd server && deno task dev:watch",
     "web:watch": "cd angular-frontend && npm run start",
-    "watch": "concurrently \"npm:server:watch\" \"npm:web:watch\""
+    "watch": "concurrently \"npm:server:watch\" \"npm:web:watch\"",
+    "dev:runbrowsers": "node scripts/run-browsers.cjs"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "playwright": "^1.60.0"
   }
 }
