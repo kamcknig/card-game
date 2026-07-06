@@ -237,28 +237,25 @@ CI runs on every push and pull request, scoped by path filters so only relevant 
 
 ### Continuous Deployment
 
-CD is triggered by publishing a GitHub release. The release tag selects which component is built and deployed:
+CD is triggered by publishing a GitHub release with a semver tag (`vX.Y.Z`). Both the server and frontend images are built and pushed together from the same release.
 
-| Tag pattern | Built image | Deployed Container App |
-|-------------|-------------|------------------------|
-| `server-vX.Y.Z` | `dominion-clone-server:X.Y.Z` (and `:latest`) | `dominion-clone-server` |
-| `frontend-vX.Y.Z` | `dominion-clone-frontend:X.Y.Z` (and `:latest`) | `dominion-clone-frontend` |
+| Tag pattern | Built images |
+|-------------|-------------|
+| `vX.Y.Z` | `dominion-clone-server:X.Y.Z` and `dominion-clone-frontend:X.Y.Z` (both also tagged `:latest`) |
 
 | Workflow | File | Trigger | What It Does |
 |----------|------|---------|--------------|
-| Build and Push | `.github/workflows/build-and-push.yml` | GitHub release published | Gates the server and frontend build jobs on the release-tag prefix and pushes the matching image to ACR |
-| Deploy | `.github/workflows/deploy.yml` | Successful Build and Push run | Resolves the component + version from the upstream tag and updates only the matching Azure Container App |
+| Build and Push | `.github/workflows/build-and-push.yml` | GitHub release published with `vX.Y.Z` tag | Builds and pushes both the server and frontend Docker images to GHCR |
 
 ```
-GitHub release `server-vX.Y.Z`    → Build server image    → Deploy `dominion-clone-server`
-GitHub release `frontend-vX.Y.Z`  → Build frontend image  → Deploy `dominion-clone-frontend`
+GitHub release `vX.Y.Z`  → Build server image + Build frontend image
 ```
 
-Bumping a version: edit `server/deno.json#version` (server) or `angular-frontend/package.json#version` (frontend), commit, then create a `server-vX.Y.Z` or `frontend-vX.Y.Z` GitHub release pointing at the commit. The runtime version surfaced in logs and the UI reads from those two files, so the file change must precede the release tag.
+Bumping a version: edit `server/deno.json#version` and `angular-frontend/package.json#version` to the new version, commit, then create a `vX.Y.Z` GitHub release pointing at that commit. Both images are stamped from the same tag, so both files should be updated to the same version before tagging. The runtime versions surfaced in logs and the UI read from those two files, so the file changes must precede the release tag.
 
 ### Version Sources
 
-The server and the Angular frontend track their own semver independently:
+Both the server and frontend share the same semver from the release tag. Both files must be updated to the same version before tagging:
 
 | Component | Source field | Surfaced where |
 |-----------|--------------|----------------|

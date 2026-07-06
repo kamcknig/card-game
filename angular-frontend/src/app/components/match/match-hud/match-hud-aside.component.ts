@@ -29,7 +29,6 @@ import { LogEntryMessage } from '../../../../types';
 import { MatPlayerContent } from './types';
 import { cardSourceStore, cardSourceTagMapStore, getCardSourceStore } from '../../../state/card-source-store';
 import { debugOverlayVisibleStore, debugRuntimeContextStore } from '../../../state/debug-runtime-state';
-import { serverVersionStore } from '../../../state/server-version-state';
 import { authIsAdminStore, authTokenStore } from '../../../core/auth/auth.service';
 import { APP_VERSION } from '../../../core/app-version';
 import { cardStore } from '../../../state/card-state';
@@ -172,13 +171,8 @@ export class MatchHudAsideComponent {
     initialValue: authIsAdminStore.get(),
   });
 
-  /** Frontend bundle version — baked in at build time from package.json. */
+  /** Unified build version — baked in at build time from package.json. */
   readonly clientVersion = APP_VERSION;
-
-  /** Server version received via /status (pre-auth) and refreshed by serverHello. */
-  readonly serverVersion = toSignal(this._nanoService.useStore(serverVersionStore), {
-    initialValue: serverVersionStore.get(),
-  });
 
   // ---------------------------------------------------------------------------
   // Mat interaction handlers
