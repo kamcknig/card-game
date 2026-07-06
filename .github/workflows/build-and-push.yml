@@ -1,11 +1,9 @@
 # Builds and pushes Docker images to GitHub Container Registry (GHCR) when
-# a component-prefixed GitHub release is published. The release tag selects
-# which component is built:
-#   - tag `server-vX.Y.Z`   → builds dominion-clone-server only
-#   - tag `frontend-vX.Y.Z` → builds dominion-clone-frontend only
-# The component prefix is stripped from the resulting image tag, so a
-# `server-v1.2.3` release publishes
-# `ghcr.io/<owner>/dominion-clone-server:1.2.3` and also updates the
+# a GitHub release is published with a semver tag (vX.Y.Z). Both the server
+# and frontend images are built and pushed together from the same release.
+# The leading `v` is stripped from the resulting image tags, so a `v1.2.3`
+# release publishes `ghcr.io/<owner>/dominion-clone-server:1.2.3` and
+# `ghcr.io/<owner>/dominion-clone-frontend:1.2.3`, and also updates the
 # floating `:latest` tag for convenience pulls on the Unraid host.
 name: Build and Push Docker Images
 
@@ -17,7 +15,7 @@ jobs:
   build-server:
     name: Build Server Image
     runs-on: ubuntu-latest
-    if: startsWith(github.event.release.tag_name, 'server-v')
+    if: startsWith(github.event.release.tag_name, 'v')
     # GHCR pushes use the workflow's GITHUB_TOKEN; packages:write grants it
     # the right to push to ghcr.io/<owner>/<repo-or-image>.
     permissions:
@@ -42,17 +40,17 @@ jobs:
         with:
           driver: docker
 
-      # Publishes the bare semver (e.g. 1.2.3 from server-v1.2.3) AND the
-      # floating :latest tag. Unraid pins exact tags via .env
-      # (SERVER_VERSION) for deterministic rolls; :latest is a convenience
-      # fallback when SERVER_VERSION is unset / on a fresh host.
+      # Publishes the bare semver (e.g. 1.2.3 from v1.2.3) AND the floating
+      # :latest tag. Unraid pins exact tags via .env (SERVER_VERSION) for
+      # deterministic rolls; :latest is a convenience fallback when
+      # SERVER_VERSION is unset / on a fresh host.
       - name: Extract image metadata
         id: meta
         uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository_owner }}/dominion-clone-server
           tags: |
-            type=match,pattern=^server-v(\d+\.\d+\.\d+)$,group=1
+            type=match,pattern=^v(\d+\.\d+\.\d+)$,group=1
             type=raw,value=latest
 
       # Stamp the release semver into server/deno.json so SERVER_VERSION
@@ -90,7 +88,7 @@ jobs:
   build-frontend:
     name: Build Frontend Image
     runs-on: ubuntu-latest
-    if: startsWith(github.event.release.tag_name, 'frontend-v')
+    if: startsWith(github.event.release.tag_name, 'v')
     permissions:
       contents: read
       packages: write
@@ -113,17 +111,17 @@ jobs:
         with:
           driver: docker
 
-      # Publishes the bare semver (e.g. 1.2.3 from frontend-v1.2.3) AND the
-      # floating :latest tag. Unraid pins exact tags via .env
-      # (FRONTEND_VERSION) for deterministic rolls; :latest is a convenience
-      # fallback when FRONTEND_VERSION is unset / on a fresh host.
+      # Publishes the bare semver (e.g. 1.2.3 from v1.2.3) AND the floating
+      # :latest tag. Unraid pins exact tags via .env (FRONTEND_VERSION) for
+      # deterministic rolls; :latest is a convenience fallback when
+      # FRONTEND_VERSION is unset / on a fresh host.
       - name: Extract image metadata
         id: meta
         uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository_owner }}/dominion-clone-frontend
           tags: |
-            type=match,pattern=^frontend-v(\d+\.\d+\.\d+)$,group=1
+            type=match,pattern=^v(\d+\.\d+\.\d+)$,group=1
             type=raw,value=latest
 
       # Stamp the release semver into angular-frontend/package.json so

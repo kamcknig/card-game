@@ -23,7 +23,6 @@ import { SoundService } from '../../../../core/sound.service';
 import { authIsAdminStore } from '../../../../core/auth/auth.service';
 import { APP_VERSION } from '../../../../core/app-version';
 import { debugOverlayVisibleStore } from '../../../../state/debug-runtime-state';
-import { serverVersionStore } from '../../../../state/server-version-state';
 import { displayCardDetail } from '../../views/modal/display-card-detail';
 import { matchStore } from '../../../../state/match-state';
 import { findCardLikeEntryInMatch } from 'shared/find-card-like-in-match';
@@ -91,25 +90,8 @@ export class GameLogComponent implements AfterViewInit {
     { initialValue: debugOverlayVisibleStore.get() },
   );
 
-  /** Frontend bundle version — baked in at build time from package.json. */
-  readonly clientVersion = APP_VERSION;
-
-  /** Server version received via /status (pre-auth) and refreshed by serverHello. */
-  readonly serverVersion = toSignal(this._nanoService.useStore(serverVersionStore), {
-    initialValue: serverVersionStore.get(),
-  });
-
-  /**
-   * Combined client + server version string rendered as the settings panel
-   * footer. Same format as the scene-banner pill so the two readouts stay
-   * visually consistent.
-   */
-  readonly versionLine = computed(() => {
-    const server = this.serverVersion();
-    return server
-      ? `Client v${this.clientVersion} · Server v${server}`
-      : `Client v${this.clientVersion}`;
-  });
+  /** Unified build version — baked in at build time from package.json. */
+  readonly versionLine = `v${APP_VERSION}`;
 
   // Sanitized log entries ready for innerHTML binding.
   readonly sanitizedEntries = computed<readonly SanitizedLogEntry[]>(() => {
