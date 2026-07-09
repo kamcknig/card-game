@@ -35,6 +35,16 @@ export class ExpansionCatalogService {
     delete this._expansionLibrary[expansionName];
   }
 
+  // Removes raw card templates registered by a partially-loaded expansion so a
+  // failed load never leaks card definitions into the catalog.
+  public removeRawCardsForExpansion(expansionName: string): void {
+    for (const [cardKey, card] of Object.entries(this._rawCardLibrary)) {
+      if (card.expansionName === expansionName) {
+        delete this._rawCardLibrary[cardKey as CardKey];
+      }
+    }
+  }
+
   // Returns all expansion data keyed by expansion name.
   public getExpansionLibrary(): ExpansionDataLibrary {
     return this._expansionLibrary;

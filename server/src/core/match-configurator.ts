@@ -336,6 +336,16 @@ export class MatchConfigurator {
         (this._config.traits?.length ?? 0);
 
       for (let i = 0; i < numKingdomsToSelect; i++) {
+        if (uniqueRandomizers.length === 0) {
+          // The pool emptied before enough kingdoms/landscapes could be selected —
+          // typically too many banned/excluded piles for the enabled expansions.
+          // nextIndex(0) would throw a much less actionable error below, so fail
+          // fast with a message that names the shortfall.
+          throw new Error(
+            `[match configurator] randomizer pool exhausted after selecting ${i} of ${numKingdomsToSelect} kingdoms — too many banned/excluded piles for the enabled expansions`,
+          );
+        }
+
         const randomIndex = this._rngService.nextIndex(uniqueRandomizers.length);
         const selectedRandomizer = uniqueRandomizers[randomIndex];
 
@@ -343,15 +353,16 @@ export class MatchConfigurator {
           this._loggerService.info(`[match configurator] selected kingdom ${selectedRandomizer.randomizer}`);
           const cardsInRandomizer = selectedRandomizer.cardsInRandomizer;
 
+          // Guard before dereferencing cardsInRandomizer[0] below.
+          if (!cardsInRandomizer.length) {
+            throw new Error(`[match configurator] no cards found for randomizer ${selectedRandomizer.randomizer}`);
+          }
+
           // this makes an assumption that if there are more cards within a randomizer group (such as knights from dark
           // ages) that they will all be in the same kingdoms.
           const kingdom = cardsInRandomizer[0].kingdom;
 
           let cards: CardNoId[] = [];
-
-          if (!cardsInRandomizer.length) {
-            throw new Error(`[match configurator] no cards found for randomizer ${selectedRandomizer.randomizer}`);
-          }
 
           if (cardsInRandomizer.length === 1) {
             cards = new Array(getDefaultKingdomSupplySize(cardsInRandomizer[0], this._config)).fill(
@@ -577,7 +588,22 @@ export class MatchConfigurator {
           .default as ExpansionConfiguratorFactory;
         configurators.set(expansionName, configuratorFactory());
       } catch (error) {
-        this._loggerService.info(`[match configurator] no configurator factory found for expansion '${expansionName}'`);
+        if ((error as { code?: string })?.code === 'ERR_MODULE_NOT_FOUND') {
+          // No configurator file for this expansion — a normal, expected case.
+          this._loggerService.info(
+            `[match configurator] no configurator factory found for expansion '${expansionName}'`,
+          );
+          continue;
+        }
+        // The configurator module exists but failed to import/execute (syntax
+        // error, throwing top-level code, etc.) — this must not be silently
+        // treated as "absent"; surface it loudly so match init fails visibly
+        // instead of silently running without that expansion's rules.
+        this._loggerService.error(
+          `[match configurator] configurator for expansion '${expansionName}' exists but failed to load`,
+        );
+        this._loggerService.error(error);
+        throw error;
       }
     }
     return configurators;

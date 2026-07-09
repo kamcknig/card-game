@@ -249,6 +249,15 @@ export class LobbyDirectoryService {
     this.io.emit('setSelectableSearchCatalog', this.expansionSearchService.getSelectableSearchCatalog());
   }
 
+  // Re-broadcasts the current searchable catalog to every connected client. Used
+  // by ServerStartupService after ExpansionSearchService.rebuildIndexes() runs
+  // post-load, since the per-expansion setSelectableSearchCatalog emits sent
+  // during the load loop (via expansionLoaded) were built against a catalog that
+  // did not yet contain any expansions.
+  public broadcastSelectableSearchCatalog(): void {
+    this.io.emit('setSelectableSearchCatalog', this.expansionSearchService.getSelectableSearchCatalog());
+  }
+
   // Returns debug summaries for all currently running games.
   public getDebugGames(): DebugGameSummary[] {
     const summaries = [...this.games.values()]

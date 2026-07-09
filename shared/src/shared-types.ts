@@ -552,6 +552,11 @@ export type ServerEmitEvents = {
   matchConfigurationUpdated: (val: MatchConfiguration) => void;
   matchReady: () => void;
   matchStarted: () => void;
+  // Sent to a game's room when matchController.initialize() rejects after a
+  // startMatch attempt. The lobby is rolled back to a joinable state (see
+  // GameMatchLifecycleCoordinatorService) and clients should show `message`
+  // and re-enable the ready/start controls instead of waiting on matchReady.
+  matchStartFailed: (payload: { gameId: string; message: string }) => void;
   nextPhaseComplete: () => void;
   patchUpdate: (patchMatch: Operation[], patchCardLibrary: Operation[]) => void;
   patchCardLibrary: (patch: Operation[]) => void;

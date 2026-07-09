@@ -274,9 +274,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
       this.matchSetupService.createArtifacts(this._matchConfiguration);
       this.matchSetupService.createNonSupplyCards(this._matchConfiguration);
       this.matchSetupService.createPlayerDecks(this._matchConfiguration, this._playerHands);
-      // Shuffle Boons/Hexes once setup has initialized their decks.
-      void this.gameActionsController.shuffleCardLike({ kind: 'boon' });
-      void this.gameActionsController.shuffleCardLike({ kind: 'hex' });
+      // Shuffle Boons/Hexes once setup has initialized their decks. Awaited so
+      // initializeInternal cannot resolve (and send matchReady) before the
+      // shuffle actually finished — a fire-and-forget void call here would let
+      // the client race ahead of the actual boon/hex deck ordering.
+      await this.gameActionsController.shuffleCardLike({ kind: 'boon' });
+      await this.gameActionsController.shuffleCardLike({ kind: 'hex' });
       this.match.config = this._matchConfiguration;
     }
 
@@ -500,7 +503,12 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
 
   // Removes a player from the live match state and updates turn ordering.
   public removePlayerFromMatch(playerId: PlayerId): void {
-    const prev = structuredClone(this.match);
+    // getMatchSnapshot() also refreshes _cardLibSnapshot — a plain
+    // structuredClone(this.match) here left it stale, so broadcastPatch below
+    // diffed the card library against whatever the last action happened to
+    // leave behind and re-sent that action's library ops instead of a clean
+    // no-op/delta for this removal.
+    const prev = this.getMatchSnapshot();
     const playerIdx = this.match.players.findIndex(player => player.id === playerId);
     if (playerIdx === -1) return;
 
