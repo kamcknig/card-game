@@ -23,7 +23,6 @@ import { ExpansionEffectRegistryService } from '../core/expansion-effect-registr
 import { ExpansionCardMetadataRegistryService } from '../core/expansion-card-metadata-registry-service.ts';
 import { ExpansionCatalogService } from '../core/expansion-catalog-service.ts';
 import { RngService } from '../core/rng-service.ts';
-import { TokenRegistryService } from '../core/tokens/token-registry-service.ts';
 import { ServerConfigService } from '../core/server-config-service.ts';
 import { LoggerBackendProvider, LoggerService } from '../core/logger-service.ts';
 import { EventLoaderService } from '../core/events/load-events.ts';
@@ -109,7 +108,6 @@ export const registerRootServices = (container: AwilixContainer, args: RegisterR
     rngService: asClass(RngService).singleton(),
     expansionEffectRegistryService: asClass(ExpansionEffectRegistryService).singleton(),
     expansionCardMetadataRegistryService: asClass(ExpansionCardMetadataRegistryService).singleton(),
-    tokenRegistryService: asClass(TokenRegistryService).singleton(),
     eventLoaderService: asClass(EventLoaderService).singleton(),
     landmarkLoaderService: asClass(LandmarkLoaderService).singleton(),
     projectLoaderService: asClass(ProjectLoaderService).singleton(),

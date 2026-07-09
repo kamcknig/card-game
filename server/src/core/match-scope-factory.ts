@@ -31,6 +31,7 @@ import { PlayRulesController } from './play-rules-controller.ts';
 import { MatchUndoService } from './undo/match-undo-service.ts';
 import { MatchUndoVoteService } from './undo/match-undo-vote-service.ts';
 import { PromptAbortRegistry } from './undo/prompt-abort-registry.ts';
+import { TokenRegistryService } from './tokens/token-registry-service.ts';
 
 /**
  * Runtime handle for one active match scope.
@@ -121,6 +122,9 @@ export class MatchScopeFactory {
       endGameEvaluator: asClass(EndGameEvaluatorService).scoped(),
       interactivityController: asClass(CardInteractivityController).scoped(),
       playerReconnectOrchestrator: asClass(PlayerReconnectOrchestrator).scoped(),
+      // Match-scoped so token definitions/handlers registered by per-match
+      // configurators cannot leak into or overwrite other matches.
+      tokenRegistryService: asClass(TokenRegistryService).scoped(),
       gameActionsController: asClass(GameActionController).scoped(),
       matchController: asClass(MatchController).scoped(),
     });
