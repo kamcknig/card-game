@@ -40,8 +40,8 @@ Visit the [Dominion Strategy Wiki](https://wiki.dominionstrategy.com/index.php/M
 
 ## Getting an Account
 
-Accounts are invitation-only. Ask an existing user for a registration code, then sign up at the login screen using that code.
+Registration is open — sign up at the login screen with a username, email, and password. No invitation or registration code is required.
 
 ## Self-Hosting
 
-If you want to run your own instance, see the [development and deployment guide](docs/development.md). It covers local setup, Docker, and production deployment on Azure.
+If you want to run your own instance, see the [development and deployment guide](docs/development.md). It covers local setup, Docker, and self-hosted production deployment on Unraid via Cloudflare Tunnel.

@@ -143,6 +143,74 @@ bootstrapping and operator maintenance only.
 deno task auth:users <command> [options]
 ```
 
+## Debug API
+
+The server exposes a `/debug/*` HTTP API for inspecting and mutating live
+game/match state (used by the OpenAPI-documented endpoints below, and by
+`docs/development.md`'s local debugging workflow).
+
+**Gating.** The entire `/debug/*` tree returns `403` unless
+`MATCH_STATE_EXPORT_ENABLED=true` is set — this is the master on/off switch.
+The state-merge endpoint additionally requires `MATCH_STATE_MERGE_ENABLED=true`.
+Every request (once the API is enabled) requires a valid **admin** session
+token — see [Authentication](#authenticating-as-an-admin) below.
+
+### Authenticating as an admin
+
+1. Grant admin on an existing account (or create one with it set):
+   ```bash
+   deno task auth:users set-admin --username <name> --admin true
+   # or, when creating the account:
+   deno task auth:users create --username <name> --password <pw> --admin true
+   ```
+2. Log in to mint a session token, same as any other user:
+   ```bash
+   curl -sSX POST http://localhost:3001/auth/login \
+     -H 'content-type: application/json' \
+     -d '{"username":"<name>","password":"<pw>"}'
+   ```
+3. Pass the returned token as a Bearer token on every `/debug/*` request:
+   ```bash
+   curl -s http://localhost:3001/debug/games \
+     -H "authorization: Bearer <token>"
+   ```
+
+Requests with no/invalid token get `401`; a valid token belonging to a
+non-admin user gets `403`.
+
+### Interactive documentation
+
+With the debug API enabled, the raw OpenAPI spec and two interactive
+explorers are available (also gated by the enable flag + admin token):
+
+| Path | What it is |
+|------|------------|
+| `GET /debug/openapi.json` | Raw OpenAPI 3 spec |
+| `GET /debug/docs` | Swagger UI |
+| `GET /debug/reference` | Scalar API reference |
+
+Both UIs read `/debug/openapi.json` client-side, so opening them in a
+browser still requires supplying the Bearer token (Swagger UI's
+**Authorize** button; Scalar prompts inline) before "Try it out" calls
+succeed.
+
+### Endpoint groups
+
+| Path prefix | Covers |
+|--------------|--------|
+| `GET /debug/games` | List/inspect active lobby games and their matches |
+| `GET /debug/games/{gameId}/matches/{matchScopeId}/state` | Export current match state (requires `MATCH_STATE_EXPORT_ENABLED`) |
+| `PATCH /debug/games/{gameId}/matches/{matchScopeId}/state` | Merge a partial state update into the live match (requires `MATCH_STATE_MERGE_ENABLED`) |
+| `POST /debug/games/{gameId}/matches/{matchScopeId}/end` | Force-end a match |
+| `GET /debug/games/{gameId}/matches/{matchScopeId}/card-library` | Dump the match's card library |
+| `GET /debug/games/{gameId}/matches/{matchScopeId}/search` | Search cards within a match |
+| `/debug/saved-match-configurations` | CRUD over saved match configurations |
+| `/debug/expansions` | Inspect loaded expansion/card data |
+
+The full request/response shapes for every route are in the OpenAPI spec —
+use `/debug/docs` or `/debug/reference` rather than reading the spec JSON
+directly.
+
 ## Other Commands
 
 ```bash

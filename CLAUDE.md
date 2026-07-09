@@ -141,7 +141,8 @@ Use consistent levels and meaningful context:
 - Each expansion has a `README.md` with mechanics and links to card/event/etc
   docs
 - CI/CD pipeline, production architecture, secrets: [`docs/development.md`](docs/development.md#cicd-pipeline)
-- Azure operations (containers, env vars, rollback, troubleshooting): [`docs/azure-operations.md`](docs/azure-operations.md)
+- Unraid operations (containers, env vars, rollback, troubleshooting): [`docs/unraid-operations.md`](docs/unraid-operations.md)
+- Debug API (endpoints, auth, interactive docs): [`server/README.md`](server/README.md#debug-api)
 - Frontend design guidelines (tokens, typography, theming, component patterns): [`docs/design-guidelines.md`](docs/design-guidelines.md)
 - Dockerfiles: `docker/` (production and dev images)
 - GitHub Actions workflows: `.github/workflows/`
@@ -165,7 +166,7 @@ Key commands:
 
 ## CI/CD and Deployment
 
-See [`docs/development.md`](docs/development.md#cicd-pipeline) for CI/CD pipeline details, GitHub Actions workflows, required secrets, and production architecture. See [`docs/azure-operations.md`](docs/azure-operations.md) for day-to-day Azure operations (updating containers, secrets, rollback, troubleshooting).
+See [`docs/development.md`](docs/development.md#cicd-pipeline) for CI/CD pipeline details, GitHub Actions workflows, and production architecture. See [`docs/unraid-operations.md`](docs/unraid-operations.md) for day-to-day Unraid operations (updating containers, secrets, rollback, troubleshooting). Deployment is manual — CI builds and publishes release images to GHCR; there is no automatic deploy step.
 
 ## Tooling Rules
 
