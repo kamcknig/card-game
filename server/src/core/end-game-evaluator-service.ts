@@ -51,7 +51,10 @@ export class EndGameEvaluatorService {
       });
       const decision = this.applyOutcome(outcome);
       if (outcome.endTriggered !== undefined) {
-        endTriggered = outcome.endTriggered;
+        // Policies contribute ADDITIVE end conditions. They must never clear a
+        // trigger produced by base rules or an earlier policy — suppression is
+        // expressed via `decision` ('defer'/'continue'), not by clearing the flag.
+        endTriggered = endTriggered || outcome.endTriggered;
       }
       if (decision === 'end_now') {
         return { shouldEndNow: true };
@@ -75,8 +78,10 @@ export class EndGameEvaluatorService {
     const emptyPileCount = startingSupplyCount - remainingSupplyCount;
     this.loggerService.debug(`[match] empty pile count ${emptyPileCount}`);
 
-    if (emptyPileCount === 3) {
-      this.loggerService.info('[match] three supply piles are empty');
+    // Latch: once three or more piles are empty the game must end even if a
+    // deferral window (e.g. Fleet) let a fourth pile empty in the meantime.
+    if (emptyPileCount >= 3) {
+      this.loggerService.info('[match] three or more supply piles are empty');
       return true;
     }
 

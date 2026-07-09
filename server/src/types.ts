@@ -1002,6 +1002,10 @@ export type PlayerScoreDecorator = (playerId: PlayerId, match: Match, cardLibrar
 
 export type EndGamePolicyDecision = 'continue' | 'end_now' | 'defer';
 export type EndGamePolicyFnContext = AppContext & { endTriggered: boolean };
+// `endTriggered` is ADDITIVE (OR-merged with the running value) — a policy can
+// only turn a trigger on, never clear one set by base rules or an earlier
+// policy. To suppress ending despite a trigger, return `decision: 'defer'`
+// (or 'continue' to leave the final decision to later policies/base rules).
 export type EndGamePolicyFnOutcome = {
   endTriggered?: boolean;
   decision?: EndGamePolicyDecision;
