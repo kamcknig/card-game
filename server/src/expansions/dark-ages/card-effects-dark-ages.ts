@@ -1,10 +1,101 @@
 import { Card, CardId, CardKey, CardType } from 'shared/types/index.ts';
-import { CardExpansionModule } from '@server-types/index.ts';
+import { CardEffectFunctionContext, CardExpansionModule } from '@server-types/index.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
+
+// Shared Knight attack body, adopted by all 10 Dame/Sir Knights and by Rogue
+// (which shares the attack text but is not itself a Knight). Each other
+// player reveals the top 2 cards of their DECK (shuffling discard-in if
+// short), trashes one revealed card costing $3-$6 (their own choice when
+// both qualify — trashing is mandatory when a qualifying card exists), and
+// discards the rest. Everything is attributed to the TARGET player, never
+// the attacker. `logTag` keeps per-card log forensics accurate for whichever
+// Knight/Rogue instance is calling this.
+const resolveKnightAttack = async (
+  cardEffectArgs: CardEffectFunctionContext,
+  opts: { logTag: string },
+): Promise<void> => {
+  const { loggerService } = cardEffectArgs;
+  const targetPlayerIds = findOrderedTargets({
+    match: cardEffectArgs.match,
+    appliesTo: 'ALL_OTHER',
+    startingPlayerId: cardEffectArgs.playerId,
+  }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+
+  for (const targetPlayerId of targetPlayerIds) {
+    const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', targetPlayerId);
+    const revealed: Card[] = [];
+
+    for (let i = 0; i < 2; i++) {
+      let cardId = deck.slice(-1)[0];
+      if (!cardId) {
+        loggerService.debug(`[${opts.logTag}] deck empty, shuffling discard in`);
+        await cardEffectArgs.actionService.run('shuffleDeck', { playerId: targetPlayerId });
+        cardId = deck.slice(-1)[0];
+        if (!cardId) {
+          loggerService.debug(`[${opts.logTag}] no cards to reveal, skipping`);
+          continue;
+        }
+      }
+      await cardEffectArgs.actionService.run('revealCard', {
+        cardId,
+        playerId: targetPlayerId,
+        moveToSetAside: true,
+      });
+      revealed.push(cardEffectArgs.cardLibrary.getCard(cardId));
+    }
+
+    const trashCandidates = revealed.filter(card => {
+      const { cost } = cardEffectArgs.cardPriceController.applyRules(card, { playerId: targetPlayerId });
+      return cost.treasure >= 3 && cost.treasure <= 6;
+    });
+
+    let cardToTrash: Card | undefined;
+    if (trashCandidates.length === 1) {
+      cardToTrash = trashCandidates[0];
+    } else if (trashCandidates.length > 1) {
+      // Target chooses which qualifying card to trash.
+      const result = (await cardEffectArgs.actionService.run('userPrompt', {
+        prompt: 'Trash card',
+        playerId: targetPlayerId,
+        content: { type: 'select', cardIds: trashCandidates.map(card => card.id), selectCount: 1 },
+      })) as { action: number; result: number[] };
+      cardToTrash = result.result.length
+        ? cardEffectArgs.cardLibrary.getCard(result.result[0])
+        : trashCandidates[0]; // trashing is mandatory; default rather than skip
+    }
+
+    if (cardToTrash) {
+      loggerService.debug(`[${opts.logTag}] trashing ${cardToTrash}`);
+      await cardEffectArgs.actionService.run('trashCard', { playerId: targetPlayerId, cardId: cardToTrash.id });
+    }
+
+    // Everything revealed and not trashed is discarded — by the TARGET.
+    const toDiscard = revealed.filter(card => card.id !== cardToTrash?.id);
+    loggerService.debug(`[${opts.logTag}] discarding ${toDiscard.length} cards`);
+    for (const card of toDiscard) {
+      await cardEffectArgs.actionService.run('discardCard', { cardId: card.id, playerId: targetPlayerId });
+    }
+
+    if (cardToTrash?.type.includes('KNIGHT')) {
+      // The "if a Knight is trashed by this, trash this" clause only appears
+      // on Knight-type cards (Dames/Sirs). Rogue shares this attack body but
+      // has no such text, so it must never self-trash here.
+      const attacker = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+      if (attacker.type.includes('KNIGHT')) {
+        loggerService.debug(`[${opts.logTag}] a Knight was trashed — trashing ${attacker}`);
+        await cardEffectArgs.actionService.run('trashCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: attacker.id,
+        });
+      }
+      // Per the Knights rules the attack continues for remaining players.
+    }
+  }
+};
 
 const cardEffects: CardExpansionModule = {
   'abandoned-mine': {
@@ -609,204 +700,13 @@ const cardEffects: CardExpansionModule = {
         });
       }
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
-
-      for (const targetPlayerId of targetPlayerIds) {
-        const deck = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
-
-        const cardsToDiscard: Card[] = [];
-        const cardsToTrash: Card[] = [];
-
-        for (let i = 0; i < 2; i++) {
-          let cardId = deck.slice(-1)[0];
-
-          if (!cardId) {
-            loggerService.debug(`[dame-anna effect] no cards in deck, shuffling`);
-            await cardEffectArgs.actionService.run('shuffleDeck', { playerId: targetPlayerId });
-
-            cardId = deck.slice(-1)[0];
-
-            if (!cardId) {
-              loggerService.debug(`[dame-anna effect] no cards in deck, skipping`);
-              continue;
-            }
-          }
-
-          const card = cardEffectArgs.cardLibrary.getCard(cardId);
-
-          loggerService.debug(`[dame-anna effect] revealing ${card}`);
-
-          await cardEffectArgs.actionService.run('revealCard', {
-            cardId: cardId,
-            playerId: targetPlayerId,
-            moveToSetAside: true,
-          });
-
-          const { cost } = cardEffectArgs.cardPriceController.applyRules(card, { playerId: targetPlayerId });
-
-          if (cost.treasure >= 3 && cost.treasure <= 6) {
-            cardsToTrash.push(card);
-          } else {
-            cardsToDiscard.push(card);
-          }
-        }
-
-        let cardToTrash: Card | undefined = undefined;
-        if (cardsToTrash.length === 1) {
-          cardToTrash = cardsToTrash[0];
-        } else if (cardsToTrash.length > 1) {
-          const result = (await cardEffectArgs.actionService.run('userPrompt', {
-            prompt: 'Trash card',
-            playerId: targetPlayerId,
-            content: {
-              type: 'select',
-              cardIds: cardsToTrash.map(card => card.id),
-              selectCount: 1,
-            },
-          })) as { action: number; result: number[] };
-
-          if (!result.result.length) {
-            loggerService.warn(`[dame-anna effect] no card selected`);
-          } else {
-            cardToTrash = cardEffectArgs.cardLibrary.getCard(result.result[0]);
-          }
-        }
-
-        if (cardToTrash) {
-          loggerService.debug(`[dame-anna effect] trashing ${cardToTrash}`);
-
-          await cardEffectArgs.actionService.run('trashCard', {
-            playerId: targetPlayerId,
-            cardId: cardToTrash.id,
-          });
-        }
-
-        loggerService.debug(`[dame-anna effect] discarding ${cardsToDiscard.length} cards`);
-
-        for (const card of cardsToDiscard) {
-          await cardEffectArgs.actionService.run('discardCard', {
-            cardId: card.id,
-            playerId: cardEffectArgs.playerId,
-          });
-        }
-
-        if (cardToTrash && cardToTrash.type.includes('KNIGHT')) {
-          const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-
-          loggerService.debug(`[dame-anna effect] trashing ${card}`);
-
-          await cardEffectArgs.actionService.run('trashCard', {
-            playerId: cardEffectArgs.playerId,
-            cardId: card.id,
-          });
-        }
-      }
+      await resolveKnightAttack(cardEffectArgs, { logTag: 'dame-anna effect' });
     },
   },
   'dame-josephine': {
     registerEffects: () => async cardEffectArgs => {
-      const loggerService = cardEffectArgs.loggerService;
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
-
-      for (const targetPlayerId of targetPlayerIds) {
-        const deck = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
-
-        const cardsToDiscard: Card[] = [];
-        const cardsToTrash: Card[] = [];
-
-        for (let i = 0; i < 2; i++) {
-          let cardId = deck.slice(-1)[0];
-
-          if (!cardId) {
-            loggerService.debug(`[dame-baily effect] no cards in deck, shuffling`);
-            await cardEffectArgs.actionService.run('shuffleDeck', { playerId: targetPlayerId });
-
-            cardId = deck.slice(-1)[0];
-
-            if (!cardId) {
-              loggerService.debug(`[dame-baily effect] no cards in deck, skipping`);
-              continue;
-            }
-          }
-
-          const card = cardEffectArgs.cardLibrary.getCard(cardId);
-
-          loggerService.debug(`[dame-baily effect] revealing ${card}`);
-
-          await cardEffectArgs.actionService.run('revealCard', {
-            cardId: cardId,
-            playerId: targetPlayerId,
-            moveToSetAside: true,
-          });
-
-          const { cost } = cardEffectArgs.cardPriceController.applyRules(card, { playerId: targetPlayerId });
-
-          if (cost.treasure >= 3 && cost.treasure <= 6) {
-            cardsToTrash.push(card);
-          } else {
-            cardsToDiscard.push(card);
-          }
-        }
-
-        let cardToTrash: Card | undefined = undefined;
-        if (cardsToTrash.length === 1) {
-          cardToTrash = cardsToTrash[0];
-        } else if (cardsToTrash.length > 1) {
-          const result = (await cardEffectArgs.actionService.run('userPrompt', {
-            prompt: 'Trash card',
-            playerId: targetPlayerId,
-            content: {
-              type: 'select',
-              cardIds: cardsToTrash.map(card => card.id),
-              selectCount: 1,
-            },
-          })) as { action: number; result: number[] };
-
-          if (!result.result.length) {
-            loggerService.warn(`[dame-baily effect] no card selected`);
-          } else {
-            cardToTrash = cardEffectArgs.cardLibrary.getCard(result.result[0]);
-            cardsToDiscard.concat(cardsToTrash.filter(card => card.id !== cardToTrash!.id));
-          }
-        }
-
-        if (cardToTrash) {
-          loggerService.debug(`[dame-baily effect] trashing ${cardToTrash}`);
-
-          await cardEffectArgs.actionService.run('trashCard', {
-            playerId: targetPlayerId,
-            cardId: cardToTrash.id,
-          });
-        }
-
-        loggerService.debug(`[dame-baily effect] discarding ${cardsToDiscard.length} cards`);
-
-        for (const card of cardsToDiscard) {
-          await cardEffectArgs.actionService.run('discardCard', {
-            cardId: card.id,
-            playerId: targetPlayerId,
-          });
-        }
-
-        if (cardToTrash && cardToTrash.type.includes('KNIGHT')) {
-          const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-
-          loggerService.debug(`[dame-baily effect] trashing ${card}`);
-
-          await cardEffectArgs.actionService.run('trashCard', {
-            playerId: cardEffectArgs.playerId,
-            cardId: card.id,
-          });
-        }
-      }
+      // Dame Josephine has no unique + bonus — just the shared Knight attack.
+      await resolveKnightAttack(cardEffectArgs, { logTag: 'dame-josephine effect' });
     },
   },
   'dame-molly': {
@@ -815,103 +715,7 @@ const cardEffects: CardExpansionModule = {
       loggerService.debug(`[dame-molly effect] gaining 2 actions`);
       await cardEffectArgs.actionService.run('gainAction', { count: 2 });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
-
-      for (const targetPlayerId of targetPlayerIds) {
-        const deck = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
-
-        const cardsToDiscard: Card[] = [];
-        const cardsToTrash: Card[] = [];
-
-        for (let i = 0; i < 2; i++) {
-          let cardId = deck.slice(-1)[0];
-
-          if (!cardId) {
-            loggerService.debug(`[dame-baily effect] no cards in deck, shuffling`);
-            await cardEffectArgs.actionService.run('shuffleDeck', { playerId: targetPlayerId });
-
-            cardId = deck.slice(-1)[0];
-
-            if (!cardId) {
-              loggerService.debug(`[dame-baily effect] no cards in deck, skipping`);
-              continue;
-            }
-          }
-
-          const card = cardEffectArgs.cardLibrary.getCard(cardId);
-
-          loggerService.debug(`[dame-baily effect] revealing ${card}`);
-
-          await cardEffectArgs.actionService.run('revealCard', {
-            cardId: cardId,
-            playerId: targetPlayerId,
-            moveToSetAside: true,
-          });
-
-          const { cost } = cardEffectArgs.cardPriceController.applyRules(card, { playerId: targetPlayerId });
-
-          if (cost.treasure >= 3 && cost.treasure <= 6) {
-            cardsToTrash.push(card);
-          } else {
-            cardsToDiscard.push(card);
-          }
-        }
-
-        let cardToTrash: Card | undefined = undefined;
-        if (cardsToTrash.length === 1) {
-          cardToTrash = cardsToTrash[0];
-        } else if (cardsToTrash.length > 1) {
-          const result = (await cardEffectArgs.actionService.run('userPrompt', {
-            prompt: 'Trash card',
-            playerId: targetPlayerId,
-            content: {
-              type: 'select',
-              cardIds: cardsToTrash.map(card => card.id),
-              selectCount: 1,
-            },
-          })) as { action: number; result: number[] };
-
-          if (!result.result.length) {
-            loggerService.warn(`[dame-baily effect] no card selected`);
-          } else {
-            cardToTrash = cardEffectArgs.cardLibrary.getCard(result.result[0]);
-            cardsToDiscard.concat(cardsToTrash.filter(card => card.id !== cardToTrash!.id));
-          }
-        }
-
-        if (cardToTrash) {
-          loggerService.debug(`[dame-baily effect] trashing ${cardToTrash}`);
-
-          await cardEffectArgs.actionService.run('trashCard', {
-            playerId: targetPlayerId,
-            cardId: cardToTrash.id,
-          });
-        }
-
-        loggerService.debug(`[dame-baily effect] discarding ${cardsToDiscard.length} cards`);
-
-        for (const card of cardsToDiscard) {
-          await cardEffectArgs.actionService.run('discardCard', {
-            cardId: card.id,
-            playerId: targetPlayerId,
-          });
-        }
-
-        if (cardToTrash && cardToTrash.type.includes('KNIGHT')) {
-          const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-
-          loggerService.debug(`[dame-baily effect] trashing ${card}`);
-
-          await cardEffectArgs.actionService.run('trashCard', {
-            playerId: cardEffectArgs.playerId,
-            cardId: card.id,
-          });
-        }
-      }
+      await resolveKnightAttack(cardEffectArgs, { logTag: 'dame-molly effect' });
     },
   },
   'dame-natalie': {
@@ -950,208 +754,16 @@ const cardEffects: CardExpansionModule = {
         }
       }
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
-
-      for (const targetPlayerId of targetPlayerIds) {
-        const deck = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
-
-        const cardsToDiscard: Card[] = [];
-        const cardsToTrash: Card[] = [];
-
-        for (let i = 0; i < 2; i++) {
-          let cardId = deck.slice(-1)[0];
-
-          if (!cardId) {
-            loggerService.debug(`[dame-baily effect] no cards in deck, shuffling`);
-            await cardEffectArgs.actionService.run('shuffleDeck', { playerId: targetPlayerId });
-
-            cardId = deck.slice(-1)[0];
-
-            if (!cardId) {
-              loggerService.debug(`[dame-baily effect] no cards in deck, skipping`);
-              continue;
-            }
-          }
-
-          const card = cardEffectArgs.cardLibrary.getCard(cardId);
-
-          loggerService.debug(`[dame-baily effect] revealing ${card}`);
-
-          await cardEffectArgs.actionService.run('revealCard', {
-            cardId: cardId,
-            playerId: targetPlayerId,
-            moveToSetAside: true,
-          });
-
-          const { cost } = cardEffectArgs.cardPriceController.applyRules(card, { playerId: targetPlayerId });
-
-          if (cost.treasure >= 3 && cost.treasure <= 6) {
-            cardsToTrash.push(card);
-          } else {
-            cardsToDiscard.push(card);
-          }
-        }
-
-        let cardToTrash: Card | undefined = undefined;
-        if (cardsToTrash.length === 1) {
-          cardToTrash = cardsToTrash[0];
-        } else if (cardsToTrash.length > 1) {
-          const result = (await cardEffectArgs.actionService.run('userPrompt', {
-            prompt: 'Trash card',
-            playerId: targetPlayerId,
-            content: {
-              type: 'select',
-              cardIds: cardsToTrash.map(card => card.id),
-              selectCount: 1,
-            },
-          })) as { action: number; result: number[] };
-
-          if (!result.result.length) {
-            loggerService.warn(`[dame-baily effect] no card selected`);
-          } else {
-            cardToTrash = cardEffectArgs.cardLibrary.getCard(result.result[0]);
-            cardsToDiscard.concat(cardsToTrash.filter(card => card.id !== cardToTrash!.id));
-          }
-        }
-
-        if (cardToTrash) {
-          loggerService.debug(`[dame-baily effect] trashing ${cardToTrash}`);
-
-          await cardEffectArgs.actionService.run('trashCard', {
-            playerId: targetPlayerId,
-            cardId: cardToTrash.id,
-          });
-        }
-
-        loggerService.debug(`[dame-baily effect] discarding ${cardsToDiscard.length} cards`);
-
-        for (const card of cardsToDiscard) {
-          await cardEffectArgs.actionService.run('discardCard', {
-            cardId: card.id,
-            playerId: targetPlayerId,
-          });
-        }
-
-        if (cardToTrash && cardToTrash.type.includes('KNIGHT')) {
-          const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-
-          loggerService.debug(`[dame-baily effect] trashing ${card}`);
-
-          await cardEffectArgs.actionService.run('trashCard', {
-            playerId: cardEffectArgs.playerId,
-            cardId: card.id,
-          });
-        }
-      }
+      await resolveKnightAttack(cardEffectArgs, { logTag: 'dame-natalie effect' });
     },
   },
   'dame-sylvia': {
     registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
-      loggerService.debug(`[dame-sylvia effect] gaining 2 actions`);
+      loggerService.debug(`[dame-sylvia effect] gaining 2 treasure`);
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
-
-      for (const targetPlayerId of targetPlayerIds) {
-        const deck = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
-
-        const cardsToDiscard: Card[] = [];
-        const cardsToTrash: Card[] = [];
-
-        for (let i = 0; i < 2; i++) {
-          let cardId = deck.slice(-1)[0];
-
-          if (!cardId) {
-            loggerService.debug(`[dame-baily effect] no cards in deck, shuffling`);
-            await cardEffectArgs.actionService.run('shuffleDeck', { playerId: targetPlayerId });
-
-            cardId = deck.slice(-1)[0];
-
-            if (!cardId) {
-              loggerService.debug(`[dame-baily effect] no cards in deck, skipping`);
-              continue;
-            }
-          }
-
-          const card = cardEffectArgs.cardLibrary.getCard(cardId);
-
-          loggerService.debug(`[dame-baily effect] revealing ${card}`);
-
-          await cardEffectArgs.actionService.run('revealCard', {
-            cardId: cardId,
-            playerId: targetPlayerId,
-            moveToSetAside: true,
-          });
-
-          const { cost } = cardEffectArgs.cardPriceController.applyRules(card, { playerId: targetPlayerId });
-
-          if (cost.treasure >= 3 && cost.treasure <= 6) {
-            cardsToTrash.push(card);
-          } else {
-            cardsToDiscard.push(card);
-          }
-        }
-
-        let cardToTrash: Card | undefined = undefined;
-        if (cardsToTrash.length === 1) {
-          cardToTrash = cardsToTrash[0];
-        } else if (cardsToTrash.length > 1) {
-          const result = (await cardEffectArgs.actionService.run('userPrompt', {
-            prompt: 'Trash card',
-            playerId: targetPlayerId,
-            content: {
-              type: 'select',
-              cardIds: cardsToTrash.map(card => card.id),
-              selectCount: 1,
-            },
-          })) as { action: number; result: number[] };
-
-          if (!result.result.length) {
-            loggerService.warn(`[dame-baily effect] no card selected`);
-          } else {
-            cardToTrash = cardEffectArgs.cardLibrary.getCard(result.result[0]);
-            cardsToDiscard.concat(cardsToTrash.filter(card => card.id !== cardToTrash!.id));
-          }
-        }
-
-        if (cardToTrash) {
-          loggerService.debug(`[dame-baily effect] trashing ${cardToTrash}`);
-
-          await cardEffectArgs.actionService.run('trashCard', {
-            playerId: targetPlayerId,
-            cardId: cardToTrash.id,
-          });
-        }
-
-        loggerService.debug(`[dame-baily effect] discarding ${cardsToDiscard.length} cards`);
-
-        for (const card of cardsToDiscard) {
-          await cardEffectArgs.actionService.run('discardCard', {
-            cardId: card.id,
-            playerId: targetPlayerId,
-          });
-        }
-
-        if (cardToTrash && cardToTrash.type.includes('KNIGHT')) {
-          const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-
-          loggerService.debug(`[dame-baily effect] trashing ${card}`);
-
-          await cardEffectArgs.actionService.run('trashCard', {
-            playerId: cardEffectArgs.playerId,
-            cardId: card.id,
-          });
-        }
-      }
+      await resolveKnightAttack(cardEffectArgs, { logTag: 'dame-sylvia effect' });
     },
   },
   'death-cart': {
@@ -2436,85 +2048,10 @@ const cardEffects: CardExpansionModule = {
       } else {
         loggerService.debug(`[rogue effect] no cards in trash costing 3 to 6`);
 
-        const targetPlayerIds = findOrderedTargets({
-          match: cardEffectArgs.match,
-          appliesTo: 'ALL_OTHER',
-          startingPlayerId: cardEffectArgs.playerId,
-        }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
-
-        for (const targetPlayerId of targetPlayerIds) {
-          const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', targetPlayerId);
-
-          if (deck.length < 2) {
-            loggerService.debug(`[rogue effect] player ${targetPlayerId} has less than 2 cards in deck, shuffling`);
-            await cardEffectArgs.actionService.run('shuffleDeck', { playerId: targetPlayerId });
-          }
-
-          const numToReveal = Math.min(2, deck.length);
-
-          loggerService.debug(`[rogue effect] revealing ${numToReveal} cards from player ${targetPlayerId} deck`);
-
-          const cardsToTrash: Card[] = [];
-          const cardsToDiscard: Card[] = [];
-
-          for (let i = 0; i < numToReveal; i++) {
-            const cardId = deck.slice(-i - 1)[0];
-
-            const card = cardEffectArgs.cardLibrary.getCard(cardId);
-            const { cost } = cardEffectArgs.cardPriceController.applyRules(card, { playerId: targetPlayerId });
-
-            if (cost.treasure >= 3 && cost.treasure <= 6 && !cost.potion) {
-              cardsToTrash.push(card);
-            } else {
-              cardsToDiscard.push(card);
-            }
-
-            await cardEffectArgs.actionService.run('revealCard', {
-              cardId,
-              playerId: targetPlayerId,
-              moveToSetAside: true,
-            });
-          }
-
-          let cardToTrash: Card | undefined = undefined;
-          if (cardsToTrash.length > 1) {
-            const result = (await cardEffectArgs.actionService.run('userPrompt', {
-              prompt: 'Trash card',
-              playerId: targetPlayerId,
-              content: {
-                type: 'select',
-                cardIds: cardsToTrash.map(card => card.id),
-                selectCount: 1,
-              },
-            })) as { action: number; result: number[] };
-
-            if (!result.result.length) {
-              loggerService.warn(`[rogue effect] no card selected`);
-            } else {
-              cardToTrash = cardEffectArgs.cardLibrary.getCard(result.result[0]);
-            }
-          } else if (cardsToTrash.length === 1) {
-            cardToTrash = cardsToTrash[0];
-          }
-
-          if (cardToTrash) {
-            loggerService.debug(`[rogue effect] trashing card ${cardToTrash}`);
-
-            await cardEffectArgs.actionService.run('trashCard', {
-              playerId: targetPlayerId,
-              cardId: cardToTrash.id,
-            });
-          }
-
-          loggerService.debug(`[rogue effect] discarding ${cardsToDiscard.length} cards`);
-
-          for (const card of cardsToDiscard.concat(cardsToTrash)) {
-            await cardEffectArgs.actionService.run('discardCard', {
-              cardId: card.id,
-              playerId: cardEffectArgs.playerId,
-            });
-          }
-        }
+        // Rogue shares the Knights' reveal/trash/discard attack, but (per its
+        // card text) has no "trash this" self-destruct clause — resolveKnightAttack
+        // only self-trashes when the attacking card is itself a Knight.
+        await resolveKnightAttack(cardEffectArgs, { logTag: 'rogue effect' });
       }
     },
   },
@@ -2629,315 +2166,27 @@ const cardEffects: CardExpansionModule = {
   },
   'sir-bailey': {
     registerEffects: () => async cardEffectArgs => {
-      const loggerService = cardEffectArgs.loggerService;
-      await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.cardId });
+      // +1 Card, +1 Action.
+      await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
-
-      for (const targetPlayerId of targetPlayerIds) {
-        const deck = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
-
-        const cardsToDiscard: Card[] = [];
-        const cardsToTrash: Card[] = [];
-
-        for (let i = 0; i < 2; i++) {
-          let cardId = deck.slice(-1)[0];
-
-          if (!cardId) {
-            loggerService.debug(`[sir-bailey effect] no cards in deck, shuffling`);
-            await cardEffectArgs.actionService.run('shuffleDeck', { playerId: targetPlayerId });
-
-            cardId = deck.slice(-1)[0];
-
-            if (!cardId) {
-              loggerService.debug(`[sir-bailey effect] no cards in deck, skipping`);
-              continue;
-            }
-          }
-
-          const card = cardEffectArgs.cardLibrary.getCard(cardId);
-
-          loggerService.debug(`[sir-bailey effect] revealing ${card}`);
-
-          await cardEffectArgs.actionService.run('revealCard', {
-            cardId: cardId,
-            playerId: targetPlayerId,
-            moveToSetAside: true,
-          });
-
-          const { cost } = cardEffectArgs.cardPriceController.applyRules(card, { playerId: targetPlayerId });
-
-          if (cost.treasure >= 3 && cost.treasure <= 6) {
-            cardsToTrash.push(card);
-          } else {
-            cardsToDiscard.push(card);
-          }
-        }
-
-        let cardToTrash: Card | undefined = undefined;
-        if (cardsToTrash.length === 1) {
-          cardToTrash = cardsToTrash[0];
-        } else if (cardsToTrash.length > 1) {
-          const result = (await cardEffectArgs.actionService.run('userPrompt', {
-            prompt: 'Trash card',
-            playerId: targetPlayerId,
-            content: {
-              type: 'select',
-              cardIds: cardsToTrash.map(card => card.id),
-              selectCount: 1,
-            },
-          })) as { action: number; result: number[] };
-
-          if (!result.result.length) {
-            loggerService.warn(`[sir-bailey effect] no card selected`);
-          } else {
-            cardToTrash = cardEffectArgs.cardLibrary.getCard(result.result[0]);
-            cardsToDiscard.concat(cardsToTrash.filter(card => card.id !== cardToTrash!.id));
-          }
-        }
-
-        if (cardToTrash) {
-          loggerService.debug(`[sir-bailey effect] trashing ${cardToTrash}`);
-
-          await cardEffectArgs.actionService.run('trashCard', {
-            playerId: targetPlayerId,
-            cardId: cardToTrash.id,
-          });
-        }
-
-        loggerService.debug(`[sir-bailey effect] discarding ${cardsToDiscard.length} cards`);
-
-        for (const card of cardsToDiscard) {
-          await cardEffectArgs.actionService.run('discardCard', {
-            cardId: card.id,
-            playerId: targetPlayerId,
-          });
-        }
-
-        if (cardToTrash && cardToTrash.type.includes('KNIGHT')) {
-          const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-
-          loggerService.debug(`[sir-bailey effect] trashing ${card}`);
-
-          await cardEffectArgs.actionService.run('trashCard', {
-            playerId: cardEffectArgs.playerId,
-            cardId: card.id,
-          });
-        }
-      }
+      await resolveKnightAttack(cardEffectArgs, { logTag: 'sir-bailey effect' });
     },
   },
   'sir-destry': {
     registerEffects: () => async cardEffectArgs => {
-      const loggerService = cardEffectArgs.loggerService;
+      // +2 Cards.
       await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
-
-      for (const targetPlayerId of targetPlayerIds) {
-        const deck = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
-
-        const cardsToDiscard: Card[] = [];
-        const cardsToTrash: Card[] = [];
-
-        for (let i = 0; i < 2; i++) {
-          let cardId = deck.slice(-1)[0];
-
-          if (!cardId) {
-            loggerService.debug(`[sir-destry effect] no cards in deck, shuffling`);
-            await cardEffectArgs.actionService.run('shuffleDeck', { playerId: targetPlayerId });
-
-            cardId = deck.slice(-1)[0];
-
-            if (!cardId) {
-              loggerService.debug(`[sir-destry effect] no cards in deck, skipping`);
-              continue;
-            }
-          }
-
-          const card = cardEffectArgs.cardLibrary.getCard(cardId);
-
-          loggerService.debug(`[sir-destry effect] revealing ${card}`);
-
-          await cardEffectArgs.actionService.run('revealCard', {
-            cardId: cardId,
-            playerId: targetPlayerId,
-            moveToSetAside: true,
-          });
-
-          const { cost } = cardEffectArgs.cardPriceController.applyRules(card, { playerId: targetPlayerId });
-
-          if (cost.treasure >= 3 && cost.treasure <= 6) {
-            cardsToTrash.push(card);
-          } else {
-            cardsToDiscard.push(card);
-          }
-        }
-
-        let cardToTrash: Card | undefined = undefined;
-        if (cardsToTrash.length === 1) {
-          cardToTrash = cardsToTrash[0];
-        } else if (cardsToTrash.length > 1) {
-          const result = (await cardEffectArgs.actionService.run('userPrompt', {
-            prompt: 'Trash card',
-            playerId: targetPlayerId,
-            content: {
-              type: 'select',
-              cardIds: cardsToTrash.map(card => card.id),
-              selectCount: 1,
-            },
-          })) as { action: number; result: number[] };
-
-          if (!result.result.length) {
-            loggerService.warn(`[sir-destry effect] no card selected`);
-          } else {
-            cardToTrash = cardEffectArgs.cardLibrary.getCard(result.result[0]);
-            cardsToDiscard.concat(cardsToTrash.filter(card => card.id !== cardToTrash!.id));
-          }
-        }
-
-        if (cardToTrash) {
-          loggerService.debug(`[sir-destry effect] trashing ${cardToTrash}`);
-
-          await cardEffectArgs.actionService.run('trashCard', {
-            playerId: targetPlayerId,
-            cardId: cardToTrash.id,
-          });
-        }
-
-        loggerService.debug(`[sir-destry effect] discarding ${cardsToDiscard.length} cards`);
-
-        for (const card of cardsToDiscard) {
-          await cardEffectArgs.actionService.run('discardCard', {
-            cardId: card.id,
-            playerId: targetPlayerId,
-          });
-        }
-
-        if (cardToTrash && cardToTrash.type.includes('KNIGHT')) {
-          const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-
-          loggerService.debug(`[sir-destry effect] trashing ${card}`);
-
-          await cardEffectArgs.actionService.run('trashCard', {
-            playerId: cardEffectArgs.playerId,
-            cardId: card.id,
-          });
-        }
-      }
+      await resolveKnightAttack(cardEffectArgs, { logTag: 'sir-destry effect' });
     },
   },
   'sir-martin': {
     registerEffects: () => async cardEffectArgs => {
-      const loggerService = cardEffectArgs.loggerService;
+      // +2 Buys.
       await cardEffectArgs.actionService.run('gainBuy', { count: 2 });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
-
-      for (const targetPlayerId of targetPlayerIds) {
-        const deck = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
-
-        const cardsToDiscard: Card[] = [];
-        const cardsToTrash: Card[] = [];
-
-        for (let i = 0; i < 2; i++) {
-          let cardId = deck.slice(-1)[0];
-
-          if (!cardId) {
-            loggerService.debug(`[sir-martin effect] no cards in deck, shuffling`);
-            await cardEffectArgs.actionService.run('shuffleDeck', { playerId: targetPlayerId });
-
-            cardId = deck.slice(-1)[0];
-
-            if (!cardId) {
-              loggerService.debug(`[sir-martin effect] no cards in deck, skipping`);
-              continue;
-            }
-          }
-
-          const card = cardEffectArgs.cardLibrary.getCard(cardId);
-
-          loggerService.debug(`[sir-martin effect] revealing ${card}`);
-
-          await cardEffectArgs.actionService.run('revealCard', {
-            cardId: cardId,
-            playerId: targetPlayerId,
-            moveToSetAside: true,
-          });
-
-          const { cost } = cardEffectArgs.cardPriceController.applyRules(card, { playerId: targetPlayerId });
-
-          if (cost.treasure >= 3 && cost.treasure <= 6) {
-            cardsToTrash.push(card);
-          } else {
-            cardsToDiscard.push(card);
-          }
-        }
-
-        let cardToTrash: Card | undefined = undefined;
-        if (cardsToTrash.length === 1) {
-          cardToTrash = cardsToTrash[0];
-        } else if (cardsToTrash.length > 1) {
-          const result = (await cardEffectArgs.actionService.run('userPrompt', {
-            prompt: 'Trash card',
-            playerId: targetPlayerId,
-            content: {
-              type: 'select',
-              cardIds: cardsToTrash.map(card => card.id),
-              selectCount: 1,
-            },
-          })) as { action: number; result: number[] };
-
-          if (!result.result.length) {
-            loggerService.warn(`[sir-martin effect] no card selected`);
-          } else {
-            cardToTrash = cardEffectArgs.cardLibrary.getCard(result.result[0]);
-            cardsToDiscard.concat(cardsToTrash.filter(card => card.id !== cardToTrash!.id));
-          }
-        }
-
-        if (cardToTrash) {
-          loggerService.debug(`[sir-martin effect] trashing ${cardToTrash}`);
-
-          await cardEffectArgs.actionService.run('trashCard', {
-            playerId: targetPlayerId,
-            cardId: cardToTrash.id,
-          });
-        }
-
-        loggerService.debug(`[sir-martin effect] discarding ${cardsToDiscard.length} cards`);
-
-        for (const card of cardsToDiscard) {
-          await cardEffectArgs.actionService.run('discardCard', {
-            cardId: card.id,
-            playerId: targetPlayerId,
-          });
-        }
-
-        if (cardToTrash && cardToTrash.type.includes('KNIGHT')) {
-          const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-
-          loggerService.debug(`[sir-martin effect] trashing ${card}`);
-
-          await cardEffectArgs.actionService.run('trashCard', {
-            playerId: cardEffectArgs.playerId,
-            cardId: card.id,
-          });
-        }
-      }
+      await resolveKnightAttack(cardEffectArgs, { logTag: 'sir-martin effect' });
     },
   },
   'sir-michael': {
@@ -2949,6 +2198,8 @@ const cardEffects: CardExpansionModule = {
         startingPlayerId: cardEffectArgs.playerId,
       }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
 
+      // Sir Michael's unique clause: each other player discards down to 3
+      // cards in hand BEFORE the shared reveal/trash/discard attack runs.
       for (const targetPlayerId of targetPlayerIds) {
         const hand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
 
@@ -2982,97 +2233,7 @@ const cardEffects: CardExpansionModule = {
         }
       }
 
-      for (const targetPlayerId of targetPlayerIds) {
-        const deck = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
-
-        const cardsToDiscard: Card[] = [];
-        const cardsToTrash: Card[] = [];
-
-        for (let i = 0; i < 2; i++) {
-          let cardId = deck.slice(-1)[0];
-
-          if (!cardId) {
-            loggerService.debug(`[sir-vander effect] no cards in deck, shuffling`);
-            await cardEffectArgs.actionService.run('shuffleDeck', { playerId: targetPlayerId });
-
-            cardId = deck.slice(-1)[0];
-
-            if (!cardId) {
-              loggerService.debug(`[sir-vander effect] no cards in deck, skipping`);
-              continue;
-            }
-          }
-
-          const card = cardEffectArgs.cardLibrary.getCard(cardId);
-
-          loggerService.debug(`[sir-vander effect] revealing ${card}`);
-
-          await cardEffectArgs.actionService.run('revealCard', {
-            cardId: cardId,
-            playerId: targetPlayerId,
-            moveToSetAside: true,
-          });
-
-          const { cost } = cardEffectArgs.cardPriceController.applyRules(card, { playerId: targetPlayerId });
-
-          if (cost.treasure >= 3 && cost.treasure <= 6) {
-            cardsToTrash.push(card);
-          } else {
-            cardsToDiscard.push(card);
-          }
-        }
-
-        let cardToTrash: Card | undefined = undefined;
-        if (cardsToTrash.length === 1) {
-          cardToTrash = cardsToTrash[0];
-        } else if (cardsToTrash.length > 1) {
-          const result = (await cardEffectArgs.actionService.run('userPrompt', {
-            prompt: 'Trash card',
-            playerId: targetPlayerId,
-            content: {
-              type: 'select',
-              cardIds: cardsToTrash.map(card => card.id),
-              selectCount: 1,
-            },
-          })) as { action: number; result: number[] };
-
-          if (!result.result.length) {
-            loggerService.warn(`[sir-vander effect] no card selected`);
-          } else {
-            cardToTrash = cardEffectArgs.cardLibrary.getCard(result.result[0]);
-            cardsToDiscard.concat(cardsToTrash.filter(card => card.id !== cardToTrash!.id));
-          }
-        }
-
-        if (cardToTrash) {
-          loggerService.debug(`[sir-vander effect] trashing ${cardToTrash}`);
-
-          await cardEffectArgs.actionService.run('trashCard', {
-            playerId: targetPlayerId,
-            cardId: cardToTrash.id,
-          });
-        }
-
-        loggerService.debug(`[sir-vander effect] discarding ${cardsToDiscard.length} cards`);
-
-        for (const card of cardsToDiscard) {
-          await cardEffectArgs.actionService.run('discardCard', {
-            cardId: card.id,
-            playerId: cardEffectArgs.playerId,
-          });
-        }
-
-        if (cardToTrash && cardToTrash.type.includes('KNIGHT')) {
-          const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-
-          loggerService.debug(`[sir-vander effect] trashing ${card}`);
-
-          await cardEffectArgs.actionService.run('trashCard', {
-            playerId: cardEffectArgs.playerId,
-            cardId: card.id,
-          });
-        }
-      }
+      await resolveKnightAttack(cardEffectArgs, { logTag: 'sir-michael effect' });
     },
   },
   'sir-vander': {
@@ -3101,104 +2262,9 @@ const cardEffects: CardExpansionModule = {
       },
     }),
     registerEffects: () => async cardEffectArgs => {
-      const loggerService = cardEffectArgs.loggerService;
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
-
-      for (const targetPlayerId of targetPlayerIds) {
-        const deck = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
-
-        const cardsToDiscard: Card[] = [];
-        const cardsToTrash: Card[] = [];
-
-        for (let i = 0; i < 2; i++) {
-          let cardId = deck.slice(-1)[0];
-
-          if (!cardId) {
-            loggerService.debug(`[sir-vander effect] no cards in deck, shuffling`);
-            await cardEffectArgs.actionService.run('shuffleDeck', { playerId: targetPlayerId });
-
-            cardId = deck.slice(-1)[0];
-
-            if (!cardId) {
-              loggerService.debug(`[sir-vander effect] no cards in deck, skipping`);
-              continue;
-            }
-          }
-
-          const card = cardEffectArgs.cardLibrary.getCard(cardId);
-
-          loggerService.debug(`[sir-vander effect] revealing ${card}`);
-
-          await cardEffectArgs.actionService.run('revealCard', {
-            cardId: cardId,
-            playerId: targetPlayerId,
-            moveToSetAside: true,
-          });
-
-          const { cost } = cardEffectArgs.cardPriceController.applyRules(card, { playerId: targetPlayerId });
-
-          if (cost.treasure >= 3 && cost.treasure <= 6) {
-            cardsToTrash.push(card);
-          } else {
-            cardsToDiscard.push(card);
-          }
-        }
-
-        let cardToTrash: Card | undefined = undefined;
-        if (cardsToTrash.length === 1) {
-          cardToTrash = cardsToTrash[0];
-        } else if (cardsToTrash.length > 1) {
-          const result = (await cardEffectArgs.actionService.run('userPrompt', {
-            prompt: 'Trash card',
-            playerId: targetPlayerId,
-            content: {
-              type: 'select',
-              cardIds: cardsToTrash.map(card => card.id),
-              selectCount: 1,
-            },
-          })) as { action: number; result: number[] };
-
-          if (!result.result.length) {
-            loggerService.warn(`[sir-vander effect] no card selected`);
-          } else {
-            cardToTrash = cardEffectArgs.cardLibrary.getCard(result.result[0]);
-            cardsToDiscard.concat(cardsToTrash.filter(card => card.id !== cardToTrash!.id));
-          }
-        }
-
-        if (cardToTrash) {
-          loggerService.debug(`[sir-vander effect] trashing ${cardToTrash}`);
-
-          await cardEffectArgs.actionService.run('trashCard', {
-            playerId: targetPlayerId,
-            cardId: cardToTrash.id,
-          });
-        }
-
-        loggerService.debug(`[sir-vander effect] discarding ${cardsToDiscard.length} cards`);
-
-        for (const card of cardsToDiscard) {
-          await cardEffectArgs.actionService.run('discardCard', {
-            cardId: card.id,
-            playerId: targetPlayerId,
-          });
-        }
-
-        if (cardToTrash && cardToTrash.type.includes('KNIGHT')) {
-          const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-
-          loggerService.debug(`[sir-vander effect] trashing ${card}`);
-
-          await cardEffectArgs.actionService.run('trashCard', {
-            playerId: cardEffectArgs.playerId,
-            cardId: card.id,
-          });
-        }
-      }
+      // Sir Vander has no unique + bonus — just the shared Knight attack
+      // (its onTrashed lifecycle hook above handles gaining a Gold).
+      await resolveKnightAttack(cardEffectArgs, { logTag: 'sir-vander effect' });
     },
   },
   squire: {
