@@ -84,8 +84,11 @@ export class GameMatchLifecycleCoordinatorService {
     this.loggerService.log(`[game] expansion '${expansion.name}' loaded`);
     state.availableExpansion.push(expansion);
     this.io.in(state.roomName).emit(
+      // Sort a copy — shared lobby state must never be reordered in place by an emit.
+      // Ascending order matches the other two call sites so ordering stays
+      // consistent regardless of which emit path last ran.
       'expansionList',
-      state.availableExpansion.sort((a, b) => b.order - a.order),
+      [...state.availableExpansion].sort((a, b) => a.order - b.order),
     );
     this.expansionSearchService.rebuildIndexes();
   }

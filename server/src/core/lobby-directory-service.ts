@@ -462,6 +462,22 @@ export class LobbyDirectoryService {
     });
 
     socket.on('disconnect', () => {
+      // Drop the username mapping unless another live socket shares this session.
+      // sessionId is a localStorage-backed value on the client (see
+      // socket.service.ts), so it is shared across every tab in the same
+      // browser profile — but the socket layer's one-user-one-tab enforcement
+      // (ServerSocketGatewayService.kickPriorSocketForUsername) dedupes by
+      // USERNAME, not sessionId. A second tab authenticated as a different
+      // account (or a stale tab whose kick hasn't landed yet) can therefore
+      // still hold a live socket for this same sessionId, so unconditionally
+      // deleting here would race away a mapping another connection still needs.
+      // It is re-established by registerConnection on reconnect regardless.
+      const hasOtherLiveSocket = [...this.io.of('/').sockets.values()].some(
+        otherSocket => otherSocket.id !== socket.id && otherSocket.handshake.query.get('sessionId') === sessionId,
+      );
+      if (!hasOtherLiveSocket) {
+        this.sessionToUsername.delete(sessionId);
+      }
       // Let per-game handlers update state first, then recompute lobby summary.
       const gameId = this.findGameIdForSession(sessionId);
       if (!gameId) return;
@@ -871,6 +887,14 @@ export class LobbyDirectoryService {
     } else {
       this.loggerService.debug(`[lobby directory] session ${targetSessionId} was not banned in game ${gameId}`);
     }
+
+    // Acknowledge the request with the refreshed banned list, mirroring the
+    // kick/ban handlers' pattern of confirming the mutation to the actor
+    // rather than leaving the owner's UI to assume success silently.
+    socket.emit('bannedSessionsUpdated', {
+      gameId,
+      bannedSessionIds: [...record.bannedSessionIds],
+    });
   }
 
   // Recomputes lobby visibility and clean-up rules after one game state transition.

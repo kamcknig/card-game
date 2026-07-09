@@ -148,11 +148,26 @@ export class GameLobbySessionCoordinatorService {
       if (!hasDisconnectedHuman) {
         void state.matchController?.runGameAction('checkForRemainingPlayerActions');
       }
+
+      if (state.postGamePhase) {
+        // Rejoining during the summary screen on a fresh socket: the prior
+        // socket's post-game handlers died with it, and this branch never
+        // bound them for reconnects — stranding the player on an inert
+        // summary screen (returnToLobby/playerReady/restartMatch/editMatch
+        // all silently did nothing). Rebind them here. The `setPlayerList`
+        // emit above already mirrors enterPostGamePhase's only broadcast
+        // payload, so no further state re-emit is needed.
+        this.bindPostGamePlayerHandlers(state, player.id, socket, callbacks);
+        if (state.owner?.id === player.id) {
+          this.bindPostGameOwnerHandlers(state, player.id, socket, callbacks);
+        }
+      }
     } else {
       this.loggerService.info('[game] not yet started, sending player to match configuration');
       socket.emit(
+        // Sort a copy — shared lobby state must never be reordered in place by an emit.
         'expansionList',
-        state.availableExpansion.sort((a, b) => a.order - b.order),
+        [...state.availableExpansion].sort((a, b) => a.order - b.order),
       );
       socket.emit('matchConfigurationUpdated', state.matchConfiguration!);
       this.lobbySocketBindings.bindPlayerLobbyHandlers(socket, {
@@ -267,14 +282,53 @@ export class GameLobbySessionCoordinatorService {
       return;
     }
 
-    // Guard: during post-game phase, treat a disconnect as a voluntary return to lobby.
+    // During post-game, a DISCONNECT is transient: keep the seat so the
+    // session can rejoin the summary screen. Only an explicit returnToLobby
+    // removes the player. `matchStarted` stays true through post-game, so
+    // treating this as onReturnToLobby (which drops the player from
+    // state.players) would make the later `matchStarted && !hasSession`
+    // reconnect gate reject the rejoin as "already started" — permanently
+    // locking the player out after any network blip on the summary screen.
     if (state.postGamePhase) {
+      const player = this.playerRegistryService.markPlayerDisconnected(state.players, playerId);
       const socket = state.socketMap.get(playerId);
-      // Treat disconnect during post-game summary the same as voluntarily returning to lobby.
-      this.onReturnToLobby(state, playerId, callbacks);
       if (socket) {
         this.runtimeSocketHandlersBySocketId.delete(socket.id);
+        // The post-game handlers bound to this now-dead socket are inert once
+        // disconnected, but leaving the map entry around leaks one closure per
+        // reconnect cycle; drop it the same way runtime handlers are dropped above.
+        this.unbindPostGameHandlers(socket);
       }
+      state.socketMap.delete(playerId);
+
+      if (!player) {
+        this.loggerService.warn('[game] post-game disconnect for unknown player');
+        return;
+      }
+
+      // Owner transfer mirrors onReturnToLobby's post-game handling.
+      if (state.owner?.id === playerId) {
+        const replacement = this.playerSessionService.findReplacementOwner(state.players, playerId);
+        state.owner = replacement;
+        if (replacement) {
+          this.io.in(state.roomName).emit('gameOwnerUpdated', replacement.id);
+          const replacementSocket = state.socketMap.get(replacement.id);
+          if (replacementSocket) {
+            this.bindPostGameOwnerHandlers(state, replacement.id, replacementSocket, callbacks);
+          }
+        }
+      }
+
+      // If nobody connected remains, clear the match as before.
+      if (!this.playerSessionService.hasConnectedHumanPlayers(state.players)) {
+        this.loggerService.log('[game] no connected humans left in post-game, clearing match');
+        state.postGamePhase = false;
+        callbacks.onClearMatch();
+        return;
+      }
+
+      this.io.in(state.roomName).emit('playerDisconnected', player);
+      callbacks.onGameStateChanged?.();
       return;
     }
 

@@ -350,7 +350,8 @@ export class Game {
     this.io.in(this.runtimeState.roomName).emit('setPlayerList', this.runtimeState.players);
     this.io
       .in(this.runtimeState.roomName)
-      .emit('expansionList', this.runtimeState.availableExpansion.sort((a, b) => a.order - b.order));
+      // Sort a copy — shared lobby state must never be reordered in place by an emit.
+      .emit('expansionList', [...this.runtimeState.availableExpansion].sort((a, b) => a.order - b.order));
     this.io
       .in(this.runtimeState.roomName)
       .emit('matchConfigurationUpdated', this.runtimeState.matchConfiguration!);
