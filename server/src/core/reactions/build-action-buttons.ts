@@ -7,9 +7,12 @@ export function buildActionButtons(
   grouped: Map<string, { count: number; reaction: Reaction }>,
   cardLibrary: MatchCardLibrary,
   loggerService: LoggerService,
+  // When every candidate reaction is compulsory, the prompt is purely an
+  // ordering choice — there is nothing to decline, so Cancel is omitted.
+  includeCancel = true,
 ) {
   let actionId = 1;
-  const buttons = [{ action: 0, label: 'Cancel' }];
+  const buttons = includeCancel ? [{ action: 0, label: 'Cancel' }] : [];
   for (const [_cardKey, { count, reaction }] of grouped) {
     // Prefer explicit reaction source names for labels.
     let resolvedName = reaction.sourceName;
