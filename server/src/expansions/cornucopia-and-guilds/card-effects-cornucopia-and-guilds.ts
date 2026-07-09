@@ -1777,7 +1777,8 @@ const expansion: CardExpansionModule = {
           loggerService.debug(`[young witch effect] player ${targetPlayerId} did not reveal a bane`);
           await cardEffectArgs.actionService.run('gainCard', {
             playerId: targetPlayerId,
-            cardId: curseCardIds[0].id,
+            // Gain from the TOP of the pile — index 0 is the bottom.
+            cardId: curseCardIds.slice(-1)[0].id,
             to: { location: 'playerDiscard' },
           });
         }

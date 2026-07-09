@@ -2,11 +2,11 @@ import { CardId, PlayerId } from 'shared/types/index.ts';
 import { CardExpansionModule, CardLifecycleCallbackContext } from '@server-types/index.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
-import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { discardDownTo } from '../../utils/discard-down-to.ts';
 
 const expansion: CardExpansionModule = {
   berserker: {
@@ -82,22 +82,12 @@ const expansion: CardExpansionModule = {
       }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
 
       for (const targetPlayerId of targetPlayerIds) {
-        const hand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
-
-        const numToDiscard = hand.length - 3;
-        if (numToDiscard <= 0) {
-          loggerService.debug(`[berserker triggered effect] no cards to discard for player ${targetPlayerId}`);
-          continue;
-        }
-
-        loggerService.debug(`[berserker triggered effect] player ${targetPlayerId} discarding ${numToDiscard} cards`);
-
-        for (let i = 0; i < numToDiscard; i++) {
-          await cardEffectArgs.actionService.run('discardCard', {
-            cardId: hand.slice(-1)[0],
-            playerId: targetPlayerId,
-          });
-        }
+        // Discard-down-to attacks let the victim choose which cards to keep.
+        await discardDownTo(cardEffectArgs, {
+          playerId: targetPlayerId,
+          targetHandSize: 3,
+          logTag: 'berserker triggered effect',
+        });
       }
     },
   },
@@ -790,7 +780,9 @@ const expansion: CardExpansionModule = {
 
         loggerService.debug(`[inn onGained effect] shuffling player deck`);
 
-        fisherYatesShuffle(args.cardSourceController.getSource('playerDeck', eventArgs.playerId), true);
+        // Route through the engine action so the shuffle uses the injected RNG
+        // instead of the shuffler's (now removed) Math.random default.
+        await args.actionService.run('shuffleDeck', { playerId: eventArgs.playerId });
       },
     }),
     registerEffects: () => async cardEffectArgs => {

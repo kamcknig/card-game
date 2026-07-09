@@ -142,7 +142,8 @@ const expansion: CardExpansionModule = {
             'gainCard',
             {
               playerId: args.trigger.args.playerId!,
-              cardId: curseCardIds[0].id,
+              // Gain from the TOP of the pile — index 0 is the bottom.
+              cardId: curseCardIds.slice(-1)[0].id,
               to: { location: 'playerDiscard' },
             },
             { loggingContext: { source: args.trigger.args.cardId } },
@@ -935,7 +936,10 @@ const expansion: CardExpansionModule = {
             },
           );
 
-          const cardId = (await triggeredArgs.actionService.run('selectSingleCard', {
+          // Named distinctly from args.cardId (the Sailor card itself) so the
+          // log source below can't accidentally shadow-attribute to the
+          // trashed card instead of the effect card.
+          const selectedCardId = (await triggeredArgs.actionService.run('selectSingleCard', {
             prompt: 'Trash card',
             playerId: args.playerId,
             restrict: args.cardSourceController.getSource('playerHand', args.playerId),
@@ -944,7 +948,7 @@ const expansion: CardExpansionModule = {
             cancelPrompt: `Don't trash`,
           })) as number | null;
 
-          if (!cardId) {
+          if (!selectedCardId) {
             loggerService.debug(`[sailor triggered effect] no card chosen`);
             return;
           }
@@ -954,9 +958,9 @@ const expansion: CardExpansionModule = {
             'trashCard',
             {
               playerId: args.playerId,
-              cardId,
+              cardId: selectedCardId,
             },
-            { loggingContext: { source: cardId } },
+            { loggingContext: { source: args.cardId } },
           );
         },
       });
@@ -1111,7 +1115,8 @@ const expansion: CardExpansionModule = {
 
         loggerService.debug(`[sea witch effect] giving curse to ${getPlayerById(args.match, targetPlayerId)}`);
         await args.actionService.run('gainCard', {
-          cardId: curseCardIds[0].id,
+          // Gain from the TOP of the pile — index 0 is the bottom.
+          cardId: curseCardIds.slice(-1)[0].id,
           playerId: targetPlayerId,
           to: { location: 'playerDiscard' },
         });
@@ -1273,6 +1278,10 @@ const expansion: CardExpansionModule = {
             return;
           }
 
+          // Capture the effect card's own id before the loop — the loop
+          // variable below shadows args.cardId, and log attribution must
+          // point at Tide Pools, not the discarded card.
+          const sourceCardId = args.cardId;
           for (const cardId of selectedCardIds) {
             await triggerArgs.actionService.run(
               'discardCard',
@@ -1280,7 +1289,7 @@ const expansion: CardExpansionModule = {
                 cardId,
                 playerId: args.playerId,
               },
-              { loggingContext: { source: cardId } },
+              { loggingContext: { source: sourceCardId } },
             );
           }
         },

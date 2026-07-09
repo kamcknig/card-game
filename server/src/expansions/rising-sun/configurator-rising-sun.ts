@@ -564,6 +564,10 @@ const registerApproachingArmyReactions = (args: RisingSunGameEventContext, proph
       playerId: player.id,
       compulsory: true,
       condition: async ({ trigger, cardLibrary, match }) => {
+        // Only the player who played the card gets the bonus (one firing, not N).
+        if (trigger.args.playerId !== player.id) {
+          return false;
+        }
         if (!isProphecyActive(match, APPROACHING_ARMY_PROPHECY_KEY)) {
           return false;
         }
@@ -682,6 +686,10 @@ const registerGreatLeaderReactions = (args: RisingSunGameEventContext, prophecy:
       playerId: player.id,
       compulsory: true,
       condition: async ({ trigger, cardLibrary, match }) => {
+        // Only the player who played the card gets the bonus (one firing, not N).
+        if (trigger.args.playerId !== player.id) {
+          return false;
+        }
         if (!isProphecyActive(match, GREAT_LEADER_PROPHECY_KEY)) {
           return false;
         }

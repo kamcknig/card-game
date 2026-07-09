@@ -1438,6 +1438,7 @@ export class GameActionController implements GameActionDefinitionMap {
     to: CardLocationSpec;
     facing?: CardFacing;
     setAsideSource?: SetAsideSourceInput;
+    updateOwner?: boolean;
   }): Promise<{ location: CardLocation; playerId?: PlayerId; emptiedSupplyPileKey?: CardKey } | undefined> {
     // Ensure we are only moving actual cards with moveCard.
     let card: Card;
@@ -1562,6 +1563,15 @@ export class GameActionController implements GameActionDefinitionMap {
           cardId,
         });
         break;
+    }
+
+    // Opt-in ownership transfer: only when explicitly requested and a destination
+    // player was actually resolved (shared zones like trash/supply have none).
+    if (args.updateOwner && destinationPlayerId !== undefined) {
+      this.loggerService.debug(
+        `[moveCard action] updating owner of ${card} from ${card.owner} to ${destinationPlayerId}`,
+      );
+      card.owner = destinationPlayerId;
     }
 
     const destinationLog =

@@ -301,6 +301,13 @@ export interface GameActionDefinitionMap {
     facing?: CardFacing;
     // Optional source metadata used when the destination is set-aside.
     setAsideSource?: SetAsideSourceInput;
+    // Opt-in: also updates card.owner to the resolved destination player.
+    // moveCard itself is a low-level primitive and leaves ownership alone by
+    // default (mirroring gainCard/exileCard/trashCard, which set it
+    // explicitly for their own semantics); effects that pass a card between
+    // two live players (e.g. Masquerade) opt in here instead of mutating
+    // card.owner directly outside the action layer.
+    updateOwner?: boolean;
   }) => Promise<{ location: CardLocation; playerId?: PlayerId; emptiedSupplyPileKey?: CardKey } | undefined>;
   // Removes a card from the active match (used for "remove from game" / "to the box" effects).
   removeCardFromGame: (args: { cardId: CardId | Card }) => Promise<void>;

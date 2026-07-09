@@ -590,17 +590,18 @@ const expansionModule: CardExpansionModule = {
 
           const playerId = targets[(i + 1) % targets.length];
 
-          const card = cardLibrary.getCard(cardId);
-          card.owner = playerId;
-
           loggerService.debug(
             `[masquerade effect] moving ${cardLibrary.getCard(cardId!)} to ${getPlayerById(match, playerId!)}`,
           );
 
+          // Ownership transfers to the receiving player — route it through the
+          // action layer via moveCard's opt-in flag instead of mutating the
+          // card directly here.
           await actionService.run('moveCard', {
             cardId: cardId!,
             toPlayerId: playerId!,
             to: { location: 'playerHand' },
+            updateOwner: true,
           });
         }
 
@@ -1399,7 +1400,9 @@ const expansionModule: CardExpansionModule = {
               });
             }
 
-            return;
+            // Continue to the next target — the attack applies to EVERY other
+            // player, not just up to the first one who discards.
+            continue;
           }
 
           const curseCardId = args.findCardService
