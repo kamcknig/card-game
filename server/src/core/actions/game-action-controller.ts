@@ -2461,10 +2461,23 @@ export class GameActionController implements GameActionDefinitionMap {
     );
   }
 
+  // Converts Coffers tokens into spendable treasure for the current turn.
   async exchangeCoffer(args: { playerId: PlayerId; count: number }, context?: GameActionContext) {
-    this.loggerService.log(`[exchangeCoffer action] player ${args.playerId} exchanged ${args.count} coffers`);
-    this.match.coffers[args.playerId] -= args.count;
-    this.match.playerTreasure += args.count;
+    this.match.coffers[args.playerId] ??= 0;
+    const available = this.match.coffers[args.playerId];
+    // Clamp to a non-negative integer no larger than the player's coffers —
+    // this handler is client-reachable and must not trust the payload.
+    const requested = Number.isFinite(args.count) ? Math.floor(args.count) : 0;
+    const count = Math.min(Math.max(0, requested), available);
+    if (count <= 0) {
+      this.loggerService.debug(
+        `[exchangeCoffer action] player ${args.playerId} has nothing to exchange (requested ${args.count}, available ${available})`,
+      );
+      return;
+    }
+    this.loggerService.log(`[exchangeCoffer action] player ${args.playerId} exchanged ${count} coffers`);
+    this.match.coffers[args.playerId] = available - count;
+    this.match.playerTreasure += count;
   }
 
   // Spends Villagers to gain actions during the Action phase.
@@ -2549,16 +2562,27 @@ export class GameActionController implements GameActionDefinitionMap {
     const standardCost = resolvedBuyOptions.cost;
     let paidTreasure = 0;
 
+    // Holds the clamped overpay actually spent (coffer + treasure), so both the
+    // paid-total math and the gainCard context reflect real money, not the raw
+    // client-supplied values.
+    let spendableOverpay = 0;
+
     if (selectedBuyOption.kind === 'standard') {
       // Standard payments use normal treasure/potion/debt handling.
-      if (args.overpay?.inCoffer) {
+      // Clamp requested overpay to what the player actually holds; the values
+      // originate from a client prompt and must be validated server-side.
+      const cofferAvailable = this.match.coffers[args.playerId] ?? 0;
+      const overpayCoffer = Math.min(Math.max(0, Math.floor(args.overpay?.inCoffer ?? 0)), cofferAvailable);
+      const overpayTreasureRequested = Math.max(0, Math.floor(args.overpay?.inTreasure ?? 0));
+
+      if (overpayCoffer > 0) {
         this.loggerService.debug(
-          `[buyCard action] player ${args.playerId} overpaid ${args.overpay.inCoffer} coffers, exchanging for treasure`,
+          `[buyCard action] player ${args.playerId} overpaying with ${overpayCoffer} coffers, exchanging for treasure`,
         );
 
         await this.exchangeCoffer({
           playerId: args.playerId,
-          count: args.overpay.inCoffer,
+          count: overpayCoffer,
         });
       }
 
@@ -2567,7 +2591,15 @@ export class GameActionController implements GameActionDefinitionMap {
       );
 
       this.match.playerTreasure -= standardCost.treasure;
-      paidTreasure = standardCost.treasure + (args.overpay?.inTreasure ?? 0) + (args.overpay?.inCoffer ?? 0);
+
+      // Spend the overpay: coffers were exchanged into playerTreasure above, so
+      // both components come out of the (post-base-cost) treasure pool.
+      spendableOverpay = Math.min(
+        overpayTreasureRequested + overpayCoffer,
+        Math.max(0, this.match.playerTreasure),
+      );
+      this.match.playerTreasure -= spendableOverpay;
+      paidTreasure = standardCost.treasure + spendableOverpay;
 
       if (standardCost.potion !== undefined) {
         this.loggerService.debug(
@@ -2633,7 +2665,7 @@ export class GameActionController implements GameActionDefinitionMap {
       },
       {
         bought: true,
-        overpay: (args.overpay?.inTreasure ?? 0) + (args.overpay?.inCoffer ?? 0),
+        overpay: spendableOverpay,
       },
     );
   }

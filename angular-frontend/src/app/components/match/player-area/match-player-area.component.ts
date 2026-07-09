@@ -436,16 +436,20 @@ export class MatchPlayerAreaComponent {
     return handCards.some((card) => card.type?.includes('TREASURE'));
   });
 
-  readonly canSpendVillagers = computed(() => {
+  // Whether the villager icon should be shown at all — tied to it being the
+  // player's own action phase, the only time villagers are ever spendable.
+  // Separate from canSpendVillagers() so the icon stays visible (disabled)
+  // at 0 villagers instead of disappearing.
+  readonly villagerControlsVisible = computed(() => {
     const selfPlayerId = this._selfPlayerId();
     if (selfPlayerId === undefined) {
       return false;
     }
-    return (
-      this._currentPlayerTurnId() === selfPlayerId
-      && this._turnPhase() === 'action'
-      && this.resourceState().villagers > 0
-    );
+    return this._currentPlayerTurnId() === selfPlayerId && this._turnPhase() === 'action';
+  });
+
+  readonly canSpendVillagers = computed(() => {
+    return this.villagerControlsVisible() && this.resourceState().villagers > 0;
   });
 
   readonly availableCubeTokens = computed(() => {

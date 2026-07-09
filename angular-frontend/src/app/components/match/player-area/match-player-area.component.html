@@ -146,9 +146,15 @@
           </button>
         }
 
-        @if (canSpendVillagers()) {
+        @if (villagerControlsVisible()) {
           <div class="resource-control">
-            <button type="button" class="resource-icon-button" (click)="onToggleVillagerControls()">
+            <button
+              type="button"
+              class="resource-icon-button"
+              [disabled]="!canSpendVillagers()"
+              [title]="canSpendVillagers() ? 'Spend Villagers for +1 Action each' : 'No Villagers to spend'"
+              (click)="onToggleVillagerControls()"
+            >
               <img src="/assets/ui-icons/villagers.jpg" alt="" />
               <span>{{ resources.villagers }}</span>
             </button>
@@ -165,24 +171,28 @@
           </div>
         }
 
-        @if (resources.coffers > 0) {
-          <div class="resource-control">
-            <button type="button" class="resource-icon-button" (click)="onToggleCofferControls()">
-              <img src="/assets/ui-icons/coffers.jpg" alt="" />
-              <span>{{ resources.coffers }}</span>
-            </button>
-            @if (showCofferControls()) {
-              <div class="resource-controls-popover">
-                <button type="button" (click)="onDecreaseCofferExchange()">-</button>
-                <span>{{ cofferExchangeAmount() }}</span>
-                <button type="button" (click)="onIncreaseCofferExchange()">+</button>
-                <button type="button" class="resource-confirm-button" (click)="onExecuteCofferExchange()">
-                  {{ cofferExchangeAmount() > 0 ? 'EXCHANGE' : 'CANCEL' }}
-                </button>
-              </div>
-            }
-          </div>
-        }
+        <div class="resource-control">
+          <button
+            type="button"
+            class="resource-icon-button"
+            [disabled]="resources.coffers === 0"
+            [title]="resources.coffers > 0 ? 'Exchange Coffers for +$1 Treasure each' : 'No Coffers to exchange'"
+            (click)="onToggleCofferControls()"
+          >
+            <img src="/assets/ui-icons/coffers.jpg" alt="" />
+            <span>{{ resources.coffers }}</span>
+          </button>
+          @if (showCofferControls()) {
+            <div class="resource-controls-popover">
+              <button type="button" (click)="onDecreaseCofferExchange()">-</button>
+              <span>{{ cofferExchangeAmount() }}</span>
+              <button type="button" (click)="onIncreaseCofferExchange()">+</button>
+              <button type="button" class="resource-confirm-button" (click)="onExecuteCofferExchange()">
+                {{ cofferExchangeAmount() > 0 ? 'EXCHANGE' : 'CANCEL' }}
+              </button>
+            </div>
+          }
+        </div>
 
         @if (resources.debt > 0) {
           <div class="resource-control">
