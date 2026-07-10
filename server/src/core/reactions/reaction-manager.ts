@@ -32,6 +32,19 @@ import { ReactionContextFactory } from './reaction-context-factory.ts';
 import { ExpansionCardMetadataRegistryService } from '../expansion-card-metadata-registry-service.ts';
 import { LoggerService } from '../logger-service.ts';
 
+// Trigger events that fire at turn/phase boundaries rather than inside the
+// action chain that caused their registration. Entries these reactions emit
+// are temporally detached from their cause (e.g. a Duration card played on a
+// previous turn), so they must NOT indent under the current chain — they
+// render flush at the turn level and rely on `source` attribution
+// ("(Wharf)") to convey causality instead of indentation.
+const DETACHED_TRIGGER_EVENTS: ReadonlySet<TriggerEventType> = new Set<TriggerEventType>([
+  'startTurn',
+  'endTurn',
+  'startTurnPhase',
+  'endTurnPhase',
+]);
+
 export class ReactionManager {
   private _reactions: Reaction[] = [];
   private _expansionGameEventHandlers: Record<GameLifecycleEvent, GameLifecycleCallback[]> = {} as Record<
@@ -464,13 +477,27 @@ export class ReactionManager {
     context: TriggeredEffectContext<T>,
     reactionContext?: ReactionContext,
   ) {
-    await this.logManager.withIndent(async () => {
-      // Ensure reaction-caused logs are scoped and unwind cleanly.
+    // Turn/phase-boundary reactions log flush with the turn's entries; their
+    // cause is conveyed by source attribution rather than indentation.
+    const detached = DETACHED_TRIGGER_EVENTS.has(reaction.listeningFor);
+    this.loggerService.debug(
+      `[REACTION MANAGER] running reaction ${reaction.id} (${detached ? 'detached: no log indent' : 'in-chain: log indented'})`,
+    );
+
+    if (detached) {
       await reaction.triggeredEffectFn({
         ...context,
         reactionContext,
       });
-    });
+    } else {
+      await this.logManager.withIndent(async () => {
+        // Ensure reaction-caused logs are scoped and unwind cleanly.
+        await reaction.triggeredEffectFn({
+          ...context,
+          reactionContext,
+        });
+      });
+    }
 
     if (reaction.once) {
       this.loggerService.info(`[REACTION MANAGER] selected reaction is single-use, unregistering it`);

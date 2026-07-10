@@ -424,7 +424,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
   // Adds and flushes a player-left log entry so clients see resignation immediately.
   public logPlayerLeft(playerId: PlayerId): void {
     this.logManager.addLogEntry({
-      root: true,
+      interject: true,
       type: 'playerLeft',
       playerId,
       reason: 'resigned',
