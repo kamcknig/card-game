@@ -13,19 +13,19 @@ const expansion: CardExpansionModule = {
   astrolabe: {
     registerEffects: () => async args => {
       const loggerService = args.loggerService;
-      loggerService.debug(`[SEASON EFFECT] gaining 1 treasure...`);
+      loggerService.debug(`[ASTROLABE EFFECT] gaining 1 treasure...`);
       await args.actionService.run('gainTreasure', { count: 1 });
 
-      loggerService.debug(`[SEASON EFFECT] gaining 1 buy...`);
+      loggerService.debug(`[ASTROLABE EFFECT] gaining 1 buy...`);
       await args.actionService.run('gainBuy', { count: 1 });
 
       const card = args.cardLibrary.getCard(args.cardId);
       // Ensure the duration card remains in play through cleanup.
       registerStartTurnEffect(args, card, async ({ loggerService, actionService }) => {
-        loggerService.debug(`[SEASIDE TRIGGERED EFFECT] gaining 1 treasure...`);
+        loggerService.debug(`[ASTROLABE TRIGGERED EFFECT] gaining 1 treasure...`);
         await actionService.run('gainTreasure', { count: 1 }, { source: args.cardId });
 
-        loggerService.debug(`[SEASIDE TRIGGERED EFFECT] gaining 1 buy...`);
+        loggerService.debug(`[ASTROLABE TRIGGERED EFFECT] gaining 1 buy...`);
         await actionService.run('gainBuy', { count: 1 }, { source: args.cardId });
       });
     },
@@ -34,13 +34,13 @@ const expansion: CardExpansionModule = {
     registerEffects:
       () =>
       async ({ loggerService, actionService, playerId }) => {
-        loggerService.debug(`[SEASON EFFECT] drawing 1 card...`);
+        loggerService.debug(`[BAZAAR EFFECT] drawing 1 card...`);
         await actionService.run('drawCard', { playerId: playerId });
 
-        loggerService.debug(`[SEASON EFFECT] gaining 2 actions...`);
+        loggerService.debug(`[BAZAAR EFFECT] gaining 2 actions...`);
         await actionService.run('gainAction', { count: 2 });
 
-        loggerService.debug(`[SEASON EFFECT] gaining 1 treasure...`);
+        loggerService.debug(`[BAZAAR EFFECT] gaining 1 treasure...`);
         await actionService.run('gainTreasure', { count: 1 });
       },
   },

@@ -374,7 +374,7 @@ const expansionModule: CardExpansionModule = {
         }
 
         for (const cardId of cardIds) {
-          loggerService.debug(`[CELLAR EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
+          loggerService.debug(`[CHAPEL EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
 
           await actionService.run('trashCard', {
             playerId,
