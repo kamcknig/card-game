@@ -5,6 +5,7 @@ import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 
 const expansion: CardExpansionModule = {
   alchemist: {
@@ -193,11 +194,7 @@ const expansion: CardExpansionModule = {
       await args.actionService.run('drawCard', { playerId: args.playerId });
       await args.actionService.run('gainAction', { count: 1 });
 
-      const targets = findOrderedTargets({
-        match: args.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: args.playerId,
-      }).filter(id => !isPlayerImmune(args.reactionContext, id));
+      const targets = getAttackTargets(args.match, args.playerId, args.reactionContext);
 
       for (const targetId of targets) {
         const curseCardId = args.findCardService

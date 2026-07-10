@@ -7,6 +7,7 @@ import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
+import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 
 const expansion: CardExpansionModule = {
   'animal-fair': {
@@ -344,11 +345,7 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
       // Attack each other player in turn order, respecting immunity reactions.
-      const targetPlayerIds = findOrderedTargets({
-        startingPlayerId: cardEffectArgs.playerId,
-        appliesTo: 'ALL_OTHER',
-        match: cardEffectArgs.match,
-      }).filter(targetPlayerId => !isPlayerImmune(cardEffectArgs.reactionContext, targetPlayerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         const revealedCardIds: CardId[] = [];
@@ -475,11 +472,7 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
       // Each other player either exiles a Curse or discards all exiled Curses if none are available.
-      const targetPlayerIds = findOrderedTargets({
-        startingPlayerId: cardEffectArgs.playerId,
-        appliesTo: 'ALL_OTHER',
-        match: cardEffectArgs.match,
-      }).filter(targetPlayerId => !isPlayerImmune(cardEffectArgs.reactionContext, targetPlayerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         const curseCards = cardEffectArgs.findCardService.findCards({

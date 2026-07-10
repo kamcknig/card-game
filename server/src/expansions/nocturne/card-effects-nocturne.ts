@@ -6,8 +6,9 @@ import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
-import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { markPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { findBoonInMatch } from '@shared/find-card-like-in-match.ts';
+import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 
 // Prompts a player to choose an Action from hand not already represented in play.
 const promptUniqueActionFromHand = async (
@@ -765,11 +766,7 @@ const expansion: CardExpansionModule = {
       }
 
       // Otherwise, each other player gains a Curse (respecting immunity).
-      const targetPlayerIds = findOrderedTargets({
-        startingPlayerId: cardEffectArgs.playerId,
-        appliesTo: 'ALL_OTHER',
-        match: cardEffectArgs.match,
-      }).filter(id => !isPlayerImmune(cardEffectArgs.reactionContext, id));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       loggerService.debug(
         `[idol effect] curse targets ${targetPlayerIds.map(id => getPlayerById(cardEffectArgs.match, id))}`,
@@ -953,11 +950,7 @@ const expansion: CardExpansionModule = {
         .filter(card => cardEffectArgs.match.stats.playedCards[card.id]?.playerId === cardEffectArgs.playerId);
       const inPlayKeys = new Set(inPlayCards.map(card => card.cardKey));
 
-      const targetPlayerIds = findOrderedTargets({
-        startingPlayerId: cardEffectArgs.playerId,
-        appliesTo: 'ALL_OTHER',
-        match: cardEffectArgs.match,
-      }).filter(id => !isPlayerImmune(cardEffectArgs.reactionContext, id));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       loggerService.debug(
         `[raider effect] targeting ${targetPlayerIds.map(id => getPlayerById(cardEffectArgs.match, id))}`,
@@ -1180,11 +1173,7 @@ const expansion: CardExpansionModule = {
       // Apply the immediate +1 Buy.
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
 
-      const targetPlayerIds = findOrderedTargets({
-        startingPlayerId: cardEffectArgs.playerId,
-        appliesTo: 'ALL_OTHER',
-        match: cardEffectArgs.match,
-      }).filter(id => !isPlayerImmune(cardEffectArgs.reactionContext, id));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       loggerService.debug(
         `[skulk effect] hex targets ${targetPlayerIds.map(id => getPlayerById(cardEffectArgs.match, id))}`,
@@ -1320,11 +1309,7 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       // Each other player receives a Hex (respecting immunity).
-      const targetPlayerIds = findOrderedTargets({
-        startingPlayerId: cardEffectArgs.playerId,
-        appliesTo: 'ALL_OTHER',
-        match: cardEffectArgs.match,
-      }).filter(id => !isPlayerImmune(cardEffectArgs.reactionContext, id));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       loggerService.debug(
         `[vampire effect] hex targets ${targetPlayerIds.map(id => getPlayerById(cardEffectArgs.match, id))}`,
@@ -1432,11 +1417,7 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const targetPlayerIds = findOrderedTargets({
-        startingPlayerId: cardEffectArgs.playerId,
-        appliesTo: 'ALL_OTHER',
-        match: cardEffectArgs.match,
-      }).filter(id => !isPlayerImmune(cardEffectArgs.reactionContext, id));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       loggerService.debug(
         `[werewolf effect] hex targets ${targetPlayerIds.map(id => getPlayerById(cardEffectArgs.match, id))}`,
@@ -1482,11 +1463,7 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const targetPlayerIds = findOrderedTargets({
-        startingPlayerId: cardEffectArgs.playerId,
-        appliesTo: 'ALL_OTHER',
-        match: cardEffectArgs.match,
-      }).filter(id => !isPlayerImmune(cardEffectArgs.reactionContext, id));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       loggerService.debug(
         `[tormentor effect] hex targets ${targetPlayerIds.map(id => getPlayerById(cardEffectArgs.match, id))}`,

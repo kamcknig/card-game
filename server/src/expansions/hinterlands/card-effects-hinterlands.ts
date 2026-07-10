@@ -1,12 +1,11 @@
 import { CardId, PlayerId } from 'shared/types/index.ts';
 import { CardExpansionModule, CardLifecycleCallbackContext } from '@server-types/index.ts';
-import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
-import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
+import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 
 const expansion: CardExpansionModule = {
   berserker: {
@@ -75,11 +74,7 @@ const expansion: CardExpansionModule = {
         to: { location: 'playerDiscard' },
       });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         // Discard-down-to attacks let the victim choose which cards to keep.
@@ -252,11 +247,7 @@ const expansion: CardExpansionModule = {
         },
         triggeredEffectFn: async () => {
           cardEffectArgs.reactionManager.unregisterTrigger(`cauldron:${cardEffectArgs.cardId}:cardGained`);
-          const targetPlayerIds = findOrderedTargets({
-            match: cardEffectArgs.match,
-            appliesTo: 'ALL_OTHER',
-            startingPlayerId: cardEffectArgs.playerId,
-          }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+          const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
           for (const targetPlayerId of targetPlayerIds) {
             const curseIds = cardEffectArgs.findCardService.findCards({
@@ -914,11 +905,7 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId, count: 3 });
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        startingPlayerId: cardEffectArgs.playerId,
-        appliesTo: 'ALL_OTHER',
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         await cardEffectArgs.actionService.run('drawCard', { playerId: targetPlayerId });
@@ -1610,11 +1597,7 @@ const expansion: CardExpansionModule = {
         if (selectedCardIds.map(cardEffectArgs.cardLibrary.getCard).every(card => card.type.includes('ACTION'))) {
           loggerService.debug(`[witchs-hut effect] every card discarded is an action, others gaining a curse`);
 
-          const targetPlayerIds = findOrderedTargets({
-            match: cardEffectArgs.match,
-            startingPlayerId: cardEffectArgs.playerId,
-            appliesTo: 'ALL_OTHER',
-          }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+          const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
           for (const targetPlayerId of targetPlayerIds) {
             const curseCardIds = cardEffectArgs.findCardService.findCards({

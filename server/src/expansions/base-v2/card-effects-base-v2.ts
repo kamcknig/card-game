@@ -4,7 +4,8 @@ import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
 import { Card, CardId } from 'shared/types/index.ts';
-import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { markPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 
 const expansionModule: CardExpansionModule = {
   // Include the source card id for treasure gains so state effects can adjust values.
@@ -114,11 +115,7 @@ const expansionModule: CardExpansionModule = {
           loggerService.debug(`[BANDIT EFFECT] no gold in supply`);
         }
 
-        const targetPlayerIds = findOrderedTargets({
-          startingPlayerId: playerId,
-          appliesTo: 'ALL_OTHER',
-          match,
-        }).filter(id => !isPlayerImmune(reactionContext, id));
+        const targetPlayerIds = getAttackTargets(match, playerId, reactionContext);
 
         loggerService.debug(`[BANDIT EFFECT] targets ${targetPlayerIds}`);
 
@@ -255,11 +252,7 @@ const expansionModule: CardExpansionModule = {
           });
         }
 
-        const targetPlayerIds = findOrderedTargets({
-          startingPlayerId: playerId,
-          appliesTo: 'ALL_OTHER',
-          match,
-        }).filter(id => !isPlayerImmune(reactionContext, id));
+        const targetPlayerIds = getAttackTargets(match, playerId, reactionContext);
 
         loggerService.debug(`[BUREAUCRAT EFFECT] targeting ${targetPlayerIds.map(id => getPlayerById(match, id))}`);
 
@@ -693,11 +686,7 @@ const expansionModule: CardExpansionModule = {
           count: 2,
         });
 
-        const playerIds = findOrderedTargets({
-          startingPlayerId: playerId,
-          appliesTo: 'ALL_OTHER',
-          match,
-        }).filter(id => !isPlayerImmune(reactionContext, id));
+        const playerIds = getAttackTargets(match, playerId, reactionContext);
 
         loggerService.debug(`[MILITIA EFFECT] targets ${playerIds.map(id => getPlayerById(match, id))}`);
 
@@ -1339,11 +1328,7 @@ const expansionModule: CardExpansionModule = {
 
         await actionService.run('drawCard', { playerId, count: 2 });
 
-        const playerIds = findOrderedTargets({
-          startingPlayerId: playerId,
-          appliesTo: 'ALL_OTHER',
-          match,
-        }).filter(id => !isPlayerImmune(reactionContext, id));
+        const playerIds = getAttackTargets(match, playerId, reactionContext);
 
         loggerService.debug(`[WITCH EFFECT] targets ${playerIds.map(id => getPlayerById(match, id))}`);
 

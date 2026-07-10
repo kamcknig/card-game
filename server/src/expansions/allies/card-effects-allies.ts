@@ -7,11 +7,10 @@ import {
 } from '@server-types/index.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { baseV2TokenIds } from '@expansions/base-v2/token-ids-base-v2.ts';
-import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { isCardStillAtGainedLocation } from '../../utils/is-card-still-at-gained-location.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
-import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 import { resolveChooseAbilities } from '../../utils/resolve-choose-abilities.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { getCurrentTurnHistoryIndex } from '../../utils/get-current-turn-history-index.ts';
@@ -384,11 +383,7 @@ const cardEffects: CardExpansionModule = {
       }
 
       // Matching guess: each other non-immune player gains a Curse.
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: playerId,
-      }).filter(targetPlayerId => !isPlayerImmune(cardEffectArgs.reactionContext, targetPlayerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         await gainTopSupplyCardToDiscard({
@@ -597,11 +592,7 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.actionService.run('drawCard', { playerId, count: 1 });
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: playerId,
-      }).filter(targetPlayerId => !isPlayerImmune(cardEffectArgs.reactionContext, targetPlayerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         const namedCardPrompt = (await cardEffectArgs.actionService.run('userPrompt', {
@@ -1356,11 +1347,7 @@ const cardEffects: CardExpansionModule = {
       loggerService.debug('[archer effect] gaining 2 treasure');
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: playerId,
-      }).filter(targetPlayerId => !isPlayerImmune(cardEffectArgs.reactionContext, targetPlayerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         const targetHand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
@@ -1586,11 +1573,7 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
       // Resolve each attacked player in deterministic turn order.
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: playerId,
-      }).filter(targetPlayerId => !isPlayerImmune(cardEffectArgs.reactionContext, targetPlayerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         let targetDeck = cardEffectArgs.cardSourceController.getSource('playerDeck', targetPlayerId);
@@ -2143,11 +2126,7 @@ const cardEffects: CardExpansionModule = {
       const loggerService = cardEffectArgs.loggerService;
       const playerId = cardEffectArgs.playerId;
       const highwaymanCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: playerId,
-      }).filter(targetPlayerId => !isPlayerImmune(cardEffectArgs.reactionContext, targetPlayerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, playerId, cardEffectArgs.reactionContext);
 
       cardEffectArgs.registerDurationEffect(highwaymanCard, {
         listeningFor: 'startTurn',
@@ -2717,11 +2696,7 @@ const cardEffects: CardExpansionModule = {
       const playerId = cardEffectArgs.playerId;
       const skirmisherCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: cardEffectArgs.match });
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: playerId,
-      }).filter(targetPlayerId => !isPlayerImmune(cardEffectArgs.reactionContext, targetPlayerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, playerId, cardEffectArgs.reactionContext);
 
       await cardEffectArgs.actionService.run('drawCard', { playerId, count: 1 });
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });

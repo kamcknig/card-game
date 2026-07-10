@@ -1,10 +1,10 @@
 import { CardEffectFunctionContext, CardExpansionModule, ReactionTrigger } from '@server-types/index.ts';
 import { CardId, CardKey } from 'shared/types/index.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
-import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { isCardStillAtGainedLocation } from '../../utils/is-card-still-at-gained-location.ts';
-import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { markPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 import { getCurrentTurnHistoryIndex } from '../../utils/get-current-turn-history-index.ts';
 import { getPlayerSourceSafe } from '../../utils/get-player-source-safe.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
@@ -398,11 +398,7 @@ const cardEffects: CardExpansionModule = {
   },
   cutthroat: {
     registerEffects: () => async cardEffectArgs => {
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         await discardDownTo(cardEffectArgs, {
@@ -689,11 +685,7 @@ const cardEffects: CardExpansionModule = {
 
       const frigateCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       const affectedTargetPlayerIds = new Set(
-        findOrderedTargets({
-          match: cardEffectArgs.match,
-          appliesTo: 'ALL_OTHER',
-          startingPlayerId: cardEffectArgs.playerId,
-        }).filter(targetPlayerId => !isPlayerImmune(cardEffectArgs.reactionContext, targetPlayerId)),
+        getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext),
       );
 
       if (affectedTargetPlayerIds.size < 1) {
@@ -1702,11 +1694,7 @@ const cardEffects: CardExpansionModule = {
       },
     }),
     registerEffects: () => async cardEffectArgs => {
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
@@ -1935,11 +1923,7 @@ const cardEffects: CardExpansionModule = {
   },
   trickster: {
     registerEffects: () => async cardEffectArgs => {
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
@@ -2582,11 +2566,7 @@ const cardEffects: CardExpansionModule = {
     registerEffects: () => async cardEffectArgs => {
       await gainTreasureAndBuy({ actionService: cardEffectArgs.actionService, treasure: 3, buy: 1 });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         await discardDownTo(cardEffectArgs, {

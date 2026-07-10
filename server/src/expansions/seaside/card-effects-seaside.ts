@@ -1,11 +1,11 @@
 import { CardExpansionModule } from '@server-types/index.ts';
-import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { Card, CardId } from 'shared/types/index.ts';
 import { getPlayerStartingFrom, getPlayerTurnIndex } from '@shared/get-player-position-utils.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 
 const expansion: CardExpansionModule = {
   astrolabe: {
@@ -271,11 +271,7 @@ const expansion: CardExpansionModule = {
         loggerService.debug(`[cutpurse effect] gaining 2 treasure...`);
         await actionService.run('gainTreasure', { count: 2 });
 
-        const targetIds = findOrderedTargets({
-          startingPlayerId: playerId,
-          appliesTo: 'ALL_OTHER',
-          match,
-        }).filter(id => !isPlayerImmune(reactionContext, id));
+        const targetIds = getAttackTargets(match, playerId, reactionContext);
 
         for (const targetId of targetIds) {
           const hand = args.cardSourceController.getSource('playerHand', targetId);
@@ -1097,11 +1093,7 @@ const expansion: CardExpansionModule = {
       loggerService.debug(`[sea witch effect] drawing 2 cards...`);
       await args.actionService.run('drawCard', { playerId: args.playerId, count: 2 });
 
-      const targetPlayerIds = findOrderedTargets({
-        startingPlayerId: args.playerId,
-        appliesTo: 'ALL_OTHER',
-        match: args.match,
-      }).filter(playerId => !isPlayerImmune(args.reactionContext, playerId));
+      const targetPlayerIds = getAttackTargets(args.match, args.playerId, args.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         const curseCardIds = args.findCardService.findCards({

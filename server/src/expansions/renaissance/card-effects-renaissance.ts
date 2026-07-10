@@ -2,9 +2,8 @@ import { Card, CardId } from 'shared/types/index.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
-import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
-import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
+import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 import { renaissanceArtifactKeys } from './artifact-keys-renaissance.ts';
 import { resolveChooseAbilities } from '../../utils/resolve-choose-abilities.ts';
 
@@ -850,11 +849,7 @@ const expansion: CardExpansionModule = {
       });
 
       // Attack each other non-immune player in turn order.
-      const targetPlayerIds = findOrderedTargets({
-        startingPlayerId: cardEffectArgs.playerId,
-        appliesTo: 'ALL_OTHER',
-        match: cardEffectArgs.match,
-      }).filter(id => !isPlayerImmune(cardEffectArgs.reactionContext, id));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       loggerService.debug(`[old-witch effect] targets ${targetPlayerIds.join(', ')}`);
 
@@ -1715,11 +1710,7 @@ const expansion: CardExpansionModule = {
       });
 
       // Attack each other non-immune player in turn order.
-      const targetPlayerIds = findOrderedTargets({
-        startingPlayerId: cardEffectArgs.playerId,
-        appliesTo: 'ALL_OTHER',
-        match: cardEffectArgs.match,
-      }).filter(id => !isPlayerImmune(cardEffectArgs.reactionContext, id));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         const hand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);

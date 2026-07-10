@@ -5,7 +5,7 @@ import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
-import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 import { resolveChooseAbilities } from '../../utils/resolve-choose-abilities.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
@@ -417,11 +417,7 @@ const expansion: CardExpansionModule = {
 
       loggerService.debug(`[catapult effect] trashed card cost=${cost.treasure ?? 0}, treasure=${triggersDiscard}`);
 
-      const targetPlayerIds = findOrderedTargets({
-        startingPlayerId: playerId,
-        appliesTo: 'ALL_OTHER',
-        match,
-      }).filter(id => !isPlayerImmune(reactionContext, id));
+      const targetPlayerIds = getAttackTargets(match, playerId, reactionContext);
 
       loggerService.debug(`[catapult effect] targets ${targetPlayerIds.join(', ') || 'none'}`);
 
@@ -1148,11 +1144,7 @@ const expansion: CardExpansionModule = {
         cardId: goldCardId,
       });
 
-      const targetPlayerIds = findOrderedTargets({
-        startingPlayerId: args.playerId,
-        appliesTo: 'ALL_OTHER',
-        match: args.match,
-      }).filter(targetPlayerId => !isPlayerImmune(args.reactionContext, targetPlayerId));
+      const targetPlayerIds = getAttackTargets(args.match, args.playerId, args.reactionContext);
 
       if (!targetPlayerIds.length) {
         loggerService.debug(`[legionary effect] no valid targets`);

@@ -4,6 +4,7 @@ import { CardExpansionModule } from '@server-types/index.ts';
 import { Card, CardId, CardKey, PlayerId } from 'shared/types/index.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { resolveChooseAbilities } from '../../utils/resolve-choose-abilities.ts';
+import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 
 const expansionModule: CardExpansionModule = {
   baron: {
@@ -1062,11 +1063,7 @@ const expansionModule: CardExpansionModule = {
 
         if (card.type.includes('VICTORY')) {
           loggerService.debug(`[REPLACE EFFECT] card is a victory card`);
-          const targets = findOrderedTargets({
-            startingPlayerId: playerId,
-            appliesTo: 'ALL_OTHER',
-            match,
-          }).filter(id => !isPlayerImmune(reactionContext, id));
+          const targets = getAttackTargets(match, playerId, reactionContext);
 
           for (const targetId of targets) {
             const curseCardId = args.findCardService
@@ -1280,11 +1277,7 @@ const expansionModule: CardExpansionModule = {
           count: 2,
         });
 
-        const targets = findOrderedTargets({
-          startingPlayerId: playerId,
-          appliesTo: 'ALL_OTHER',
-          match,
-        }).filter(id => !isPlayerImmune(reactionContext, id));
+        const targets = getAttackTargets(match, playerId, reactionContext);
 
         loggerService.debug(
           `[SWINDLER EFFECT] targets in order ${targets.map(id => getPlayerById(match, id)).join(',')}`,
@@ -1353,11 +1346,7 @@ const expansionModule: CardExpansionModule = {
 
         await actionService.run('drawCard', { playerId, count: 3 });
 
-        const targets = findOrderedTargets({
-          startingPlayerId: playerId,
-          appliesTo: 'ALL_OTHER',
-          match,
-        }).filter(id => !isPlayerImmune(reactionContext, id));
+        const targets = getAttackTargets(match, playerId, reactionContext);
 
         loggerService.debug(`[TORTURER EFFECT] targets ${targets.map(id => getPlayerById(match, id)).join(',')}`);
 

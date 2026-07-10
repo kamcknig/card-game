@@ -4,7 +4,7 @@ import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getStartingSupplyCount } from '../../utils/get-starting-supply-count.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getPlayerStartingFrom } from '@shared/get-player-position-utils.ts';
-import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 
 const expansion: CardExpansionModule = {
   anvil: {
@@ -161,11 +161,7 @@ const expansion: CardExpansionModule = {
       loggerService.debug(`[charlatan effect] gaining 3 treasure and 1 action`);
       await effectArgs.actionService.run('gainTreasure', { count: 3 });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: effectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: effectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(effectArgs.reactionContext, playerId));
+      const targetPlayerIds = getAttackTargets(effectArgs.match, effectArgs.playerId, effectArgs.reactionContext);
 
       loggerService.debug(`[charlatan effect] targets ${targetPlayerIds} gaining a curse`);
 
@@ -239,16 +235,9 @@ const expansion: CardExpansionModule = {
       const loggerService = effectArgs.loggerService;
       await effectArgs.actionService.run('gainTreasure', { count: 2 });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: effectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: effectArgs.playerId,
-      }).filter(playerId => {
-        return (
-          !isPlayerImmune(effectArgs.reactionContext, playerId) &&
-          effectArgs.cardSourceController.getSource('playerHand', playerId).length >= 5
-        );
-      });
+      const targetPlayerIds = getAttackTargets(effectArgs.match, effectArgs.playerId, effectArgs.reactionContext).filter(
+        playerId => effectArgs.cardSourceController.getSource('playerHand', playerId).length >= 5,
+      );
 
       for (const targetPlayerId of targetPlayerIds) {
         const selectedCardId = await effectArgs.actionService.run('selectSingleCard', {
@@ -797,11 +786,7 @@ const expansion: CardExpansionModule = {
 
       await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId, count: 3 });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         const match = cardEffectArgs.match;
