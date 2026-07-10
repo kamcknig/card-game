@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
-import { ActionButtons, UserPromptActionArgs } from 'shared/types';
+import { ActionButtons, PROMPT_DECLINE_ACTION, UserPromptActionArgs } from 'shared/types';
 import { UiDialogComponent } from '../ui/dialog/ui-dialog.component';
 import { PromptDialogCoordinatorService } from '../../core/prompt-dialog/prompt-dialog-coordinator.service';
 import { PromptSelectContentComponent } from './content/prompt-select-content.component';
@@ -59,7 +59,7 @@ export class PromptDialogHostComponent {
     if (promptContent?.type === 'number-input') {
       const actionButtons: ActionButtons = [{ label: promptContent.submitText ?? 'SUBMIT', action: 1 }];
       if (promptContent.optional) {
-        actionButtons.push({ label: promptContent.cancelText ?? 'CANCEL', action: 0 });
+        actionButtons.push({ label: promptContent.cancelText ?? 'CANCEL', action: PROMPT_DECLINE_ACTION, role: 'cancel' });
       }
       return actionButtons;
     }
@@ -112,6 +112,29 @@ export class PromptDialogHostComponent {
     return !(this.resolvedActionButtons()?.length);
   });
 
+  // The prompt's decline button, if any: prefer the explicit role marker,
+  // fall back to the legacy PROMPT_DECLINE_ACTION id convention.
+  readonly declineButton = computed(() => {
+    const buttons = this.resolvedActionButtons() ?? [];
+    return buttons.find((button) => button.role === 'cancel')
+      ?? buttons.find((button) => button.action === PROMPT_DECLINE_ACTION);
+  });
+
+  // Dismissal policy: a prompt may be dismissed (Escape / backdrop / close-X)
+  // only when it has an explicit decline path — a cancel-role (or legacy
+  // action-0) button, or a display-only / action-less payload that already
+  // shows the close X. Required-action prompts (no decline path) cannot be
+  // dismissed; the player must perform the requested action.
+  readonly promptDismissable = computed(() => {
+    if (!this.activeRequest()) {
+      return false;
+    }
+    if (this.showDisplayCloseButton() || this.showFallbackCloseButton()) {
+      return true;
+    }
+    return this.declineButton() !== undefined;
+  });
+
   // Current prompt validation state used by action button disable logic.
   readonly validationState = computed(() => this._validationState());
 
@@ -140,9 +163,12 @@ export class PromptDialogHostComponent {
     this.submitResponse(action);
   }
 
-  // Handles display-only close button actions.
-  onDisplayClose(): void {
-    this.submitResponse(0);
+  // Shell-initiated dismissal (Escape / backdrop / close-X). Submits the
+  // decline button's OWN action id (not a hard-coded 0) through the same
+  // submitResponse path as clicking it, so the server receives the exact
+  // cancel payload and knows the prompt was declined without a selection.
+  onDismissRequested(): void {
+    this.submitResponse(this.declineButton()?.action ?? PROMPT_DECLINE_ACTION);
   }
 
   // Returns true when a button action should be disabled by validation state.

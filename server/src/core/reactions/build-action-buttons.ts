@@ -2,6 +2,7 @@ import { Reaction } from '@server-types/index.ts';
 import { formatCardName } from '../../utils/format-card-name.ts';
 import { MatchCardLibrary } from '../match-card-library.ts';
 import { LoggerService } from '../logger-service.ts';
+import { ActionButton } from 'shared/types/index.ts';
 
 export function buildActionButtons(
   grouped: Map<string, { count: number; reaction: Reaction }>,
@@ -12,7 +13,10 @@ export function buildActionButtons(
   includeCancel = true,
 ) {
   let actionId = 1;
-  const buttons = includeCancel ? [{ action: 0, label: 'Cancel' }] : [];
+  // The decline path: role: 'cancel' marks this as the prompt's explicit
+  // cancel button so the client's dismissal policy can identify it (see
+  // ActionButton.role in shared-types.ts).
+  const buttons: ActionButton[] = includeCancel ? [{ action: 0, label: 'Cancel', role: 'cancel' as const }] : [];
   for (const [_cardKey, { count, reaction }] of grouped) {
     // Prefer explicit reaction source names for labels.
     let resolvedName = reaction.sourceName;
