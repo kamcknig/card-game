@@ -1,6 +1,6 @@
 import {matchStore} from '../../../../state/match-state';
 import {playerStore, selfPlayerIdStore,} from '../../../../state/player-state';
-import {CardId, CardKey, PlayCardSelectionResult, PlayerId, UserPromptActionArgs} from 'shared/types';
+import {CardId, CardKey, PlayCardSelectionResult, PlayerId, PROMPT_DECLINE_ACTION, UserPromptActionArgs} from 'shared/types';
 import {
   awaitingServerLockReleaseStore,
   clientSelectableCardsOverrideStore,
@@ -194,7 +194,7 @@ export class MatchScene {
   private async openPromptUi(args: UserPromptActionArgs): Promise<unknown> {
     if (!this._promptDialogCoordinator.supportsPrompt(args)) {
       console.warn('[match scene] unsupported prompt payload for Angular dialog host');
-      return { action: 0 };
+      return { action: PROMPT_DECLINE_ACTION };
     }
 
     return await this._promptDialogCoordinator.openPrompt(args, this._selfId);
@@ -234,7 +234,7 @@ export class MatchScene {
     };
 
     // Action button cancel path from userPromptModal.
-    if (payload.action === 0) {
+    if (payload.action === PROMPT_DECLINE_ACTION) {
       return { selectedCardIds: [] };
     }
 
@@ -301,7 +301,7 @@ export class MatchScene {
 
       if (arg.optional) {
         modalArgs.actionButtons = [
-          { label: arg.cancelPrompt ?? 'Cancel', action: 0 },
+          { label: arg.cancelPrompt ?? 'Cancel', action: PROMPT_DECLINE_ACTION, role: 'cancel' },
           { label: arg.validPrompt ?? arg.prompt ?? 'Confirm', action: 1 },
         ];
         modalArgs.validationAction = 1;

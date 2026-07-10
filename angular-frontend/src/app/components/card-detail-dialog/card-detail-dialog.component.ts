@@ -61,10 +61,6 @@ export class CardDetailDialogComponent {
     event.stopPropagation();
   }
 
-  @HostListener('document:keydown.escape')
-  onEscapeKey() {
-    if (this.isOpen()) {
-      this.closeDetailDialog();
-    }
-  }
+  // Escape dismissal is provided by the shell (UiDialogComponent); no local
+  // listener needed.
 }

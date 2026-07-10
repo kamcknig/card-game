@@ -17,10 +17,12 @@ import { validateCountSpec } from 'shared/validate-count-spec';
 import { resolveCountSpec } from 'shared/resolve-count-spec';
 import { CardComponent } from '../../card/card.component';
 import { CardLikeComponent } from '../../card-like/card-like.component';
+import { WayPickerPanelComponent } from '../../way-picker-overlay/way-picker-panel.component';
 import { cardStore } from '../../../state/card-state';
 import { cardSourceStore } from '../../../state/card-source-store';
 import { matchStore } from '../../../state/match-state';
 import { debugRuntimeContextStore } from '../../../state/debug-runtime-state';
+import { createSelectionEmitter } from './selection-emitter';
 
 type PromptSelectContent = Extract<UserPromptKinds, { type: 'select' | 'display-cards' }>;
 
@@ -38,6 +40,7 @@ type PromptSelectionEntry = {
   imports: [
     CardComponent,
     CardLikeComponent,
+    WayPickerPanelComponent,
   ],
   templateUrl: './prompt-select-content.component.html',
   styleUrl: './prompt-select-content.component.scss',
@@ -84,10 +87,15 @@ export class PromptSelectContentComponent {
   private readonly _wayTooltipPosition = signal<{ left: number; top: number }>({ left: 8, top: 8 });
   private _wayTooltipCloseTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  private _lastValidationState: boolean | null = null;
-  private _lastResultSignature = '';
   private _lastSelectedWaySignature: string | null = null;
-  private _lastAutoFinishSignature: string | null = null;
+
+  // Shared dedup-and-emit machinery for results/validation/auto-finish; see
+  // selection-emitter.ts for why this isn't itself an `effect()`.
+  private readonly _selectionEmitter = createSelectionEmitter<number[]>({
+    resultsUpdated: this.resultsUpdated,
+    validationUpdated: this.validationUpdated,
+    finished: this.finished,
+  });
 
   // Rebuilds prompt-local selection state whenever the prompt payload changes.
   private readonly _resetSelectionOnContentChange = effect(() => {
@@ -98,10 +106,8 @@ export class PromptSelectContentComponent {
     this.cancelWayTooltipClose();
     this._wayTooltipEntryKey.set(null);
     this._wayTooltipHovering.set(false);
-    this._lastValidationState = null;
-    this._lastResultSignature = '';
+    this._selectionEmitter.reset();
     this._lastSelectedWaySignature = null;
-    this._lastAutoFinishSignature = null;
   });
 
   // Emits prompt results/validation as selection state changes.
@@ -110,16 +116,12 @@ export class PromptSelectContentComponent {
     const selectedIds = this.selectedSourceIds();
     const validationState = this.isValidSelection();
 
-    const resultSignature = JSON.stringify(selectedIds);
-    if (resultSignature !== this._lastResultSignature) {
-      this._lastResultSignature = resultSignature;
-      this.resultsUpdated.emit(selectedIds);
-    }
-
-    if (validationState !== this._lastValidationState) {
-      this._lastValidationState = validationState;
-      this.validationUpdated.emit(validationState);
-    }
+    this._selectionEmitter.emit({
+      result: selectedIds,
+      isValid: validationState,
+      shouldAutoFinish: this.shouldAutoFinish(),
+      autoFinishSignatureExtra: selectedEntryKeys.join(','),
+    });
 
     if (this.showWaySelection()) {
       const selectedWayId = this.resolveSelectedWayIdForEmission();
@@ -129,17 +131,6 @@ export class PromptSelectContentComponent {
         this.selectedWayUpdated.emit(selectedWayId);
       }
     }
-
-    if (this.shouldAutoFinish() && validationState) {
-      const finishSignature = `${resultSignature}:${selectedEntryKeys.join(',')}`;
-      if (finishSignature !== this._lastAutoFinishSignature) {
-        this._lastAutoFinishSignature = finishSignature;
-        this.finished.emit();
-      }
-      return;
-    }
-
-    this._lastAutoFinishSignature = null;
   });
 
   // Prompt entries derived from card/card-like ids in prompt payload order.
@@ -226,6 +217,9 @@ export class PromptSelectContentComponent {
     return [...(this._match()?.ways ?? [])].sort((a, b) => a.cardKey.localeCompare(b.cardKey));
   });
 
+  // Sorted Way ids for the shared way-picker-panel component.
+  readonly sortedWayIds = computed(() => this.sortedWays().map((way) => way.id));
+
   // True when this prompt should expose a modal-local Way selection UI.
   readonly showWaySelection = computed(() => {
     const content = this.content();
@@ -305,11 +299,6 @@ export class PromptSelectContentComponent {
   // Indicates whether an entry is currently selected.
   isSelected(entry: PromptSelectionEntry): boolean {
     return this._selectedEntryKeys().includes(entry.key);
-  }
-
-  // Indicates whether a way entry is currently selected.
-  isSelectedWay(wayId: CardLikeId): boolean {
-    return this._selectedWayId() === wayId;
   }
 
   // Opens the modal-local Way tooltip for one hovered card entry.

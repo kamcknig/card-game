@@ -9,6 +9,7 @@ import { NanostoresService } from '@nanostores/angular';
 import { combineLatest, map, of, switchMap } from 'rxjs';
 import { PlayerId } from 'shared/types';
 import { UiDialogComponent } from '../../ui/dialog/ui-dialog.component';
+import { ConfirmDialogComponent } from '../../ui/confirm-dialog/confirm-dialog.component';
 import { playerStore } from '../../../state/player-state';
 import { disconnectedHumanIdsStore } from '../../../state/game-state';
 import { SocketService } from '../../../core/socket-service/socket.service';
@@ -21,6 +22,7 @@ import { UndoVoteCoordinatorService } from '../../../core/undo/undo-vote-coordin
   selector: 'app-match-hud',
   imports: [
     UiDialogComponent,
+    ConfirmDialogComponent,
   ],
   templateUrl: './match-hud.component.html',
   styleUrl: './match-hud.component.scss',

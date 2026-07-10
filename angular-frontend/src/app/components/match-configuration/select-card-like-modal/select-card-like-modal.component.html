@@ -1,19 +1,12 @@
-<div class="modal-container" [class.modal-container--cards]="imageSize() === 'half'">
-  <!-- ── Header ── -->
-  <div class="modal-header">
-    <div class="header-title-row">
-      <span class="header-title">{{ title() }}</span>
-      <div class="header-title-row-right">
-        @if (selectedCount() > 0) {
-          <span class="selected-count-badge">{{ selectedCount() }} selected</span>
-        }
-        <button class="close-button" (click)="onCancel()" aria-label="Close">
-          <lucide-icon [img]="XIcon" [size]="18" />
-        </button>
-      </div>
-    </div>
-
-    <!-- Search input -->
+<app-ui-dialog
+  [skin]="'light'"
+  [layer]="'picker'"
+  [heading]="title()"
+  [showClose]="true"
+  (close)="onCancel()"
+>
+  <!-- ── Toolbar: search input + live selection count ── -->
+  <div class="modal-toolbar">
     <div class="search-wrapper">
       <lucide-icon class="search-icon" [img]="SearchIcon" [size]="14" />
       <input
@@ -30,86 +23,87 @@
         </button>
       }
     </div>
+    @if (selectedCount() > 0) {
+      <span class="selected-count-badge">{{ selectedCount() }} selected</span>
+    }
+  </div>
 
-    <!-- Type filter chips — only shown for card catalogs that expose types -->
-    @if (availableTypes().length > 0) {
-      <div class="type-chips">
+  <!-- Type filter chips — only shown for card catalogs that expose types -->
+  @if (availableTypes().length > 0) {
+    <div class="type-chips">
+      <button
+        class="type-chip"
+        [class.active]="activeTypeFilter().size === 0"
+        (click)="clearTypeFilter()"
+      >All</button>
+      @for (type of availableTypes(); track type) {
         <button
           class="type-chip"
-          [class.active]="activeTypeFilter().size === 0"
-          (click)="clearTypeFilter()"
-        >All</button>
-        @for (type of availableTypes(); track type) {
-          <button
-            class="type-chip"
-            [class.active]="activeTypeFilter().has(type)"
-            (click)="onTypeFilterClick(type)"
-          >{{ toTypeLabel(type) }}</button>
-        }
-      </div>
-    }
-  </div>
+          [class.active]="activeTypeFilter().has(type)"
+          (click)="onTypeFilterClick(type)"
+        >{{ toTypeLabel(type) }}</button>
+      }
+    </div>
+  }
 
-  <!-- ── Card grid (scrollable body) ── -->
-  <div class="modal-body">
-    @if (imageSize() === 'half') {
-      <!-- Kingdom / banned card tile grid — renders the same <app-card>
-           used elsewhere on the match-configuration screen. The catalog is
-           narrowed to CardNoId by the imageSize === 'half' branch (only the
-           'cards' catalog ever uses 'half'); cast for the template type
-           checker since SelectableSearchResult is a wider union. -->
-      <div class="card-tile-grid">
-        @for (item of displayCardResults(); track item.cardKey) {
-          <div
-            class="card-tile"
-            [class.selected]="isSelected(item.cardKey)"
-            (click)="toggleCard(item.cardKey)"
-          >
-            <app-card [cardData]="item" [forceFacing]="'front'" />
-            @if (isSelected(item.cardKey)) {
-              <div class="card-tile-checkmark">
-                <lucide-icon [img]="CheckIcon" [size]="10" />
-              </div>
-            }
-          </div>
-        }
+  <!-- ── Card grid ── -->
+  @if (imageSize() === 'half') {
+    <!-- Kingdom / banned card tile grid — renders the same <app-card>
+         used elsewhere on the match-configuration screen. The catalog is
+         narrowed to CardNoId by the imageSize === 'half' branch (only the
+         'cards' catalog ever uses 'half'); cast for the template type
+         checker since SelectableSearchResult is a wider union. -->
+    <div class="card-tile-grid">
+      @for (item of displayCardResults(); track item.cardKey) {
+        <div
+          class="card-tile"
+          [class.selected]="isSelected(item.cardKey)"
+          (click)="toggleCard(item.cardKey)"
+        >
+          <app-card [cardData]="item" [forceFacing]="'front'" />
+          @if (isSelected(item.cardKey)) {
+            <div class="card-tile-checkmark">
+              <lucide-icon [img]="CheckIcon" [size]="10" />
+            </div>
+          }
+        </div>
+      }
 
-        @if (shouldShowNoResults()) {
-          <p class="no-results">No matching cards.</p>
-        }
-      </div>
-    } @else {
-      <!-- Landscape grid — renders the same <app-card-like> used elsewhere
-           on the match-configuration screen. -->
-      <div class="landscape-grid">
-        @for (item of displayCardLikeResults(); track item.cardKey) {
-          <div
-            class="landscape-tile"
-            [class.selected]="isSelected(item.cardKey)"
-            (click)="toggleCard(item.cardKey)"
-          >
-            <app-card-like
-              [cardLikeData]="item"
-              [kind]="cardLikeKind()"
-              [showCost]="cardLikeShowCost()"
-            />
-            @if (isSelected(item.cardKey)) {
-              <div class="landscape-checkmark">
-                <lucide-icon [img]="CheckIcon" [size]="10" />
-              </div>
-            }
-          </div>
-        }
+      @if (shouldShowNoResults()) {
+        <p class="no-results">No matching cards.</p>
+      }
+    </div>
+  } @else {
+    <!-- Landscape grid — renders the same <app-card-like> used elsewhere
+         on the match-configuration screen. -->
+    <div class="landscape-grid">
+      @for (item of displayCardLikeResults(); track item.cardKey) {
+        <div
+          class="landscape-tile"
+          [class.selected]="isSelected(item.cardKey)"
+          (click)="toggleCard(item.cardKey)"
+        >
+          <app-card-like
+            [cardLikeData]="item"
+            [kind]="cardLikeKind()"
+            [showCost]="cardLikeShowCost()"
+          />
+          @if (isSelected(item.cardKey)) {
+            <div class="landscape-checkmark">
+              <lucide-icon [img]="CheckIcon" [size]="10" />
+            </div>
+          }
+        </div>
+      }
 
-        @if (shouldShowNoResults()) {
-          <p class="no-results">No matching results.</p>
-        }
-      </div>
-    }
-  </div>
+      @if (shouldShowNoResults()) {
+        <p class="no-results">No matching results.</p>
+      }
+    </div>
+  }
 
   <!-- ── Footer ── -->
-  <div class="modal-footer">
+  <div class="ui-dialog-footer">
     <div class="footer-left">
       <span class="footer-count">{{ totalCount() }} cards</span>
       <button
@@ -123,4 +117,4 @@
       <button class="btn btn-primary" (click)="onConfirm()">Confirm Selection</button>
     </div>
   </div>
-</div>
+</app-ui-dialog>

@@ -1,60 +1,20 @@
-// Default container sized for the landscape (card-like) catalogs — 3 cards
-// per row at --card-landscape-width (238px) plus the 12px (--theme-space-md)
-// gaps, the 20px (--theme-space-xl) modal-body horizontal padding on each
-// side, the 1px container border on each side, and a ~10px buffer for the
-// thin scrollbar gutter the modal-body draws when content overflows.
-//   3 × 238 + 2 × 12 + 2 × 20 + 2 × 1 + 10 = 790  → round to 800.
-.modal-container {
-  width: 800px;
-  height: 540px;
-  max-width: calc(100vw - 32px);
-  max-height: calc(100vh - 32px);
-  background: linear-gradient(150deg, var(--theme-surface-app-start) 0%, var(--theme-surface-app-end) 100%);
-  border-radius: var(--theme-radius-xl);
-  border: 1px solid var(--theme-border-medium);
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
+@use '../../ui/dialog/dialog-search' as dialog-search;
 
-// Card (kingdom / banned) catalog — 5 cards per row at --card-width (150px),
-// using the same padding/border/scrollbar accounting as the default. Taller
-// so at least three full rows of card tiles are visible without scrolling.
-//   5 × 150 + 4 × 12 + 2 × 20 + 2 × 1 + 10 = 850  → round to 860.
-.modal-container--cards {
-  width: 860px;
-  height: 760px;
-}
-
-/* ── Header ── */
-.modal-header {
-  padding: var(--theme-space-lg) var(--theme-space-xl);
-  background: var(--theme-surface-panel);
-  border-bottom: 1px solid var(--theme-border-subtle);
-  flex-shrink: 0;
-}
-
-.header-title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--theme-space-md);
-}
-
-.header-title-row-right {
+/* ── Toolbar (search input + selection count) ── */
+.modal-toolbar {
   display: flex;
   align-items: center;
   gap: var(--theme-space-sm);
+  margin-bottom: var(--theme-space-md);
 }
 
-.header-title {
-  font-family: var(--theme-font-display);
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--theme-accent-gold);
+@include dialog-search.field('.search-input');
+
+// Toolbar layout override: the shared mixin sizes the wrapper full-width for
+// its other consumer (the load dialog, which stacks it above a list); here
+// it shares a row with the selection-count badge.
+.search-wrapper {
+  flex: 1;
 }
 
 .selected-count-badge {
@@ -63,81 +23,7 @@
   background: var(--theme-surface-card);
   padding: var(--theme-space-xs) var(--theme-space-md);
   border-radius: var(--theme-radius-pill);
-}
-
-.close-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  color: var(--theme-text-tertiary);
-  cursor: pointer;
-  padding: var(--theme-space-2xs);
-  line-height: 1;
-  transition: color 120ms;
-
-  &:hover {
-    color: var(--theme-text-primary);
-  }
-}
-
-/* ── Search input ── */
-.search-wrapper {
-  position: relative;
-  width: 100%;
-}
-
-.search-icon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--theme-text-tertiary);
-  pointer-events: none;
-}
-
-.search-clear-button {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  color: var(--theme-text-tertiary);
-  cursor: pointer;
-  padding: var(--theme-space-2xs);
-  line-height: 1;
-  transition: color 120ms;
-
-  &:hover {
-    color: var(--theme-text-primary);
-  }
-}
-
-.search-input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: var(--theme-space-sm) var(--theme-space-3xl) var(--theme-space-sm) var(--theme-space-3xl);
-  background: var(--theme-surface-app-start);
-  border: 1px solid var(--theme-border-subtle);
-  border-radius: var(--theme-radius-lg);
-  color: var(--theme-text-primary);
-  font-size: 14px;
-  font-family: var(--theme-font-body);
-  outline: none;
-  transition: border-color 120ms;
-
-  &::placeholder {
-    color: var(--theme-text-tertiary);
-  }
-
-  &:focus {
-    border-color: var(--theme-border-strong);
-  }
+  white-space: nowrap;
 }
 
 /* ── Type filter chips ── */
@@ -145,7 +31,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--theme-space-xs);
-  margin-top: var(--theme-space-md);
+  margin-bottom: var(--theme-space-md);
 }
 
 .type-chip {
@@ -170,34 +56,23 @@
   }
 }
 
-/* ── Scrollable body ── */
-.modal-body {
-  flex: 1;
-  overflow-y: auto;
-  padding: var(--theme-space-lg) var(--theme-space-xl);
-  scrollbar-width: thin;
-  scrollbar-color: var(--theme-border-subtle) transparent;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--theme-border-subtle);
-    border-radius: var(--theme-radius-sm);
-  }
-}
-
 /* ── Card tile grid (half / kingdom mode — wraps <app-card>) ── */
+// Sized to fit 5 --card-width (150px) tiles per row with ~4 rows visible
+// before scrolling kicks in (shell body owns the scroll + padding/border,
+// so only the grid's own content footprint needs sizing here).
+//   width: 5 × 150 + 4 × 12 (gaps) = 798 → round to 800.
+//   min-height: 4 × --card-small-height (155px) + 3 × 12 (gaps) = 656 → round to 660.
 .card-tile-grid {
   display: flex;
   flex-wrap: wrap;
   gap: var(--theme-space-md);
   align-content: start;
+  width: 800px;
+  max-width: 100%;
+  min-height: 660px;
+  // Centers the grid within the (now width-capped) dialog body instead of
+  // sitting flush left when the panel is wider than the grid's own content.
+  margin: 0 auto;
 }
 
 // Wraps an inner <app-card>. The card supplies its own border, art, name,
@@ -238,11 +113,21 @@
 }
 
 /* ── Landscape grid (full mode — wraps <app-card-like>) ── */
+// Sized to fit 3 --card-landscape-width (238px) tiles per row with ~3 rows
+// visible before scrolling.
+//   width: 3 × 238 + 2 × 12 (gaps) = 738 → round to 740.
+//   min-height: 3 × --card-landscape-height (149px) + 2 × 12 (gaps) = 471 → round to 480.
 .landscape-grid {
   display: flex;
   flex-wrap: wrap;
   gap: var(--theme-space-md);
   align-content: start;
+  width: 740px;
+  max-width: 100%;
+  min-height: 480px;
+  // Centers the grid within the (now width-capped) dialog body instead of
+  // sitting flush left when the panel is wider than the grid's own content.
+  margin: 0 auto;
 }
 
 .landscape-tile {
@@ -289,13 +174,10 @@
 }
 
 /* ── Footer ── */
-.modal-footer {
-  padding: var(--theme-space-md) var(--theme-space-xl);
-  border-top: 1px solid var(--theme-border-subtle);
-  display: flex;
-  align-items: center;
+// Overrides the shell's default flex-end footer to keep the count/Clear
+// cluster pinned left and Cancel/Confirm pinned right.
+.ui-dialog-footer {
   justify-content: space-between;
-  flex-shrink: 0;
 }
 
 .footer-left {

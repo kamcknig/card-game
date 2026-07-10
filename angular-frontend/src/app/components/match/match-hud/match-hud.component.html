@@ -1,9 +1,10 @@
 @let waitingPlayerName = waitingOnPlayerName();
 @if (waitingPlayerName) {
   <app-ui-dialog
-    [zIndex]="4050"
-    [closeOnBackdrop]="false"
+    [skin]="'dark'"
+    [layer]="'hud'"
     [hasBackdrop]="false"
+    [dismissable]="false"
   >
     <div class="waiting-dialog-card">
       Waiting for {{ waitingPlayerName }}
@@ -13,9 +14,9 @@
 
 @if (gamePaused()) {
   <app-ui-dialog
-    [zIndex]="4000"
-    [closeOnBackdrop]="false"
-    [backdropVariant]="'soft'"
+    [skin]="'dark'"
+    [layer]="'hud'"
+    [dismissable]="false"
   >
     <div class="pause-dialog-card">
       PLAYER DISCONNECTED
@@ -26,17 +27,17 @@
 @let disconnectedPlayers = disconnectedHumans();
 @if (disconnectedPlayers.length) {
   <app-ui-dialog
-    [zIndex]="4200"
-    [closeOnBackdrop]="false"
-    [backdropVariant]="'soft'"
+    [skin]="'light'"
+    [layer]="'hud'"
+    [dismissable]="false"
   >
-    <div class="disconnect-card">
-      <div class="disconnect-title">Player disconnected</div>
-      <div class="disconnect-names">
-        @for (player of disconnectedPlayers; track player.id) {
-          <div class="disconnect-name">{{ player.name }}</div>
-        }
-      </div>
+    <div class="disconnect-title">Player disconnected</div>
+    <div class="disconnect-names">
+      @for (player of disconnectedPlayers; track player.id) {
+        <div class="disconnect-name">{{ player.name }}</div>
+      }
+    </div>
+    <div class="ui-dialog-footer">
       <button class="btn btn-danger" (click)="onRemoveDisconnectedPlayer()">
         Remove player and keep playing
       </button>
@@ -45,59 +46,46 @@
 }
 
 @if (resignDialogVisible()) {
-  <app-ui-dialog
-    [zIndex]="4250"
-    [backdropVariant]="'strong'"
-    [closeOnBackdrop]="true"
-    (close)="onCancelResign()"
-  >
-    <div class="resign-dialog-card">
-      <div class="resign-dialog-title">Resign Match</div>
-      <div class="resign-dialog-body">Are you sure you want to resign and leave this game?</div>
-      <div class="resign-dialog-actions">
-        <button class="btn btn-secondary" (click)="onCancelResign()">Cancel</button>
-        <button class="btn btn-danger" (click)="onConfirmResign()">Resign</button>
-      </div>
-    </div>
-  </app-ui-dialog>
+  <app-confirm-dialog
+    [heading]="'Resign Match'"
+    [message]="'Are you sure you want to resign and leave this game?'"
+    [confirmLabel]="'Resign'"
+    [danger]="true"
+    [skin]="'light'"
+    [layer]="'hud'"
+    (confirmed)="onConfirmResign()"
+    (cancelled)="onCancelResign()">
+  </app-confirm-dialog>
 }
 
 @if (undoWaitingVisible()) {
   <app-ui-dialog
-    [zIndex]="4255"
+    [skin]="'light'"
+    [layer]="'hud'"
     [backdropVariant]="'strong'"
-    [closeOnBackdrop]="false"
-    [hasBackdrop]="true"
+    [dismissable]="false"
   >
-    <div class="undo-waiting-card">
-      <div class="undo-waiting-title">Undo requested</div>
-      <div class="undo-waiting-body">
-        Waiting for other players to approve undo…
-      </div>
-      <div class="undo-waiting-actions">
-        <button class="btn btn-secondary" (click)="onCancelUndo()">Cancel</button>
-      </div>
+    <div class="undo-waiting-title">Undo requested</div>
+    <div class="undo-waiting-body">
+      Waiting for other players to approve undo…
+    </div>
+    <div class="undo-waiting-actions">
+      <button class="btn btn-secondary" (click)="onCancelUndo()">Cancel</button>
     </div>
   </app-ui-dialog>
 }
 
 @let undoVoteOriginator = undoVote.originatorName();
 @if (undoVoteOriginator) {
-  <app-ui-dialog
-    [zIndex]="4260"
-    [backdropVariant]="'strong'"
-    [closeOnBackdrop]="false"
-    [hasBackdrop]="true"
-  >
-    <div class="undo-allow-card">
-      <div class="undo-allow-title">Undo request</div>
-      <div class="undo-allow-body">
-        Allow {{ undoVoteOriginator }} to undo their last action?
-      </div>
-      <div class="undo-allow-actions">
-        <button class="btn btn-danger" (click)="undoVote.vote(false)">Deny</button>
-        <button class="btn btn-primary" (click)="undoVote.vote(true)">Allow</button>
-      </div>
-    </div>
-  </app-ui-dialog>
+  <app-confirm-dialog
+    [heading]="'Undo request'"
+    [message]="'Allow ' + undoVoteOriginator + ' to undo their last action?'"
+    [confirmLabel]="'Allow'"
+    [cancelLabel]="'Deny'"
+    [skin]="'light'"
+    [layer]="'hud'"
+    [dismissable]="false"
+    (confirmed)="undoVote.vote(true)"
+    (cancelled)="undoVote.vote(false)">
+  </app-confirm-dialog>
 }

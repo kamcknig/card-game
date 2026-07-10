@@ -1,6 +1,7 @@
 @if (isOpen()) {
   <app-ui-dialog
-    [zIndex]="5000"
+    [skin]="'none'"
+    [layer]="'detail'"
     [backdropVariant]="'strong'"
     (close)="closeDetailDialog()"
   >

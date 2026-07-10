@@ -1,3 +1,5 @@
+@use './selectable-tile' as tile;
+
 .prompt-select-content {
   display: flex;
   flex-direction: column;
@@ -21,10 +23,8 @@
 }
 
 .selection-entry {
+  @include tile.tile-base;
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--theme-radius-md);
-  padding: 0;
   cursor: default;
   transform: translateY(0);
   transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
@@ -35,56 +35,21 @@
 }
 
 .selection-entry.selectable:hover {
-  border-color: var(--theme-border-action);
+  @include tile.tile-hover;
 }
 
 .selection-entry.selected {
-  transform: translateY(-10px);
-  border-color: var(--theme-border-action);
-  box-shadow: 0 0 0 1px var(--theme-color-selected-glow);
+  @include tile.tile-selected(-10px);
 }
 
 .selection-entry.non-selectable {
   opacity: 0.6;
 }
 
+// Position/z-index/width only — panel chrome + entry list styling now live
+// in WayPickerPanelComponent (shared with the board-level way-picker flyout).
 .way-picker {
   position: absolute;
   z-index: 6;
-  display: flex;
-  flex-direction: column;
-  gap: var(--theme-space-sm);
-  background: rgba(0, 0, 0, var(--theme-overlay-alpha-medium));
-  border: 1px solid var(--theme-border-action);
-  border-radius: var(--theme-radius-md);
-  padding: var(--theme-space-sm);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
   width: 220px;
-  box-sizing: border-box;
-}
-
-.way-picker-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--theme-space-sm);
-  max-height: 320px;
-  overflow: auto;
-}
-
-.way-entry {
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--theme-radius-md);
-  padding: 0;
-  cursor: pointer;
-  display: block;
-}
-
-.way-entry:hover {
-  border-color: var(--theme-border-action);
-}
-
-.way-entry.selected-way {
-  border-color: var(--theme-border-action);
-  box-shadow: 0 0 0 1px var(--theme-color-selected-glow);
 }

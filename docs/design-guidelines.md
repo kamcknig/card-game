@@ -519,33 +519,99 @@ border: 1px solid var(--theme-border-strong);
 
 ### Dialogs / Modals
 
+All dialogs are built on the shared shell — **never hand-roll backdrop,
+panel, header/footer chrome, or Escape handling in a component.** Use
+`app-ui-dialog` (`angular-frontend/src/app/components/ui/dialog/`) directly
+for bespoke layouts, or `app-confirm-dialog`
+(`angular-frontend/src/app/components/ui/confirm-dialog/`) for the standard
+heading + message + Cancel/Confirm footer pattern.
+
+**Skins** (`skin` input on `app-ui-dialog` / `app-confirm-dialog`):
+- `light` — the surface-panel standard below. Use for out-of-match screens
+  (lobby, match-config, profile) and in-match confirmations that should read
+  as a normal dialog (resign, save/load).
+- `dark` — the "Overlay Panels" match standard (translucent black,
+  `--theme-text-on-dark`). Use for in-match informational/prompt overlays
+  (pause, waiting, disconnect, server prompts, mat viewer).
+- `none` — chromeless; the consumer paints its own panel (card detail is the
+  only user).
+
+**Layers** (`layer` input): named z-index ladder, defined as
+`UI_DIALOG_LAYERS` in `ui-dialog.component.ts`. Pick the layer for the
+dialog's role rather than a raw z-index:
+
+| Layer | z-index | Use for |
+|---|---|---|
+| `base` | 3000 | Lobby and general confirmations |
+| `hud` | 4000 | In-match HUD dialogs (pause, waiting, disconnect, resign, undo, mats) |
+| `prompt` | 4300 | Server-driven prompt dialogs |
+| `picker` | 4400 | Match-config selection/save/load dialogs |
+| `detail` | 5000 | Card detail zoom — always topmost |
+
+Later-attached overlays at the same layer stack above earlier ones (CDK
+appends in attach order), so per-dialog offsets within a layer are
+unnecessary.
+
+**Dismissal policy:** the `dismissable` input is a single gate covering
+Escape, backdrop click, and the header close-X together — there is no way to
+enable one without the others. Dismissal must always invoke the exact same
+handler as the dialog's own Cancel/decline action, never a bare `close()`
+that skips cancel logic (`app-confirm-dialog`'s `cancelled` output does this
+automatically). Dialogs backing a required action — no decline path exists —
+set `dismissable=false` so the user must complete the requested action.
+Server prompts derive this per-prompt from the button set (see
+`server/CLAUDE.md` "Prompt buttons"): a `role: 'cancel'` button makes the
+prompt dismissable and dismissal submits that button's action; a prompt with
+no cancel-role button cannot be dismissed.
+
 **Backdrop:**
-- `position: fixed; inset: 0; z-index: 100`
-- `background: rgba(0, 0, 0, var(--theme-overlay-alpha-medium))`
-- Click on backdrop dismisses (same as Cancel)
+- `background: rgba(0, 0, 0, var(--theme-overlay-alpha-medium))` (variant
+  `medium`, the default) or `var(--theme-overlay-alpha-strong)` (variant
+  `strong`, used by prompts/card-detail/HUD confirmations)
+- Click on backdrop dismisses per the policy above (same as Cancel)
 
-**Container:**
-- `background: var(--theme-surface-panel)`
+**Container (shell-provided, `.ui-dialog-panel`):**
+- Light skin: `background: var(--theme-surface-panel)`; dark skin:
+  `background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong))`,
+  `color: var(--theme-text-on-dark)`
 - `border-radius: var(--theme-radius-xl)` (12px)
-- `border: 1px solid var(--theme-border-medium)`
+- `border: 1px solid var(--theme-border-medium)` (light) /
+  `var(--theme-border-strong)` (dark)
 - `box-shadow: var(--theme-shadow-high)` (light: `0 8px 32px rgba(0,0,0,0.2)` / dark: `0 12px 48px rgba(0,0,0,0.5)`)
-- `max-height: calc(100vh - 80px); max-width: calc(100vw - 40px)`
+- `max-width: min(60vw, calc(100vw - 24px)); max-height: min(70vh, calc(100vh - 24px))`
 
-**Header:** `padding: 16px 20px; border-bottom: 1px solid var(--theme-border-subtle)`. Title uses Display font, 15–16px, 600 weight, uppercase.
+**Header (shell-provided, `.ui-dialog-header`):** renders when `heading` or
+`showClose` is set. `padding: 16px 20px; border-bottom: 1px solid
+var(--theme-border-subtle)`. Title uses Display font, 15–16px, 600 weight,
+uppercase.
 
-**Scrollable body:** `flex: 1; overflow-y: auto; padding: 16px 20px`. Use `scrollbar-width: thin`.
+**Scrollable body (shell-provided, `.ui-dialog-body`):** `flex: 1;
+overflow-y: auto; padding: 16px 20px`. Use `scrollbar-width: thin`.
 
-**Footer:** `padding: 12px 20px; border-top: 1px solid var(--theme-border-subtle)`. Cancel = `.btn .btn-secondary`, Confirm = `.btn .btn-primary`, destructive = `.btn .btn-danger`. Gap: `8px`. Align right with `justify-content: flex-end`.
+**Footer:** consumers project a `<div class="ui-dialog-footer">` into the
+shell (absent footer renders nothing). `padding: 12px 20px; border-top: 1px
+solid var(--theme-border-subtle)`. Cancel = `.btn .btn-secondary`, Confirm =
+`.btn .btn-primary`, destructive = `.btn .btn-danger`. Gap: `8px`. Align
+right with `justify-content: flex-end`.
 
-**Search input:** `background: var(--theme-surface-app-start); border: 1px solid var(--theme-border-subtle); border-radius: 8px; padding: 9px 12px 9px 34px; font-size: 14px`. Search icon: 14×14 SVG magnifying glass at `left: 12px`.
+**Search input:** shared recipe in
+`angular-frontend/src/app/components/ui/dialog/_dialog-search.scss`
+(`@use` it rather than re-implementing): `background:
+var(--theme-surface-app-start); border: 1px solid var(--theme-border-subtle);
+border-radius: 8px; padding: 9px 12px 9px 34px; font-size: 14px`. Search
+icon: 14×14 SVG magnifying glass at `left: 12px`.
 
 **Filter chips:**
 - Inactive: `padding: 3px 10px; border-radius: 10px; border: 1px solid transparent; background: transparent; color: var(--theme-text-tertiary); font-size: 11px`
 - Active: `border: 1px solid var(--theme-accent-gold); background: var(--theme-accent-gold-soft); color: var(--theme-accent-gold)`
 
-**Dismiss:** Escape, backdrop click, close button, Cancel all close without applying. Only Confirm applies.
+**Dismiss:** Escape, backdrop click, and the close button all route through
+the single `dismissable` gate described above; Cancel closes without
+applying regardless of `dismissable`. Only Confirm applies.
 
-**Transitions:** Backdrop fades in 180ms. Dialog enters from `translateY(8px) opacity(0)` over 180ms.
+**Transitions:** Backdrop fades in 180ms. Dialog enters from
+`translateY(8px) opacity(0)` over 180ms (`ui-dialog-enter` keyframes, shell-
+provided — do not re-implement per dialog).
 
 ### Dropdown Menus
 

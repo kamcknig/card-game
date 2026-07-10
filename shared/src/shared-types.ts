@@ -656,7 +656,6 @@ export interface ServerListenEvents {
   banLobbyPlayer: (gameId: string, targetPlayerId: PlayerId) => void;
   // Owner-only request to unban a previously banned session from a lobby game.
   unbanLobbyPlayer: (gameId: string, targetSessionId: string) => void;
-  cardsSelected: (selected: CardId[]) => void
   cardLikeTapped: (playerId: PlayerId, cardId: CardId) => void;
   cardTapped: (playerId: PlayerId, cardId: CardId) => void;
   // Plays a hand Action card using an active Way instead of its printed effect.
@@ -1352,9 +1351,27 @@ export class Card<M = unknown> extends CardLike<M> {
 
 const EffectTargetValues = ['ANY', 'ALL_OTHER', 'ALL'] as const;
 export type EffectTarget = typeof EffectTargetValues[number] | string;
-export type ActionButtons = {
+
+/**
+ * The conventional action id for declining/cancelling a prompt without
+ * performing its action. Kept for the many existing prompts whose Cancel
+ * buttons use id 0; new/updated prompt builders should ALSO set
+ * `role: 'cancel'` explicitly rather than relying on this id.
+ */
+export const PROMPT_DECLINE_ACTION = 0 as const;
+
+export type ActionButton = {
   label: string;
   action: string | number;
-}[];
+  /**
+   * Marks this button as the prompt's decline path — pressing it (or
+   * dismissing the dialog via Escape/backdrop) means "do not perform the
+   * requested action". A prompt with no cancel-role button and no
+   * PROMPT_DECLINE_ACTION button is a required action and cannot be
+   * dismissed.
+   */
+  role?: 'cancel';
+};
+export type ActionButtons = ActionButton[];
 export type CardNoId = Omit<Card, 'id'>;
 export type CardFacing = 'front' | 'back';

@@ -7,20 +7,40 @@ import {
   ViewChild,
   ViewContainerRef,
   ViewEncapsulation,
+  computed,
   effect,
   inject,
   input,
   output
 } from '@angular/core';
 import { NgClass } from '@angular/common';
+import { A11yModule } from '@angular/cdk/a11y';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
+import { LucideAngularModule, X } from 'lucide-angular';
 
-export type UiDialogBackdropVariant = 'none' | 'soft' | 'strong';
+export type UiDialogBackdropVariant = 'none' | 'medium' | 'strong';
+// Visual skin applied to the panel: 'light' = design-guidelines dialog
+// standard (surface-panel), 'dark' = match-overlay standard (translucent
+// black), 'none' = chromeless (consumer paints its own chrome, e.g. card
+// detail).
+export type UiDialogSkin = 'light' | 'dark' | 'none';
+
+// Named z-index ladder for all dialog surfaces. Later-attached overlays at
+// the same layer stack above earlier ones (CDK appends in attach order), so
+// fine-grained per-dialog offsets are no longer needed.
+export const UI_DIALOG_LAYERS = {
+  base: 3000,   // lobby and general confirmations
+  hud: 4000,    // in-match HUD dialogs (pause, waiting, disconnect, resign, undo, mats)
+  prompt: 4300, // server-driven prompt dialogs
+  picker: 4400, // match-config selection/save/load dialogs
+  detail: 5000, // card detail zoom — always topmost
+} as const;
+export type UiDialogLayer = keyof typeof UI_DIALOG_LAYERS;
 
 @Component({
   selector: 'app-ui-dialog',
-  imports: [NgClass],
+  imports: [NgClass, A11yModule, LucideAngularModule],
   templateUrl: './ui-dialog.component.html',
   styleUrl: './ui-dialog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,18 +55,43 @@ export class UiDialogComponent implements AfterViewInit, OnDestroy {
   private _overlayRef: OverlayRef | null = null;
   private _appliedBackdropVariant: UiDialogBackdropVariant | null = null;
 
-  // Controls whether clicking the backdrop dismisses the dialog.
-  closeOnBackdrop = input(true);
+  // Lucide icon reference for the standard header close-X.
+  readonly XIcon = X;
+
   // Controls whether a full-screen backdrop is created for this dialog.
   hasBackdrop = input(true);
-  // Controls z-index stacking for dialog ordering.
-  zIndex = input(3000);
   // Backdrop intensity variant used by dialog overlays.
-  backdropVariant = input<UiDialogBackdropVariant>('soft');
+  backdropVariant = input<UiDialogBackdropVariant>('medium');
   // Optional panel class for per-dialog layout customization.
   panelClass = input<string | undefined>(undefined);
+  // Visual skin: 'light' = design-guidelines dialog standard (surface-panel),
+  // 'dark' = match-overlay standard (translucent black), 'none' = chromeless
+  // (card detail). Panel radius/shadow/structure are shared by light+dark.
+  skin = input<UiDialogSkin>('light');
+  // Optional heading rendered in the standard header band with divider.
+  heading = input<string | undefined>(undefined);
+  // Shows the standard close-X in the header; clicking it requests dismissal.
+  showClose = input(false);
+  // Single gate for user-initiated dismissal (Escape, backdrop click, close-X).
+  // When false the dialog can only be closed programmatically — required-action
+  // prompts set this false so the user must perform the requested action.
+  dismissable = input(true);
+  // Named layer controlling z-index stacking; defaults to the base layer.
+  layer = input<UiDialogLayer>('base');
 
   close = output<void>();
+
+  // Skin + consumer panel classes applied to .ui-dialog-panel.
+  readonly panelNgClass = computed(() => {
+    const classes: Record<string, boolean> = {
+      [`skin-${this.skin()}`]: this.skin() !== 'none',
+    };
+    const panelClass = this.panelClass();
+    if (panelClass) {
+      classes[panelClass] = true;
+    }
+    return classes;
+  });
 
   constructor() {
     // Keep overlay z-index and backdrop variant in sync with input changes.
@@ -74,6 +119,15 @@ export class UiDialogComponent implements AfterViewInit, OnDestroy {
     overlayRef.attach(new TemplatePortal(this._dialogContent, this._viewContainerRef));
     overlayRef.backdropClick().subscribe(() => this.onBackdropClick());
 
+    // Escape requests dismissal. CDK's OverlayKeyboardDispatcher delivers
+    // keydown only to the top-most overlay, so stacked dialogs behave.
+    overlayRef.keydownEvents().subscribe((event) => {
+      if (event.key === 'Escape' && !event.defaultPrevented) {
+        event.preventDefault();
+        this.requestDismiss();
+      }
+    });
+
     this._overlayRef = overlayRef;
     this.applyZIndex(overlayRef);
     this.applyBackdropVariant(overlayRef);
@@ -87,15 +141,27 @@ export class UiDialogComponent implements AfterViewInit, OnDestroy {
 
   // Handles backdrop clicks while preserving panel interactions.
   onBackdropClick() {
-    if (!this.closeOnBackdrop()) {
+    this.requestDismiss();
+  }
+
+  // Handles the standard header close-X.
+  onCloseClicked() {
+    this.requestDismiss();
+  }
+
+  // Single user-dismissal gate: Escape, backdrop, and close-X all route here.
+  // Non-dismissable dialogs (required actions) ignore all three.
+  private requestDismiss(): void {
+    if (!this.dismissable()) {
       return;
     }
     this.close.emit();
   }
 
-  // Applies explicit z-index ordering to both overlay panel and backdrop.
+  // Applies explicit z-index ordering to both overlay panel and backdrop,
+  // resolved from the named layer ladder.
   private applyZIndex(overlayRef: OverlayRef): void {
-    const baseZIndex = this.zIndex();
+    const baseZIndex = UI_DIALOG_LAYERS[this.layer()];
     overlayRef.hostElement.style.setProperty('z-index', String(baseZIndex + 1));
     overlayRef.overlayElement.style.setProperty('z-index', String(baseZIndex + 1));
     overlayRef.backdropElement?.style.setProperty('z-index', String(baseZIndex));
