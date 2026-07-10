@@ -16,6 +16,7 @@ import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 
 const teacherTokenLabels: Record<string, string> = {
   [adventuresTokenIds.plusBuy]: '+1 Buy token',
@@ -909,16 +910,6 @@ const expansion: CardExpansionModule = {
       const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
-        const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', targetPlayerId);
-
-        if (deck.length === 0) {
-          // Shuffle if the target has no cards in deck.
-          loggerService.debug(`[giant effect] no cards in deck, shuffling`);
-          await cardEffectArgs.actionService.run('shuffleDeck', {
-            playerId: targetPlayerId,
-          });
-        }
-
         const gainCurse = async () => {
           const curseCards = cardEffectArgs.findCardService.findCards({
             all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
@@ -935,24 +926,20 @@ const expansion: CardExpansionModule = {
           return true;
         };
 
-        if (deck.length === 0) {
-          // Still empty: target gains a Curse.
+        // Reveal the top card of the target player's deck, set aside —
+        // shuffling the discard back in automatically if the deck is empty.
+        const revealed = await revealTopDeckCards(cardEffectArgs, targetPlayerId, 1, { setAside: true });
+        const revealedCard = revealed[0];
+
+        if (!revealedCard) {
+          // Deck and discard both empty: nothing to reveal, target gains a
+          // Curse instead.
           loggerService.debug(`[giant effect] still no cards, gaining a Curse`);
-          if (!(await gainCurse())) {
-            continue;
-          }
+          await gainCurse();
+          continue;
         }
 
-        // Reveal the top card of the target player's deck.
-        const revealedCardId = deck.slice(-1)[0];
-        const revealedCard = cardEffectArgs.cardLibrary.getCard(revealedCardId);
-
         loggerService.debug(`[giant effect] revealing ${revealedCard}`);
-        await cardEffectArgs.actionService.run('revealCard', {
-          playerId: targetPlayerId,
-          cardId: revealedCardId,
-          moveToSetAside: true,
-        });
 
         const { cost } = cardEffectArgs.cardPriceController.applyRules(revealedCard, { playerId: targetPlayerId });
 
@@ -1269,29 +1256,17 @@ const expansion: CardExpansionModule = {
       });
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
-      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+      // Reveal the top card of the deck, set aside — shuffling the discard
+      // back in automatically if the deck is empty.
+      const revealed = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, 1, { setAside: true });
+      const revealedCard = revealed[0];
 
-      if (deck.length) {
-        loggerService.debug(`[magpie effect] no cards in deck, shuffling deck`);
-        await cardEffectArgs.actionService.run('shuffleDeck', {
-          playerId: cardEffectArgs.playerId,
-        });
-
-        if (!deck.length) {
-          loggerService.debug(`[magpie effect] still no cards in deck, no cards to reveal`);
-          return;
-        }
+      if (!revealedCard) {
+        loggerService.debug(`[magpie effect] still no cards in deck, no cards to reveal`);
+        return;
       }
 
-      const revealedCard = cardEffectArgs.cardLibrary.getCard(deck.slice(-1)[0]);
-
       loggerService.debug(`[magpie effect] revealing ${revealedCard}`);
-
-      await cardEffectArgs.actionService.run('revealCard', {
-        playerId: cardEffectArgs.playerId,
-        cardId: revealedCard,
-        moveToSetAside: true,
-      });
 
       if (revealedCard.type.includes('TREASURE')) {
         loggerService.debug(`[magpie effect] treasure revealed, moving revealed card to hand`);

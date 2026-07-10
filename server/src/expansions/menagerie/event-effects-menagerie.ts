@@ -7,6 +7,7 @@ import { getPlayerSourceSafe } from '../../utils/get-player-source-safe.ts';
 import { AppContext, CardEffectFunctionContext, CardExpansionModule } from '@server-types/index.ts';
 import { Card, CardCost, CardId, CardKey, PlayerId } from 'shared/types/index.ts';
 import { findEventInMatch } from '@shared/find-card-like-in-match.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 
 // Runtime metadata attached to cards Exiled by Invest.
 type InvestCardMetadata = {
@@ -775,19 +776,11 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      // Reveal up to 4 cards to set-aside so we can split and resolve them.
-      const revealedCardIds: CardId[] = [];
-      for (let revealIndex = 0; revealIndex < 4; revealIndex++) {
-        const revealedCardId = await cardEffectArgs.actionService.run('revealCard', {
-          playerId: cardEffectArgs.playerId,
-          source: 'playerDeck',
-          moveToSetAside: true,
-        });
-        if (revealedCardId === undefined) {
-          break;
-        }
-        revealedCardIds.push(revealedCardId);
-      }
+      // Reveal up to 4 cards to set-aside so we can split and resolve them;
+      // revealTopDeckCards shuffles the discard in automatically whenever
+      // the deck runs dry mid-reveal.
+      const revealedCards = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, 4, { setAside: true });
+      const revealedCardIds: CardId[] = revealedCards.map(card => card.id);
 
       if (!revealedCardIds.length) {
         loggerService.debug('[pursue effect] no cards revealed');

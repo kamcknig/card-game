@@ -11,6 +11,7 @@ import { resolveChooseAbilities } from '../../utils/resolve-choose-abilities.ts'
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
 import { FortuneMetadata } from '../prosperity/types.ts';
 import { getPlayerStartingFrom } from '@shared/get-player-position-utils.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 
 type ArchiveEffectContext = Pick<CardEffectFunctionContext, 'actionService' | 'cardLibrary' | 'cardSourceController'>;
 
@@ -504,41 +505,18 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      // Helper to reveal the top card of a player's deck, shuffling if needed.
-      const revealTopCard = async (targetPlayerId: PlayerId) => {
-        const deck = args.cardSourceController.getSource('playerDeck', targetPlayerId);
-        if (deck.length < 1) {
-          loggerService.debug(`[chariot race effect] player ${targetPlayerId} deck empty, shuffling discard`);
-          await args.actionService.run('shuffleDeck', {
-            playerId: targetPlayerId,
-          });
-        }
+      // Reveal the top card of the left player's deck, shuffling in the
+      // discard automatically if the deck is empty.
+      const leftRevealed = await revealTopDeckCards(args, leftPlayerId, 1);
+      const leftCard = leftRevealed[0];
 
-        if (deck.length < 1) {
-          loggerService.debug(`[chariot race effect] player ${targetPlayerId} still has no cards to reveal`);
-          return null;
-        }
-
-        const topCardId = deck.slice(-1)[0];
-        loggerService.debug(`[chariot race effect] revealing top card ${topCardId} for player ${targetPlayerId}`);
-        await args.actionService.run('revealCard', {
-          playerId: targetPlayerId,
-          cardId: topCardId,
-        });
-        return topCardId;
-      };
-
-      // Reveal the left player's top card.
-      const leftCardId = await revealTopCard(leftPlayerId);
-
-      if (!drawnCardId || !leftCardId) {
+      if (!drawnCardId || !leftCard) {
         loggerService.debug(`[chariot race effect] missing revealed cards, skipping rewards`);
         return;
       }
 
       // Compare effective costs (including price rules) for each player.
       const drawnCard = cardLibrary.getCard(drawnCardId);
-      const leftCard = cardLibrary.getCard(leftCardId);
       const { cost: drawnCost } = args.cardPriceController.applyRules(drawnCard, { playerId });
       const { cost: leftCost } = args.cardPriceController.applyRules(leftCard, {
         playerId: leftPlayerId,
@@ -1447,37 +1425,15 @@ const expansion: CardExpansionModule = {
       });
       await args.actionService.run('gainAction', { count: 1 });
 
-      const revealTopDeckCard = async () => {
-        let deck = args.cardSourceController.getSource('playerDeck', args.playerId);
-        if (!deck.length) {
-          loggerService.debug(`[patrician effect] player ${args.playerId} deck empty, shuffling discard`);
-          await args.actionService.run('shuffleDeck', {
-            playerId: args.playerId,
-          });
-          deck = args.cardSourceController.getSource('playerDeck', args.playerId);
-        }
-
-        if (!deck.length) {
-          loggerService.debug(`[patrician effect] still no cards to reveal after shuffling`);
-          return null;
-        }
-
-        const topCardId = deck.slice(-1)[0];
-        loggerService.debug(`[patrician effect] revealing top card ${topCardId} of deck`);
-        await args.actionService.run('revealCard', {
-          playerId: args.playerId,
-          cardId: topCardId,
-        });
-        return topCardId;
-      };
-
-      const revealedCardId = await revealTopDeckCard();
-      if (!revealedCardId) {
+      // Reveal the top card of the player's deck, shuffling in the discard
+      // automatically if the deck is empty.
+      const revealed = await revealTopDeckCards(args, args.playerId, 1);
+      const revealedCard = revealed[0];
+      if (!revealedCard) {
         loggerService.debug(`[patrician effect] no card revealed`);
         return;
       }
 
-      const revealedCard = args.cardLibrary.getCard(revealedCardId);
       const { cost: revealedCost } = args.cardPriceController.applyRules(revealedCard, { playerId: args.playerId });
 
       const qualifiesForDraw = compareCardCosts(revealedCost, { treasure: 5 }) >= 0;
@@ -1488,7 +1444,7 @@ const expansion: CardExpansionModule = {
 
       loggerService.info(`[patrician effect] revealed ${revealedCard.cardKey} costs $5 or more, moving to hand`);
       await args.actionService.run('moveCard', {
-        cardId: revealedCardId,
+        cardId: revealedCard.id,
         toPlayerId: args.playerId,
         to: { location: 'playerHand' },
       });

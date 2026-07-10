@@ -5,6 +5,7 @@ import { getStartingSupplyCount } from '../../utils/get-starting-supply-count.ts
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getPlayerStartingFrom } from '@shared/get-player-position-utils.ts';
 import { getAttackTargets } from '../../utils/get-attack-targets.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 
 const expansion: CardExpansionModule = {
   anvil: {
@@ -790,34 +791,22 @@ const expansion: CardExpansionModule = {
 
       for (const targetPlayerId of targetPlayerIds) {
         const match = cardEffectArgs.match;
-        const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', targetPlayerId);
 
-        if (deck.length < 3) {
-          loggerService.debug(`[rabble effect] ${targetPlayerId} has less than 3 cards in deck, shuffling`);
-          await cardEffectArgs.actionService.run('shuffleDeck', { playerId: targetPlayerId });
-        }
+        // Reveal the top 3 cards, set aside — shuffling the discard back in
+        // automatically if the deck runs dry mid-reveal.
+        const revealedCards = await revealTopDeckCards(cardEffectArgs, targetPlayerId, 3, { setAside: true });
 
-        if (deck.length === 0) {
+        if (!revealedCards.length) {
           loggerService.debug(`[rabble effect] ${targetPlayerId} has no cards in deck`);
           continue;
         }
 
-        const numToReveal = Math.min(3, deck.length);
-
         const cardsToRearrange: Card[] = [];
 
-        for (let i = 0; i < numToReveal; i++) {
-          const cardId = deck.slice(-1)[0];
-          const card = cardEffectArgs.cardLibrary.getCard(cardId);
-          await cardEffectArgs.actionService.run('revealCard', {
-            cardId,
-            playerId: targetPlayerId,
-            moveToSetAside: true,
-          });
-
+        for (const card of revealedCards) {
           if (card.type.includes('ACTION') || card.type.includes('TREASURE')) {
             loggerService.debug(`[rabble effect] action or treasure revealed, discarding`);
-            await cardEffectArgs.actionService.run('discardCard', { cardId, playerId: targetPlayerId });
+            await cardEffectArgs.actionService.run('discardCard', { cardId: card.id, playerId: targetPlayerId });
           } else {
             cardsToRearrange.push(card);
           }

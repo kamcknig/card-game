@@ -5,6 +5,7 @@ import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getAttackTargets } from '../../utils/get-attack-targets.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 
 const expansion: CardExpansionModule = {
   advisor: {
@@ -12,31 +13,11 @@ const expansion: CardExpansionModule = {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.debug(`[advisor effect] gaining 1 action`);
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
-      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
-      const cardsRevealed: Card[] = [];
-
       loggerService.debug(`[advisor effect] revealing 3 cards`);
 
-      for (let i = 0; i < 3; i++) {
-        if (deck.length === 0) {
-          loggerService.debug(`[advisor effect] no cards in deck, shuffling`);
-          await cardEffectArgs.actionService.run('shuffleDeck', { playerId: cardEffectArgs.playerId });
-
-          if (deck.length === 0) {
-            loggerService.debug(`[advisor effect] no cards in deck after shuffling`);
-            break;
-          }
-        }
-
-        const cardId = deck.slice(-1)[0];
-        const card = cardEffectArgs.cardLibrary.getCard(cardId);
-        cardsRevealed.push(card);
-        await cardEffectArgs.actionService.run('revealCard', {
-          cardId,
-          playerId: cardEffectArgs.playerId,
-          moveToSetAside: true,
-        });
-      }
+      // Reveal the top 3 cards, set aside — shuffling the discard back in
+      // automatically if the deck runs dry mid-reveal.
+      const cardsRevealed = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, 3, { setAside: true });
 
       const leftPlayer = getPlayerStartingFrom({
         startFromIdx: cardEffectArgs.match.currentPlayerTurnIndex,
@@ -176,32 +157,14 @@ const expansion: CardExpansionModule = {
   carnival: {
     registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
-      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
       const cardsToKeep: Card[] = [];
       const cardsToDiscard: Card[] = [];
 
-      for (let i = 0; i < 4; i++) {
-        if (deck.length === 0) {
-          loggerService.debug(`[carnival effect] no cards in deck, shuffling`);
-          await cardEffectArgs.actionService.run('shuffleDeck', { playerId: cardEffectArgs.playerId });
+      // Reveal the top 4 cards, set aside — shuffling the discard back in
+      // automatically if the deck runs dry mid-reveal.
+      const revealedCards = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, 4, { setAside: true });
 
-          if (deck.length === 0) {
-            loggerService.debug(`[carnival effect] no cards in deck after shuffling`);
-            break;
-          }
-        }
-
-        const revealedCardId = deck.slice(-1)[0];
-        const revealedCard = cardEffectArgs.cardLibrary.getCard(revealedCardId);
-
-        loggerService.debug(`[carnival effect] revealing ${revealedCard}`);
-
-        await cardEffectArgs.actionService.run('revealCard', {
-          cardId: revealedCardId,
-          playerId: cardEffectArgs.playerId,
-          moveToSetAside: true,
-        });
-
+      for (const revealedCard of revealedCards) {
         if (!cardsToKeep.find(card => card.cardKey === revealedCard.cardKey)) {
           loggerService.debug(`[carnival effect] adding ${revealedCard} to keep`);
           cardsToKeep.push(revealedCard);
@@ -734,32 +697,22 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
-      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+      // Reveal the top card of the deck, shuffling the discard in
+      // automatically if the deck is empty.
+      const revealed = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, 1);
+      const card = revealed[0];
 
-      if (deck.length === 0) {
-        loggerService.debug(`[herald effect] no cards in deck, shuffling`);
-        await cardEffectArgs.actionService.run('shuffleDeck', { playerId: cardEffectArgs.playerId });
-
-        if (deck.length === 0) {
-          loggerService.debug(`[herald effect] no cards in deck after shuffling`);
-          return;
-        }
+      if (!card) {
+        loggerService.debug(`[herald effect] no cards in deck after shuffling`);
+        return;
       }
 
-      const cardId = deck.slice(-1)[0];
-      const card = cardEffectArgs.cardLibrary.getCard(cardId);
-
       loggerService.debug(`[herald effect] player ${cardEffectArgs.playerId} revealing ${card}`);
-
-      await cardEffectArgs.actionService.run('revealCard', {
-        cardId,
-        playerId: cardEffectArgs.playerId,
-      });
 
       if (card.type.includes('ACTION')) {
         loggerService.debug(`[herald effect] card is an action card, playing it`);
         await cardEffectArgs.actionService.run('playCard', {
-          cardId,
+          cardId: card.id,
           playerId: cardEffectArgs.playerId,
         });
       }
@@ -889,42 +842,30 @@ const expansion: CardExpansionModule = {
 
       const uniqueHandCardNames = new Set(hand.map(cardEffectArgs.cardLibrary.getCard).map(card => card.cardName));
 
-      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
-      const discard = cardEffectArgs.cardSourceController.getSource('playerDiscard', cardEffectArgs.playerId);
-
       const cardsToDiscard: CardId[] = [];
 
-      while (deck.length + discard.length > 0) {
-        let cardId = deck.slice(-1)[0];
+      // Reveal cards one at a time, set aside, stopping after the first
+      // card that doesn't match a card name in hand; revealTopDeckCards
+      // shuffles the discard in automatically whenever the deck runs dry
+      // mid-reveal.
+      while (true) {
+        const revealed = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, 1, { setAside: true });
+        const card = revealed[0];
 
-        if (!cardId) {
-          await cardEffectArgs.actionService.run('shuffleDeck', { playerId: cardEffectArgs.playerId });
-
-          cardId = deck.slice(-1)[0];
-
-          if (!cardId) {
-            loggerService.warn(`[hunting party effect] no cards in deck after shuffling`);
-            return;
-          }
+        if (!card) {
+          loggerService.warn(`[hunting party effect] no cards in deck after shuffling`);
+          return;
         }
-
-        const card = cardEffectArgs.cardLibrary.getCard(cardId);
 
         loggerService.debug(`[hunting party effect] revealing ${card}`);
 
-        await cardEffectArgs.actionService.run('revealCard', {
-          cardId: card.id,
-          playerId: cardEffectArgs.playerId,
-          moveToSetAside: true,
-        });
-
         if (uniqueHandCardNames.has(card.cardName)) {
           loggerService.debug(`[hunting party effect] adding ${card.cardName} to discards`);
-          cardsToDiscard.push(cardId);
+          cardsToDiscard.push(card.id);
         } else {
           loggerService.debug(`[hunting party effect] moving ${card.cardName} to hand`);
           await cardEffectArgs.actionService.run('moveCard', {
-            cardId: cardId,
+            cardId: card.id,
             toPlayerId: cardEffectArgs.playerId,
             to: { location: 'playerHand' },
           });
@@ -1084,32 +1025,24 @@ const expansion: CardExpansionModule = {
 
       const key = result.result;
 
-      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
-      const discard = cardEffectArgs.cardSourceController.getSource('playerDiscard', cardEffectArgs.playerId);
       let count = 0;
-      while (deck.length + discard.length > 0 && count < 3) {
-        if (deck.length === 0) {
-          loggerService.warn(`[journeyman effect] no cards in deck, shuffling`);
-          await cardEffectArgs.actionService.run('shuffleDeck', { playerId: cardEffectArgs.playerId });
-
-          if (deck.length === 0) {
-            loggerService.warn(`[journeyman effect] no cards in deck after shuffling`);
-            break;
-          }
+      // Reveal cards one at a time, set aside, until 3 non-matching cards
+      // have been moved to hand or the player runs out of cards;
+      // revealTopDeckCards shuffles the discard in automatically whenever
+      // the deck runs dry mid-reveal.
+      while (count < 3) {
+        const revealed = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, 1, { setAside: true });
+        const card = revealed[0];
+        if (!card) {
+          loggerService.warn(`[journeyman effect] no cards in deck after shuffling`);
+          break;
         }
 
-        const cardId = deck.slice(-1)[0];
-        await cardEffectArgs.actionService.run('revealCard', {
-          cardId,
-          playerId: cardEffectArgs.playerId,
-          moveToSetAside: true,
-        });
-        const card = cardEffectArgs.cardLibrary.getCard(cardId);
         if (card.cardKey === key) {
-          await cardEffectArgs.actionService.run('discardCard', { cardId, playerId: cardEffectArgs.playerId });
+          await cardEffectArgs.actionService.run('discardCard', { cardId: card.id, playerId: cardEffectArgs.playerId });
         } else {
           await cardEffectArgs.actionService.run('moveCard', {
-            cardId,
+            cardId: card.id,
             toPlayerId: cardEffectArgs.playerId,
             to: { location: 'playerHand' },
           });

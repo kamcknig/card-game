@@ -15,6 +15,7 @@ import { resolveChooseAbilities } from '../../utils/resolve-choose-abilities.ts'
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { getCurrentTurnHistoryIndex } from '../../utils/get-current-turn-history-index.ts';
 import { resolvePileDestinationForCardKey } from '../../utils/resolve-pile-destination-for-card-key.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 
 const AUGURS_PILE_KEY: CardKey = 'augurs';
 const FORTS_PILE_KEY: CardKey = 'forts';
@@ -2205,28 +2206,28 @@ const cardEffects: CardExpansionModule = {
 
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
-      let deck = cardEffectArgs.cardSourceController.getSource('playerDeck', playerId);
-      if (deck.length < 3 && cardEffectArgs.cardSourceController.getSource('playerDiscard', playerId).length > 0) {
-        await cardEffectArgs.actionService.run('shuffleDeck', { playerId });
-        deck = cardEffectArgs.cardSourceController.getSource('playerDeck', playerId);
-      }
-      const revealedCardIds = deck.slice(-3);
-      if (revealedCardIds.length < 1) {
-        loggerService.debug('[hunter effect] no cards to reveal');
-        return;
-      }
+      const revealedCardIds: CardId[] = [];
 
-      // Keep the looked-at cards in set-aside to resolve independent typed picks.
-      for (const revealedCardId of revealedCardIds) {
-        await cardEffectArgs.actionService.run('revealCard', {
-          playerId,
-          cardId: revealedCardId,
-        });
+      // Reveal the top 3 cards one at a time and set them aside to resolve
+      // independent typed picks; revealTopDeckCards shuffles the discard in
+      // automatically whenever the deck runs dry mid-reveal.
+      for (let i = 0; i < 3; i++) {
+        const revealed = await revealTopDeckCards(cardEffectArgs, playerId, 1);
+        const card = revealed[0];
+        if (!card) {
+          break;
+        }
+        revealedCardIds.push(card.id);
         await cardEffectArgs.actionService.run('moveCard', {
-          cardId: revealedCardId,
+          cardId: card.id,
           toPlayerId: playerId,
           to: { location: 'set-aside' },
         });
+      }
+
+      if (revealedCardIds.length < 1) {
+        loggerService.debug('[hunter effect] no cards to reveal');
+        return;
       }
 
       const remainingSetAside = [...revealedCardIds];
@@ -2621,28 +2622,27 @@ const cardEffects: CardExpansionModule = {
     registerEffects: () => async cardEffectArgs => {
       const playerId = cardEffectArgs.playerId;
       const loggerService = cardEffectArgs.loggerService;
-      let deck = cardEffectArgs.cardSourceController.getSource('playerDeck', playerId);
-      if (deck.length < 5 && cardEffectArgs.cardSourceController.getSource('playerDiscard', playerId).length > 0) {
-        await cardEffectArgs.actionService.run('shuffleDeck', { playerId });
-        deck = cardEffectArgs.cardSourceController.getSource('playerDeck', playerId);
-      }
+      const lookedAtCardIds: CardId[] = [];
 
-      const lookedAtCardIds = deck.slice(-5);
-      if (lookedAtCardIds.length < 1) {
-        return;
-      }
-
-      // Use set-aside as a stable holding zone while trash/reorder choices resolve.
-      for (const lookedAtCardId of lookedAtCardIds) {
-        await cardEffectArgs.actionService.run('revealCard', {
-          playerId,
-          cardId: lookedAtCardId,
-        });
+      // Use set-aside as a stable holding zone while trash/reorder choices
+      // resolve; revealTopDeckCards shuffles the discard in automatically
+      // whenever the deck runs dry mid-reveal.
+      for (let i = 0; i < 5; i++) {
+        const revealed = await revealTopDeckCards(cardEffectArgs, playerId, 1);
+        const card = revealed[0];
+        if (!card) {
+          break;
+        }
+        lookedAtCardIds.push(card.id);
         await cardEffectArgs.actionService.run('moveCard', {
-          cardId: lookedAtCardId,
+          cardId: card.id,
           toPlayerId: playerId,
           to: { location: 'set-aside' },
         });
+      }
+
+      if (lookedAtCardIds.length < 1) {
+        return;
       }
 
       const selectedTrashCardIds = await cardEffectArgs.actionService.run('selectCard', {

@@ -9,6 +9,7 @@ import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { markPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { findBoonInMatch } from '@shared/find-card-like-in-match.ts';
 import { getAttackTargets } from '../../utils/get-attack-targets.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 
 // Prompts a player to choose an Action from hand not already represented in play.
 const promptUniqueActionFromHand = async (
@@ -2354,46 +2355,29 @@ const expansion: CardExpansionModule = {
   ghost: {
     registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
-      // Reveal cards until an Action card is found or the deck is exhausted.
-      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
-      const discard = cardEffectArgs.cardSourceController.getSource('playerDiscard', cardEffectArgs.playerId);
+      // Reveal cards until an Action card is found or the deck is exhausted;
+      // revealTopDeckCards shuffles the discard in automatically whenever
+      // the deck runs dry mid-reveal.
       const cardsToDiscard: CardId[] = [];
       let actionCardId: CardId | undefined;
 
-      while (deck.length + discard.length > 0 && !actionCardId) {
-        if (deck.length === 0) {
-          loggerService.debug('[ghost effect] deck empty, shuffling discard');
-          await cardEffectArgs.actionService.run('shuffleDeck', { playerId: cardEffectArgs.playerId });
-        }
-
-        if (deck.length === 0) {
+      while (!actionCardId) {
+        const revealed = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, 1, { setAside: true });
+        const revealedCard = revealed[0];
+        if (!revealedCard) {
           loggerService.debug('[ghost effect] no cards left to reveal');
           break;
         }
 
-        const revealedCardId = deck.slice(-1)[0];
-        const revealedCard = cardEffectArgs.cardLibrary.getCard(revealedCardId);
         loggerService.debug(`[ghost effect] revealing ${revealedCard}`);
-        await cardEffectArgs.actionService.run('revealCard', {
-          playerId: cardEffectArgs.playerId,
-          cardId: revealedCardId,
-        });
-
-        // Move the revealed card to set-aside (face up) to avoid shuffling it back.
-        await cardEffectArgs.actionService.run('moveCard', {
-          cardId: revealedCardId,
-          toPlayerId: cardEffectArgs.playerId,
-          to: { location: 'set-aside' },
-          facing: 'front',
-        });
 
         if (revealedCard.type.includes('ACTION')) {
           loggerService.info(`[ghost effect] set aside Action ${revealedCard}`);
-          actionCardId = revealedCardId;
+          actionCardId = revealedCard.id;
           break;
         }
 
-        cardsToDiscard.push(revealedCardId);
+        cardsToDiscard.push(revealedCard.id);
       }
 
       // Discard any non-Action cards that were revealed.
@@ -2700,42 +2684,22 @@ const expansion: CardExpansionModule = {
       });
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
-      let deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+      // Reveal the top card of the deck, shuffling the discard in
+      // automatically if the deck is empty.
+      const revealed = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, 1);
+      const revealedCard = revealed[0];
 
-      if (!deck.length) {
-        loggerService.debug(`[will-o-wisp effect] deck empty for player ${cardEffectArgs.playerId}, shuffling discard`);
-        await cardEffectArgs.actionService.run('shuffleDeck', {
-          playerId: cardEffectArgs.playerId,
-        });
-
-        deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
-      }
-
-      if (!deck.length) {
+      if (!revealedCard) {
         loggerService.debug(
           `[will-o-wisp effect] no cards to reveal after shuffling for player ${cardEffectArgs.playerId}`,
         );
-
         return;
       }
 
-      const topCardId = deck.slice(-1)[0];
+      const revealedCardId = revealedCard.id;
 
-      loggerService.debug(`[will-o-wisp effect] revealing top card ${topCardId}`);
+      loggerService.debug(`[will-o-wisp effect] revealing top card ${revealedCard}`);
 
-      await cardEffectArgs.actionService.run('revealCard', {
-        playerId: cardEffectArgs.playerId,
-        cardId: topCardId,
-      });
-
-      const revealedCardId = topCardId;
-
-      if (!revealedCardId) {
-        loggerService.debug('[will-o-wisp effect] no card revealed');
-        return;
-      }
-
-      const revealedCard = cardEffectArgs.cardLibrary.getCard(revealedCardId);
       const { cost } = cardEffectArgs.cardPriceController.applyRules(revealedCard, {
         playerId: cardEffectArgs.playerId,
       });

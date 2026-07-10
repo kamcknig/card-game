@@ -8,6 +8,7 @@ import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getAttackTargets } from '../../utils/get-attack-targets.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 
 const expansion: CardExpansionModule = {
   'animal-fair': {
@@ -348,23 +349,13 @@ const expansion: CardExpansionModule = {
       const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
-        const revealedCardIds: CardId[] = [];
-
-        // Reveal the top two cards, letting revealCard handle shuffle fallback.
-        for (let index = 0; index < 2; index++) {
-          const revealedCardId = await cardEffectArgs.actionService.run('revealCard', {
-            playerId: targetPlayerId,
-            source: 'playerDeck',
-            moveToSetAside: true,
-          });
-          if (revealedCardId === undefined) {
-            loggerService.debug(`[cardinal effect] player ${targetPlayerId} has no more cards to reveal`);
-            break;
-          }
-          revealedCardIds.push(revealedCardId);
-        }
+        // Reveal the top two cards, set aside — shuffling the discard back
+        // in automatically if the deck runs dry mid-reveal.
+        const revealedCards = await revealTopDeckCards(cardEffectArgs, targetPlayerId, 2, { setAside: true });
+        const revealedCardIds: CardId[] = revealedCards.map(card => card.id);
 
         if (!revealedCardIds.length) {
+          loggerService.debug(`[cardinal effect] player ${targetPlayerId} has no more cards to reveal`);
           continue;
         }
 

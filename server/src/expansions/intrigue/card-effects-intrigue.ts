@@ -5,6 +5,7 @@ import { Card, CardId, CardKey, PlayerId } from 'shared/types/index.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { resolveChooseAbilities } from '../../utils/resolve-choose-abilities.ts';
 import { getAttackTargets } from '../../utils/get-attack-targets.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 
 const expansionModule: CardExpansionModule = {
   baron: {
@@ -852,26 +853,14 @@ const expansionModule: CardExpansionModule = {
           return;
         }
 
-        if (deck.length < numToReveal) {
-          loggerService.debug(`[PATROL EFFECT] not enough cards in deck, shuffling`);
-          await actionService.run('shuffleDeck', {
-            playerId,
-          });
-        }
-
-        const revealedCardIds: Card[] = args.findCardService
-          .findCards({ location: 'playerDeck', playerId })
-          .slice(-numToReveal);
-
-        for (const cardId of revealedCardIds) {
-          loggerService.debug(`[PATROL EFFECT] revealing ${cardId}...`);
-
-          await actionService.run('revealCard', {
-            cardId,
-            playerId,
-            moveToSetAside: true,
-          });
-        }
+        // Reveal the top numToReveal cards of the deck, set aside — shuffling
+        // the discard back in automatically if the deck runs dry mid-reveal.
+        const revealedCardIds: Card[] = await revealTopDeckCards(
+          { actionService, cardLibrary, loggerService },
+          playerId,
+          numToReveal,
+          { setAside: true },
+        );
 
         const [victoryCards, nonVictoryCards] = revealedCardIds.reduce(
           (prev, card) => {
@@ -1261,16 +1250,7 @@ const expansionModule: CardExpansionModule = {
   swindler: {
     registerEffects:
       () =>
-      async ({
-        loggerService,
-        reactionContext,
-        actionService,
-        playerId,
-        match,
-        cardLibrary,
-        cardPriceController,
-        ...args
-      }) => {
+      async ({ loggerService, reactionContext, actionService, playerId, match, cardLibrary, cardPriceController }) => {
         loggerService.debug(`[SWINDLER EFFECT] gaining 2 treasure...`);
 
         await actionService.run('gainTreasure', {
@@ -1284,28 +1264,23 @@ const expansionModule: CardExpansionModule = {
         );
 
         for (const target of targets) {
-          const deck = args.cardSourceController.getSource('playerDeck', target);
+          // Reveal the top card of the target's deck, shuffling the discard
+          // in automatically if the deck is empty. Returning the actual
+          // revealed Card directly avoids re-deriving the id from a stale
+          // read of the deck array after the shuffle has mutated it.
+          const revealed = await revealTopDeckCards({ actionService, cardLibrary, loggerService }, target, 1);
+          const card = revealed[0];
 
-          if (deck.length === 0) {
-            loggerService.debug(`[SWINDLER EFFECT] ${getPlayerById(match, target)} as no cards, shuffling`);
-            await actionService.run('shuffleDeck', {
-              playerId: target,
-            });
-
-            if (deck.length === 0) {
-              loggerService.debug(`[SWINDLER EFFECT] ${getPlayerById(match, target)} still has no cards`);
-              continue;
-            }
+          if (!card) {
+            loggerService.debug(`[SWINDLER EFFECT] ${getPlayerById(match, target)} still has no cards`);
+            continue;
           }
 
-          let cardId = deck.slice(-1)?.[0];
-          const card = cardLibrary.getCard(cardId);
-
-          loggerService.debug(`[SWINDLER EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
+          loggerService.debug(`[SWINDLER EFFECT] trashing ${card}...`);
 
           await actionService.run('trashCard', {
             playerId: target,
-            cardId: cardId,
+            cardId: card.id,
           });
 
           const { cost } = cardPriceController.applyRules(card, { playerId });
@@ -1324,15 +1299,14 @@ const expansionModule: CardExpansionModule = {
             loggerService.debug('[SWINDLER EFFECT] no replacement card selected');
             continue;
           }
-          cardId = cardIdToGain;
 
           loggerService.debug(
-            `[SWINDLER EFFECT] ${getPlayerById(match, target)} gaining ${cardLibrary.getCard(cardId)}...`,
+            `[SWINDLER EFFECT] ${getPlayerById(match, target)} gaining ${cardLibrary.getCard(cardIdToGain)}...`,
           );
 
           await actionService.run('gainCard', {
             playerId: target,
-            cardId,
+            cardId: cardIdToGain,
             to: { location: 'playerDiscard' },
           });
         }
@@ -1547,7 +1521,7 @@ const expansionModule: CardExpansionModule = {
   'wishing-well': {
     registerEffects:
       () =>
-      async ({ loggerService, match, cardLibrary, actionService, playerId, ...args }) => {
+      async ({ loggerService, cardLibrary, actionService, playerId }) => {
         loggerService.debug(`[WISHING WELL EFFECT] drawing card...`);
 
         await actionService.run('drawCard', { playerId });
@@ -1569,29 +1543,21 @@ const expansionModule: CardExpansionModule = {
 
         loggerService.debug(`[WISHING WELL EFFECT] player named '${cardKey}'`);
 
-        if (args.findCardService.findCards({ location: 'playerDeck', playerId }).length === 0) {
-          loggerService.debug(`[WISHING WELL EFFECT] shuffling player's deck...`);
+        // Reveal the top card of the deck, shuffling the discard in
+        // automatically if the deck is empty.
+        const revealed = await revealTopDeckCards({ actionService, cardLibrary, loggerService }, playerId, 1);
+        const card = revealed[0];
 
-          await actionService.run('shuffleDeck', {
-            playerId,
-          });
+        if (!card) {
+          loggerService.debug(`[WISHING WELL EFFECT] no card to reveal`);
+          return;
         }
 
-        const cardId = args.findCardService.findCards({ location: 'playerDeck', playerId }).slice(-1)[0]?.id;
-
-        loggerService.debug(`[WISHING WELL EFFECT] revealing card ${cardLibrary.getCard(cardId)}...`);
-
-        await actionService.run('revealCard', {
-          cardId,
-          playerId,
-        });
-
-        const card = cardLibrary.getCard(cardId);
         if (card.cardKey === cardKey) {
           loggerService.debug(`[WISHING WELL EFFECT] moving ${card} to hand`);
 
           await actionService.run('moveCard', {
-            cardId,
+            cardId: card.id,
             toPlayerId: playerId,
             to: { location: 'playerHand' },
           });

@@ -4,6 +4,7 @@ import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { findProjectInMatch } from '@shared/find-card-like-in-match.ts';
 import { renaissanceTokenIds } from './token-ids-renaissance.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 
 // Checks whether a player has a cube placed on the given project.
 function isProjectOwned(match: Match, playerId: PlayerId, project: Project) {
@@ -1172,27 +1173,18 @@ const effectMap: CardExpansionModule = {
           return owned;
         },
         triggeredEffectFn: async triggeredArgs => {
-          let deck = triggeredArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+          // Reveal the top card of the deck, shuffling the discard in
+          // automatically if the deck is empty.
+          const revealed = await revealTopDeckCards(triggeredArgs, cardEffectArgs.playerId, 1);
+          const topCard = revealed[0];
 
-          if (!deck.length) {
-            loggerService.debug('[piazza project] deck empty, shuffling');
-            await triggeredArgs.actionService.run('shuffleDeck', { playerId: cardEffectArgs.playerId });
-            deck = triggeredArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
-          }
-
-          if (!deck.length) {
+          if (!topCard) {
             loggerService.debug('[piazza project] no cards to reveal after shuffling');
             return;
           }
 
-          const topCardId = deck.slice(-1)[0];
-          const topCard = triggeredArgs.cardLibrary.getCard(topCardId);
+          const topCardId = topCard.id;
           loggerService.debug(`[piazza project] revealing ${topCard}`);
-
-          await triggeredArgs.actionService.run('revealCard', {
-            playerId: cardEffectArgs.playerId,
-            cardId: topCardId,
-          });
 
           if (!topCard.type.includes('ACTION')) {
             loggerService.debug('[piazza project] revealed card is not an Action, leaving on top');

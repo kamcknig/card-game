@@ -6,6 +6,7 @@ import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 import { renaissanceArtifactKeys } from './artifact-keys-renaissance.ts';
 import { resolveChooseAbilities } from '../../utils/resolve-choose-abilities.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 
 // Renaissance card effects module (artifacts handled separately).
 const expansion: CardExpansionModule = {
@@ -25,29 +26,11 @@ const expansion: CardExpansionModule = {
 
       loggerService.debug(`[border-guard effect] revealing ${revealCount} card(s) (lantern: ${hasLantern})`);
 
-      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
-      const revealedCards: Card[] = [];
-
-      // Reveal the top N cards, shuffling if needed.
-      for (let index = 0; index < revealCount; index++) {
-        if (deck.length < 1) {
-          loggerService.debug('[border-guard effect] deck empty, shuffling discard');
-          await cardEffectArgs.actionService.run('shuffleDeck', { playerId: cardEffectArgs.playerId });
-          if (deck.length < 1) {
-            loggerService.debug('[border-guard effect] no cards to reveal after shuffling');
-            break;
-          }
-        }
-
-        const cardId = deck.slice(-1)[0];
-        const card = cardEffectArgs.cardLibrary.getCard(cardId);
-        revealedCards.push(card);
-        await cardEffectArgs.actionService.run('revealCard', {
-          cardId,
-          playerId: cardEffectArgs.playerId,
-          moveToSetAside: true,
-        });
-      }
+      // Reveal the top N cards, set aside — shuffling the discard back in
+      // automatically if the deck runs dry mid-reveal.
+      const revealedCards = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, revealCount, {
+        setAside: true,
+      });
 
       if (!revealedCards.length) {
         loggerService.debug('[border-guard effect] no cards revealed');
@@ -1402,33 +1385,10 @@ const expansion: CardExpansionModule = {
       });
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
-      // Reveal up to the top 3 cards of deck, shuffling if needed.
-      const revealedCardIds: CardId[] = [];
-      for (let index = 0; index < 3; index++) {
-        let deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
-        if (!deck.length) {
-          loggerService.debug('[seer effect] deck empty, shuffling discard');
-          await cardEffectArgs.actionService.run('shuffleDeck', {
-            playerId: cardEffectArgs.playerId,
-          });
-          deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
-        }
-
-        if (!deck.length) {
-          loggerService.debug('[seer effect] no cards left to reveal');
-          break;
-        }
-
-        const topCardId = deck.slice(-1)[0];
-        const topCard = cardEffectArgs.cardLibrary.getCard(topCardId);
-        loggerService.debug(`[seer effect] revealing ${topCard}`);
-        await cardEffectArgs.actionService.run('revealCard', {
-          cardId: topCardId,
-          playerId: cardEffectArgs.playerId,
-          moveToSetAside: true,
-        });
-        revealedCardIds.push(topCardId);
-      }
+      // Reveal up to the top 3 cards of deck, set aside — shuffling the
+      // discard back in automatically if the deck runs dry mid-reveal.
+      const revealedCards = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, 3, { setAside: true });
+      const revealedCardIds: CardId[] = revealedCards.map(card => card.id);
 
       if (!revealedCardIds.length) {
         return;

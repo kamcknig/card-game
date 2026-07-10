@@ -6,6 +6,7 @@ import { CardExpansionModule } from '@server-types/index.ts';
 import { Card, CardId } from 'shared/types/index.ts';
 import { markPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { getAttackTargets } from '../../utils/get-attack-targets.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 
 const expansionModule: CardExpansionModule = {
   // Include the source card id for treasure gains so state effects can adjust values.
@@ -120,37 +121,17 @@ const expansionModule: CardExpansionModule = {
         loggerService.debug(`[BANDIT EFFECT] targets ${targetPlayerIds}`);
 
         for (const targetPlayerId of targetPlayerIds) {
-          const playerDeck = args.cardSourceController.getSource('playerDeck', targetPlayerId);
-          const playerDiscard = args.cardSourceController.getSource('playerDiscard', targetPlayerId);
+          // Reveal the top 2 cards of the target's deck, set aside —
+          // shuffling the discard back in automatically if the deck runs
+          // dry mid-reveal.
+          const revealedCards = await revealTopDeckCards({ actionService, cardLibrary, loggerService }, targetPlayerId, 2, {
+            setAside: true,
+          });
+          const cardIdsToReveal = revealedCards.map(card => card.id);
 
-          let numToReveal = 2;
-          const totalCards = playerDiscard.length + playerDeck.length;
-
-          numToReveal = Math.min(numToReveal, totalCards);
-
-          if (numToReveal === 0) {
+          if (cardIdsToReveal.length === 0) {
             loggerService.debug(`[BANDIT EFFECT] player has no cards to reveal`);
             continue;
-          }
-
-          if (playerDeck.length < numToReveal) {
-            loggerService.debug(`[BANDIT EFFECT] not enough cards in deck, shuffling...`);
-
-            await actionService.run('shuffleDeck', {
-              playerId: targetPlayerId,
-            });
-          }
-
-          const cardIdsToReveal = playerDeck.slice(-numToReveal);
-
-          for (const cardId of cardIdsToReveal) {
-            loggerService.debug(`[BANDIT EFFECT] revealing ${cardLibrary.getCard(cardId)}...`);
-
-            await actionService.run('revealCard', {
-              playerId: targetPlayerId,
-              cardId,
-              moveToSetAside: true,
-            });
           }
 
           const possibleCardIdsToTrash = cardIdsToReveal.filter(cardId => {

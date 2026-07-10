@@ -6,6 +6,7 @@ import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { getAttackTargets } from '../../utils/get-attack-targets.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 
 const expansion: CardExpansionModule = {
   astrolabe: {
@@ -1005,27 +1006,19 @@ const expansion: CardExpansionModule = {
         loggerService.debug(`[SEA CHART EFFECT] gaining 1 action...`);
         await actionService.run('gainAction', { count: 1 });
 
-        const deck = args.cardSourceController.getSource('playerDeck', playerId);
+        // Reveal the top card of the deck, set aside — shuffling the
+        // discard back in automatically if the deck is empty.
+        const revealed = await revealTopDeckCards({ actionService, cardLibrary, loggerService }, playerId, 1, {
+          setAside: true,
+        });
+        const card = revealed[0];
 
-        if (deck.length === 0) {
-          loggerService.debug(`[SEA CHART EFFECT] shuffling deck...`);
-          await actionService.run('shuffleDeck', { playerId });
-
-          if (deck.length === 0) {
-            loggerService.debug(`[SEA CHART EFFECT] no cards in deck...`);
-            return;
-          }
+        if (!card) {
+          loggerService.debug(`[SEA CHART EFFECT] no cards in deck...`);
+          return;
         }
 
-        const cardId = deck.slice(-1)[0];
-        const card = cardLibrary.getCard(cardId);
-
-        loggerService.debug(`[SEA CHART EFFECT] revealing card...`);
-        await actionService.run('revealCard', {
-          cardId,
-          playerId,
-          moveToSetAside: true,
-        });
+        const cardId = card.id;
 
         const copyInPlay = args.findCardService
           .findCards({ location: 'playArea' })
