@@ -1,38 +1,29 @@
-import { createCardLike } from '../../utils/create-card-data.ts';
 import { AllyNoId } from 'shared/types/index.ts';
+import { ExpansionEffectRegistryService } from '../expansion-effect-registry-service.ts';
 import { ExpansionCatalogService } from '../expansion-catalog-service.ts';
 import { LoggerService } from '../logger-service.ts';
+import { LandscapeLoaderService } from '../landscape-loader-service.ts';
 
 // Loads ally data for one expansion.
-export class AllyLoaderService {
+export class AllyLoaderService extends LandscapeLoaderService<AllyNoId> {
   constructor(
-    private readonly expansionCatalogService: ExpansionCatalogService,
-    private readonly loggerService: LoggerService,
-  ) {}
+    expansionEffectRegistryService: ExpansionEffectRegistryService,
+    expansionCatalogService: ExpansionCatalogService,
+    loggerService: LoggerService,
+  ) {
+    super(expansionEffectRegistryService, expansionCatalogService, loggerService, {
+      kind: 'ally',
+      catalogSlot: 'allies',
+      label: 'ally',
+      logTag: 'load-allies',
+      // Allies have no companion ally-effects-<expansion>.ts loader; ally
+      // behavior is wired directly by expansion configurators instead.
+      hasEffects: false,
+    });
+  }
 
   // Loads ally libraries for one expansion when present.
-  public async loadExpansionAllies(expansionName: string): Promise<void> {
-    const expansionAllies = (this.expansionCatalogService.getRequiredExpansion(expansionName).allies ??= {});
-
-    try {
-      const allyLibraryModule = await import(`@expansions/${expansionName}/ally-library-${expansionName}.json`, {
-        with: { type: 'json' },
-      });
-      const allies = allyLibraryModule.default as Record<string, Partial<AllyNoId>>;
-
-      for (const cardKey of Object.keys(allies)) {
-        const allyTemplate = allies[cardKey];
-        const cardLike = createCardLike(cardKey, expansionName, allyTemplate);
-        expansionAllies[cardKey] = {
-          ...cardLike,
-          randomizer: allyTemplate.randomizer ?? null,
-        };
-      }
-    } catch (error) {
-      if ((error as { code?: string }).code !== 'ERR_MODULE_NOT_FOUND') {
-        this.loggerService.warn(`[load-allies] failed to load expansion ally library for expansion ${expansionName}`);
-        this.loggerService.error(error);
-      }
-    }
+  public loadExpansionAllies(expansionName: string): Promise<void> {
+    return this.loadExpansionLandscapes(expansionName);
   }
 }

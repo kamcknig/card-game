@@ -210,26 +210,63 @@ export class SupabaseUserStore implements UserStore {
   }
 
   /**
+   * Fires a fire-and-forget targeted UPDATE against `auth_users` for one row.
+   * Every setter below shared this exact then/catch boilerplate before
+   * consolidation. `failureMessage` is embedded verbatim in the warn log
+   * (`[auth users] ${failureMessage}: ${error.message}`); `onSuccess`, when
+   * provided, runs after a successful update (some setters log more than
+   * "succeeded", e.g. setEmail/setSupabaseAuthId).
+   */
+  private fireUpdate(id: number, patch: Record<string, unknown>, failureMessage: string, onSuccess?: () => void): void {
+    this.client
+      ?.from('auth_users')
+      .update(patch)
+      .eq('id', id)
+      .then(({ error }) => {
+        if (error) {
+          this.loggerService.warn(`[auth users] ${failureMessage}: ${error.message}`);
+          return;
+        }
+        onSuccess?.();
+      });
+  }
+
+  /**
+   * Fires a fire-and-forget DELETE against `auth_users` for a query the
+   * caller has already filtered (`.eq()` / `.neq()`). Shared by `delete(id)`
+   * and `clear()`.
+   */
+  private fireDelete(
+    query: PromiseLike<{ error: { message: string } | null }> | undefined,
+    failureMessage: string,
+    onSuccess?: () => void,
+  ): void {
+    query?.then(({ error }) => {
+      if (error) {
+        this.loggerService.warn(`[auth users] ${failureMessage}: ${error.message}`);
+        return;
+      }
+      onSuccess?.();
+    });
+  }
+
+  /**
    * Replaces a user's password hash and clears any pending lockout state.
    *
    * Fires an async targeted UPDATE in the background (fire-and-forget).
    */
   public updatePassword(id: number, passwordHash: string, algo: PasswordAlgo, now: number): void {
-    this.client
-      ?.from('auth_users')
-      .update({
+    this.fireUpdate(
+      id,
+      {
         password_hash: passwordHash,
         password_algo: algo,
         password_updated_at: now,
         failed_attempts: 0,
         locked_until: null,
-      })
-      .eq('id', id)
-      .then(({ error }) => {
-        if (error) {
-          this.loggerService.warn(`[auth users] updatePassword failed for id=${id}: ${error.message}`);
-        }
-      });
+      },
+      `updatePassword failed for id=${id}`,
+    );
   }
 
   /**
@@ -253,15 +290,7 @@ export class SupabaseUserStore implements UserStore {
 
     const newCount = current.failedAttempts + 1;
 
-    this.client
-      .from('auth_users')
-      .update({ failed_attempts: newCount })
-      .eq('id', id)
-      .then(({ error }) => {
-        if (error) {
-          this.loggerService.warn(`[auth users] recordFailure update failed for id=${id}: ${error.message}`);
-        }
-      });
+    this.fireUpdate(id, { failed_attempts: newCount }, `recordFailure update failed for id=${id}`);
 
     return { ...current, failedAttempts: newCount };
   }
@@ -272,15 +301,7 @@ export class SupabaseUserStore implements UserStore {
    * Fires an async targeted UPDATE in the background (fire-and-forget).
    */
   public resetFailures(id: number): void {
-    this.client
-      ?.from('auth_users')
-      .update({ failed_attempts: 0, locked_until: null })
-      .eq('id', id)
-      .then(({ error }) => {
-        if (error) {
-          this.loggerService.warn(`[auth users] resetFailures failed for id=${id}: ${error.message}`);
-        }
-      });
+    this.fireUpdate(id, { failed_attempts: 0, locked_until: null }, `resetFailures failed for id=${id}`);
   }
 
   /**
@@ -289,15 +310,7 @@ export class SupabaseUserStore implements UserStore {
    * Fires an async targeted UPDATE in the background (fire-and-forget).
    */
   public setLockedUntil(id: number, until: number | null): void {
-    this.client
-      ?.from('auth_users')
-      .update({ locked_until: until })
-      .eq('id', id)
-      .then(({ error }) => {
-        if (error) {
-          this.loggerService.warn(`[auth users] setLockedUntil failed for id=${id}: ${error.message}`);
-        }
-      });
+    this.fireUpdate(id, { locked_until: until }, `setLockedUntil failed for id=${id}`);
   }
 
   /**
@@ -306,15 +319,7 @@ export class SupabaseUserStore implements UserStore {
    * Fires an async targeted UPDATE in the background (fire-and-forget).
    */
   public setDisabled(id: number, disabled: boolean): void {
-    this.client
-      ?.from('auth_users')
-      .update({ disabled })
-      .eq('id', id)
-      .then(({ error }) => {
-        if (error) {
-          this.loggerService.warn(`[auth users] setDisabled failed for id=${id}: ${error.message}`);
-        }
-      });
+    this.fireUpdate(id, { disabled }, `setDisabled failed for id=${id}`);
   }
 
   /**
@@ -323,15 +328,7 @@ export class SupabaseUserStore implements UserStore {
    * Fires an async targeted UPDATE in the background (fire-and-forget).
    */
   public setAdmin(id: number, isAdmin: boolean): void {
-    this.client
-      ?.from('auth_users')
-      .update({ is_admin: isAdmin })
-      .eq('id', id)
-      .then(({ error }) => {
-        if (error) {
-          this.loggerService.warn(`[auth users] setAdmin failed for id=${id}: ${error.message}`);
-        }
-      });
+    this.fireUpdate(id, { is_admin: isAdmin }, `setAdmin failed for id=${id}`);
   }
 
   /**
@@ -348,17 +345,9 @@ export class SupabaseUserStore implements UserStore {
   public setEmail(id: number, email: string, _now: number): void {
     const emailNorm = email.toLowerCase();
 
-    this.client
-      ?.from('auth_users')
-      .update({ email: emailNorm })
-      .eq('id', id)
-      .then(({ error }) => {
-        if (error) {
-          this.loggerService.warn(`[auth users] setEmail failed for id=${id}: ${error.message}`);
-        } else {
-          this.loggerService.debug(`[auth users] set email for id=${id}`);
-        }
-      });
+    this.fireUpdate(id, { email: emailNorm }, `setEmail failed for id=${id}`, () =>
+      this.loggerService.debug(`[auth users] set email for id=${id}`),
+    );
   }
 
   /**
@@ -367,17 +356,9 @@ export class SupabaseUserStore implements UserStore {
    * Fires an async targeted UPDATE in the background (fire-and-forget).
    */
   public setSupabaseAuthId(id: number, authId: string | null): void {
-    this.client
-      ?.from('auth_users')
-      .update({ supabase_auth_id: authId })
-      .eq('id', id)
-      .then(({ error }) => {
-        if (error) {
-          this.loggerService.warn(`[auth users] setSupabaseAuthId failed for id=${id}: ${error.message}`);
-        } else {
-          this.loggerService.debug(`[auth users] set supabaseAuthId for id=${id}: ${authId ?? 'null'}`);
-        }
-      });
+    this.fireUpdate(id, { supabase_auth_id: authId }, `setSupabaseAuthId failed for id=${id}`, () =>
+      this.loggerService.debug(`[auth users] set supabaseAuthId for id=${id}: ${authId ?? 'null'}`),
+    );
   }
 
   /**
@@ -387,15 +368,7 @@ export class SupabaseUserStore implements UserStore {
    * No-ops silently when the id is not found. Intended for CLI/admin use.
    */
   public delete(id: number): void {
-    this.client
-      ?.from('auth_users')
-      .delete()
-      .eq('id', id)
-      .then(({ error }) => {
-        if (error) {
-          this.loggerService.warn(`[auth users] delete failed for id=${id}: ${error.message}`);
-        }
-      });
+    this.fireDelete(this.client?.from('auth_users').delete().eq('id', id), `delete failed for id=${id}`);
   }
 
   /**
@@ -406,17 +379,9 @@ export class SupabaseUserStore implements UserStore {
    * Intended for CLI/admin use.
    */
   public clear(): void {
-    this.client
-      ?.from('auth_users')
-      .delete()
-      .neq('id', 0)
-      .then(({ error }) => {
-        if (error) {
-          this.loggerService.warn(`[auth users] clear failed: ${error.message}`);
-        } else {
-          this.loggerService.info('[auth users] cleared all user records from Supabase');
-        }
-      });
+    this.fireDelete(this.client?.from('auth_users').delete().neq('id', 0), 'clear failed', () =>
+      this.loggerService.info('[auth users] cleared all user records from Supabase'),
+    );
   }
 
   /**

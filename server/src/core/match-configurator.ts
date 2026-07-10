@@ -62,6 +62,29 @@ export function uniqueByProp<T extends Record<string, unknown>, K extends keyof 
   return list.filter((_, i) => idxByKey.get(list[i][prop]) === i);
 }
 
+// Landscape kinds that share the "events and others" randomizer pool
+// selection semantics (as opposed to kingdom piles, which are counted
+// separately). Events, landmarks, projects, ways, and traits are otherwise
+// handled identically during selection.
+type LandscapeKind = 'event' | 'landmark' | 'project' | 'way' | 'trait';
+
+// The card-like shape produced by any of the landscape kinds above.
+type LandscapeCardLike = EventNoId | LandmarkNoId | ProjectNoId | WayNoId | TraitNoId;
+
+// Per-kind wiring: where randomizer candidates come from on an expansion's
+// library data. Used to build the shared "events and others" candidate pool
+// without five near-identical blocks.
+const LANDSCAPE_KIND_DEFINITIONS: ReadonlyArray<{
+  type: LandscapeKind;
+  candidatesFor: (expansion: ExpansionData) => Record<string, LandscapeCardLike>;
+}> = [
+  { type: 'event', candidatesFor: expansion => expansion.events ?? {} },
+  { type: 'landmark', candidatesFor: expansion => expansion.landmarks ?? {} },
+  { type: 'project', candidatesFor: expansion => expansion.projects ?? {} },
+  { type: 'way', candidatesFor: expansion => expansion.ways ?? {} },
+  { type: 'trait', candidatesFor: expansion => expansion.traits ?? {} },
+];
+
 /**
  * The configurator takes a MatchConfiguration instance and creates a ComputedMatchConfiguration.
  *
@@ -203,6 +226,44 @@ export class MatchConfigurator {
     );
   }
 
+  // Resolves the player-configured expansions into an array of the expansions'
+  // library data. Shared by kingdom-candidate gathering and pile-member
+  // resolution — both previously duplicated this exact reduce.
+  private getSelectedExpansionData(): ExpansionData[] {
+    return this._config.expansions.reduce((acc, allowedExpansion) => {
+      const expansionData = this._expansionCatalogService.getExpansion(allowedExpansion.name);
+      if (!expansionData) {
+        this._loggerService.warn(`[match configurator] expansion ${allowedExpansion.name} not found`);
+        return acc;
+      }
+      acc.push(expansionData);
+      return acc;
+    }, [] as ExpansionData[]);
+  }
+
+  // Pushes a selected landscape card-like onto its corresponding config array.
+  // The cast on each branch is safe because `type` and `cardLike` originate
+  // from the same discriminated LANDSCAPE_KIND_DEFINITIONS entry.
+  private pushLandscapeSelection(type: LandscapeKind, cardLike: LandscapeCardLike): void {
+    switch (type) {
+      case 'event':
+        this._config.events.push(cardLike as EventNoId);
+        return;
+      case 'landmark':
+        (this._config.landmarks ??= []).push(cardLike as LandmarkNoId);
+        return;
+      case 'project':
+        (this._config.projects ??= []).push(cardLike as ProjectNoId);
+        return;
+      case 'way':
+        (this._config.ways ??= []).push(cardLike as WayNoId);
+        return;
+      case 'trait':
+        (this._config.traits ??= []).push(cardLike as TraitNoId);
+        return;
+    }
+  }
+
   private createCardSources(cardSourceController: CardSourceController) {
     // todo: right now these register locations that were previously hard-coded in the match state.
     // i'm converting to use this CardSourceController class and these might be able to be converted
@@ -233,16 +294,8 @@ export class MatchConfigurator {
         `[match configurator] number of requested kingdoms ${this._requestedKingdoms.length} is enough`,
       );
     } else {
-      // reduces the player-configured expansions into an array whose elements are the expansions' library data
-      const selectedExpansions = this._config.expansions.reduce((acc, allowedExpansion) => {
-        const expansionData = this._expansionCatalogService.getExpansion(allowedExpansion.name);
-        if (!expansionData) {
-          this._loggerService.warn(`[match configurator] expansion ${allowedExpansion.name} not found`);
-          return acc;
-        }
-        acc.push(expansionData);
-        return acc;
-      }, [] as ExpansionData[]);
+      // Resolves the player-configured expansions into an array of the expansions' library data.
+      const selectedExpansions = this.getSelectedExpansionData();
 
       // list of pile keys that are banned or already pre-selected
       const bannedKingdomRandomizers = this._bannedKingdoms.map(card => getCardPileKey(card));
@@ -262,59 +315,29 @@ export class MatchConfigurator {
 
       type AvailableRandomizer =
         | { randomizer: string; type: 'card'; cardsInRandomizer: CardNoId[] }
-        | { randomizer: string; type: 'event'; cardLike: EventNoId }
-        | { randomizer: string; type: 'landmark'; cardLike: LandmarkNoId }
-        | { randomizer: string; type: 'project'; cardLike: ProjectNoId }
-        | { randomizer: string; type: 'way'; cardLike: WayNoId }
-        | { randomizer: string; type: 'trait'; cardLike: TraitNoId };
+        | { randomizer: string; type: LandscapeKind; cardLike: LandscapeCardLike };
 
+      // Landscapes (events, landmarks, projects, ways, traits) all participate
+      // in the shared "events and others" randomizer pool with identical
+      // candidate-gathering rules — one loop over LANDSCAPE_KIND_DEFINITIONS
+      // replaces five near-identical blocks.
       const availableRandomizers: AvailableRandomizer[] = [
         ...availableKingdomRandomizerGroups.map(group => ({
           randomizer: group.pileKey,
           type: 'card' as const,
           cardsInRandomizer: group.cards,
         })),
-        ...selectedExpansions.flatMap(nextExpansion => [
-          ...Object.values(nextExpansion.events)
-            .filter(event => event.randomizer !== null)
-            .map(event => ({
-              randomizer: event.randomizer!,
-              cardLike: event,
-              type: 'event' as const,
-            })),
-          // Landmarks participate in the shared "events and others" randomizer pool.
-          ...Object.values(nextExpansion.landmarks)
-            .filter(landmark => landmark.randomizer !== null)
-            .map(landmark => ({
-              randomizer: landmark.randomizer!,
-              cardLike: landmark,
-              type: 'landmark' as const,
-            })),
-          // Projects participate in the shared "events and others" randomizer pool.
-          ...Object.values(nextExpansion.projects ?? {})
-            .filter(project => project.randomizer !== null)
-            .map(project => ({
-              randomizer: project.randomizer!,
-              cardLike: project,
-              type: 'project' as const,
-            })),
-          // Ways participate in the shared "events and others" randomizer pool.
-          ...Object.values(nextExpansion.ways ?? {})
-            .filter(way => way.randomizer !== null)
-            .map(way => ({
-              randomizer: way.randomizer!,
-              cardLike: way,
-              type: 'way' as const,
-            })),
-          // Traits participate in the shared "events and others" randomizer pool.
-          ...Object.values(nextExpansion.traits ?? {})
-            .filter(trait => trait.randomizer !== null)
-            .map(trait => ({
-              randomizer: trait.randomizer!,
-              cardLike: trait,
-              type: 'trait' as const,
-            })),
-        ]),
+        ...selectedExpansions.flatMap(nextExpansion =>
+          LANDSCAPE_KIND_DEFINITIONS.flatMap(({ type, candidatesFor }) =>
+            Object.values(candidatesFor(nextExpansion))
+              .filter(cardLike => cardLike.randomizer !== null)
+              .map(cardLike => ({
+                randomizer: cardLike.randomizer!,
+                cardLike,
+                type,
+              })),
+          ),
+        ),
       ];
 
       const uniqueRandomizers = uniqueByProp(availableRandomizers, 'randomizer');
@@ -376,125 +399,33 @@ export class MatchConfigurator {
             name: kingdom,
             cards,
           });
-        } else if (selectedRandomizer.type === 'event') {
-          this._loggerService.info(`[match configurator] selected event ${selectedRandomizer.randomizer}`);
+        } else {
+          // Events, landmarks, projects, ways, and traits all share the same
+          // "events and others" selection-limit semantics — one branch
+          // replaces five near-identical blocks.
+          const landscapeType = selectedRandomizer.type;
+          this._loggerService.info(`[match configurator] selected ${landscapeType} ${selectedRandomizer.randomizer}`);
 
           if (++selectedEventsAndOthers <= allowedEventsAndOthers) {
             this._loggerService.info(
-              `[match configurator] selected event ${selectedRandomizer.randomizer} is allowed, adding to match`,
+              `[match configurator] selected ${landscapeType} ${selectedRandomizer.randomizer} is allowed, adding to match`,
             );
-            const event = selectedRandomizer.cardLike;
+            const cardLike = selectedRandomizer.cardLike;
 
-            if (!event) {
-              throw new Error(`[match configurator] event not found for randomizer ${selectedRandomizer.randomizer}`);
-            }
-
-            this._config.events.push(event);
-          } else {
-            this._loggerService.info(
-              `[match configurator] selected event ${selectedRandomizer.randomizer} is not allowed, already have max number of events and others`,
-            );
-          }
-
-          // reduce the counter because events don't count against kingdoms selection
-          i--;
-        } else if (selectedRandomizer.type === 'landmark') {
-          // Landmarks are treated as "others" alongside events for random selection limits.
-          this._loggerService.info(`[match configurator] selected landmark ${selectedRandomizer.randomizer}`);
-
-          if (++selectedEventsAndOthers <= allowedEventsAndOthers) {
-            this._loggerService.info(
-              `[match configurator] selected landmark ${selectedRandomizer.randomizer} is allowed, adding to match`,
-            );
-            const landmark = selectedRandomizer.cardLike;
-
-            if (!landmark) {
+            if (!cardLike) {
               throw new Error(
-                `[match configurator] landmark not found for randomizer ${selectedRandomizer.randomizer}`,
+                `[match configurator] ${landscapeType} not found for randomizer ${selectedRandomizer.randomizer}`,
               );
             }
 
-            this._config.landmarks ??= [];
-            this._config.landmarks.push(landmark);
+            this.pushLandscapeSelection(landscapeType, cardLike);
           } else {
             this._loggerService.info(
-              `[match configurator] selected landmark ${selectedRandomizer.randomizer} is not allowed, already have max number of events and others`,
+              `[match configurator] selected ${landscapeType} ${selectedRandomizer.randomizer} is not allowed, already have max number of events and others`,
             );
           }
 
-          // reduce the counter because landmarks don't count against kingdoms selection
-          i--;
-        } else if (selectedRandomizer.type === 'project') {
-          // Projects are treated as "others" alongside events for random selection limits.
-          this._loggerService.info(`[match configurator] selected project ${selectedRandomizer.randomizer}`);
-
-          if (++selectedEventsAndOthers <= allowedEventsAndOthers) {
-            this._loggerService.info(
-              `[match configurator] selected project ${selectedRandomizer.randomizer} is allowed, adding to match`,
-            );
-            const project = selectedRandomizer.cardLike;
-
-            if (!project) {
-              throw new Error(`[match configurator] project not found for randomizer ${selectedRandomizer.randomizer}`);
-            }
-
-            this._config.projects ??= [];
-            this._config.projects.push(project);
-          } else {
-            this._loggerService.info(
-              `[match configurator] selected project ${selectedRandomizer.randomizer} is not allowed, already have max number of events and others`,
-            );
-          }
-
-          // reduce the counter because projects don't count against kingdoms selection
-          i--;
-        } else if (selectedRandomizer.type === 'way') {
-          // Ways are treated as "others" alongside events for random selection limits.
-          this._loggerService.info(`[match configurator] selected way ${selectedRandomizer.randomizer}`);
-
-          if (++selectedEventsAndOthers <= allowedEventsAndOthers) {
-            this._loggerService.info(
-              `[match configurator] selected way ${selectedRandomizer.randomizer} is allowed, adding to match`,
-            );
-            const way = selectedRandomizer.cardLike;
-
-            if (!way) {
-              throw new Error(`[match configurator] way not found for randomizer ${selectedRandomizer.randomizer}`);
-            }
-
-            this._config.ways ??= [];
-            this._config.ways.push(way);
-          } else {
-            this._loggerService.info(
-              `[match configurator] selected way ${selectedRandomizer.randomizer} is not allowed, already have max number of events and others`,
-            );
-          }
-
-          // reduce the counter because ways don't count against kingdoms selection
-          i--;
-        } else if (selectedRandomizer.type === 'trait') {
-          // Traits are treated as "others" alongside events for random selection limits.
-          this._loggerService.info(`[match configurator] selected trait ${selectedRandomizer.randomizer}`);
-
-          if (++selectedEventsAndOthers <= allowedEventsAndOthers) {
-            this._loggerService.info(
-              `[match configurator] selected trait ${selectedRandomizer.randomizer} is allowed, adding to match`,
-            );
-            const trait = selectedRandomizer.cardLike;
-
-            if (!trait) {
-              throw new Error(`[match configurator] trait not found for randomizer ${selectedRandomizer.randomizer}`);
-            }
-
-            this._config.traits ??= [];
-            this._config.traits.push(trait);
-          } else {
-            this._loggerService.info(
-              `[match configurator] selected trait ${selectedRandomizer.randomizer} is not allowed, already have max number of events and others`,
-            );
-          }
-
-          // reduce the counter because traits don't count against kingdoms selection
+          // reduce the counter because non-kingdom landscapes don't count against kingdoms selection
           i--;
         }
 
@@ -507,15 +438,7 @@ export class MatchConfigurator {
     // card (e.g. Castles, Knights, Augurs) expands to the full pile in the supply
     // instead of producing N copies of just the randomizer card. Mirrors how the
     // random-kingdom path treats multi-card piles (see the cardsInRandomizer branch above).
-    const allSelectedExpansions = this._config.expansions.reduce((acc, allowedExpansion) => {
-      const expansionData = this._expansionCatalogService.getExpansion(allowedExpansion.name);
-      if (!expansionData) {
-        this._loggerService.warn(`[match configurator] expansion ${allowedExpansion.name} not found`);
-        return acc;
-      }
-      acc.push(expansionData);
-      return acc;
-    }, [] as ExpansionData[]);
+    const allSelectedExpansions = this.getSelectedExpansionData();
 
     const randomizerGroups = getAvailableKingdomRandomizerGroups({
       expansions: allSelectedExpansions,
