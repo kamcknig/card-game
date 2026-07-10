@@ -48,30 +48,6 @@ function rowToRecord(row: DbUserRow): UserRecord {
 }
 
 /**
- * Maps an in-memory {@link UserRecord} to a partial DB row suitable for
- * upsert operations (excludes `id` and identity columns).
- *
- * Only the mutable columns are included; `username`, `username_lower`, and
- * `created_at` are set at insert time and never changed.
- */
-function recordToMutableRow(rec: UserRecord): Omit<DbUserRow, 'id'> {
-  return {
-    username: rec.username,
-    username_lower: rec.username.toLowerCase(),
-    password_hash: rec.passwordHash,
-    password_algo: rec.passwordAlgo,
-    password_updated_at: rec.passwordUpdatedAt,
-    failed_attempts: rec.failedAttempts,
-    locked_until: rec.lockedUntil,
-    disabled: rec.disabled,
-    is_admin: rec.isAdmin,
-    created_at: rec.createdAt,
-    email: rec.email,
-    supabase_auth_id: rec.supabaseAuthId,
-  };
-}
-
-/**
  * Supabase-backed implementation of {@link UserStore}.
  *
  * All read operations (`getByUsername`, `getById`, `getByEmail`, `list`) query
@@ -459,23 +435,5 @@ export class SupabaseUserStore implements UserStore {
     }
 
     return ((data ?? []) as DbUserRow[]).map(rowToRecord);
-  }
-
-  /**
-   * Upserts the current record back to the Supabase table in the background.
-   *
-   * Used by methods that need a full-record upsert rather than a targeted
-   * column update. Errors are logged but do not propagate.
-   */
-  private persist(rec: UserRecord): void {
-    const row = { id: rec.id, ...recordToMutableRow(rec) };
-    this.client
-      ?.from('auth_users')
-      .upsert(row, { onConflict: 'id' })
-      .then(({ error }) => {
-        if (error) {
-          this.loggerService.warn(`[auth users] persist failed for '${rec.username}': ${error.message}`);
-        }
-      });
   }
 }

@@ -22,10 +22,15 @@ type DbMatchConfigSaveRow = {
 
 /**
  * In-memory representation of a single save (mirrors the KV shape).
+ *
+ * `createdAtMs` is tracked separately from `savedAtMs` (last-modified) so
+ * updates/overwrites can preserve the original creation timestamp instead of
+ * clobbering it on every upsert.
  */
 type CachedSave = {
   name: string;
   savedAtMs: number;
+  createdAtMs: number;
   configuration: MatchConfiguration;
 };
 
@@ -76,6 +81,7 @@ export class SupabaseMatchConfigurationSaveService implements MatchConfiguration
       this.cache.set(ck, {
         name: row.display_name,
         savedAtMs: row.updated_at,
+        createdAtMs: row.created_at,
         configuration: row.data,
       });
       loaded++;
@@ -107,7 +113,10 @@ export class SupabaseMatchConfigurationSaveService implements MatchConfiguration
       requestedName,
       normalizedName,
       isValid: true,
-      exists: this.cache.has(this.cacheKey(username, normalizedName)),
+      // Normalize explicitly even though cacheKey also lowercases internally —
+      // this call site historically passed the raw (possibly mixed-case)
+      // username, which produced a cache-key mismatch against the save path.
+      exists: this.cache.has(this.cacheKey(username.toLowerCase(), normalizedName)),
     };
   }
 
@@ -150,17 +159,21 @@ export class SupabaseMatchConfigurationSaveService implements MatchConfiguration
 
     const trimmedName = name.trim();
     const now = Date.now();
+    const usernameLower = username.toLowerCase();
+    const ck = this.cacheKey(usernameLower, check.normalizedName);
+    // Preserve the original creation timestamp when overwriting an existing
+    // save; only a brand-new key gets `createdAtMs = now`.
+    const existingRecord = this.cache.get(ck);
     const payload: CachedSave = {
       name: trimmedName.length > 0 ? trimmedName : check.normalizedName,
       savedAtMs: now,
+      createdAtMs: existingRecord?.createdAtMs ?? now,
       configuration: structuredClone(configuration),
     };
 
-    const usernameLower = username.toLowerCase();
-    const ck = this.cacheKey(usernameLower, check.normalizedName);
     this.cache.set(ck, payload);
 
-    this.persist(usernameLower, check.normalizedName, payload, now);
+    this.persist(usernameLower, check.normalizedName, payload);
 
     this.loggerService.info(
       `[match config saves] ${check.exists ? 'overwrote' : 'saved'} '${payload.name}' for user '${username}' (${check.normalizedName})`,
@@ -180,7 +193,8 @@ export class SupabaseMatchConfigurationSaveService implements MatchConfiguration
       return { ok: false, key, message: 'Invalid saved configuration key.' };
     }
 
-    const save = this.cache.get(this.cacheKey(username, normalizedKey));
+    // Normalize explicitly (see checkSaveName) to match the save path's key.
+    const save = this.cache.get(this.cacheKey(username.toLowerCase(), normalizedKey));
     if (!save) {
       return { ok: false, key: normalizedKey, message: 'Saved configuration was not found.' };
     }
@@ -201,7 +215,8 @@ export class SupabaseMatchConfigurationSaveService implements MatchConfiguration
       return { ok: false, key, message: 'Invalid saved configuration key.' };
     }
 
-    const save = this.cache.get(this.cacheKey(username, normalizedKey));
+    // Normalize explicitly (see checkSaveName) to match the save path's key.
+    const save = this.cache.get(this.cacheKey(username.toLowerCase(), normalizedKey));
     if (!save) {
       return { ok: false, key: normalizedKey, message: 'Saved configuration was not found.' };
     }
@@ -245,11 +260,14 @@ export class SupabaseMatchConfigurationSaveService implements MatchConfiguration
     const payload: CachedSave = {
       name: resolvedName,
       savedAtMs: now,
+      // Preserve the original creation timestamp — this is always an update
+      // of an existing save (guarded by the `!existing` check above).
+      createdAtMs: existing.createdAtMs,
       configuration: structuredClone(configuration),
     };
 
     this.cache.set(ck, payload);
-    this.persist(usernameLower, normalizedKey, payload, now);
+    this.persist(usernameLower, normalizedKey, payload);
 
     this.loggerService.info(`[match config saves] updated '${resolvedName}' for user '${username}' (${normalizedKey})`);
     return { ok: true, key: normalizedKey, name: resolvedName };
@@ -338,9 +356,14 @@ export class SupabaseMatchConfigurationSaveService implements MatchConfiguration
    *
    * The double-colon separator (`::`) is safe because normalized keys only
    * contain `[A-Za-z0-9_-]` and usernames similarly exclude `::`.
+   *
+   * Always lowercases the username here as defense in depth — callers have
+   * historically been inconsistent about pre-lowercasing (some passed the
+   * raw, possibly mixed-case username), which produced cache-key mismatches
+   * between the save path and the load/check paths.
    */
-  private cacheKey(usernameLower: string, saveKey: string): string {
-    return `${usernameLower}::${saveKey}`;
+  private cacheKey(username: string, saveKey: string): string {
+    return `${username.toLowerCase()}::${saveKey}`;
   }
 
   /**
@@ -363,16 +386,19 @@ export class SupabaseMatchConfigurationSaveService implements MatchConfiguration
    * Upserts the given save record to the DB in the background.
    *
    * Uses `onConflict: 'username_lower, save_key'` so re-saves are treated as
-   * updates. Errors are logged but do not propagate.
+   * updates. Writes `save.createdAtMs` (not the current time) so repeated
+   * upserts on an existing save never clobber its original creation
+   * timestamp; `save.savedAtMs` is the last-modified time. Errors are logged
+   * but do not propagate.
    */
-  private persist(usernameLower: string, saveKey: string, save: CachedSave, now: number): void {
+  private persist(usernameLower: string, saveKey: string, save: CachedSave): void {
     const row: DbMatchConfigSaveRow = {
       username_lower: usernameLower,
       save_key: saveKey,
       display_name: save.name,
       data: save.configuration,
-      created_at: now,
-      updated_at: now,
+      created_at: save.createdAtMs,
+      updated_at: save.savedAtMs,
     };
 
     this.client

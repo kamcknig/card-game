@@ -106,13 +106,10 @@ export class AuthSessionService {
     const now = this.clock.now();
     const ttlMs = this.serverConfigService.getAuthSessionTtlMs();
 
-    // Single-session enforcement: revoke all prior sessions for this user so
-    // the newest login is always the only valid one.
-    const prior = this.removeSessionsForUsername(result.username);
-    if (prior > 0) {
-      this.loggerService.info(`[auth] revoked ${prior} prior session(s) for '${result.username}' on new login`);
-    }
-
+    // Create and persist the new session FIRST. The store's DB write is
+    // fire-and-forget; if priors were revoked before this record existed, a
+    // slow `deleteByUsername` could race ahead of the `put` and delete the
+    // brand-new row out from under the just-logged-in user.
     this.sessionStore.put({
       token,
       username: result.username,
@@ -123,6 +120,14 @@ export class AuthSessionService {
       createdFromIp: context?.ip,
       createdFromUserAgent: context?.userAgent,
     });
+
+    // Single-session enforcement: revoke all prior sessions for this user,
+    // excluding the one just created, so the newest login is always the only
+    // valid one and can never be swept up by its own revocation.
+    const prior = this.removeSessionsForUsernameExcept(result.username, token);
+    if (prior > 0) {
+      this.loggerService.info(`[auth] revoked ${prior} prior session(s) for '${result.username}' on new login`);
+    }
 
     this.loggerService.info(`[auth] login successful for '${result.username}' via '${providerName}'`);
     return { ok: true, token, username: result.username };

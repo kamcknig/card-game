@@ -195,22 +195,28 @@ export class ServerAuthRouteHandlerService {
       });
     }
 
-    // Guard body size before calling req.json() to avoid parsing large bodies.
-    const contentLength = Number(req.headers.get('content-length') ?? '0');
+    // Cheap fast-path: reject immediately when the client-supplied
+    // Content-Length already exceeds the cap, before touching the stream.
     const maxBytes = this.serverConfigService.getAuthMaxBodyBytes();
+    const contentLength = Number(req.headers.get('content-length') ?? '0');
     if (contentLength > maxBytes) {
       this.loggerService.warn(`[auth route] login body too large from ${remoteIp}: ${contentLength} > ${maxBytes}`);
       return new Response('payload too large', { status: 413, headers: this.corsHeaders(req) });
     }
 
-    let body: Record<string, unknown>;
-    try {
-      body = await req.json();
-    } catch {
+    // Content-Length is client-controlled and can be omitted or understated —
+    // enforce the cap against the actual byte stream too.
+    const bodyResult = await this.readJsonBodyLimited(req, maxBytes);
+    if (!bodyResult.ok) {
+      if (bodyResult.reason === 'too_large') {
+        this.loggerService.warn(`[auth route] login body exceeded ${maxBytes} bytes on the wire from ${remoteIp}`);
+        return new Response('payload too large', { status: 413, headers: this.corsHeaders(req) });
+      }
       this.loggerService.debug(`[auth route] login request body is not valid JSON from ${remoteIp}`);
       this.authRateLimiterService.recordFailure(remoteIp);
       return new Response('invalid json', { status: 400, headers: this.corsHeaders(req) });
     }
+    const body = bodyResult.body;
 
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
       this.loggerService.debug(`[auth route] login request body is not a plain object from ${remoteIp}`);
@@ -455,9 +461,9 @@ export class ServerAuthRouteHandlerService {
       });
     }
 
-    // Enforce the same body-size cap applied to login.
-    const contentLength = Number(req.headers.get('content-length') ?? '0');
+    // Enforce the same body-size cap applied to login. Fast-path check first.
     const maxBytes = this.serverConfigService.getAuthMaxBodyBytes();
+    const contentLength = Number(req.headers.get('content-length') ?? '0');
     if (contentLength > maxBytes) {
       this.loggerService.warn(
         `[auth route] register body too large from ${remoteIp}: ${contentLength} > ${maxBytes}`,
@@ -465,13 +471,17 @@ export class ServerAuthRouteHandlerService {
       return new Response('payload too large', { status: 413, headers: this.corsHeaders(req) });
     }
 
-    let body: Record<string, unknown>;
-    try {
-      body = await req.json();
-    } catch {
+    // Content-Length is client-controlled — enforce the cap on the actual stream.
+    const bodyResult = await this.readJsonBodyLimited(req, maxBytes);
+    if (!bodyResult.ok) {
+      if (bodyResult.reason === 'too_large') {
+        this.loggerService.warn(`[auth route] register body exceeded ${maxBytes} bytes on the wire from ${remoteIp}`);
+        return new Response('payload too large', { status: 413, headers: this.corsHeaders(req) });
+      }
       this.authRateLimiterService.recordFailure(remoteIp);
       return new Response('invalid json', { status: 400, headers: this.corsHeaders(req) });
     }
+    const body = bodyResult.body;
 
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
       this.authRateLimiterService.recordFailure(remoteIp);
@@ -712,18 +722,21 @@ export class ServerAuthRouteHandlerService {
       return this.jsonResponse({ ok: false, message: 'unauthorized' }, 401, req);
     }
 
-    const contentLength = Number(req.headers.get('content-length') ?? '0');
     const maxBytes = this.serverConfigService.getAuthMaxBodyBytes();
+    const contentLength = Number(req.headers.get('content-length') ?? '0');
     if (contentLength > maxBytes) {
       return new Response('payload too large', { status: 413, headers: this.corsHeaders(req) });
     }
 
-    let body: Record<string, unknown>;
-    try {
-      body = await req.json();
-    } catch {
+    // Content-Length is client-controlled — enforce the cap on the actual stream.
+    const bodyResult = await this.readJsonBodyLimited(req, maxBytes);
+    if (!bodyResult.ok) {
+      if (bodyResult.reason === 'too_large') {
+        return new Response('payload too large', { status: 413, headers: this.corsHeaders(req) });
+      }
       return new Response('invalid json', { status: 400, headers: this.corsHeaders(req) });
     }
+    const body = bodyResult.body;
 
     const currentPassword =
       typeof body['currentPassword'] === 'string' ? (body['currentPassword'] as string) : '';
@@ -852,18 +865,21 @@ export class ServerAuthRouteHandlerService {
       return this.jsonResponse({ ok: false, message: 'unauthorized' }, 401, req);
     }
 
-    const contentLength = Number(req.headers.get('content-length') ?? '0');
     const maxBytes = this.serverConfigService.getAuthMaxBodyBytes();
+    const contentLength = Number(req.headers.get('content-length') ?? '0');
     if (contentLength > maxBytes) {
       return new Response('payload too large', { status: 413, headers: this.corsHeaders(req) });
     }
 
-    let body: Record<string, unknown>;
-    try {
-      body = await req.json();
-    } catch {
+    // Content-Length is client-controlled — enforce the cap on the actual stream.
+    const bodyResult = await this.readJsonBodyLimited(req, maxBytes);
+    if (!bodyResult.ok) {
+      if (bodyResult.reason === 'too_large') {
+        return new Response('payload too large', { status: 413, headers: this.corsHeaders(req) });
+      }
       return new Response('invalid json', { status: 400, headers: this.corsHeaders(req) });
     }
+    const body = bodyResult.body;
 
     const email = typeof body['email'] === 'string' ? (body['email'] as string).trim() : '';
     const password = typeof body['password'] === 'string' ? (body['password'] as string) : '';
@@ -1092,9 +1108,10 @@ export class ServerAuthRouteHandlerService {
       });
     }
 
-    // Apply the same body-size cap used elsewhere in this module.
-    const contentLength = Number(req.headers.get('content-length') ?? '0');
+    // Apply the same body-size cap used elsewhere in this module. Fast-path
+    // check first, then enforce against the actual stream.
     const maxBytes = this.serverConfigService.getAuthMaxBodyBytes();
+    const contentLength = Number(req.headers.get('content-length') ?? '0');
     if (contentLength > maxBytes) {
       this.loggerService.warn(
         `[auth route] resend-confirmation body too large from ${remoteIp}: ${contentLength} > ${maxBytes}`,
@@ -1102,13 +1119,18 @@ export class ServerAuthRouteHandlerService {
       return new Response('payload too large', { status: 413, headers: this.corsHeaders(req) });
     }
 
-    let body: Record<string, unknown>;
-    try {
-      body = await req.json();
-    } catch {
+    const bodyResult = await this.readJsonBodyLimited(req, maxBytes);
+    if (!bodyResult.ok) {
+      if (bodyResult.reason === 'too_large') {
+        this.loggerService.warn(
+          `[auth route] resend-confirmation body exceeded ${maxBytes} bytes on the wire from ${remoteIp}`,
+        );
+        return new Response('payload too large', { status: 413, headers: this.corsHeaders(req) });
+      }
       this.authRateLimiterService.recordFailure(remoteIp);
       return new Response('invalid json', { status: 400, headers: this.corsHeaders(req) });
     }
+    const body = bodyResult.body;
 
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
       this.authRateLimiterService.recordFailure(remoteIp);
@@ -1181,6 +1203,60 @@ export class ServerAuthRouteHandlerService {
     }
 
     return this.jsonResponse({ ok: true }, 200, req);
+  }
+
+  /**
+   * Reads and parses a JSON request body while enforcing `maxBytes` against
+   * the actual byte stream.
+   *
+   * The `Content-Length` header is client-controlled and cannot be trusted
+   * as the sole guard — a request can omit it entirely or under-report it,
+   * bypassing the cheap header-based pre-check that call sites run first.
+   * This reads the stream chunk-by-chunk and bails out (cancelling the
+   * reader) the moment the running total exceeds `maxBytes`, so a hostile
+   * client can never force the full body to be buffered before rejection.
+   *
+   * Returns `{ ok: true, body }` on success. Returns `{ ok: false, reason }`
+   * with `'too_large'` when the byte cap is exceeded on the wire, or
+   * `'invalid'` when the body stream is missing/unreadable or the
+   * accumulated bytes do not parse as JSON.
+   */
+  private async readJsonBodyLimited(
+    req: Request,
+    maxBytes: number,
+  ): Promise<{ ok: true; body: Record<string, unknown> } | { ok: false; reason: 'too_large' | 'invalid' }> {
+    const reader = req.body?.getReader();
+    if (!reader) {
+      return { ok: false, reason: 'invalid' };
+    }
+
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        // Stop reading immediately — do not buffer the rest of a hostile
+        // oversized body just to discard it.
+        await reader.cancel();
+        return { ok: false, reason: 'too_large' };
+      }
+      chunks.push(value);
+    }
+
+    try {
+      const combined = new Uint8Array(total);
+      let offset = 0;
+      for (const chunk of chunks) {
+        combined.set(chunk, offset);
+        offset += chunk.byteLength;
+      }
+      const text = new TextDecoder().decode(combined);
+      return { ok: true, body: JSON.parse(text) as Record<string, unknown> };
+    } catch {
+      return { ok: false, reason: 'invalid' };
+    }
   }
 
   /**
