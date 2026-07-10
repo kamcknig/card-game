@@ -66,8 +66,9 @@ export class PromptDialogHostComponent {
       return promptArgs.actionButtons;
     }
 
-    // Provide a default confirm action for select prompts that do not define action buttons.
-    if (promptContent?.type === 'select') {
+    // Provide a default confirm action for select/name-card prompts that do
+    // not define action buttons.
+    if (promptContent?.type === 'select' || promptContent?.type === 'name-card') {
       return [{ label: 'Confirm', action: 1 }];
     }
 
@@ -91,7 +92,10 @@ export class PromptDialogHostComponent {
       return promptArgs.validationAction;
     }
 
-    if (promptContent?.type === 'select' && !promptArgs.actionButtons?.length) {
+    if (
+      (promptContent?.type === 'select' || promptContent?.type === 'name-card')
+      && !promptArgs.actionButtons?.length
+    ) {
       return 1;
     }
 
@@ -149,11 +153,6 @@ export class PromptDialogHostComponent {
   // Updates host way-selection payload from select prompt content.
   onSelectedWayUpdated(wayId: number | null): void {
     this._selectedWayId.set(wayId);
-  }
-
-  // Handles content-level finish events.
-  onContentFinished(): void {
-    this.submitResponse();
   }
 
   // Handles explicit dialog action button clicks.

@@ -42,7 +42,7 @@
           <app-prompt-name-card-content
             [selfPlayerId]="request.selfPlayerId"
             (resultsUpdated)="onResultsUpdated($event)"
-            (finished)="onContentFinished()"
+            (validationUpdated)="onValidationUpdated($event)"
           ></app-prompt-name-card-content>
         }
 

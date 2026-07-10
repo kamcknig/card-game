@@ -10,6 +10,7 @@
       <button
         type="button"
         class="name-card-result"
+        [class.selected]="card.cardKey === selectedCardKey()"
         (click)="selectCard(card)">
         <app-card [cardData]="card" [forceFacing]="'front'" />
       </button>
