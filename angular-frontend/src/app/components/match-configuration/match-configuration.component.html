@@ -455,21 +455,11 @@
       @if (savedConfigurations().length < 1) {
         <div class="config-dialog-meta">No saved configurations found.</div>
       } @else {
-        <div class="search-wrapper">
-          <lucide-icon class="search-icon" [img]="SearchIcon" [size]="14" />
-          <input
-            class="config-dialog-search-input"
-            type="text"
-            placeholder="Search configurations..."
-            [value]="loadDialogSearchTerm()"
-            (input)="updateLoadDialogSearchTerm($any($event.target).value)"
-          />
-          @if (loadDialogSearchTerm().length > 0) {
-            <button class="search-clear-button" type="button" (click)="clearLoadDialogSearch()" aria-label="Clear search">
-              <lucide-icon [img]="RemoveIcon" [size]="12" />
-            </button>
-          }
-        </div>
+        <app-search-input
+          [value]="loadDialogSearchTerm()"
+          [placeholder]="'Search configurations...'"
+          (valueChange)="updateLoadDialogSearchTerm($event)"
+        />
         @if (filteredSavedConfigurations().length < 1) {
           <div class="config-dialog-meta">No matches for '{{ loadDialogSearchTerm() }}'.</div>
         } @else {

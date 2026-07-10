@@ -7,22 +7,13 @@
 >
   <!-- ── Toolbar: search input + live selection count ── -->
   <div class="modal-toolbar">
-    <div class="search-wrapper">
-      <lucide-icon class="search-icon" [img]="SearchIcon" [size]="14" />
-      <input
-        #searchInput
-        class="search-input"
-        type="text"
-        placeholder="Search by name, type, or expansion..."
-        (input)="updateSearchTerm($any($event.target).value)"
-        autofocus
-      />
-      @if (rawSearchTerm().length > 0) {
-        <button class="search-clear-button" (click)="clearSearch()" aria-label="Clear search">
-          <lucide-icon [img]="XIcon" [size]="12" />
-        </button>
-      }
-    </div>
+    <app-search-input
+      class="modal-search"
+      [value]="rawSearchTerm()"
+      [placeholder]="'Search by name, type, or expansion...'"
+      [autofocus]="true"
+      (valueChange)="updateSearchTerm($event)"
+    />
     @if (selectedCount() > 0) {
       <span class="selected-count-badge">{{ selectedCount() }} selected</span>
     }

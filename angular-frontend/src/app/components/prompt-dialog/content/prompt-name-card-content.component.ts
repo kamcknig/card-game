@@ -9,15 +9,16 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { NgOptimizedImage } from '@angular/common';
 import { CardNoId, PlayerId } from 'shared/types';
 import { SocketService } from '../../../core/socket-service/socket.service';
-import { displayCardDetail } from '../../match/views/modal/display-card-detail';
+import { CardComponent } from '../../card/card.component';
+import { SearchInputComponent } from '../../ui/search-input/search-input.component';
 
 @Component({
   selector: 'app-prompt-name-card-content',
   imports: [
-    NgOptimizedImage,
+    CardComponent,
+    SearchInputComponent,
   ],
   templateUrl: './prompt-name-card-content.component.html',
   styleUrl: './prompt-name-card-content.component.scss',
@@ -78,12 +79,6 @@ export class PromptNameCardContentComponent implements OnInit, OnDestroy {
   selectCard(card: CardNoId): void {
     this.resultsUpdated.emit(card.cardKey);
     this.finished.emit();
-  }
-
-  // Opens detail art for a search result via right-click.
-  onCardContextMenu(event: MouseEvent, card: CardNoId): void {
-    event.preventDefault();
-    void displayCardDetail(card);
   }
 
   // Receives server-backed name search results.

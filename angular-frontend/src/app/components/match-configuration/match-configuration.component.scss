@@ -1,5 +1,3 @@
-@use '../ui/dialog/dialog-search' as dialog-search;
-
 /* ——— Layout ——————————————————————————————— */
 $match-config-single-column-breakpoint: 940px;
 
@@ -636,9 +634,8 @@ $match-config-single-column-breakpoint: 940px;
 // classes from styles.scss). No local rules needed.
 
 // ── Load-dialog search input ──
-@include dialog-search.field('.config-dialog-search-input');
-
 // Sits above the saved-configuration list within .config-dialog-body.
-.search-wrapper {
+app-search-input {
+  display: block;
   margin-bottom: var(--theme-space-sm);
 }

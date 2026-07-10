@@ -1,9 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  ElementRef,
   OnInit,
-  ViewChild,
   computed,
   inject,
   input,
@@ -27,10 +25,11 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { selectableSearchCatalogStore } from '../../../state/selectable-search-state';
 import { Subject, debounceTime, startWith } from 'rxjs';
-import { LucideAngularModule, Search, X, Check } from 'lucide-angular';
+import { LucideAngularModule, Check } from 'lucide-angular';
 import { CardComponent } from '../../card/card.component';
 import { CardLikeComponent, CardLikeKind } from '../../card-like/card-like.component';
 import { UiDialogComponent } from '../../ui/dialog/ui-dialog.component';
+import { SearchInputComponent } from '../../ui/search-input/search-input.component';
 
 export type SelectableCardLikeNoId =
   | EventNoId
@@ -68,7 +67,7 @@ const CATALOG_KINDS_WITH_COST: ReadonlySet<SearchCatalogKind> = new Set<SearchCa
 
 @Component({
   selector: 'app-select-card-like-modal',
-  imports: [LucideAngularModule, CardComponent, CardLikeComponent, UiDialogComponent],
+  imports: [LucideAngularModule, CardComponent, CardLikeComponent, UiDialogComponent, SearchInputComponent],
   templateUrl: './select-card-like-modal.component.html',
   styleUrl: './select-card-like-modal.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -76,9 +75,6 @@ const CATALOG_KINDS_WITH_COST: ReadonlySet<SearchCatalogKind> = new Set<SearchCa
 export class SelectCardLikeModalComponent implements OnInit {
   private readonly _nanoService = inject(NanostoresService);
   private readonly _searchInput$ = new Subject<string>();
-
-  /** Native input element ref used to imperatively clear the DOM value. */
-  @ViewChild('searchInput') private _searchInputEl!: ElementRef<HTMLInputElement>;
 
   /** Card keys that should appear pre-selected when the modal opens. */
   initialSelectionKeys = input<string[]>([]);
@@ -102,8 +98,6 @@ export class SelectCardLikeModalComponent implements OnInit {
   close = output<void>();
 
   /** Lucide icon references required by the template. */
-  readonly SearchIcon = Search;
-  readonly XIcon = X;
   readonly CheckIcon = Check;
 
   /** Debounced search term used to filter the grid. */
@@ -227,7 +221,6 @@ export class SelectCardLikeModalComponent implements OnInit {
 
   /** Clears the search input and resets all search state. */
   clearSearch(): void {
-    this._searchInputEl.nativeElement.value = '';
     this.updateSearchTerm('');
   }
 

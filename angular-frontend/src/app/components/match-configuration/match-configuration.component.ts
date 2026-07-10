@@ -48,9 +48,10 @@ import {
 } from './select-card-like-modal/select-card-like-modal.component';
 import { SceneContentComponent } from '../scene-content/scene-content.component';
 import { UiDialogComponent } from '../ui/dialog/ui-dialog.component';
+import { SearchInputComponent } from '../ui/search-input/search-input.component';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { compare } from 'fast-json-patch';
-import { FolderOpen, LogOut, LucideAngularModule, Save, Search, Trash2, X } from 'lucide-angular';
+import { FolderOpen, LogOut, LucideAngularModule, Save, Trash2, X } from 'lucide-angular';
 import Fuse from 'fuse.js';
 import { displayCardDetail } from '../match/views/modal/display-card-detail';
 import { CardComponent } from '../card/card.component';
@@ -89,6 +90,7 @@ type SelectionModalState = {
     SceneContentComponent,
     NgStyle,
     UiDialogComponent,
+    SearchInputComponent,
     LucideAngularModule,
     CardComponent,
     CardLikeComponent,
@@ -105,8 +107,6 @@ export class MatchConfigurationComponent implements OnDestroy {
   readonly LeaveIcon = LogOut;
   // Per-slot remove affordance shown on hover over a chosen card.
   readonly RemoveIcon = X;
-  // Lucide icon used in the load-dialog search input.
-  readonly SearchIcon = Search;
 
   private readonly _router = inject(Router);
   private readonly _nanoStoreService = inject(NanostoresService);
@@ -557,14 +557,10 @@ export class MatchConfigurationComponent implements OnDestroy {
     this._socketService.emit('loadSavedMatchConfiguration', key);
   }
 
-  // Updates the load-dialog search term from raw input events.
+  // Updates the load-dialog search term from raw input events; also called
+  // with '' to clear it and restore the full saved list.
   updateLoadDialogSearchTerm(term: string) {
     this.loadDialogSearchTerm.set(term);
-  }
-
-  // Clears the load-dialog search term, restoring the full saved list.
-  clearLoadDialogSearch() {
-    this.loadDialogSearchTerm.set('');
   }
 
   // Deletes a saved configuration entry from the load dialog list.

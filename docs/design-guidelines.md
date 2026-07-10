@@ -594,12 +594,13 @@ solid var(--theme-border-subtle)`. Cancel = `.btn .btn-secondary`, Confirm =
 `.btn .btn-primary`, destructive = `.btn .btn-danger`. Gap: `8px`. Align
 right with `justify-content: flex-end`.
 
-**Search input:** shared recipe in
-`angular-frontend/src/app/components/ui/dialog/_dialog-search.scss`
-(`@use` it rather than re-implementing): `background:
+**Search input:** use the shared `app-search-input` component
+(`angular-frontend/src/app/components/ui/search-input/`) rather than
+re-implementing — it owns the wrapper, magnifying-glass icon, text input,
+and the clear (X) button that appears once there's text. `background:
 var(--theme-surface-app-start); border: 1px solid var(--theme-border-subtle);
 border-radius: 8px; padding: 9px 12px 9px 34px; font-size: 14px`. Search
-icon: 14×14 SVG magnifying glass at `left: 12px`.
+icon: 14×14 magnifying glass at `left: 12px`.
 
 **Filter chips:**
 - Inactive: `padding: 3px 10px; border-radius: 10px; border: 1px solid transparent; background: transparent; color: var(--theme-text-tertiary); font-size: 11px`
