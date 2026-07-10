@@ -62,7 +62,6 @@ export class PromptSelectContentComponent {
   validationUpdated = output<boolean>();
   resultsUpdated = output<number[]>();
   selectedWayUpdated = output<CardLikeId | null>();
-  finished = output<void>();
 
   private readonly _cardsById = toSignal(this._nanoService.useStore(cardStore), {
     initialValue: cardStore.get(),
@@ -89,12 +88,11 @@ export class PromptSelectContentComponent {
 
   private _lastSelectedWaySignature: string | null = null;
 
-  // Shared dedup-and-emit machinery for results/validation/auto-finish; see
+  // Shared dedup-and-emit machinery for results/validation; see
   // selection-emitter.ts for why this isn't itself an `effect()`.
   private readonly _selectionEmitter = createSelectionEmitter<number[]>({
     resultsUpdated: this.resultsUpdated,
     validationUpdated: this.validationUpdated,
-    finished: this.finished,
   });
 
   // Rebuilds prompt-local selection state whenever the prompt payload changes.
@@ -112,15 +110,12 @@ export class PromptSelectContentComponent {
 
   // Emits prompt results/validation as selection state changes.
   private readonly _emitSelectionState = effect(() => {
-    const selectedEntryKeys = this._selectedEntryKeys();
     const selectedIds = this.selectedSourceIds();
     const validationState = this.isValidSelection();
 
     this._selectionEmitter.emit({
       result: selectedIds,
       isValid: validationState,
-      shouldAutoFinish: this.shouldAutoFinish(),
-      autoFinishSignatureExtra: selectedEntryKeys.join(','),
     });
 
     if (this.showWaySelection()) {
@@ -250,20 +245,11 @@ export class PromptSelectContentComponent {
   // True when this prompt content is display-only and should not accept selection.
   readonly displayOnly = computed(() => this.content().type === 'display-cards');
 
-  // Toggles one selectable entry in the prompt selection.
+  // Toggles one selectable entry in the prompt selection. Selection never
+  // submits by itself — the host's Confirm button (validation-gated) is the
+  // only submit path.
   toggleEntry(entry: PromptSelectionEntry): void {
     if (this.displayOnly() || !entry.selectable) {
-      return;
-    }
-
-    if (this.canShowWayTooltipForEntry(entry)) {
-      this._selectedEntryKeys.set([entry.key]);
-      this._selectedWayEntryKey.set(entry.key);
-      this._selectedWayId.set(null);
-      this.cancelWayTooltipClose();
-      this._wayTooltipEntryKey.set(null);
-      this._wayTooltipHovering.set(false);
-      this.emitImmediatePlaySelectionFinish(entry, null);
       return;
     }
 
@@ -271,16 +257,26 @@ export class PromptSelectContentComponent {
     const existingIndex = currentSelection.indexOf(entry.key);
 
     if (existingIndex >= 0) {
+      // Clicking a selected entry always deselects it (any count spec) —
+      // Confirm disables again if the selection drops below the spec.
       currentSelection.splice(existingIndex, 1);
+      this._selectedEntryKeys.set(currentSelection);
+    } else if (this.isSingleSelection()) {
+      // Exact-1 specs move the selection to the clicked entry.
+      this._selectedEntryKeys.set([entry.key]);
     } else {
+      // Multi-pick specs ("select 2", "up to 3") keep pure toggle
+      // semantics: add on click, remove on re-click — never replace.
       currentSelection.push(entry.key);
+      this._selectedEntryKeys.set(currentSelection);
     }
 
-    this._selectedEntryKeys.set(currentSelection);
     this.syncWaySelectionWithCurrentSelection();
   }
 
-  // Applies a Way choice to the hovered/selected eligible card.
+  // Applies a Way choice to the hovered/selected eligible card. Selecting a
+  // Way records the choice (glow highlight via selectedWayId); Confirm is
+  // the only submit path.
   selectWay(wayId: CardLikeId): void {
     const targetEntry = this.wayTooltipEntry();
     if (!targetEntry) {
@@ -293,7 +289,6 @@ export class PromptSelectContentComponent {
     this.cancelWayTooltipClose();
     this._wayTooltipEntryKey.set(null);
     this._wayTooltipHovering.set(false);
-    this.emitImmediatePlaySelectionFinish(targetEntry, wayId);
   }
 
   // Indicates whether an entry is currently selected.
@@ -384,19 +379,18 @@ export class PromptSelectContentComponent {
     return this._selectedWayId();
   }
 
-  // Mirrors legacy auto-finish behavior for single-card selects without a Way choice.
-  private shouldAutoFinish(): boolean {
+  // True when the prompt's count spec demands exactly one selection —
+  // clicking a different entry then moves the selection instead of
+  // stacking into an invalid two-selected state.
+  private isSingleSelection(): boolean {
     const content = this.content();
-    if (content.type !== 'select' || this.showWaySelection()) {
+    if (content.type !== 'select') {
       return false;
     }
-
     const countSpec = resolveCountSpec(content.selectCount);
-    if (countSpec.kind === 'fixed') {
-      return countSpec.count === 1;
-    }
-
-    return countSpec.min === 1 && countSpec.max === 1;
+    return countSpec.kind === 'fixed'
+      ? countSpec.count === 1
+      : countSpec.min === 1 && countSpec.max === 1;
   }
 
   // Cancels in-flight tooltip close timers.
@@ -460,13 +454,5 @@ export class PromptSelectContentComponent {
     top = Math.min(Math.max(top, padding), maxTop);
 
     return { left: Math.floor(left), top: Math.floor(top) };
-  }
-
-  // Submits single-card play selection immediately to match board-click play behavior.
-  private emitImmediatePlaySelectionFinish(entry: PromptSelectionEntry, selectedWayId: CardLikeId | null): void {
-    this.validationUpdated.emit(true);
-    this.resultsUpdated.emit([entry.sourceId]);
-    this.selectedWayUpdated.emit(selectedWayId);
-    this.finished.emit();
   }
 }
