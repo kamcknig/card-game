@@ -158,6 +158,16 @@ System reactions fire first, then per-player reactions in turn order.
 
 **Duration effects** (`registerDurationEffect()`) associate trigger IDs with card IDs for cleanup when the card leaves play.
 
+### Prompt buttons
+
+Action button ids are arbitrary. A prompt's decline/cancel button MUST set
+`role: 'cancel'` (conventional id: `PROMPT_DECLINE_ACTION` from
+`shared/types`). The client uses this to decide dismissability: a prompt
+with a cancel-role button can be dismissed (Escape/backdrop submits that
+button's action), while a prompt without one is a required action the
+player cannot dismiss. Never rely on `action === 0` alone to mean cancel
+in new code.
+
 **Lifecycle hooks** registered via `ExpansionCardMetadataRegistryService`: `onGameStartSetup`, `onGameStart`, `onCardGained`, `onGain`, `onPlay`, `onCleanup`.
 
 ## Logging

@@ -424,9 +424,7 @@ export type PromptService = {
   chooseOne(args: UserPromptActionArgs): Promise<number | null>;
   confirm(args: UserPromptActionArgs, confirmAction?: number): Promise<boolean>;
   requestNumberInput(args: UserPromptActionArgs, confirmAction?: number): Promise<number | null>;
-  selectCardsFromPrompt(args: UserPromptActionArgs): Promise<CardId[]>;
   selectSingleCardFromPrompt(args: SelectSingleCardPromptArgs): Promise<CardId | null>;
-  selectSingleCardFromAction(args: SelectSingleActionCardArgs): Promise<CardId | null>;
   requestActionResult<TResult = unknown>(
     args: UserPromptActionArgs,
   ): Promise<{ action: number; result: TResult | undefined } | null>;

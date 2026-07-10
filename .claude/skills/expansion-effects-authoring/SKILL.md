@@ -75,6 +75,7 @@ Before introducing any new helper function, apply this gate in order:
 - Follow Dominion Lose Track and Stop-Moving rules.
 - NEVER use `select*` actions (`selectSingleCard`, `selectCard`, etc.) when the player would be unable to see the candidate cards on the board (for example, cards currently in deck/hidden zones).
 - In hidden/invisible-card cases, use a prompt-based action (`userPrompt` / `promptService`) that explicitly displays the candidate cards and choice UI.
+- Prompt buttons: an optional prompt's decline/cancel button must set `role: 'cancel'` (conventional id: `PROMPT_DECLINE_ACTION` from `shared/types`) so the client can offer Escape/backdrop dismissal; a required prompt has no cancel-role button and is not dismissable. Never rely on `action === 0` alone to mean cancel.
 - Prefer pile-key semantics over card-key semantics for supply-top effects (split pile safe).
 - Keep comments for all new code.
 - Do not remove pre-existing comments.

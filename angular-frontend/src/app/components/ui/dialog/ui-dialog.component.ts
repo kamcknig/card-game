@@ -19,7 +19,7 @@ import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
 import { LucideAngularModule, X } from 'lucide-angular';
 
-export type UiDialogBackdropVariant = 'none' | 'soft' | 'strong';
+export type UiDialogBackdropVariant = 'none' | 'medium' | 'strong';
 // Visual skin applied to the panel: 'light' = design-guidelines dialog
 // standard (surface-panel), 'dark' = match-overlay standard (translucent
 // black), 'none' = chromeless (consumer paints its own chrome, e.g. card
@@ -58,16 +58,10 @@ export class UiDialogComponent implements AfterViewInit, OnDestroy {
   // Lucide icon reference for the standard header close-X.
   readonly XIcon = X;
 
-  // Controls whether clicking the backdrop dismisses the dialog. Legacy
-  // input kept alongside `dismissable` until Phase 6 removes it.
-  closeOnBackdrop = input(true);
   // Controls whether a full-screen backdrop is created for this dialog.
   hasBackdrop = input(true);
-  // Controls z-index stacking for dialog ordering. Superseded by `layer`
-  // when set; kept for consumers that haven't migrated yet.
-  zIndex = input(3000);
   // Backdrop intensity variant used by dialog overlays.
-  backdropVariant = input<UiDialogBackdropVariant>('soft');
+  backdropVariant = input<UiDialogBackdropVariant>('medium');
   // Optional panel class for per-dialog layout customization.
   panelClass = input<string | undefined>(undefined);
   // Visual skin: 'light' = design-guidelines dialog standard (surface-panel),
@@ -82,8 +76,8 @@ export class UiDialogComponent implements AfterViewInit, OnDestroy {
   // When false the dialog can only be closed programmatically — required-action
   // prompts set this false so the user must perform the requested action.
   dismissable = input(true);
-  // Named layer; when set, takes precedence over the legacy zIndex input.
-  layer = input<UiDialogLayer | undefined>(undefined);
+  // Named layer controlling z-index stacking; defaults to the base layer.
+  layer = input<UiDialogLayer>('base');
 
   close = output<void>();
 
@@ -156,23 +150,18 @@ export class UiDialogComponent implements AfterViewInit, OnDestroy {
   }
 
   // Single user-dismissal gate: Escape, backdrop, and close-X all route here.
-  // Non-dismissable dialogs (required actions) ignore all three. Both the
-  // new `dismissable` gate and the legacy `closeOnBackdrop` input must allow
-  // dismissal — `closeOnBackdrop` remains honored so existing
-  // `[closeOnBackdrop]="false"` consumers stay locked until they migrate; it
-  // is removed in Phase 6.
+  // Non-dismissable dialogs (required actions) ignore all three.
   private requestDismiss(): void {
-    if (!this.dismissable() || !this.closeOnBackdrop()) {
+    if (!this.dismissable()) {
       return;
     }
     this.close.emit();
   }
 
-  // Applies explicit z-index ordering to both overlay panel and backdrop.
-  // Resolves the effective z-index from the named layer when set, falling
-  // back to the legacy `zIndex` input.
+  // Applies explicit z-index ordering to both overlay panel and backdrop,
+  // resolved from the named layer ladder.
   private applyZIndex(overlayRef: OverlayRef): void {
-    const baseZIndex = this.layer() !== undefined ? UI_DIALOG_LAYERS[this.layer()!] : this.zIndex();
+    const baseZIndex = UI_DIALOG_LAYERS[this.layer()];
     overlayRef.hostElement.style.setProperty('z-index', String(baseZIndex + 1));
     overlayRef.overlayElement.style.setProperty('z-index', String(baseZIndex + 1));
     overlayRef.backdropElement?.style.setProperty('z-index', String(baseZIndex));

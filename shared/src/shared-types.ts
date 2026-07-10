@@ -656,7 +656,6 @@ export interface ServerListenEvents {
   banLobbyPlayer: (gameId: string, targetPlayerId: PlayerId) => void;
   // Owner-only request to unban a previously banned session from a lobby game.
   unbanLobbyPlayer: (gameId: string, targetSessionId: string) => void;
-  cardsSelected: (selected: CardId[]) => void
   cardLikeTapped: (playerId: PlayerId, cardId: CardId) => void;
   cardTapped: (playerId: PlayerId, cardId: CardId) => void;
   // Plays a hand Action card using an active Way instead of its printed effect.

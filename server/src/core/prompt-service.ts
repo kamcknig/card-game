@@ -1,10 +1,5 @@
 import { ActionService, PromptService as PromptServiceContract } from '@server-types/index.ts';
-import {
-  CardId,
-  SelectSingleActionCardArgs,
-  SelectSingleCardPromptArgs,
-  UserPromptActionArgs,
-} from 'shared/types/index.ts';
+import { CardId, SelectSingleCardPromptArgs, UserPromptActionArgs } from 'shared/types/index.ts';
 
 // Provides typed prompt helpers so effect code can avoid repetitive cast/parsing logic.
 export class PromptService implements PromptServiceContract {
@@ -42,7 +37,8 @@ export class PromptService implements PromptServiceContract {
   }
 
   // Returns selected card ids from a prompt-result payload; returns an empty array when no selection result exists.
-  public async selectCardsFromPrompt(args: UserPromptActionArgs): Promise<CardId[]> {
+  // Private: the only public entry point for card selection is selectSingleCardFromPrompt.
+  private async selectCardsFromPrompt(args: UserPromptActionArgs): Promise<CardId[]> {
     const result = await this.request<unknown>(args);
     return this.extractSelectedCardIds(result);
   }
@@ -57,11 +53,6 @@ export class PromptService implements PromptServiceContract {
       },
     });
     return selectedCardIds[0] ?? null;
-  }
-
-  // Runs the action-layer single-card selection and returns null when no card was selected.
-  public async selectSingleCardFromAction(args: SelectSingleActionCardArgs): Promise<CardId | null> {
-    return await this.actionService.run('selectSingleCard', args);
   }
 
   // Returns both the selected action and typed result payload when action is present; otherwise returns null.
