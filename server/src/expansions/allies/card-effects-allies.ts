@@ -462,15 +462,18 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
       // Student can optionally rotate the Wizards split pile before the mandatory trash.
-      const rotatePrompt = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId,
-        prompt: 'Rotate the Wizards?',
-        actionButtons: [
-          { label: 'NO', action: 1 },
-          { label: 'ROTATE', action: 2 },
-        ],
-      })) as { action?: number } | null;
-      if (rotatePrompt?.action === 2) {
+      const shouldRotate = await cardEffectArgs.promptService.confirm(
+        {
+          playerId,
+          prompt: 'Rotate the Wizards?',
+          actionButtons: [
+            { label: 'NO', action: 1 },
+            { label: 'ROTATE', action: 2 },
+          ],
+        },
+        2,
+      );
+      if (shouldRotate) {
         loggerService.debug('[student effect] rotating Wizards split pile');
         await cardEffectArgs.actionService.run('rotateSplitPile', {
           pileKey: WIZARDS_PILE_KEY,
@@ -726,15 +729,18 @@ const cardEffects: CardExpansionModule = {
       });
 
       // Town Crier rotates the Townsfolk split pile independently of the chosen branch.
-      const rotatePrompt = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId,
-        prompt: 'Rotate the Townsfolk?',
-        actionButtons: [
-          { label: 'NO', action: 1 },
-          { label: 'ROTATE', action: 2 },
-        ],
-      })) as { action?: number } | null;
-      if (rotatePrompt?.action !== 2) {
+      const shouldRotate = await cardEffectArgs.promptService.confirm(
+        {
+          playerId,
+          prompt: 'Rotate the Townsfolk?',
+          actionButtons: [
+            { label: 'NO', action: 1 },
+            { label: 'ROTATE', action: 2 },
+          ],
+        },
+        2,
+      );
+      if (!shouldRotate) {
         loggerService.debug('[town-crier effect] player declined to rotate Townsfolk');
         return;
       }
@@ -904,16 +910,19 @@ const cardEffects: CardExpansionModule = {
           return;
         }
 
-        const prompt = (await cardEffectArgs.actionService.run('userPrompt', {
-          playerId: eventArgs.playerId,
-          prompt: 'Put this onto your deck?',
-          actionButtons: [
-            { label: 'NO', action: 1 },
-            { label: 'YES', action: 2 },
-          ],
-        })) as { action?: number } | null;
+        const shouldTopDeck = await cardEffectArgs.promptService.confirm(
+          {
+            playerId: eventArgs.playerId,
+            prompt: 'Put this onto your deck?',
+            actionButtons: [
+              { label: 'NO', action: 1 },
+              { label: 'YES', action: 2 },
+            ],
+          },
+          2,
+        );
 
-        if (prompt?.action !== 2) {
+        if (!shouldTopDeck) {
           loggerService.debug('[tent onDiscarded effect] player declined to top-deck Tent');
           return;
         }
@@ -933,16 +942,19 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
       // Tent optionally rotates the Forts split pile.
-      const rotatePrompt = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId: cardEffectArgs.playerId,
-        prompt: 'Rotate the Forts?',
-        actionButtons: [
-          { label: 'NO', action: 1 },
-          { label: 'ROTATE', action: 2 },
-        ],
-      })) as { action?: number } | null;
+      const shouldRotate = await cardEffectArgs.promptService.confirm(
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Rotate the Forts?',
+          actionButtons: [
+            { label: 'NO', action: 1 },
+            { label: 'ROTATE', action: 2 },
+          ],
+        },
+        2,
+      );
 
-      if (rotatePrompt?.action !== 2) {
+      if (!shouldRotate) {
         loggerService.debug('[tent effect] player declined to rotate Forts');
         return;
       }

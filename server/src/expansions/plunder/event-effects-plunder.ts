@@ -1051,16 +1051,19 @@ const effectMap: CardExpansionModule = {
   scrounge: {
     registerEffects: () => async cardEffectArgs => {
       const playerId = cardEffectArgs.playerId;
-      const choice = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId,
-        prompt: 'Choose one',
-        actionButtons: [
-          { label: 'TRASH A CARD', action: 1 },
-          { label: 'GAIN ESTATE FROM TRASH', action: 2 },
-        ],
-      })) as { action: number };
+      const choseTrash = await cardEffectArgs.promptService.confirm(
+        {
+          playerId,
+          prompt: 'Choose one',
+          actionButtons: [
+            { label: 'TRASH A CARD', action: 1 },
+            { label: 'GAIN ESTATE FROM TRASH', action: 2 },
+          ],
+        },
+        1,
+      );
 
-      if (choice.action === 1) {
+      if (choseTrash) {
         const hand = getPlayerSourceSafe(cardEffectArgs, 'playerHand', playerId);
         if (!hand.length) {
           return;

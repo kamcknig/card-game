@@ -226,20 +226,23 @@ const expansion: CardExpansionModule = {
             const gainedCard = triggeredArgs.cardLibrary.getCard(gainedCardId);
 
             loggerService.debug(`[cargo-ship cardGained effect] gained ${gainedCard}; prompting set-aside choice`);
-            const promptResult = (await triggeredArgs.actionService.run('userPrompt', {
-              playerId: cardEffectArgs.playerId,
-              prompt: `Set aside ${gainedCard.cardName} with Cargo Ship?`,
-              actionButtons: [
-                { label: 'NO', action: 1 },
-                { label: 'YES', action: 2 },
-              ],
-              content: {
-                type: 'display-cards',
-                cardIds: [gainedCardId],
+            const shouldSetAside = await triggeredArgs.promptService.confirm(
+              {
+                playerId: cardEffectArgs.playerId,
+                prompt: `Set aside ${gainedCard.cardName} with Cargo Ship?`,
+                actionButtons: [
+                  { label: 'NO', action: 1 },
+                  { label: 'YES', action: 2 },
+                ],
+                content: {
+                  type: 'display-cards',
+                  cardIds: [gainedCardId],
+                },
               },
-            })) as { action?: number } | null;
+              2,
+            );
 
-            if (promptResult?.action !== 2) {
+            if (!shouldSetAside) {
               loggerService.debug('[cargo-ship cardGained effect] player declined set-aside');
               return;
             }
@@ -340,16 +343,19 @@ const expansion: CardExpansionModule = {
         loggerService.debug(
           `[ducat onGained effect] prompting whether to trash Copper from ${copperInHandIds.length} card(s)`,
         );
-        const promptResult = (await cardEffectArgs.actionService.run('userPrompt', {
-          playerId: eventArgs.playerId,
-          prompt: 'Trash a Copper from your hand?',
-          actionButtons: [
-            { label: 'NO', action: 1 },
-            { label: 'YES', action: 2 },
-          ],
-        })) as { action?: number } | null;
+        const shouldTrashCopper = await cardEffectArgs.promptService.confirm(
+          {
+            playerId: eventArgs.playerId,
+            prompt: 'Trash a Copper from your hand?',
+            actionButtons: [
+              { label: 'NO', action: 1 },
+              { label: 'YES', action: 2 },
+            ],
+          },
+          2,
+        );
 
-        if (promptResult?.action !== 2) {
+        if (!shouldTrashCopper) {
           loggerService.debug('[ducat onGained effect] player declined to trash Copper');
           return;
         }
@@ -860,16 +866,19 @@ const expansion: CardExpansionModule = {
         }
 
         loggerService.debug(`[old-witch effect] player ${targetPlayerId} may trash a Curse from hand`);
-        const promptResult = (await cardEffectArgs.actionService.run('userPrompt', {
-          playerId: targetPlayerId,
-          prompt: 'Trash a Curse from your hand?',
-          actionButtons: [
-            { label: 'NO', action: 1 },
-            { label: 'YES', action: 2 },
-          ],
-        })) as { action?: number } | null;
+        const shouldTrashCurse = await cardEffectArgs.promptService.confirm(
+          {
+            playerId: targetPlayerId,
+            prompt: 'Trash a Curse from your hand?',
+            actionButtons: [
+              { label: 'NO', action: 1 },
+              { label: 'YES', action: 2 },
+            ],
+          },
+          2,
+        );
 
-        if (promptResult?.action !== 2) {
+        if (!shouldTrashCurse) {
           loggerService.debug(`[old-witch effect] player ${targetPlayerId} declined to trash a Curse`);
           continue;
         }
@@ -1173,16 +1182,19 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const promptResult = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId: cardEffectArgs.playerId,
-        prompt: 'Choose one',
-        actionButtons: [
-          { label: '+$2', action: 1 },
-          { label: 'REPLAY ACTION', action: 2 },
-        ],
-      })) as { action?: number } | null;
+      const shouldReplayAction = await cardEffectArgs.promptService.confirm(
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Choose one',
+          actionButtons: [
+            { label: '+$2', action: 1 },
+            { label: 'REPLAY ACTION', action: 2 },
+          ],
+        },
+        2,
+      );
 
-      if (promptResult?.action !== 2) {
+      if (!shouldReplayAction) {
         loggerService.debug('[scepter effect] player chose +2 treasure');
         await cardEffectArgs.actionService.run('gainTreasure', {
           count: 2,

@@ -74,16 +74,19 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       // Prompt for immediate effect vs delayed duration effect.
-      const choice = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId: cardEffectArgs.playerId,
-        prompt: 'Use Barge now or at the start of your next turn?',
-        actionButtons: [
-          { label: 'NOW', action: 1 },
-          { label: 'NEXT TURN', action: 2 },
-        ],
-      })) as { action?: number } | null;
+      const useNextTurn = await cardEffectArgs.promptService.confirm(
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Use Barge now or at the start of your next turn?',
+          actionButtons: [
+            { label: 'NOW', action: 1 },
+            { label: 'NEXT TURN', action: 2 },
+          ],
+        },
+        2,
+      );
 
-      if (choice?.action !== 2) {
+      if (!useNextTurn) {
         // Immediate mode: resolve +3 Cards and +1 Buy now.
         loggerService.debug('[barge effect] resolving immediate mode');
         await cardEffectArgs.actionService.run('drawCard', {
@@ -150,16 +153,19 @@ const expansion: CardExpansionModule = {
           },
           triggeredEffectFn: async triggeredArgs => {
             // Prompt since this reaction is optional ("you may play this").
-            const promptResult = (await triggeredArgs.actionService.run('userPrompt', {
-              playerId,
-              prompt: 'Play Black Cat?',
-              actionButtons: [
-                { label: 'NO', action: 1 },
-                { label: 'YES', action: 2 },
-              ],
-            })) as { action?: number } | null;
+            const shouldPlay = await triggeredArgs.promptService.confirm(
+              {
+                playerId,
+                prompt: 'Play Black Cat?',
+                actionButtons: [
+                  { label: 'NO', action: 1 },
+                  { label: 'YES', action: 2 },
+                ],
+              },
+              2,
+            );
 
-            if (promptResult?.action !== 2) {
+            if (!shouldPlay) {
               loggerService.debug('[black-cat reaction] player declined to play Black Cat');
               return;
             }
@@ -604,16 +610,19 @@ const expansion: CardExpansionModule = {
             }
           },
           triggeredEffectFn: async triggeredArgs => {
-            const promptResult = (await triggeredArgs.actionService.run('userPrompt', {
-              playerId,
-              prompt: 'Play Falconer?',
-              actionButtons: [
-                { label: 'NO', action: 1 },
-                { label: 'YES', action: 2 },
-              ],
-            })) as { action?: number } | null;
+            const shouldPlay = await triggeredArgs.promptService.confirm(
+              {
+                playerId,
+                prompt: 'Play Falconer?',
+                actionButtons: [
+                  { label: 'NO', action: 1 },
+                  { label: 'YES', action: 2 },
+                ],
+              },
+              2,
+            );
 
-            if (promptResult?.action !== 2) {
+            if (!shouldPlay) {
               loggerService.debug('[falconer reaction] player declined to play Falconer');
               return;
             }
@@ -1038,16 +1047,19 @@ const expansion: CardExpansionModule = {
       });
       await cardEffectArgs.actionService.run('gainAction', { count: 2 });
 
-      const promptResult = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId: cardEffectArgs.playerId,
-        prompt: 'Discard your hand for +5 Cards?',
-        actionButtons: [
-          { label: 'NO', action: 1 },
-          { label: 'YES', action: 2 },
-        ],
-      })) as { action?: number } | null;
+      const shouldDiscardHand = await cardEffectArgs.promptService.confirm(
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Discard your hand for +5 Cards?',
+          actionButtons: [
+            { label: 'NO', action: 1 },
+            { label: 'YES', action: 2 },
+          ],
+        },
+        2,
+      );
 
-      if (promptResult?.action !== 2) {
+      if (!shouldDiscardHand) {
         loggerService.debug('[hunting-lodge effect] player declined to discard hand');
         return;
       }
@@ -1103,20 +1115,23 @@ const expansion: CardExpansionModule = {
               return;
             }
 
-            const promptResult = (await triggeredArgs.actionService.run('userPrompt', {
-              playerId: cardEffectArgs.playerId,
-              prompt: `Gain a copy of ${playedCard.cardName} with Kiln?`,
-              actionButtons: [
-                { label: 'NO', action: 1 },
-                { label: 'YES', action: 2 },
-              ],
-              content: {
-                type: 'display-cards',
-                cardIds: [copyCard.id],
+            const shouldGainCopy = await triggeredArgs.promptService.confirm(
+              {
+                playerId: cardEffectArgs.playerId,
+                prompt: `Gain a copy of ${playedCard.cardName} with Kiln?`,
+                actionButtons: [
+                  { label: 'NO', action: 1 },
+                  { label: 'YES', action: 2 },
+                ],
+                content: {
+                  type: 'display-cards',
+                  cardIds: [copyCard.id],
+                },
               },
-            })) as { action?: number } | null;
+              2,
+            );
 
-            if (promptResult?.action !== 2) {
+            if (!shouldGainCopy) {
               loggerService.debug('[kiln effect] player declined to gain copy');
               return;
             }
@@ -1605,16 +1620,19 @@ const expansion: CardExpansionModule = {
             }
           },
           triggeredEffectFn: async triggeredArgs => {
-            const promptResult = (await triggeredArgs.actionService.run('userPrompt', {
-              playerId,
-              prompt: 'Play Sheepdog?',
-              actionButtons: [
-                { label: 'NO', action: 1 },
-                { label: 'YES', action: 2 },
-              ],
-            })) as { action?: number } | null;
+            const shouldPlay = await triggeredArgs.promptService.confirm(
+              {
+                playerId,
+                prompt: 'Play Sheepdog?',
+                actionButtons: [
+                  { label: 'NO', action: 1 },
+                  { label: 'YES', action: 2 },
+                ],
+              },
+              2,
+            );
 
-            if (promptResult?.action !== 2) {
+            if (!shouldPlay) {
               loggerService.debug('[sheepdog reaction] player declined to play Sheepdog');
               return;
             }
@@ -1875,16 +1893,19 @@ const expansion: CardExpansionModule = {
           return;
         }
 
-        const promptResult = (await args.actionService.run('userPrompt', {
-          playerId: eventArgs.playerId,
-          prompt: 'Play Village Green?',
-          actionButtons: [
-            { label: 'NO', action: 1 },
-            { label: 'YES', action: 2 },
-          ],
-        })) as { action?: number } | null;
+        const shouldPlay = await args.promptService.confirm(
+          {
+            playerId: eventArgs.playerId,
+            prompt: 'Play Village Green?',
+            actionButtons: [
+              { label: 'NO', action: 1 },
+              { label: 'YES', action: 2 },
+            ],
+          },
+          2,
+        );
 
-        if (promptResult?.action !== 2) {
+        if (!shouldPlay) {
           loggerService.debug('[village-green onDiscarded] player declined to play Village Green');
           return;
         }
@@ -1908,16 +1929,19 @@ const expansion: CardExpansionModule = {
         playedCardId => playedCardId === cardEffectArgs.cardId,
       ).length;
 
-      const promptResult = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId: cardEffectArgs.playerId,
-        prompt: 'Use Village Green now or at the start of your next turn?',
-        actionButtons: [
-          { label: 'NOW', action: 1 },
-          { label: 'NEXT TURN', action: 2 },
-        ],
-      })) as { action?: number } | null;
+      const useNextTurn = await cardEffectArgs.promptService.confirm(
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Use Village Green now or at the start of your next turn?',
+          actionButtons: [
+            { label: 'NOW', action: 1 },
+            { label: 'NEXT TURN', action: 2 },
+          ],
+        },
+        2,
+      );
 
-      if (promptResult?.action !== 2) {
+      if (!useNextTurn) {
         loggerService.debug('[village-green effect] resolving immediate mode');
         await cardEffectArgs.actionService.run('drawCard', {
           playerId: cardEffectArgs.playerId,
@@ -1965,20 +1989,23 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const promptResult = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId: cardEffectArgs.playerId,
-        prompt: 'Gain a Silver?',
-        actionButtons: [
-          { label: 'NO', action: 1 },
-          { label: 'YES', action: 2 },
-        ],
-        content: {
-          type: 'display-cards',
-          cardIds: [topSilverCard.id],
+      const shouldGainSilver = await cardEffectArgs.promptService.confirm(
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Gain a Silver?',
+          actionButtons: [
+            { label: 'NO', action: 1 },
+            { label: 'YES', action: 2 },
+          ],
+          content: {
+            type: 'display-cards',
+            cardIds: [topSilverCard.id],
+          },
         },
-      })) as { action?: number } | null;
+        2,
+      );
 
-      if (promptResult?.action !== 2) {
+      if (!shouldGainSilver) {
         loggerService.debug('[wayfarer effect] player declined to gain Silver');
         return;
       }

@@ -164,16 +164,17 @@ const expansion: CardExpansionModule = {
         }
 
         // Prompt the player to decide when to receive the boon.
-        const decision = (await cardEffectArgs.actionService.run('userPrompt', {
-          playerId: eventArgs.playerId,
-          prompt: 'Receive a Boon now or at the start of your next turn?',
-          actionButtons: [
-            { label: 'NOW', action: 1 },
-            { label: 'NEXT TURN', action: 2 },
-          ],
-        })) as { action: number };
-
-        const immediate = decision.action === 1;
+        const immediate = await cardEffectArgs.promptService.confirm(
+          {
+            playerId: eventArgs.playerId,
+            prompt: 'Receive a Boon now or at the start of your next turn?',
+            actionButtons: [
+              { label: 'NOW', action: 1 },
+              { label: 'NEXT TURN', action: 2 },
+            ],
+          },
+          1,
+        );
         loggerService.debug(`[blessed-village onGained] player chose ${immediate ? 'now' : 'next turn'} for boon`);
 
         if (immediate) {
@@ -1045,21 +1046,24 @@ const expansion: CardExpansionModule = {
       });
 
       for (const targetPlayerId of targetPlayerIds) {
-        const decision = (await cardEffectArgs.actionService.run('userPrompt', {
-          playerId: targetPlayerId,
-          prompt: `Receive ${boon.cardName}?\n\n${boon.abilityText}`,
-          actionButtons: [
-            { label: 'NO', action: 1 },
-            { label: 'YES', action: 2 },
-          ],
-          content: {
-            type: 'display-cards',
-            cardIds: [],
-            cardLikeIds: [boonId],
+        const shouldReceive = await cardEffectArgs.promptService.confirm(
+          {
+            playerId: targetPlayerId,
+            prompt: `Receive ${boon.cardName}?\n\n${boon.abilityText}`,
+            actionButtons: [
+              { label: 'NO', action: 1 },
+              { label: 'YES', action: 2 },
+            ],
+            content: {
+              type: 'display-cards',
+              cardIds: [],
+              cardLikeIds: [boonId],
+            },
           },
-        })) as { action: number };
+          2,
+        );
 
-        if (decision.action !== 2) {
+        if (!shouldReceive) {
           loggerService.debug(`[sacred-grove effect] ${getPlayerById(cardEffectArgs.match, targetPlayerId)} declined`);
           continue;
         }
@@ -1178,16 +1182,19 @@ const expansion: CardExpansionModule = {
         triggeredEffectFn: async triggeredArgs => {
           const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
 
-          const decision = (await triggeredArgs.actionService.run('userPrompt', {
-            playerId: cardEffectArgs.playerId,
-            prompt: `Put ${gainedCard.cardName} onto your deck?`,
-            actionButtons: [
-              { label: 'NO', action: 1 },
-              { label: 'YES', action: 2 },
-            ],
-          })) as { action: number };
+          const shouldTopdeck = await triggeredArgs.promptService.confirm(
+            {
+              playerId: cardEffectArgs.playerId,
+              prompt: `Put ${gainedCard.cardName} onto your deck?`,
+              actionButtons: [
+                { label: 'NO', action: 1 },
+                { label: 'YES', action: 2 },
+              ],
+            },
+            2,
+          );
 
-          if (decision.action !== 2) {
+          if (!shouldTopdeck) {
             loggerService.debug('[tracker effect] player declined to topdeck gained card');
             return;
           }
@@ -1461,16 +1468,19 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const decision = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId: cardEffectArgs.playerId,
-        prompt: 'Discard 3 cards?',
-        actionButtons: [
-          { label: 'NO', action: 1 },
-          { label: 'YES', action: 2 },
-        ],
-      })) as { action: number };
+      const shouldDiscard = await cardEffectArgs.promptService.confirm(
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Discard 3 cards?',
+          actionButtons: [
+            { label: 'NO', action: 1 },
+            { label: 'YES', action: 2 },
+          ],
+        },
+        2,
+      );
 
-      if (decision.action !== 2) {
+      if (!shouldDiscard) {
         loggerService.debug('[secret-cave effect] player chose not to discard');
         return;
       }
@@ -1576,21 +1586,24 @@ const expansion: CardExpansionModule = {
       loggerService.debug(`[pixie effect] discarded ${boon}`);
 
       // Prompt to trash Pixie to receive the discarded boon twice.
-      const decision = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId: cardEffectArgs.playerId,
-        prompt: `Trash Pixie to receive ${boon.cardName} twice?`,
-        actionButtons: [
-          { label: `DON'T TRASH`, action: 1 },
-          { label: 'TRASH', action: 2 },
-        ],
-        content: {
-          type: 'display-cards',
-          cardIds: [],
-          cardLikeIds: [boonId],
+      const shouldTrash = await cardEffectArgs.promptService.confirm(
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Trash Pixie to receive ${boon.cardName} twice?`,
+          actionButtons: [
+            { label: `DON'T TRASH`, action: 1 },
+            { label: 'TRASH', action: 2 },
+          ],
+          content: {
+            type: 'display-cards',
+            cardIds: [],
+            cardLikeIds: [boonId],
+          },
         },
-      })) as { action: number };
+        2,
+      );
 
-      if (decision.action !== 2) {
+      if (!shouldTrash) {
         loggerService.debug('[pixie effect] player declined to trash Pixie');
         return;
       }
@@ -1907,20 +1920,23 @@ const expansion: CardExpansionModule = {
       const topCard = cardEffectArgs.cardLibrary.getCard(topCardId);
       loggerService.debug(`[zombie-spy effect] looking at top card ${topCard}`);
 
-      const decision = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId: cardEffectArgs.playerId,
-        prompt: 'Discard the top card?',
-        actionButtons: [
-          { label: 'DISCARD', action: 1 },
-          { label: 'PUT BACK', action: 2 },
-        ],
-        content: {
-          type: 'display-cards',
-          cardIds: [topCardId],
+      const shouldDiscard = await cardEffectArgs.promptService.confirm(
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Discard the top card?',
+          actionButtons: [
+            { label: 'DISCARD', action: 1 },
+            { label: 'PUT BACK', action: 2 },
+          ],
+          content: {
+            type: 'display-cards',
+            cardIds: [topCardId],
+          },
         },
-      })) as { action: number };
+        1,
+      );
 
-      if (decision.action === 1) {
+      if (shouldDiscard) {
         loggerService.debug(`[zombie-spy effect] discarding ${topCard}`);
         await cardEffectArgs.actionService.run('discardCard', {
           playerId: cardEffectArgs.playerId,
@@ -2239,16 +2255,19 @@ const expansion: CardExpansionModule = {
         // Prompt the owner to set it aside for end-of-turn return.
         const faithfulHound = args.cardLibrary.getCard(eventArgs.cardId);
 
-        const result = (await args.actionService.run('userPrompt', {
-          prompt: 'Set Faithful Hound aside?',
-          playerId: eventArgs.playerId,
-          actionButtons: [
-            { label: 'CANCEL', action: 1 },
-            { label: 'SET ASIDE', action: 2 },
-          ],
-        })) as { action: number };
+        const shouldSetAside = await args.promptService.confirm(
+          {
+            prompt: 'Set Faithful Hound aside?',
+            playerId: eventArgs.playerId,
+            actionButtons: [
+              { label: 'CANCEL', action: 1 },
+              { label: 'SET ASIDE', action: 2 },
+            ],
+          },
+          2,
+        );
 
-        if (result.action === 1) {
+        if (!shouldSetAside) {
           loggerService.debug('[faithful-hound onDiscarded] player declined to set aside');
           return;
         }

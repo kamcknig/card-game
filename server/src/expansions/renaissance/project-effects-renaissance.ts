@@ -1030,20 +1030,23 @@ const effectMap: CardExpansionModule = {
           const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
           loggerService.debug(`[innovation project] prompting to play gained card ${gainedCard}`);
 
-          const promptResult = (await triggeredArgs.actionService.run('userPrompt', {
-            playerId: cardEffectArgs.playerId,
-            prompt: `Play ${gainedCard.cardName}?`,
-            actionButtons: [
-              { label: 'NO', action: 1 },
-              { label: 'YES', action: 2 },
-            ],
-            content: {
-              type: 'display-cards',
-              cardIds: [gainedCard.id],
+          const shouldPlayGainedCard = await triggeredArgs.promptService.confirm(
+            {
+              playerId: cardEffectArgs.playerId,
+              prompt: `Play ${gainedCard.cardName}?`,
+              actionButtons: [
+                { label: 'NO', action: 1 },
+                { label: 'YES', action: 2 },
+              ],
+              content: {
+                type: 'display-cards',
+                cardIds: [gainedCard.id],
+              },
             },
-          })) as { action: number };
+            2,
+          );
 
-          if (promptResult.action !== 2) {
+          if (!shouldPlayGainedCard) {
             loggerService.debug('[innovation project] player declined to play gained card');
             return;
           }
@@ -1107,16 +1110,19 @@ const effectMap: CardExpansionModule = {
             return;
           }
 
-          const result = (await triggeredArgs.actionService.run('userPrompt', {
-            playerId: cardEffectArgs.playerId,
-            prompt: 'Pay $1 for +1 Coffers? (Pageant)',
-            actionButtons: [
-              { label: 'NO', action: 1 },
-              { label: 'YES', action: 2 },
-            ],
-          })) as { action: number };
+          const shouldPay = await triggeredArgs.promptService.confirm(
+            {
+              playerId: cardEffectArgs.playerId,
+              prompt: 'Pay $1 for +1 Coffers? (Pageant)',
+              actionButtons: [
+                { label: 'NO', action: 1 },
+                { label: 'YES', action: 2 },
+              ],
+            },
+            2,
+          );
 
-          if (result.action !== 2) {
+          if (!shouldPay) {
             loggerService.debug('[pageant project] player declined to pay $1');
             return;
           }
@@ -1483,22 +1489,23 @@ const effectMap: CardExpansionModule = {
             .map(token => token.id)
             .sort((a, b) => a.localeCompare(b));
 
-          const promptResult = (await triggeredArgs.actionService.run('userPrompt', {
-            playerId: cardEffectArgs.playerId,
-            prompt: `Sinister Plot: Add a token, or remove ${ownedTokenIds.length} token(s) to draw that many cards?`,
-            actionButtons: [
-              { label: 'ADD TOKEN', action: 1 },
-              { label: 'REMOVE TOKENS', action: 2 },
-            ],
-            content: {
-              type: 'display-cards',
-              cardLikeIds: [project.id],
+          const shouldRemoveTokens = await triggeredArgs.promptService.confirm(
+            {
+              playerId: cardEffectArgs.playerId,
+              prompt: `Sinister Plot: Add a token, or remove ${ownedTokenIds.length} token(s) to draw that many cards?`,
+              actionButtons: [
+                { label: 'ADD TOKEN', action: 1 },
+                { label: 'REMOVE TOKENS', action: 2 },
+              ],
+              content: {
+                type: 'display-cards',
+                cardLikeIds: [project.id],
+              },
             },
-          })) as { action?: number } | null;
+            2,
+          );
 
-          const selectedAction = promptResult?.action === 2 ? 2 : 1;
-
-          if (selectedAction === 2) {
+          if (shouldRemoveTokens) {
             const removedCount = ownedTokenIds.length;
             loggerService.debug(
               `[sinister-plot project] removing ${removedCount} token(s) for player ${cardEffectArgs.playerId}`,

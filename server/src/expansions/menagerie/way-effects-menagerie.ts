@@ -523,16 +523,19 @@ const expansion: CardExpansionModule = {
           const gainedCardId = triggeredArgs.trigger.args.cardId;
           const gainedCard = triggeredArgs.cardLibrary.getCard(gainedCardId);
 
-          const decision = (await triggeredArgs.actionService.run('userPrompt', {
-            playerId: cardEffectArgs.playerId,
-            prompt: `Put ${gainedCard.cardName} onto your deck?`,
-            actionButtons: [
-              { label: 'NO', action: 1 },
-              { label: 'YES', action: 2 },
-            ],
-          })) as { action: number };
+          const shouldTopDeck = await triggeredArgs.promptService.confirm(
+            {
+              playerId: cardEffectArgs.playerId,
+              prompt: `Put ${gainedCard.cardName} onto your deck?`,
+              actionButtons: [
+                { label: 'NO', action: 1 },
+                { label: 'YES', action: 2 },
+              ],
+            },
+            2,
+          );
 
-          if (decision.action !== 2) {
+          if (!shouldTopDeck) {
             loggerService.debug('[way-of-the-seal effect] player declined to topdeck gained card');
             return;
           }

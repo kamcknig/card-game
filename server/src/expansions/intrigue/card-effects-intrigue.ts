@@ -40,16 +40,19 @@ const expansionModule: CardExpansionModule = {
         } else {
           loggerService.debug(`[BARON EFFECT] player has an estate in hand`);
 
-          const confirm = (await actionService.run('userPrompt', {
-            playerId,
-            prompt: 'Discard estate?',
-            actionButtons: [
-              { label: `DON'T DISCARD`, action: 1 },
-              { label: 'DISCARD', action: 2 },
-            ],
-          })) as { action: number };
+          const shouldDiscard = await args.promptService.confirm(
+            {
+              playerId,
+              prompt: 'Discard estate?',
+              actionButtons: [
+                { label: `DON'T DISCARD`, action: 1 },
+                { label: 'DISCARD', action: 2 },
+              ],
+            },
+            2,
+          );
 
-          if (confirm.action === 2) {
+          if (shouldDiscard) {
             loggerService.debug(`[BARON EFFECT] player chooses to discard estate, gain 4 treasure`);
 
             await actionService.run('discardCard', {
@@ -676,7 +679,7 @@ const expansionModule: CardExpansionModule = {
   'mining-village': {
     registerEffects:
       () =>
-      async ({ loggerService, actionService, playerId, cardId, cardLibrary }) => {
+      async ({ loggerService, actionService, playerId, cardId, cardLibrary, promptService }) => {
         loggerService.debug(`[MINING VILLAGE EFFECT] drawing card...`);
 
         await actionService.run('drawCard', { playerId });
@@ -686,16 +689,19 @@ const expansionModule: CardExpansionModule = {
         await actionService.run('gainAction', { count: 2 });
 
         loggerService.debug(`[MINING VILLAGE EFFECT] prompting user to trash mining village or not`);
-        const results = (await actionService.run('userPrompt', {
-          playerId,
-          actionButtons: [
-            { action: 1, label: `DON'T TRASH` },
-            { action: 2, label: 'TRASH' },
-          ],
-          prompt: 'Trash Mining Village?',
-        })) as { action: number };
+        const shouldTrash = await promptService.confirm(
+          {
+            playerId,
+            actionButtons: [
+              { action: 1, label: `DON'T TRASH` },
+              { action: 2, label: 'TRASH' },
+            ],
+            prompt: 'Trash Mining Village?',
+          },
+          2,
+        );
 
-        if (results.action === 2) {
+        if (shouldTrash) {
           loggerService.debug(`[MINING VILLAGE EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
 
           await actionService.run('trashCard', {
@@ -1321,16 +1327,19 @@ const expansionModule: CardExpansionModule = {
           const player = getPlayerById(match, target);
           loggerService.debug(`[TORTURER EFFECT] prompting ${player} to choose to discard or gain curse to hand...`);
 
-          const result = (await actionService.run('userPrompt', {
-            playerId: target,
-            actionButtons: [
-              { action: 1, label: 'DISCARD' },
-              { action: 2, label: 'GAIN CURSE' },
-            ],
-            prompt: 'Choose one',
-          })) as { action: number };
+          const shouldDiscard = await args.promptService.confirm(
+            {
+              playerId: target,
+              actionButtons: [
+                { action: 1, label: 'DISCARD' },
+                { action: 2, label: 'GAIN CURSE' },
+              ],
+              prompt: 'Choose one',
+            },
+            1,
+          );
 
-          if (result.action === 1) {
+          if (shouldDiscard) {
             loggerService.debug(`[TORTURER EFFECT] prompting ${player} to discard 2 cards...`);
 
             const hand = args.cardSourceController.getSource('playerHand', target);

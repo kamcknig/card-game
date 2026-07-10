@@ -108,16 +108,19 @@ const registerThisTurnTopdeckOnGain = (cardEffectArgs: CardEffectFunctionContext
     triggeredEffectFn: async triggeredArgs => {
       const gainedCardId = triggeredArgs.trigger.args.cardId as CardId;
       const gainedCard = triggeredArgs.cardLibrary.getCard(gainedCardId);
-      const decision = (await triggeredArgs.actionService.run('userPrompt', {
-        playerId: cardEffectArgs.playerId,
-        prompt: `Put ${gainedCard.cardName} onto your deck?`,
-        actionButtons: [
-          { label: 'NO', action: 1 },
-          { label: 'YES', action: 2 },
-        ],
-      })) as { action: number };
+      const shouldTopdeck = await triggeredArgs.promptService.confirm(
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Put ${gainedCard.cardName} onto your deck?`,
+          actionButtons: [
+            { label: 'NO', action: 1 },
+            { label: 'YES', action: 2 },
+          ],
+        },
+        2,
+      );
 
-      if (decision.action !== 2) {
+      if (!shouldTopdeck) {
         loggerService.debug('[insignia effect] player declined topdecking gained card');
         return;
       }
@@ -213,16 +216,19 @@ const cardEffects: CardExpansionModule = {
 
       const cabinBoyCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       registerStartTurnEffect(cardEffectArgs, cabinBoyCard, async triggeredArgs => {
-        const decision = (await triggeredArgs.actionService.run('userPrompt', {
-          playerId: cardEffectArgs.playerId,
-          prompt: 'Choose one',
-          actionButtons: [
-            { label: '+$2', action: 1 },
-            { label: 'TRASH TO GAIN DURATION', action: 2 },
-          ],
-        })) as { action: number };
+        const choseTreasure = await triggeredArgs.promptService.confirm(
+          {
+            playerId: cardEffectArgs.playerId,
+            prompt: 'Choose one',
+            actionButtons: [
+              { label: '+$2', action: 1 },
+              { label: 'TRASH TO GAIN DURATION', action: 2 },
+            ],
+          },
+          1,
+        );
 
-        if (decision.action === 1) {
+        if (choseTreasure) {
           await triggeredArgs.actionService.run('gainTreasure', { count: 2 });
           return;
         }
@@ -514,16 +520,19 @@ const cardEffects: CardExpansionModule = {
           break;
         }
 
-        const nextPick = (await cardEffectArgs.actionService.run('userPrompt', {
-          playerId,
-          prompt: `You may play another ${selectedCardKey}`,
-          actionButtons: [
-            { label: 'DONE', action: 1 },
-            { label: 'PLAY', action: 2 },
-          ],
-        })) as { action?: number } | null;
+        const shouldPlayAnother = await cardEffectArgs.promptService.confirm(
+          {
+            playerId,
+            prompt: `You may play another ${selectedCardKey}`,
+            actionButtons: [
+              { label: 'DONE', action: 1 },
+              { label: 'PLAY', action: 2 },
+            ],
+          },
+          2,
+        );
 
-        if (nextPick?.action !== 2) {
+        if (!shouldPlayAnother) {
           break;
         }
 
@@ -743,16 +752,19 @@ const cardEffects: CardExpansionModule = {
       },
     }),
     registerEffects: () => async cardEffectArgs => {
-      const decision = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId: cardEffectArgs.playerId,
-        prompt: 'Gain +$2 now or at the start of your next turn?',
-        actionButtons: [
-          { label: 'NOW', action: 1 },
-          { label: 'NEXT TURN', action: 2 },
-        ],
-      })) as { action: number };
+      const gainNow = await cardEffectArgs.promptService.confirm(
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Gain +$2 now or at the start of your next turn?',
+          actionButtons: [
+            { label: 'NOW', action: 1 },
+            { label: 'NEXT TURN', action: 2 },
+          ],
+        },
+        1,
+      );
 
-      if (decision.action === 1) {
+      if (gainNow) {
         await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
         return;
       }
@@ -1021,16 +1033,19 @@ const cardEffects: CardExpansionModule = {
             }
           },
           triggeredEffectFn: async triggeredArgs => {
-            const decision = (await triggeredArgs.actionService.run('userPrompt', {
-              playerId: eventArgs.playerId,
-              prompt: 'Play Mapmaker from your hand?',
-              actionButtons: [
-                { label: 'NO', action: 1 },
-                { label: 'YES', action: 2 },
-              ],
-            })) as { action?: number } | null;
+            const shouldPlay = await triggeredArgs.promptService.confirm(
+              {
+                playerId: eventArgs.playerId,
+                prompt: 'Play Mapmaker from your hand?',
+                actionButtons: [
+                  { label: 'NO', action: 1 },
+                  { label: 'YES', action: 2 },
+                ],
+              },
+              2,
+            );
 
-            if (decision?.action !== 2) {
+            if (!shouldPlay) {
               return;
             }
 
@@ -1139,16 +1154,19 @@ const cardEffects: CardExpansionModule = {
         },
         triggeredEffectFn: async triggeredArgs => {
           const gainedCardId = triggeredArgs.trigger.args.cardId;
-          const decision = (await triggeredArgs.actionService.run('userPrompt', {
-            playerId: cardEffectArgs.playerId,
-            prompt: 'Play the gained Treasure?',
-            actionButtons: [
-              { label: 'NO', action: 1 },
-              { label: 'YES', action: 2 },
-            ],
-          })) as { action: number };
+          const shouldPlay = await triggeredArgs.promptService.confirm(
+            {
+              playerId: cardEffectArgs.playerId,
+              prompt: 'Play the gained Treasure?',
+              actionButtons: [
+                { label: 'NO', action: 1 },
+                { label: 'YES', action: 2 },
+              ],
+            },
+            2,
+          );
 
-          if (decision.action !== 2) {
+          if (!shouldPlay) {
             return;
           }
 
@@ -1253,17 +1271,22 @@ const cardEffects: CardExpansionModule = {
             `[quartermaster duration] startTurn for player ${playerId}; setAside count=${setAside.length}`,
           );
 
-          const choice = (await triggeredArgs.actionService.run('userPrompt', {
-            playerId,
-            prompt: 'Choose one',
-            actionButtons: [
-              { label: 'GAIN UP TO $4', action: 1 },
-              { label: 'TAKE FROM QUARTERMASTER', action: 2 },
-            ],
-          })) as { action: number };
-          loggerService.debug(`[quartermaster duration] player ${playerId} selected action=${choice.action}`);
+          const choseTakeFromQuartermaster = await triggeredArgs.promptService.confirm(
+            {
+              playerId,
+              prompt: 'Choose one',
+              actionButtons: [
+                { label: 'GAIN UP TO $4', action: 1 },
+                { label: 'TAKE FROM QUARTERMASTER', action: 2 },
+              ],
+            },
+            2,
+          );
+          loggerService.debug(
+            `[quartermaster duration] player ${playerId} chose ${choseTakeFromQuartermaster ? 'take from quartermaster' : 'gain up to $4'}`,
+          );
 
-          if (choice.action === 2 && setAside.length) {
+          if (choseTakeFromQuartermaster && setAside.length) {
             const selectedSetAsideId =
               setAside.length === 1
                 ? setAside[0]
@@ -1668,16 +1691,19 @@ const cardEffects: CardExpansionModule = {
             }
           },
           triggeredEffectFn: async triggeredArgs => {
-            const decision = (await triggeredArgs.actionService.run('userPrompt', {
-              playerId: eventArgs.playerId,
-              prompt: 'Play Stowaway from your hand?',
-              actionButtons: [
-                { label: 'NO', action: 1 },
-                { label: 'YES', action: 2 },
-              ],
-            })) as { action?: number } | null;
+            const shouldPlay = await triggeredArgs.promptService.confirm(
+              {
+                playerId: eventArgs.playerId,
+                prompt: 'Play Stowaway from your hand?',
+                actionButtons: [
+                  { label: 'NO', action: 1 },
+                  { label: 'YES', action: 2 },
+                ],
+              },
+              2,
+            );
 
-            if (decision?.action !== 2) {
+            if (!shouldPlay) {
               return;
             }
 
@@ -1863,16 +1889,19 @@ const cardEffects: CardExpansionModule = {
           return discardedCard.type.includes('TREASURE');
         },
         triggeredEffectFn: async triggeredArgs => {
-          const decision = (await triggeredArgs.actionService.run('userPrompt', {
-            playerId: cardEffectArgs.playerId,
-            prompt: 'Set this discarded Treasure aside?',
-            actionButtons: [
-              { label: 'NO', action: 1 },
-              { label: 'YES', action: 2 },
-            ],
-          })) as { action: number };
+          const shouldSetAside = await triggeredArgs.promptService.confirm(
+            {
+              playerId: cardEffectArgs.playerId,
+              prompt: 'Set this discarded Treasure aside?',
+              actionButtons: [
+                { label: 'NO', action: 1 },
+                { label: 'YES', action: 2 },
+              ],
+            },
+            2,
+          );
 
-          if (decision.action !== 2) {
+          if (!shouldSetAside) {
             return;
           }
 
@@ -1942,16 +1971,19 @@ const cardEffects: CardExpansionModule = {
   },
   amphora: {
     registerEffects: () => async cardEffectArgs => {
-      const decision = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId: cardEffectArgs.playerId,
-        prompt: 'Gain +$3 and +1 Buy now or at the start of your next turn?',
-        actionButtons: [
-          { label: 'NOW', action: 1 },
-          { label: 'NEXT TURN', action: 2 },
-        ],
-      })) as { action: number };
+      const gainNow = await cardEffectArgs.promptService.confirm(
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Gain +$3 and +1 Buy now or at the start of your next turn?',
+          actionButtons: [
+            { label: 'NOW', action: 1 },
+            { label: 'NEXT TURN', action: 2 },
+          ],
+        },
+        1,
+      );
 
-      if (decision.action === 1) {
+      if (gainNow) {
         await gainTreasureAndBuy({ actionService: cardEffectArgs.actionService, treasure: 3, buy: 1 });
         return;
       }
@@ -2096,20 +2128,23 @@ const cardEffects: CardExpansionModule = {
           return card.type.includes('ACTION') || card.type.includes('TREASURE');
         });
 
-      const decision = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId: cardEffectArgs.playerId,
-        prompt: 'Choose one',
-        actionButtons: [
-          { label: 'PLAY ACTION/TREASURE', action: 1 },
-          { label: '+$3 AND +1 BUY', action: 2 },
-        ],
-        content: {
-          type: 'display-cards',
-          cardIds: discard,
+      const choseTreasureAndBuy = await cardEffectArgs.promptService.confirm(
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Choose one',
+          actionButtons: [
+            { label: 'PLAY ACTION/TREASURE', action: 1 },
+            { label: '+$3 AND +1 BUY', action: 2 },
+          ],
+          content: {
+            type: 'display-cards',
+            cardIds: discard,
+          },
         },
-      })) as { action: number };
+        2,
+      );
 
-      if (decision.action === 2) {
+      if (choseTreasureAndBuy) {
         await gainTreasureAndBuy({ actionService: cardEffectArgs.actionService, treasure: 3, buy: 1 });
         return;
       }

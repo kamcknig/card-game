@@ -377,16 +377,19 @@ const effectMap: CardExpansionModule = {
         },
       });
 
-      const promptResult = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId: cardEffectArgs.playerId,
-        prompt: 'Gain a Curse for +1 Buy and +$2?',
-        actionButtons: [
-          { label: 'NO', action: 1 },
-          { label: 'YES', action: 2 },
-        ],
-      })) as { action?: number } | null;
+      const shouldGainCurse = await cardEffectArgs.promptService.confirm(
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Gain a Curse for +1 Buy and +$2?',
+          actionButtons: [
+            { label: 'NO', action: 1 },
+            { label: 'YES', action: 2 },
+          ],
+        },
+        2,
+      );
 
-      if (promptResult?.action !== 2) {
+      if (!shouldGainCurse) {
         loggerService.debug('[desperation effect] player declined to gain a Curse');
         return;
       }
@@ -546,16 +549,19 @@ const effectMap: CardExpansionModule = {
       }
 
       loggerService.debug(`[gamble effect] discarded card ${discardedCard} is playable; prompting player`);
-      const promptResult = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId: cardEffectArgs.playerId,
-        prompt: `Play ${discardedCard.cardName}?`,
-        actionButtons: [
-          { label: 'NO', action: 1 },
-          { label: 'YES', action: 2 },
-        ],
-      })) as { action?: number } | null;
+      const shouldPlay = await cardEffectArgs.promptService.confirm(
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Play ${discardedCard.cardName}?`,
+          actionButtons: [
+            { label: 'NO', action: 1 },
+            { label: 'YES', action: 2 },
+          ],
+        },
+        2,
+      );
 
-      if (promptResult?.action !== 2) {
+      if (!shouldPlay) {
         loggerService.debug('[gamble effect] player declined to play discarded card');
         return;
       }
@@ -979,15 +985,18 @@ const effectMap: CardExpansionModule = {
 
       let selectedMode: 'supply' | 'exile';
       if (canExileFromSupply && canTopdeckFromExile) {
-        const promptResult = (await cardEffectArgs.actionService.run('userPrompt', {
-          playerId: cardEffectArgs.playerId,
-          prompt: 'Choose one',
-          actionButtons: [
-            { label: 'EXILE SUPPLY ACTION', action: 1 },
-            { label: 'TOPDECK EXILED ACTION', action: 2 },
-          ],
-        })) as { action?: number } | null;
-        selectedMode = promptResult?.action === 2 ? 'exile' : 'supply';
+        const shouldTopdeckFromExile = await cardEffectArgs.promptService.confirm(
+          {
+            playerId: cardEffectArgs.playerId,
+            prompt: 'Choose one',
+            actionButtons: [
+              { label: 'EXILE SUPPLY ACTION', action: 1 },
+              { label: 'TOPDECK EXILED ACTION', action: 2 },
+            ],
+          },
+          2,
+        );
+        selectedMode = shouldTopdeckFromExile ? 'exile' : 'supply';
       } else {
         selectedMode = canExileFromSupply ? 'supply' : 'exile';
       }

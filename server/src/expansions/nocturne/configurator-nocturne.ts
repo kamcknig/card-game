@@ -634,16 +634,19 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
           const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
 
           // Offer the exchange decision to the gaining player.
-          const decision = (await triggeredArgs.actionService.run('userPrompt', {
-            playerId: player.id,
-            prompt: `Exchange ${gainedCard.cardName} for Changeling?`,
-            actionButtons: [
-              { label: 'CANCEL', action: 1 },
-              { label: 'EXCHANGE', action: 2 },
-            ],
-          })) as { action: number };
+          const shouldExchange = await triggeredArgs.promptService.confirm(
+            {
+              playerId: player.id,
+              prompt: `Exchange ${gainedCard.cardName} for Changeling?`,
+              actionButtons: [
+                { label: 'CANCEL', action: 1 },
+                { label: 'EXCHANGE', action: 2 },
+              ],
+            },
+            2,
+          );
 
-          if (decision.action === 1) {
+          if (!shouldExchange) {
             args.loggerService.debug('[changeling exchange] player declined exchange');
             return;
           }

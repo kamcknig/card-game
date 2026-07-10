@@ -703,15 +703,18 @@ const expansion: CardExpansionModule = {
 
         loggerService.debug(`[NATIVE VILLAGE EFFECT] prompting user to choose...`);
 
-        const result = (await actionService.run('userPrompt', {
-          playerId,
-          actionButtons: [
-            { label: 'Put top card on mat', action: 1 },
-            { label: 'Take cards from mat', action: 2 },
-          ],
-        })) as { action: number };
+        const shouldPutOnMat = await args.promptService.confirm(
+          {
+            playerId,
+            actionButtons: [
+              { label: 'Put top card on mat', action: 1 },
+              { label: 'Take cards from mat', action: 2 },
+            ],
+          },
+          1,
+        );
 
-        if (result.action === 1) {
+        if (shouldPutOnMat) {
           const deck = args.cardSourceController.getSource('playerDeck', playerId);
 
           if (deck.length === 0) {
