@@ -14,7 +14,7 @@ import { expansionListStore } from '../../state/expansion-list-state';
 import { cardStore } from '../../state/card-state';
 import { tokenDefinitionStore } from '../../state/token-definition-state';
 import { applyPatch, Operation } from 'fast-json-patch';
-import { logManager } from '../log-manager';
+import { logManager, resetLogRenderTracking } from '../log-manager';
 import { cardSourceStore, cardSourceTagMapStore } from '../../state/card-source-store';
 import { basicSupplies, kingdomSupplies } from '../../state/match-logic';
 import {
@@ -106,6 +106,9 @@ export class SocketEventMapService {
     map['setLog'] = (history: LogEntry[]) => {
       logEntryIdsStore.set([]);
       logStore.set({});
+      // Render-time parent tracking must restart with the replay so
+      // suppression decisions match a fresh render.
+      resetLogRenderTracking();
       for (const entry of history) {
         logManager.addLogEntry(entry);
       }
@@ -269,6 +272,9 @@ export class SocketEventMapService {
       // Clear first-match log entries so the second match starts with an empty log.
       logEntryIdsStore.set([]);
       logStore.set({});
+      // Render-time parent tracking must restart clean so the new match's log
+      // does not inherit parent subjects from the previous match's chains.
+      resetLogRenderTracking();
       // activeLobbyGameIdStore is intentionally NOT cleared here. The store now
       // remains set throughout the active match phase so Phase 3 (MatchComponent
       // lifecycle) and Phase 4 (still-in-game dialog) can read it as a sentinel.
