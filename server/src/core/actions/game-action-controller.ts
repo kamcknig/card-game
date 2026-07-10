@@ -79,6 +79,7 @@ import { TokenRegistryService } from '../tokens/token-registry-service.ts';
 import { RngService } from '../rng-service.ts';
 import { LoggerService } from '../logger-service.ts';
 import { PromptAbortRegistry } from '../undo/prompt-abort-registry.ts';
+import { wrapActionServiceWithSource } from '../../utils/wrap-action-service-with-source.ts';
 
 export class GameActionController implements GameActionDefinitionMap {
   private _customActionHandlers: Partial<GameActionDefinitionMap> = {};
@@ -912,53 +913,10 @@ export class GameActionController implements GameActionDefinitionMap {
         return triggerIds;
       },
     });
-    const sourceAwareActions = new Set<GameActions>([
-      'gainTreasure',
-      'gainAction',
-      'gainBuy',
-      'gainPotion',
-      'gainVictoryToken',
-      'drawCard',
-      'drawHand',
-      'shuffle',
-      'shuffleDeck',
-      'shuffleCardLike',
-    ]);
-    context.actionService = {
-      run: async <K extends GameActions>(
-        action: K,
-        ...runArgs: Parameters<GameActionDefinitionMap[K]>
-      ): Promise<GameActionReturnTypeMap[K]> => {
-        const [actionArgs, actionContext] = runArgs;
-        if (!sourceAwareActions.has(action)) {
-          return await this.actionService.run(action, ...runArgs);
-        }
-        if (!actionArgs || typeof actionArgs !== 'object' || Array.isArray(actionArgs)) {
-          return await this.actionService.run(action, ...runArgs);
-        }
-        if (actionContext?.source !== undefined) {
-          return await this.actionService.run(action, ...runArgs);
-        }
-        const argsWithSource = [
-          actionArgs as Parameters<GameActionDefinitionMap[K]>[0],
-          {
-            ...(actionContext ?? {}),
-            source: args.cardId as CardId,
-          },
-        ] as unknown as Parameters<GameActionDefinitionMap[K]>;
-
-        return await this.runActionDirect(action, ...argsWithSource);
-      },
-    };
+    // Auto-attribute source-aware actions to this effect's card so log
+    // entries can name their cause without per-card boilerplate.
+    context.actionService = wrapActionServiceWithSource(this.actionService, args.cardId as CardId);
     return context;
-  }
-
-  // Executes actionService.run through one generic signature to avoid overload narrowing issues.
-  private async runActionDirect<K extends GameActions>(
-    action: K,
-    ...args: Parameters<GameActionDefinitionMap[K]>
-  ): Promise<GameActionReturnTypeMap[K]> {
-    return await this.actionService.run(action, ...args);
   }
 
   // Resolves action attribution source from context.

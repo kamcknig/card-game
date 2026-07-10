@@ -19,6 +19,7 @@ import { LogManager } from '../log-manager.ts';
 import { RngService } from '../rng-service.ts';
 import { LoggerService } from '../logger-service.ts';
 import type { ReactionManager } from './reaction-manager.ts';
+import { wrapActionServiceWithSource } from '../../utils/wrap-action-service-with-source.ts';
 
 // Centralized builder for reaction/lifecycle callback contexts.
 export class ReactionContextFactory {
@@ -95,8 +96,19 @@ export class ReactionContextFactory {
     trigger: TriggeredEffectContext<T>['trigger'];
     reaction: Reaction;
   }): TriggeredEffectContext<T> {
+    const base = this.baseContext(args.reactionManager);
+    // Reactions registered from a card carry that card's id as sourceId; wrap
+    // the action service so source-aware actions attribute their log entries
+    // to it (e.g. a Duration card drawing on a later turn logs "(Wharf)").
+    // Only card sources are injectable: LogEntrySource is a CardId, and
+    // landscape sourceIds live in a different id namespace.
+    const actionService =
+      args.reaction.sourceType === 'card' && args.reaction.sourceId !== undefined
+        ? wrapActionServiceWithSource(base.actionService, args.reaction.sourceId)
+        : base.actionService;
     return {
-      ...this.baseContext(args.reactionManager),
+      ...base,
+      actionService,
       isRootLog: false,
       trigger: args.trigger,
       reaction: args.reaction,
