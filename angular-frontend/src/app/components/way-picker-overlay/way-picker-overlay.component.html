@@ -1,27 +1,15 @@
 @let picker = activePicker();
 @if (picker) {
   <div class="way-picker-overlay-root">
-    <div
+    <app-way-picker-panel
       class="way-picker-panel"
       [style.left.px]="picker.left"
       [style.top.px]="picker.top"
+      [wayIds]="picker.wayCardLikeIds"
+      [wayKind]="'way'"
+      (waySelected)="onSelectWay($event)"
       (mouseenter)="onPanelMouseEnter()"
       (mouseleave)="onPanelMouseLeave()"
-    >
-      <div class="way-picker-list">
-        @for (wayId of picker.wayCardLikeIds; track wayId) {
-          <button
-            type="button"
-            class="way-entry"
-            (click)="onSelectWay(wayId)"
-          >
-            <app-card-like
-              [cardLikeId]="wayId"
-              [kind]="'way'"
-            ></app-card-like>
-          </button>
-        }
-      </div>
-    </div>
+    ></app-way-picker-panel>
   </div>
 }

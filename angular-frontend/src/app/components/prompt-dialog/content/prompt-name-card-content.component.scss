@@ -1,3 +1,5 @@
+@use './selectable-tile' as tile;
+
 .name-card-content {
   display: flex;
   flex-direction: column;
@@ -28,16 +30,13 @@
 }
 
 .name-card-result {
+  @include tile.tile-base;
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--theme-radius-md);
-  padding: 0;
-  cursor: pointer;
   transition: transform 120ms ease, border-color 120ms ease;
 }
 
 .name-card-result:hover {
-  border-color: var(--theme-border-action);
+  @include tile.tile-hover;
   transform: translateY(-6px);
 }
 

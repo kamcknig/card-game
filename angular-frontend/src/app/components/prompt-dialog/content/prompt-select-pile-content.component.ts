@@ -5,6 +5,7 @@ import { CardKey, UserPromptKinds } from 'shared/types';
 import { resolveCountSpec } from 'shared/resolve-count-spec';
 import { validateCountSpec } from 'shared/validate-count-spec';
 import { selectedPileStore } from '../../../state/interactive-state';
+import { createSelectionEmitter } from './selection-emitter';
 
 type PromptSelectPileContent = Extract<UserPromptKinds, { type: 'select-pile' }>;
 
@@ -27,16 +28,18 @@ export class PromptSelectPileContentComponent {
     initialValue: selectedPileStore.get(),
   });
 
-  private _lastValidationState: boolean | null = null;
-  private _lastResultSignature = '';
-  private _lastAutoFinishSignature: string | null = null;
+  // Shared dedup-and-emit machinery for results/validation/auto-finish; see
+  // selection-emitter.ts.
+  private readonly _selectionEmitter = createSelectionEmitter<CardKey[]>({
+    resultsUpdated: this.resultsUpdated,
+    validationUpdated: this.validationUpdated,
+    finished: this.finished,
+  });
 
   // Resets local emission signatures whenever prompt payload changes.
   private readonly _resetStateOnContentChange = effect(() => {
     this.content();
-    this._lastValidationState = null;
-    this._lastResultSignature = '';
-    this._lastAutoFinishSignature = null;
+    this._selectionEmitter.reset();
   });
 
   // Emits result + validation updates and applies single-choice auto-finish semantics.
@@ -44,26 +47,11 @@ export class PromptSelectPileContentComponent {
     const selectedPiles = this.selectedPiles();
     const valid = this.isValidSelection();
 
-    const resultSignature = JSON.stringify(selectedPiles);
-    if (resultSignature !== this._lastResultSignature) {
-      this._lastResultSignature = resultSignature;
-      this.resultsUpdated.emit([...selectedPiles]);
-    }
-
-    if (valid !== this._lastValidationState) {
-      this._lastValidationState = valid;
-      this.validationUpdated.emit(valid);
-    }
-
-    if (this.shouldAutoFinish() && valid) {
-      if (resultSignature !== this._lastAutoFinishSignature) {
-        this._lastAutoFinishSignature = resultSignature;
-        this.finished.emit();
-      }
-      return;
-    }
-
-    this._lastAutoFinishSignature = null;
+    this._selectionEmitter.emit({
+      result: [...selectedPiles],
+      isValid: valid,
+      shouldAutoFinish: this.shouldAutoFinish(),
+    });
   });
 
   // Ordered selectable pile names from prompt payload.

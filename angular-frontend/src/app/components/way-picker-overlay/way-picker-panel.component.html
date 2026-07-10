@@ -1,0 +1,14 @@
+<div class="way-picker-list" [class.scrollable]="scrollable()">
+  @for (wayId of wayIds(); track wayId) {
+    <button
+      type="button"
+      class="way-entry"
+      [class.selected-way]="isSelected(wayId)"
+      (click)="onSelectWay(wayId)">
+      <app-card-like
+        [cardLikeId]="wayId"
+        [kind]="wayKind()"
+      ></app-card-like>
+    </button>
+  }
+</div>

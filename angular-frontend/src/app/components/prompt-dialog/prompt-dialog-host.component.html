@@ -49,11 +49,11 @@
         }
 
         @case ('overpay') {
-          <app-prompt-overpay-content
+          <app-prompt-slider-content
             [content]="promptContent"
             (validationUpdated)="onValidationUpdated($event)"
             (resultsUpdated)="onResultsUpdated($event)"
-          ></app-prompt-overpay-content>
+          ></app-prompt-slider-content>
         }
 
         @case ('rearrange') {
@@ -65,11 +65,11 @@
         }
 
         @case ('blind-rearrange') {
-          <app-prompt-blind-rearrange-content
+          <app-prompt-slider-content
             [content]="promptContent"
             (validationUpdated)="onValidationUpdated($event)"
             (resultsUpdated)="onResultsUpdated($event)"
-          ></app-prompt-blind-rearrange-content>
+          ></app-prompt-slider-content>
         }
 
         @case ('select-pile') {

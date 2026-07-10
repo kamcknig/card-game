@@ -5,9 +5,8 @@ import { PromptDialogCoordinatorService } from '../../core/prompt-dialog/prompt-
 import { PromptSelectContentComponent } from './content/prompt-select-content.component';
 import { PromptNumberInputContentComponent } from './content/prompt-number-input-content.component';
 import { PromptNameCardContentComponent } from './content/prompt-name-card-content.component';
-import { PromptOverpayContentComponent } from './content/prompt-overpay-content.component';
+import { PromptSliderContentComponent } from './content/prompt-slider-content.component';
 import { PromptRearrangeContentComponent } from './content/prompt-rearrange-content.component';
-import { PromptBlindRearrangeContentComponent } from './content/prompt-blind-rearrange-content.component';
 import { PromptSelectPileContentComponent } from './content/prompt-select-pile-content.component';
 
 @Component({
@@ -17,9 +16,8 @@ import { PromptSelectPileContentComponent } from './content/prompt-select-pile-c
     PromptSelectContentComponent,
     PromptNumberInputContentComponent,
     PromptNameCardContentComponent,
-    PromptOverpayContentComponent,
+    PromptSliderContentComponent,
     PromptRearrangeContentComponent,
-    PromptBlindRearrangeContentComponent,
     PromptSelectPileContentComponent,
   ],
   templateUrl: './prompt-dialog-host.component.html',

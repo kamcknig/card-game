@@ -1,0 +1,25 @@
+// Shared layout for both slider variants (overpay / blind-rearrange); sizing
+// uses the wider of the two legacy components' bounds so neither variant
+// shrinks relative to before the merge.
+.slider-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--theme-space-md);
+  min-width: 360px;
+}
+
+.slider-input {
+  width: min(680px, calc(100vw - 180px));
+}
+
+.slider-value {
+  color: var(--theme-text-on-dark);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.slider-breakdown {
+  color: var(--theme-text-on-dark);
+  font-size: 16px;
+}

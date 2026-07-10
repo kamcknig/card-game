@@ -1,12 +1,12 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { CardLikeId } from 'shared/types';
-import { CardLikeComponent } from '../card-like/card-like.component';
+import { WayPickerPanelComponent } from './way-picker-panel.component';
 import { WayPickerOverlayService } from '../../core/way-picker/way-picker-overlay.service';
 
 @Component({
   selector: 'app-way-picker-overlay',
   imports: [
-    CardLikeComponent,
+    WayPickerPanelComponent,
   ],
   templateUrl: './way-picker-overlay.component.html',
   styleUrl: './way-picker-overlay.component.scss',

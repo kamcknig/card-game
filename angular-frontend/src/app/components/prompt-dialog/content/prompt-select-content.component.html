@@ -39,25 +39,16 @@
   }
 
   @if (showWayTooltip()) {
-    <div
+    <app-way-picker-panel
       class="way-picker"
       [style.left.px]="wayTooltipPosition().left"
       [style.top.px]="wayTooltipPosition().top"
+      [wayIds]="sortedWayIds()"
+      [selectedWayId]="selectedWayId()"
+      [scrollable]="true"
+      (waySelected)="selectWay($event)"
       (mouseenter)="onWayTooltipMouseEnter()"
       (mouseleave)="onWayTooltipMouseLeave()">
-      <div class="way-picker-list">
-        @for (way of sortedWays(); track way.id) {
-          <button
-            type="button"
-            class="way-entry"
-            [class.selected-way]="isSelectedWay(way.id)"
-            (click)="selectWay(way.id)">
-            <app-card-like
-              [cardLikeId]="way.id"
-            ></app-card-like>
-          </button>
-        }
-      </div>
-    </div>
+    </app-way-picker-panel>
   }
 </div>

@@ -1,0 +1,46 @@
+// Shared panel chrome. Position (fixed/absolute), z-index, and width are
+// consumer-specific — set from each consumer's own stylesheet by targeting
+// the `app-way-picker-panel` host tag directly (Angular's emulated
+// encapsulation lets a parent stylesheet reach a child's host element this
+// way without `::ng-deep`).
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--theme-space-sm);
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-medium));
+  border: 1px solid var(--theme-border-action);
+  border-radius: var(--theme-radius-md);
+  padding: var(--theme-space-sm);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+.way-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--theme-space-sm);
+}
+
+.way-picker-list.scrollable {
+  max-height: 320px;
+  overflow: auto;
+}
+
+.way-entry {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--theme-radius-md);
+  padding: 0;
+  cursor: pointer;
+  display: block;
+}
+
+.way-entry:hover {
+  border-color: var(--theme-border-action);
+}
+
+.way-entry.selected-way {
+  border-color: var(--theme-border-action);
+  box-shadow: 0 0 0 1px var(--theme-color-selected-glow);
+}
