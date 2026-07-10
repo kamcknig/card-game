@@ -5,6 +5,8 @@ import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { getAttackTargets } from '../../utils/get-attack-targets.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 
 // Shared Knight attack body, adopted by all 10 Dame/Sir Knights and by Rogue
 // (which shares the attack text but is not itself a Knight). Each other
@@ -19,34 +21,13 @@ const resolveKnightAttack = async (
   opts: { logTag: string },
 ): Promise<void> => {
   const { loggerService } = cardEffectArgs;
-  const targetPlayerIds = findOrderedTargets({
-    match: cardEffectArgs.match,
-    appliesTo: 'ALL_OTHER',
-    startingPlayerId: cardEffectArgs.playerId,
-  }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+  // getAttackTargets = ordered ALL_OTHER minus anyone marked immune (Moat).
+  const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
   for (const targetPlayerId of targetPlayerIds) {
-    const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', targetPlayerId);
-    const revealed: Card[] = [];
-
-    for (let i = 0; i < 2; i++) {
-      let cardId = deck.slice(-1)[0];
-      if (!cardId) {
-        loggerService.debug(`[${opts.logTag}] deck empty, shuffling discard in`);
-        await cardEffectArgs.actionService.run('shuffleDeck', { playerId: targetPlayerId });
-        cardId = deck.slice(-1)[0];
-        if (!cardId) {
-          loggerService.debug(`[${opts.logTag}] no cards to reveal, skipping`);
-          continue;
-        }
-      }
-      await cardEffectArgs.actionService.run('revealCard', {
-        cardId,
-        playerId: targetPlayerId,
-        moveToSetAside: true,
-      });
-      revealed.push(cardEffectArgs.cardLibrary.getCard(cardId));
-    }
+    // Reveal the top 2 cards of the target's DECK, set aside — shuffling the
+    // discard back in automatically if the deck runs dry mid-reveal.
+    const revealed = await revealTopDeckCards(cardEffectArgs, targetPlayerId, 2, { setAside: true });
 
     const trashCandidates = revealed.filter(card => {
       const { cost } = cardEffectArgs.cardPriceController.applyRules(card, { playerId: targetPlayerId });

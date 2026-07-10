@@ -183,8 +183,11 @@ export class MatchSetupService {
             return instance.id;
           }),
         );
-        fisherYatesShuffle(deck, true, () => this.rngService.nextFloat());
       });
+      // Shuffle once after every starting-hand card key has been pushed —
+      // shuffling per-key inside the loop above was redundant work that only
+      // ever mattered for the effect of the final key's shuffle anyway.
+      fisherYatesShuffle(deck, true, () => this.rngService.nextFloat());
     }
   }
 

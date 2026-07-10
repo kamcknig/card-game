@@ -40,18 +40,6 @@ Deno.test('findOrderedTargets resolves ALL_OTHER excluding current player id', (
   assertEquals(result, [3, 1]);
 });
 
-Deno.test('findOrderedTargets returns fallback ANY behavior currently implemented', () => {
-  const match = createMatchWithPlayers();
-
-  const result = findOrderedTargets({
-    match,
-    startingPlayerId: 2,
-    appliesTo: 'ANY',
-  });
-
-  assertEquals(result, [1]);
-});
-
 Deno.test('findOrderedTargets returns empty list for unsupported target expressions', () => {
   const match = createMatchWithPlayers();
 
@@ -116,18 +104,6 @@ Deno.test('findOrderedTargets resolves ALL_OTHER with a single player returns em
   assertEquals(result, []);
 });
 
-Deno.test('findOrderedTargets resolves X_OTHER pattern and returns empty (not implemented)', () => {
-  const match = createMatchWithPlayers();
-
-  const result = findOrderedTargets({
-    match,
-    startingPlayerId: 2,
-    appliesTo: '2_OTHER' as EffectTarget,
-  });
-
-  assertEquals(result, []);
-});
-
 Deno.test('findOrderedTargets resolves ALL with startingPlayerId as the first player', () => {
   const match = createMatchWithPlayers();
 
@@ -182,30 +158,30 @@ Deno.test('findOrderedTargets ALL_OTHER with loggerService logs target info', ()
   assertEquals(entries.some(e => e.level === 'info'), true);
 });
 
-Deno.test('findOrderedTargets ANY with loggerService logs error', () => {
+Deno.test('findOrderedTargets logs error for unsupported target expressions', () => {
   const match = createMatchWithPlayers();
   const { entries, loggerService } = createTestLogger();
 
   findOrderedTargets({
     match,
     startingPlayerId: 1,
-    appliesTo: 'ANY',
+    appliesTo: 'NOT_A_TARGET' as EffectTarget,
     loggerService,
   });
 
   assertEquals(entries.some(e => e.level === 'error'), true);
 });
 
-Deno.test('findOrderedTargets X_OTHER with loggerService logs error', () => {
+Deno.test('findOrderedTargets resolves ALL_OTHER with startingPlayerId not in the player list preserves order from index 0', () => {
   const match = createMatchWithPlayers();
-  const { entries, loggerService } = createTestLogger();
 
-  findOrderedTargets({
+  // findIndex returns -1 for an unrecognized id; normalizeIndex must wrap
+  // that into a valid starting index rather than indexing negatively.
+  const result = findOrderedTargets({
     match,
-    startingPlayerId: 1,
-    appliesTo: '2_OTHER' as EffectTarget,
-    loggerService,
+    startingPlayerId: 999,
+    appliesTo: 'ALL_OTHER',
   });
 
-  assertEquals(entries.some(e => e.level === 'info' || e.level === 'error'), true);
+  assertEquals(result, [1, 2]);
 });

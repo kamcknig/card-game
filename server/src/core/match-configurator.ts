@@ -32,34 +32,23 @@ import { RngService } from './rng-service.ts';
 import { LoggerService } from './logger-service.ts';
 
 /**
- * Return a new array with at most one element for every distinct `prop` value.
+ * Return a new array with at most one element for every distinct `prop` value,
+ * keeping the first occurrence. (A `keep: 'last'` variant previously existed
+ * here but had no callers — removed rather than left as unused surface area.)
  *
  * @template T extends Record<string, any>
  * @param   list  Source array
  * @param   prop  Property whose value determines uniqueness
- * @param   keep  'first' | 'last'  – keeps the first or last occurrence (default 'first')
  * @returns Deduplicated array
  */
-export function uniqueByProp<T extends Record<string, unknown>, K extends keyof T = keyof T>(
-  list: T[],
-  prop: K,
-  keep: 'first' | 'last' = 'first',
-): T[] {
-  if (keep === 'first') {
-    // Keep the first occurrence
-    const seen = new Set<unknown>();
-    return list.filter(item => {
-      const key = item[prop];
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  }
-
-  // Keep the **last** occurrence
-  const idxByKey = new Map<unknown, number>(); // key → index of last sighting
-  list.forEach((item, i) => idxByKey.set(item[prop], i));
-  return list.filter((_, i) => idxByKey.get(list[i][prop]) === i);
+export function uniqueByProp<T extends Record<string, unknown>, K extends keyof T = keyof T>(list: T[], prop: K): T[] {
+  const seen = new Set<unknown>();
+  return list.filter(item => {
+    const key = item[prop];
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 // Landscape kinds that share the "events and others" randomizer pool
@@ -172,7 +161,8 @@ export class MatchConfigurator {
 
     this._bannedKingdoms = this._config.bannedKingdoms?.slice() ?? [];
 
-    // Trim preselected landscapes (events/landmarks/projects/ways/traits) before random selection.
+    // Trim preselected landscapes (events/landmarks/projects/ways/traits) down
+    // to the shared cap before random selection fills the remaining slots.
     this.enforceLandscapeLimit();
     this.selectKingdomSupply();
     this.selectBasicSupply();
@@ -207,23 +197,42 @@ export class MatchConfigurator {
     }
   }
 
-  // Logs when preselected landscapes exceed the configured cap; random selection handles limits.
+  // Trims preselected landscapes (events/landmarks/projects/ways/traits) down
+  // to the shared "events and others" cap. The random-selection loop in
+  // selectKingdomSupply only prevents exceeding the cap while it fills
+  // remaining slots — a preselected list that already starts over-cap (e.g.
+  // a restored saved configuration from before the cap changed) was never
+  // trimmed and would silently ignore the limit. Order is preserved within
+  // and across kinds (events, then landmarks, projects, ways, traits) so the
+  // drop is deterministic; only the tail beyond the cap is removed.
   private enforceLandscapeLimit(): void {
     const allowedEventsAndOthers = MatchBaseConfiguration.numberOfEventsAndOthers;
-    const events = this._config.events ?? [];
-    const landmarks = this._config.landmarks ?? [];
-    const projects = this._config.projects ?? [];
-    const ways = this._config.ways ?? [];
-    const traits = this._config.traits ?? [];
-    const total = events.length + landmarks.length + projects.length + ways.length + traits.length;
 
-    if (total <= allowedEventsAndOthers) {
+    const tagged: { kind: LandscapeKind; item: LandscapeCardLike }[] = [
+      ...(this._config.events ?? []).map(item => ({ kind: 'event' as const, item })),
+      ...(this._config.landmarks ?? []).map(item => ({ kind: 'landmark' as const, item })),
+      ...(this._config.projects ?? []).map(item => ({ kind: 'project' as const, item })),
+      ...(this._config.ways ?? []).map(item => ({ kind: 'way' as const, item })),
+      ...(this._config.traits ?? []).map(item => ({ kind: 'trait' as const, item })),
+    ];
+
+    if (tagged.length <= allowedEventsAndOthers) {
       return;
     }
 
-    this._loggerService.info(
-      `[match configurator] ${total} landscapes preselected, skipping random landscape selection cap of ${allowedEventsAndOthers}`,
+    const dropped = tagged.slice(allowedEventsAndOthers);
+    this._loggerService.warn(
+      `[match configurator] ${tagged.length} landscapes preselected, exceeds cap of ${allowedEventsAndOthers} — dropping ${
+        dropped.length
+      }: ${dropped.map(entry => entry.item.cardKey).join(', ')}`,
     );
+
+    const kept = tagged.slice(0, allowedEventsAndOthers);
+    this._config.events = kept.filter(entry => entry.kind === 'event').map(entry => entry.item as EventNoId);
+    this._config.landmarks = kept.filter(entry => entry.kind === 'landmark').map(entry => entry.item as LandmarkNoId);
+    this._config.projects = kept.filter(entry => entry.kind === 'project').map(entry => entry.item as ProjectNoId);
+    this._config.ways = kept.filter(entry => entry.kind === 'way').map(entry => entry.item as WayNoId);
+    this._config.traits = kept.filter(entry => entry.kind === 'trait').map(entry => entry.item as TraitNoId);
   }
 
   // Resolves the player-configured expansions into an array of the expansions'
