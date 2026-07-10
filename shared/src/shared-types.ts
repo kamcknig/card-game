@@ -1048,12 +1048,18 @@ type ProjectArgs = {
   [p in keyof CardLike]: CardLike[p];
 } & {
   randomizer?: string | null;
+  // Freeform filter tags (mirrors Card.tags), e.g. 'coffers' / 'villagers'
+  // provider markers consumed by the frontend resource-visibility logic.
+  tags?: string[];
 };
 
 // Projects are landscape card-likes that grant permanent abilities.
 export class Project extends CardLike {
   // Randomizer key used to group projects during selection.
   randomizer: string | null;
+  // Freeform filter tags (mirrors Card.tags); flows from the project
+  // library JSON through createProject's spread into this constructor.
+  tags?: string[];
 
   constructor(args: ProjectArgs) {
     super(args);
@@ -1061,6 +1067,7 @@ export class Project extends CardLike {
     this.id = args.id;
     this.cardName = args.cardName;
     this.randomizer = args.randomizer ?? null;
+    this.tags = args.tags ?? [];
   }
 
   override toString() {

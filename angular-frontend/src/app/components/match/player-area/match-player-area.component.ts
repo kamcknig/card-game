@@ -43,7 +43,7 @@ import {
   playerTreasureStore,
   turnPhaseStore
 } from '../../../state/turn-state';
-import { cofferStore, debtStore, villagerStore } from '../../../state/resource-logic';
+import { cofferStore, debtStore, matchUsesCoffersStore, matchUsesVillagersStore, villagerStore } from '../../../state/resource-logic';
 import { CARD_WIDTH } from '../../../core/app-contants';
 import { SUPPLY_PANEL_GAP_PX } from '../supply/supply-layout.constants';
 import { TokenImageBadgeComponent } from '../token-image-badge/token-image-badge.component';
@@ -200,6 +200,15 @@ export class MatchPlayerAreaComponent {
 
   private readonly _debtByPlayer = toSignal(this._nanoStores.useStore(debtStore), {
     initialValue: debtStore.get(),
+  });
+
+  // Whether the match contains any Coffers/Villagers provider content —
+  // drives whether the corresponding HUD controls render at all.
+  private readonly _matchUsesCoffers = toSignal(this._nanoStores.useStore(matchUsesCoffersStore), {
+    initialValue: matchUsesCoffersStore.get(),
+  });
+  private readonly _matchUsesVillagers = toSignal(this._nanoStores.useStore(matchUsesVillagersStore), {
+    initialValue: matchUsesVillagersStore.get(),
   });
 
   private readonly _showCofferControls = signal(false);
@@ -436,11 +445,27 @@ export class MatchPlayerAreaComponent {
     return handCards.some((card) => card.type?.includes('TREASURE'));
   });
 
-  // Whether the villager icon should be shown at all — tied to it being the
-  // player's own action phase, the only time villagers are ever spendable.
-  // Separate from canSpendVillagers() so the icon stays visible (disabled)
-  // at 0 villagers instead of disappearing.
+  // Whether the Coffers control renders at all: only when the match
+  // contains a Coffers provider. The non-zero-balance fallback is a safety
+  // net in case a provider card was minted without its tag.
+  readonly coffersVisible = computed(() => {
+    return this._matchUsesCoffers() || this.resourceState().coffers > 0;
+  });
+
+  // Whether the villager icon should be shown at all — mirrors
+  // coffersVisible: visible whenever the match contains a Villagers
+  // provider (or the player already holds some), regardless of phase. The
+  // non-zero-balance check is a safety net in case a provider card was
+  // minted without its tag.
   readonly villagerControlsVisible = computed(() => {
+    return this._matchUsesVillagers() || this.resourceState().villagers > 0;
+  });
+
+  // Whether it is currently the player's own action phase — the only time
+  // Villagers are spendable (for +1 Action each). Separate from
+  // villagerControlsVisible so the icon stays visible outside the action
+  // phase while the spend control itself stays disabled.
+  private readonly _isOwnActionPhase = computed(() => {
     const selfPlayerId = this._selfPlayerId();
     if (selfPlayerId === undefined) {
       return false;
@@ -449,7 +474,7 @@ export class MatchPlayerAreaComponent {
   });
 
   readonly canSpendVillagers = computed(() => {
-    return this.villagerControlsVisible() && this.resourceState().villagers > 0;
+    return this._isOwnActionPhase() && this.resourceState().villagers > 0;
   });
 
   readonly availableCubeTokens = computed(() => {

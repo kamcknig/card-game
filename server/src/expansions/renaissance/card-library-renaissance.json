@@ -13,7 +13,8 @@
       "treasure": 3
     },
     "type": ["ACTION"],
-    "abilityText": "+4 Villagers\nTrash this."
+    "abilityText": "+4 Villagers\nTrash this.",
+    "tags": ["villagers"]
   },
   "cargo-ship": {
     "cardName": "Cargo Ship",
@@ -29,7 +30,8 @@
       "treasure": 2
     },
     "type": ["TREASURE"],
-    "abilityText": "+1 Coffers\n+1 Buy\nWhen you gain this, you may trash a Copper from your hand."
+    "abilityText": "+1 Coffers\n+1 Buy\nWhen you gain this, you may trash a Copper from your hand.",
+    "tags": ["coffers"]
   },
   "experiment": {
     "cardName": "Experiment",
@@ -77,7 +79,8 @@
       "treasure": 2
     },
     "type": ["ACTION"],
-    "abilityText": "+2 Cards\nWhen you gain this, +2 Villagers."
+    "abilityText": "+2 Cards\nWhen you gain this, +2 Villagers.",
+    "tags": ["villagers"]
   },
   "mountain-village": {
     "cardName": "Mountain Village",
@@ -102,7 +105,8 @@
       "treasure": 4
     },
     "type": ["ACTION", "REACTION"],
-    "abilityText": "+1 Villager\n+$2\nWhen something causes you to reveal this (using the word \"reveal\") in an Action phase, +1 Coffers."
+    "abilityText": "+1 Villager\n+$2\nWhen something causes you to reveal this (using the word \"reveal\") in an Action phase, +1 Coffers.",
+    "tags": ["coffers", "villagers"]
   },
   "priest": {
     "cardName": "Priest",
@@ -118,7 +122,8 @@
       "treasure": 5
     },
     "type": ["ACTION"],
-    "abilityText": "+2 Cards\nTrash a card from your hand. +1 Villager per $1 it costs."
+    "abilityText": "+2 Cards\nTrash a card from your hand. +1 Villager per $1 it costs.",
+    "tags": ["villagers"]
   },
   "research": {
     "cardName": "Research",
@@ -142,7 +147,8 @@
       "treasure": 5
     },
     "type": ["ACTION"],
-    "abilityText": "Gain a card to your hand costing up to $4.\nIf it's a Treasure, +1 Villager."
+    "abilityText": "Gain a card to your hand costing up to $4.\nIf it's a Treasure, +1 Villager.",
+    "tags": ["villagers"]
   },
   "seer": {
     "cardName": "Seer",
@@ -158,7 +164,8 @@
       "treasure": 4
     },
     "type": ["ACTION"],
-    "abilityText": "+2 Cards\n+1 Buy\nWhen you gain or trash this, +1 Coffers and +1 Villager."
+    "abilityText": "+2 Cards\n+1 Buy\nWhen you gain or trash this, +1 Coffers and +1 Villager.",
+    "tags": ["coffers", "villagers"]
   },
   "spices": {
     "cardName": "Spices",
@@ -166,7 +173,8 @@
       "treasure": 5
     },
     "type": ["TREASURE"],
-    "abilityText": "+$2\n+1 Buy\nWhen you gain this, +2 Coffers."
+    "abilityText": "+$2\n+1 Buy\nWhen you gain this, +2 Coffers.",
+    "tags": ["coffers"]
   },
   "swashbuckler": {
     "cardName": "Swashbuckler",
@@ -174,7 +182,8 @@
       "treasure": 5
     },
     "type": ["ACTION"],
-    "abilityText": "+3 Cards\nIf your discard pile has any cards in it: +1 Coffers, then if you have at least 4 Coffers tokens, take the Treasure Chest."
+    "abilityText": "+3 Cards\nIf your discard pile has any cards in it: +1 Coffers, then if you have at least 4 Coffers tokens, take the Treasure Chest.",
+    "tags": ["coffers"]
   },
   "treasurer": {
     "cardName": "Treasurer",
@@ -191,7 +200,8 @@
     },
     "type": ["ACTION", "ATTACK"],
     "targetScheme": "ALL_OTHER",
-    "abilityText": "+2 Coffers\nEach other player with 5 or more cards in hand discards one costing $2 or more (or reveals they can't)."
+    "abilityText": "+2 Coffers\nEach other player with 5 or more cards in hand discards one costing $2 or more (or reveals they can't).",
+    "tags": ["coffers"]
   },
   "scepter": {
     "cardName": "Scepter",

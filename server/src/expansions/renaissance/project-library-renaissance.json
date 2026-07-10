@@ -4,7 +4,8 @@
       "treasure": 5
     },
     "kingdomSelectable": false,
-    "abilityText": "When you gain an Action card, +1 Villager."
+    "abilityText": "When you gain an Action card, +1 Villager.",
+    "tags": ["villagers"]
   },
   "barracks": {
     "cost": {
@@ -60,7 +61,8 @@
       "treasure": 4
     },
     "kingdomSelectable": false,
-    "abilityText": "At the end of your Buy phase, if you didn't gain any cards during it, +1 Coffers and +1 Villager."
+    "abilityText": "At the end of your Buy phase, if you didn't gain any cards during it, +1 Coffers and +1 Villager.",
+    "tags": ["coffers", "villagers"]
   },
   "fair": {
     "cost": {
@@ -81,7 +83,8 @@
       "treasure": 5
     },
     "kingdomSelectable": false,
-    "abilityText": "When you gain a Treasure, +1 Coffers."
+    "abilityText": "When you gain a Treasure, +1 Coffers.",
+    "tags": ["coffers"]
   },
   "innovation": {
     "cost": {
@@ -95,7 +98,8 @@
       "treasure": 3
     },
     "kingdomSelectable": false,
-    "abilityText": "At the end of your Buy phase, you may pay $1 for +1 Coffers."
+    "abilityText": "At the end of your Buy phase, you may pay $1 for +1 Coffers.",
+    "tags": ["coffers"]
   },
   "piazza": {
     "cost": {
