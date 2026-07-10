@@ -124,7 +124,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
             'removeToken',
             { tokenInstanceId: tokenEntry[0] },
             {
-              loggingContext: { source: trigger.args.source },
+              source: trigger.args.source,
             },
           );
         },

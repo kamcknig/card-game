@@ -42,15 +42,17 @@ export class PlayerReconnectOrchestrator {
   public bindGameplaySocketListeners(socket: AppSocket, playerId: PlayerId) {
     this.matchSocketBindings.bindGameplaySocketHandlers(socket, {
       onNextPhase: async () => await this.onNextPhase(),
-      onSearchCards: (pid, searchStr) => this.onSearchCards(pid, searchStr),
-      onExchangeCoffer: async (pid, count) => {
-        await this.actionService.run('exchangeCoffer', { playerId: pid, count });
+      // Attribute to the socket's bound player; never trust the payload id.
+      onSearchCards: (_pid, searchStr) => this.onSearchCards(playerId, searchStr),
+      onExchangeCoffer: async (_pid, count) => {
+        // Attribute to the socket's bound player; never trust the payload id.
+        await this.actionService.run('exchangeCoffer', { playerId, count });
       },
-      onSpendVillager: async (pid, count) => {
-        await this.actionService.run('spendVillager', { playerId: pid, count });
+      onSpendVillager: async (_pid, count) => {
+        await this.actionService.run('spendVillager', { playerId, count });
       },
-      onPayDebt: async (pid, count) => {
-        await this.actionService.run('payDebt', { playerId: pid, count });
+      onPayDebt: async (_pid, count) => {
+        await this.actionService.run('payDebt', { playerId, count });
       },
       onUndoRequested: () => {
         void this.undoVoteService.requestUndo(playerId);

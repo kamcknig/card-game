@@ -4,7 +4,8 @@ import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getStartingSupplyCount } from '../../utils/get-starting-supply-count.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getPlayerStartingFrom } from '@shared/get-player-position-utils.ts';
-import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { getAttackTargets } from '../../utils/get-attack-targets.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 
 const expansion: CardExpansionModule = {
   anvil: {
@@ -161,29 +162,23 @@ const expansion: CardExpansionModule = {
       loggerService.debug(`[charlatan effect] gaining 3 treasure and 1 action`);
       await effectArgs.actionService.run('gainTreasure', { count: 3 });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: effectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: effectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(effectArgs.reactionContext, playerId));
+      const targetPlayerIds = getAttackTargets(effectArgs.match, effectArgs.playerId, effectArgs.reactionContext);
 
       loggerService.debug(`[charlatan effect] targets ${targetPlayerIds} gaining a curse`);
 
       for (const targetPlayerId of targetPlayerIds) {
-        const curseCards = effectArgs.findCardService.findCards({
-          all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+        const gainedCurseId = await effectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+          playerId: targetPlayerId,
+          pileKey: 'curse',
+          from: 'basicSupply',
+          to: { location: 'playerDiscard' },
+          logTag: 'charlatan effect',
         });
 
-        if (!curseCards.length) {
+        if (!gainedCurseId) {
           loggerService.debug(`[charlatan effect] no curse cards in supply`);
           break;
         }
-
-        await effectArgs.actionService.run('gainCard', {
-          playerId: targetPlayerId,
-          cardId: curseCards.slice(-1)[0].id,
-          to: { location: 'playerDiscard' },
-        });
       }
     },
   },
@@ -239,16 +234,9 @@ const expansion: CardExpansionModule = {
       const loggerService = effectArgs.loggerService;
       await effectArgs.actionService.run('gainTreasure', { count: 2 });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: effectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: effectArgs.playerId,
-      }).filter(playerId => {
-        return (
-          !isPlayerImmune(effectArgs.reactionContext, playerId) &&
-          effectArgs.cardSourceController.getSource('playerHand', playerId).length >= 5
-        );
-      });
+      const targetPlayerIds = getAttackTargets(effectArgs.match, effectArgs.playerId, effectArgs.reactionContext).filter(
+        playerId => effectArgs.cardSourceController.getSource('playerHand', playerId).length >= 5,
+      );
 
       for (const targetPlayerId of targetPlayerIds) {
         const selectedCardId = await effectArgs.actionService.run('selectSingleCard', {
@@ -530,20 +518,17 @@ const expansion: CardExpansionModule = {
           return true;
         },
         triggeredEffectFn: async triggeredEffectArgs => {
-          const goldCardIds = effectArgs.findCardService.findCards({
-            all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }],
-          });
-
-          if (!goldCardIds.length) {
-            loggerService.debug(`[hoard triggered effect] no gold in supply`);
-            return;
-          }
-
-          await triggeredEffectArgs.actionService.run('gainCard', {
+          const gainedGoldId = await triggeredEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
             playerId: effectArgs.playerId,
-            cardId: goldCardIds.slice(-1)[0].id,
+            pileKey: 'gold',
+            from: 'basicSupply',
             to: { location: 'playerDiscard' },
+            logTag: 'hoard triggered effect',
           });
+
+          if (!gainedGoldId) {
+            loggerService.debug(`[hoard triggered effect] no gold in supply`);
+          }
         },
         playerId: effectArgs.playerId,
       });
@@ -721,20 +706,17 @@ const expansion: CardExpansionModule = {
         playerId: effectArgs.playerId,
       });
 
-      const cardsInSupply = effectArgs.findCardService.findCards({
-        all: [{ location: selectedCard.isBasic ? 'basicSupply' : 'kingdomSupply' }, { cardKeys: selectedCard.cardKey }],
-      });
-
-      if (cardsInSupply.length === 0) {
-        loggerService.debug(`[mint effect] no copies of ${selectedCard} in supply`);
-        return;
-      }
-
-      await effectArgs.actionService.run('gainCard', {
+      const gainedCardId = await effectArgs.supplyGainService.gainTopSupplyCardForPileKey({
         playerId: effectArgs.playerId,
-        cardId: cardsInSupply.slice(-1)[0].id,
+        pileKey: selectedCard.cardKey,
+        from: selectedCard.isBasic ? 'basicSupply' : 'kingdomSupply',
         to: { location: 'playerDiscard' },
+        logTag: 'mint effect',
       });
+
+      if (!gainedCardId) {
+        loggerService.debug(`[mint effect] no copies of ${selectedCard} in supply`);
+      }
     },
   },
   monument: {
@@ -797,42 +779,26 @@ const expansion: CardExpansionModule = {
 
       await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId, count: 3 });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         const match = cardEffectArgs.match;
-        const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', targetPlayerId);
 
-        if (deck.length < 3) {
-          loggerService.debug(`[rabble effect] ${targetPlayerId} has less than 3 cards in deck, shuffling`);
-          await cardEffectArgs.actionService.run('shuffleDeck', { playerId: targetPlayerId });
-        }
+        // Reveal the top 3 cards, set aside — shuffling the discard back in
+        // automatically if the deck runs dry mid-reveal.
+        const revealedCards = await revealTopDeckCards(cardEffectArgs, targetPlayerId, 3, { setAside: true });
 
-        if (deck.length === 0) {
+        if (!revealedCards.length) {
           loggerService.debug(`[rabble effect] ${targetPlayerId} has no cards in deck`);
           continue;
         }
 
-        const numToReveal = Math.min(3, deck.length);
-
         const cardsToRearrange: Card[] = [];
 
-        for (let i = 0; i < numToReveal; i++) {
-          const cardId = deck.slice(-1)[0];
-          const card = cardEffectArgs.cardLibrary.getCard(cardId);
-          await cardEffectArgs.actionService.run('revealCard', {
-            cardId,
-            playerId: targetPlayerId,
-            moveToSetAside: true,
-          });
-
+        for (const card of revealedCards) {
           if (card.type.includes('ACTION') || card.type.includes('TREASURE')) {
             loggerService.debug(`[rabble effect] action or treasure revealed, discarding`);
-            await cardEffectArgs.actionService.run('discardCard', { cardId, playerId: targetPlayerId });
+            await cardEffectArgs.actionService.run('discardCard', { cardId: card.id, playerId: targetPlayerId });
           } else {
             cardsToRearrange.push(card);
           }

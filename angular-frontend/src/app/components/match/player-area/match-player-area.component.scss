@@ -385,6 +385,12 @@
   object-fit: cover;
 }
 
+.resource-icon-button:disabled {
+  cursor: not-allowed;
+  filter: grayscale(1) brightness(0.6);
+  opacity: 0.7;
+}
+
 .resource-icon-button span {
   position: absolute;
   inset: 0;

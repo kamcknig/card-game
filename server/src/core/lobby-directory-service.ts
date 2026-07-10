@@ -249,6 +249,15 @@ export class LobbyDirectoryService {
     this.io.emit('setSelectableSearchCatalog', this.expansionSearchService.getSelectableSearchCatalog());
   }
 
+  // Re-broadcasts the current searchable catalog to every connected client. Used
+  // by ServerStartupService after ExpansionSearchService.rebuildIndexes() runs
+  // post-load, since the per-expansion setSelectableSearchCatalog emits sent
+  // during the load loop (via expansionLoaded) were built against a catalog that
+  // did not yet contain any expansions.
+  public broadcastSelectableSearchCatalog(): void {
+    this.io.emit('setSelectableSearchCatalog', this.expansionSearchService.getSelectableSearchCatalog());
+  }
+
   // Returns debug summaries for all currently running games.
   public getDebugGames(): DebugGameSummary[] {
     const summaries = [...this.games.values()]
@@ -453,6 +462,22 @@ export class LobbyDirectoryService {
     });
 
     socket.on('disconnect', () => {
+      // Drop the username mapping unless another live socket shares this session.
+      // sessionId is a localStorage-backed value on the client (see
+      // socket.service.ts), so it is shared across every tab in the same
+      // browser profile — but the socket layer's one-user-one-tab enforcement
+      // (ServerSocketGatewayService.kickPriorSocketForUsername) dedupes by
+      // USERNAME, not sessionId. A second tab authenticated as a different
+      // account (or a stale tab whose kick hasn't landed yet) can therefore
+      // still hold a live socket for this same sessionId, so unconditionally
+      // deleting here would race away a mapping another connection still needs.
+      // It is re-established by registerConnection on reconnect regardless.
+      const hasOtherLiveSocket = [...this.io.of('/').sockets.values()].some(
+        otherSocket => otherSocket.id !== socket.id && otherSocket.handshake.query.get('sessionId') === sessionId,
+      );
+      if (!hasOtherLiveSocket) {
+        this.sessionToUsername.delete(sessionId);
+      }
       // Let per-game handlers update state first, then recompute lobby summary.
       const gameId = this.findGameIdForSession(sessionId);
       if (!gameId) return;
@@ -461,31 +486,56 @@ export class LobbyDirectoryService {
   }
 
   /**
-   * Email-gated handler for `createLobbyGame` socket events.
+   * Checks whether the authenticated user for `sessionId` has an email
+   * address attached, emitting `joinLobbyRejected` and returning `false` when
+   * not. Returns `true` when the session has no known username (a separate
+   * auth gate handles unauthenticated sessions) or the user has an email
+   * attached.
    *
-   * Looks up the authenticated username for this session and checks whether
-   * the user's account has an email address attached. Users without an email
-   * (legacy accounts predating email registration) cannot create games until
-   * they visit `/profile/security` and attach one. The rejection is defence-
-   * in-depth: the lobby UI already blocks the action before emitting the
-   * socket event, but a client that bypasses the UI check is also refused here.
+   * Users without an email (legacy accounts predating email registration)
+   * cannot create or join games until they visit `/profile/security` and
+   * attach one. The rejection is defence-in-depth: the lobby UI already
+   * blocks the action before emitting the socket event, but a client that
+   * bypasses the UI check is also refused here.
+   *
+   * `gameId` is included in the rejection payload (and the log/message text)
+   * when provided — the join flow has a target game; the create flow does not.
+   *
+   * Shared by {@link handleCreateLobbyGame} and {@link handleJoinLobbyGame}.
+   */
+  private async checkEmailAttached(sessionId: string, socket: AppSocket, gameId?: string): Promise<boolean> {
+    const username = this.sessionToUsername.get(sessionId);
+    if (!username) {
+      return true;
+    }
+
+    const user = await this.userStore.getByUsername(username);
+    if (user?.email != null) {
+      return true;
+    }
+
+    const action = gameId ? `joining game ${gameId}` : 'creating game';
+    this.loggerService.info(
+      `[lobby directory] session ${sessionId} (username=${username}) blocked from ${action}: no email attached`,
+    );
+    this.emitJoinRejected(socket, {
+      ...(gameId ? { gameId } : {}),
+      reason: 'invalidRequest',
+      message: gameId
+        ? 'Add an email to your account before joining games.'
+        : 'Add an email to your account before creating games.',
+    });
+    return false;
+  }
+
+  /**
+   * Email-gated handler for `createLobbyGame` socket events.
    *
    * On success, delegates to `createLobbyGame()` and then `joinLobbyGame()`.
    */
   private async handleCreateLobbyGame(sessionId: string, socket: AppSocket): Promise<void> {
-    const username = this.sessionToUsername.get(sessionId);
-    if (username) {
-      const user = await this.userStore.getByUsername(username);
-      if (user?.email == null) {
-        this.loggerService.info(
-          `[lobby directory] session ${sessionId} (username=${username}) blocked from creating game: no email attached`,
-        );
-        this.emitJoinRejected(socket, {
-          reason: 'invalidRequest',
-          message: 'Add an email to your account before creating games.',
-        });
-        return;
-      }
+    if (!(await this.checkEmailAttached(sessionId, socket))) {
+      return;
     }
 
     // Prevent orphan lobby games when the same session issues repeated create requests.
@@ -505,28 +555,11 @@ export class LobbyDirectoryService {
   /**
    * Email-gated handler for `joinLobbyGame` socket events.
    *
-   * Mirrors the email gate from {@link handleCreateLobbyGame}: users without
-   * an email address attached to their account cannot join games. The rejection
-   * emits `joinLobbyRejected` so the frontend's existing rejection handler
-   * surfaces the message in the lobby status banner.
-   *
    * On success, delegates to `joinLobbyGame()`.
    */
   private async handleJoinLobbyGame(sessionId: string, socket: AppSocket, gameId: string): Promise<void> {
-    const username = this.sessionToUsername.get(sessionId);
-    if (username) {
-      const user = await this.userStore.getByUsername(username);
-      if (user?.email == null) {
-        this.loggerService.info(
-          `[lobby directory] session ${sessionId} (username=${username}) blocked from joining game ${gameId}: no email attached`,
-        );
-        this.emitJoinRejected(socket, {
-          gameId,
-          reason: 'invalidRequest',
-          message: 'Add an email to your account before joining games.',
-        });
-        return;
-      }
+    if (!(await this.checkEmailAttached(sessionId, socket, gameId))) {
+      return;
     }
 
     this.joinLobbyGame(sessionId, socket, gameId);
@@ -862,6 +895,14 @@ export class LobbyDirectoryService {
     } else {
       this.loggerService.debug(`[lobby directory] session ${targetSessionId} was not banned in game ${gameId}`);
     }
+
+    // Acknowledge the request with the refreshed banned list, mirroring the
+    // kick/ban handlers' pattern of confirming the mutation to the actor
+    // rather than leaving the owner's UI to assume success silently.
+    socket.emit('bannedSessionsUpdated', {
+      gameId,
+      bannedSessionIds: [...record.bannedSessionIds],
+    });
   }
 
   // Recomputes lobby visibility and clean-up rules after one game state transition.

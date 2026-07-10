@@ -5,6 +5,8 @@ import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { getAttackTargets } from '../../utils/get-attack-targets.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 
 const expansion: CardExpansionModule = {
   alchemist: {
@@ -87,19 +89,19 @@ const expansion: CardExpansionModule = {
       const playerDiscard = args.cardSourceController.getSource('playerDiscard', args.playerId);
 
       const numToReveal = Math.min(4, playerDeck.length + playerDiscard.length);
-
-      if (playerDeck.length < numToReveal) {
-        await args.actionService.run('shuffleDeck', { playerId: args.playerId });
-      }
-
-      const cardsToReveal = playerDeck.slice(-numToReveal).map(args.cardLibrary.getCard);
       const setAside: Card[] = [];
 
-      for (const card of cardsToReveal) {
-        await args.actionService.run('revealCard', {
-          cardId: card.id,
-          playerId: args.playerId,
-        });
+      // Reveal one card at a time (rather than n at once with setAside) so
+      // each card can be routed to hand or set-aside immediately, matching
+      // Apothecary's card text; revealTopDeckCards shuffles the discard in
+      // automatically whenever the deck runs dry mid-reveal.
+      for (let i = 0; i < numToReveal; i++) {
+        const revealed = await revealTopDeckCards(args, args.playerId, 1);
+        const card = revealed[0];
+        if (!card) {
+          loggerService.debug(`[apothecary effect] no more cards to reveal`);
+          break;
+        }
 
         if (['copper', 'potion'].includes(card.cardKey)) {
           await args.actionService.run('moveCard', {
@@ -193,11 +195,7 @@ const expansion: CardExpansionModule = {
       await args.actionService.run('drawCard', { playerId: args.playerId });
       await args.actionService.run('gainAction', { count: 1 });
 
-      const targets = findOrderedTargets({
-        match: args.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: args.playerId,
-      }).filter(id => !isPlayerImmune(args.reactionContext, id));
+      const targets = getAttackTargets(args.match, args.playerId, args.reactionContext);
 
       for (const targetId of targets) {
         const curseCardId = args.findCardService
@@ -219,9 +217,7 @@ const expansion: CardExpansionModule = {
             to: { location: 'playerDiscard' },
           },
           {
-            loggingContext: {
-              source: args.cardId,
-            },
+            source: args.cardId,
           },
         );
       }
@@ -230,25 +226,21 @@ const expansion: CardExpansionModule = {
   golem: {
     registerEffects: () => async args => {
       const loggerService = args.loggerService;
-      const deck = args.cardSourceController.getSource('playerDeck', args.playerId);
-      const discard = args.cardSourceController.getSource('playerDiscard', args.playerId);
-
       const actionCardsSetAside: Card[] = [];
       const cardsToDiscard: Card[] = [];
 
-      while (deck.length + discard.length > 0 && actionCardsSetAside.length !== 2) {
-        if (deck.length === 0) {
-          await args.actionService.run('shuffleDeck', { playerId: args.playerId });
+      // Reveal one card at a time until 2 non-Golem Actions are set aside or
+      // the player runs out of cards; revealTopDeckCards shuffles the
+      // discard in automatically whenever the deck runs dry mid-reveal.
+      while (actionCardsSetAside.length !== 2) {
+        const revealed = await revealTopDeckCards(args, args.playerId, 1);
+        const card = revealed[0];
+        if (!card) {
+          loggerService.debug(`[golem effect] no more cards to reveal`);
+          break;
         }
 
-        const cardId = deck.slice(-1)[0];
-        const card = args.cardLibrary.getCard(cardId);
-
         loggerService.debug(`[golem effect] revealing card ${card}`);
-        await args.actionService.run('revealCard', {
-          cardId: card.id,
-          playerId: args.playerId,
-        });
 
         loggerService.debug(`[golem effect] card is non-golem action, setting aside`);
         await args.actionService.run('moveCard', {
@@ -375,28 +367,17 @@ const expansion: CardExpansionModule = {
       }).filter(playerId => !isPlayerImmune(args.reactionContext, playerId));
 
       for (const targetPlayerId of targetIds) {
-        const deck = args.cardSourceController.getSource('playerDeck', targetPlayerId);
+        // Reveal the top card of the target's deck, set aside — shuffling
+        // the discard back in automatically if the deck is empty.
+        const revealed = await revealTopDeckCards(args, targetPlayerId, 1, { setAside: true });
+        const card = revealed[0];
 
-        if (deck.length === 0) {
-          loggerService.debug(`[scrying-pool effect] no cards in deck, shuffling`);
-          await args.actionService.run('shuffleDeck', { playerId: targetPlayerId });
-
-          if (deck.length === 0) {
-            loggerService.debug(`[scrying-pool effect] still no cards in deck, skipping`);
-            continue;
-          }
+        if (!card) {
+          loggerService.debug(`[scrying-pool effect] still no cards in deck, skipping`);
+          continue;
         }
 
-        const cardId = deck.slice(-1)[0];
-        const card = args.cardLibrary.getCard(cardId);
-
         loggerService.debug(`[scrying-pool effect] revealing card ${card}`);
-
-        await args.actionService.run('revealCard', {
-          cardId: cardId,
-          playerId: targetPlayerId,
-          moveToSetAside: true,
-        });
 
         const result = (await args.actionService.run('userPrompt', {
           prompt: `Discard or top-deck ${card.cardName}?`,
@@ -410,44 +391,33 @@ const expansion: CardExpansionModule = {
         if (result.action === 1) {
           loggerService.debug(`[scrying-pool effect] ${getPlayerById(args.match, args.playerId)} chose discard`);
           await args.actionService.run('discardCard', {
-            cardId: cardId,
+            cardId: card.id,
             playerId: targetPlayerId,
           });
         } else {
           loggerService.debug(`[scrying-pool effect] ${getPlayerById(args.match, args.playerId)} chose top-deck`);
           await args.actionService.run('moveCard', {
-            cardId: cardId,
+            cardId: card.id,
             toPlayerId: targetPlayerId,
             to: { location: 'playerDeck' },
           });
         }
       }
 
-      const deck = args.cardSourceController.getSource('playerDeck', args.playerId);
-      const discard = args.cardSourceController.getSource('playerDiscard', args.playerId);
-
       const cardsRevealed: Card[] = [];
 
-      while (deck.length + discard.length > 0) {
-        const cardId = deck.slice(-1)[0];
-        if (!cardId) {
-          loggerService.debug(`[scrying-pool effect] no cards in deck, shuffling`);
-          await args.actionService.run('shuffleDeck', { playerId: args.playerId });
-
-          if (deck.length === 0) {
-            loggerService.debug(`[scrying-pool effect] still no cards in deck`);
-            return;
-          }
+      // Reveal cards one at a time, set aside, stopping after the first
+      // non-Action (inclusive); revealTopDeckCards shuffles the discard in
+      // automatically whenever the deck runs dry mid-reveal.
+      while (true) {
+        const revealed = await revealTopDeckCards(args, args.playerId, 1, { setAside: true });
+        const card = revealed[0];
+        if (!card) {
+          loggerService.debug(`[scrying-pool effect] still no cards in deck`);
+          return;
         }
 
-        const card = args.cardLibrary.getCard(cardId);
         cardsRevealed.push(card);
-
-        await args.actionService.run('revealCard', {
-          cardId: card.id,
-          playerId: args.playerId,
-          moveToSetAside: true,
-        });
 
         if (!card.type.includes('ACTION')) {
           break;
@@ -486,50 +456,40 @@ const expansion: CardExpansionModule = {
         cardId: selectedCardId,
       });
 
-      let cards: Card[] = [];
       if (selectedCard.type.includes('ACTION')) {
-        cards = args.findCardService.findCards({ all: [{ location: ['basicSupply'] }, { cardKeys: 'duchy' }] });
+        loggerService.debug(`[transmute effect] card is action, gaining duchy`);
 
-        const card = cards.slice(-1)[0];
-        if (card) {
-          loggerService.debug(`[transmute effect] card is action, gaining duchy`);
-
-          await args.actionService.run('gainCard', {
-            playerId: args.playerId,
-            cardId: card.id,
-            to: { location: 'playerDiscard' },
-          });
-        }
+        await args.supplyGainService.gainTopSupplyCardForPileKey({
+          playerId: args.playerId,
+          pileKey: 'duchy',
+          from: 'basicSupply',
+          to: { location: 'playerDiscard' },
+          logTag: 'transmute effect',
+        });
       }
 
       if (selectedCard.type.includes('TREASURE')) {
-        cards = args.findCardService.findCards({ all: [{ location: 'kingdomSupply' }, { cardKeys: 'transmute' }] });
+        loggerService.debug(`[transmute effect] card is treasure, gaining transmute`);
 
-        const card = cards.slice(-1)[0];
-        if (card) {
-          loggerService.debug(`[transmute effect] card is treasure, gaining transmute`);
-
-          await args.actionService.run('gainCard', {
-            playerId: args.playerId,
-            cardId: card.id,
-            to: { location: 'playerDiscard' },
-          });
-        }
+        await args.supplyGainService.gainTopSupplyCardForPileKey({
+          playerId: args.playerId,
+          pileKey: 'transmute',
+          from: 'kingdomSupply',
+          to: { location: 'playerDiscard' },
+          logTag: 'transmute effect',
+        });
       }
 
       if (selectedCard.type.includes('VICTORY')) {
-        cards = args.findCardService.findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }] });
+        loggerService.debug(`[transmute effect] card is victory, gaining gold`);
 
-        const card = cards.slice(-1)[0];
-        if (card) {
-          loggerService.debug(`[transmute effect] card is victory, gaining gold`);
-
-          await args.actionService.run('gainCard', {
-            playerId: args.playerId,
-            cardId: card.id,
-            to: { location: 'playerDiscard' },
-          });
-        }
+        await args.supplyGainService.gainTopSupplyCardForPileKey({
+          playerId: args.playerId,
+          pileKey: 'gold',
+          from: 'basicSupply',
+          to: { location: 'playerDiscard' },
+          logTag: 'transmute effect',
+        });
       }
     },
   },

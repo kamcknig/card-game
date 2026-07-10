@@ -1,12 +1,11 @@
 import { CardId, PlayerId } from 'shared/types/index.ts';
 import { CardExpansionModule, CardLifecycleCallbackContext } from '@server-types/index.ts';
-import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
-import { fisherYatesShuffle } from '../../utils/fisher-yates-shuffler.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
-import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { discardDownTo } from '../../utils/discard-down-to.ts';
+import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 
 const expansion: CardExpansionModule = {
   berserker: {
@@ -75,29 +74,15 @@ const expansion: CardExpansionModule = {
         to: { location: 'playerDiscard' },
       });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
-        const hand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
-
-        const numToDiscard = hand.length - 3;
-        if (numToDiscard <= 0) {
-          loggerService.debug(`[berserker triggered effect] no cards to discard for player ${targetPlayerId}`);
-          continue;
-        }
-
-        loggerService.debug(`[berserker triggered effect] player ${targetPlayerId} discarding ${numToDiscard} cards`);
-
-        for (let i = 0; i < numToDiscard; i++) {
-          await cardEffectArgs.actionService.run('discardCard', {
-            cardId: hand.slice(-1)[0],
-            playerId: targetPlayerId,
-          });
-        }
+        // Discard-down-to attacks let the victim choose which cards to keep.
+        await discardDownTo(cardEffectArgs, {
+          playerId: targetPlayerId,
+          targetHandSize: 3,
+          logTag: 'berserker triggered effect',
+        });
       }
     },
   },
@@ -143,7 +128,7 @@ const expansion: CardExpansionModule = {
             cardId: selectedCard.id,
             to: { location: 'playerDiscard' },
           },
-          { loggingContext: { source: eventArgs.cardId } },
+          { source: eventArgs.cardId },
         );
       },
     }),
@@ -262,30 +247,23 @@ const expansion: CardExpansionModule = {
         },
         triggeredEffectFn: async () => {
           cardEffectArgs.reactionManager.unregisterTrigger(`cauldron:${cardEffectArgs.cardId}:cardGained`);
-          const targetPlayerIds = findOrderedTargets({
-            match: cardEffectArgs.match,
-            appliesTo: 'ALL_OTHER',
-            startingPlayerId: cardEffectArgs.playerId,
-          }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+          const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
           for (const targetPlayerId of targetPlayerIds) {
-            const curseIds = cardEffectArgs.findCardService.findCards({
-              all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+            loggerService.debug(`[cauldron triggered effect] player ${targetPlayerId} gaining a curse`);
+
+            const gainedCurseId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+              playerId: targetPlayerId,
+              pileKey: 'curse',
+              from: 'basicSupply',
+              to: { location: 'playerDiscard' },
+              logTag: 'cauldron triggered effect',
             });
 
-            if (!curseIds.length) {
+            if (!gainedCurseId) {
               loggerService.debug(`[cauldron triggered effect] no curse cards in supply`);
               break;
             }
-
-            loggerService.debug(
-              `[cauldron triggered effect] player ${targetPlayerId} gaining ${curseIds.slice(-1)[0]}`,
-            );
-            await cardEffectArgs.actionService.run('gainCard', {
-              playerId: targetPlayerId,
-              cardId: curseIds.slice(-1)[0].id,
-              to: { location: 'playerDiscard' },
-            });
           }
         },
       });
@@ -538,24 +516,17 @@ const expansion: CardExpansionModule = {
               cardId: eventArgs.cardId,
             });
 
-            const goldCardIds = triggeredEffectArgs.findCardService.findCards({
-              all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }],
-            });
-
-            if (!goldCardIds.length) {
-              loggerService.debug(`[fools-gold triggered effect] no gold cards in supply`);
-              return;
-            }
-
-            const card = goldCardIds.slice(-1)[0];
-
-            loggerService.debug(`[fools-gold triggered effect] gaining ${card}`);
-
-            await triggeredEffectArgs.actionService.run('gainCard', {
+            const gainedGoldId = await triggeredEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
               playerId: eventArgs.playerId,
-              cardId: card.id,
+              pileKey: 'gold',
+              from: 'basicSupply',
               to: { location: 'playerDeck' },
+              logTag: 'fools-gold triggered effect',
             });
+
+            if (!gainedGoldId) {
+              loggerService.debug(`[fools-gold triggered effect] no gold cards in supply`);
+            }
           },
         });
       },
@@ -699,7 +670,7 @@ const expansion: CardExpansionModule = {
               cardId: selectedCard.id,
               to: { location: 'playerDiscard' },
             },
-            { loggingContext: { source: cardEffectArgs.cardId } },
+            { source: cardEffectArgs.cardId },
           );
         },
       });
@@ -790,7 +761,9 @@ const expansion: CardExpansionModule = {
 
         loggerService.debug(`[inn onGained effect] shuffling player deck`);
 
-        fisherYatesShuffle(args.cardSourceController.getSource('playerDeck', eventArgs.playerId), true);
+        // Route through the engine action so the shuffle uses the injected RNG
+        // instead of the shuffler's (now removed) Math.random default.
+        await args.actionService.run('shuffleDeck', { playerId: eventArgs.playerId });
       },
     }),
     registerEffects: () => async cardEffectArgs => {
@@ -830,20 +803,18 @@ const expansion: CardExpansionModule = {
   'jack-of-all-trades': {
     registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
-      const silverCardIds = cardEffectArgs.findCardService.findCards({
-        all: [{ location: 'basicSupply' }, { cardKeys: 'silver' }],
+      loggerService.debug(`[jack-of-all-trades effect] gaining a silver`);
+
+      const gainedSilverId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+        playerId: cardEffectArgs.playerId,
+        pileKey: 'silver',
+        from: 'basicSupply',
+        to: { location: 'playerDiscard' },
+        logTag: 'jack-of-all-trades effect',
       });
 
-      if (!silverCardIds.length) {
+      if (!gainedSilverId) {
         loggerService.debug(`[jack-of-all-trades effect] no silver cards in supply`);
-      } else {
-        loggerService.debug(`[jack-of-all-trades effect] gaining a silver`);
-
-        await cardEffectArgs.actionService.run('gainCard', {
-          playerId: cardEffectArgs.playerId,
-          cardId: silverCardIds.slice(-1)[0].id,
-          to: { location: 'playerDiscard' },
-        });
       }
 
       const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
@@ -922,11 +893,7 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId, count: 3 });
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        startingPlayerId: cardEffectArgs.playerId,
-        appliesTo: 'ALL_OTHER',
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         await cardEffectArgs.actionService.run('drawCard', { playerId: targetPlayerId });
@@ -1403,24 +1370,17 @@ const expansion: CardExpansionModule = {
           playerId: eventArgs.playerId,
         });
 
-        const goldCardIds = args.findCardService.findCards({
-          all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }],
-        });
-
-        if (!goldCardIds.length) {
-          loggerService.debug(`[tunnel onDiscarded event] no gold cards in supply`);
-          return;
-        }
-
-        const goldCard = goldCardIds.slice(-1)[0];
-
-        loggerService.debug(`[tunnel onDiscarded event] gaining ${goldCard}`);
-
-        await args.actionService.run('gainCard', {
+        const gainedGoldId = await args.supplyGainService.gainTopSupplyCardForPileKey({
           playerId: eventArgs.playerId,
-          cardId: goldCard.id,
+          pileKey: 'gold',
+          from: 'basicSupply',
           to: { location: 'playerDiscard' },
+          logTag: 'tunnel onDiscarded event',
         });
+
+        if (!gainedGoldId) {
+          loggerService.debug(`[tunnel onDiscarded event] no gold cards in supply`);
+        }
       },
     }),
   },
@@ -1618,31 +1578,21 @@ const expansion: CardExpansionModule = {
         if (selectedCardIds.map(cardEffectArgs.cardLibrary.getCard).every(card => card.type.includes('ACTION'))) {
           loggerService.debug(`[witchs-hut effect] every card discarded is an action, others gaining a curse`);
 
-          const targetPlayerIds = findOrderedTargets({
-            match: cardEffectArgs.match,
-            startingPlayerId: cardEffectArgs.playerId,
-            appliesTo: 'ALL_OTHER',
-          }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+          const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
           for (const targetPlayerId of targetPlayerIds) {
-            const curseCardIds = cardEffectArgs.findCardService.findCards({
-              all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+            const gainedCurseId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+              playerId: targetPlayerId,
+              pileKey: 'curse',
+              from: 'basicSupply',
+              to: { location: 'playerDiscard' },
+              logTag: 'witchs-hut effect',
             });
 
-            if (!curseCardIds.length) {
+            if (!gainedCurseId) {
               loggerService.debug(`[witchs-hut effect] no curse cards in supply`);
               return;
             }
-
-            const curseCard = curseCardIds.slice(-1)[0];
-
-            loggerService.debug(`[witchs-hut effect] gaining ${curseCard} to ${targetPlayerId}`);
-
-            await cardEffectArgs.actionService.run('gainCard', {
-              playerId: targetPlayerId,
-              cardId: curseCard.id,
-              to: { location: 'playerDiscard' },
-            });
           }
         } else {
           loggerService.debug(`[witchs-hut effect] not every card discarded is an action`);

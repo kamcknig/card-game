@@ -115,6 +115,20 @@ export class SupabaseSessionStore implements SessionStore {
   }
 
   /**
+   * Attaches the shared fire-and-forget completion handler to a Supabase
+   * write query (upsert/update/delete), logging a warning on failure. Every
+   * DB mutation in this store shared this exact then/catch boilerplate
+   * before consolidation.
+   */
+  private fireWrite(query: PromiseLike<{ error: { message: string } | null }> | undefined, failureMessage: string): void {
+    query?.then(({ error }) => {
+      if (error) {
+        this.loggerService.warn(`[auth sessions] ${failureMessage}: ${error.message}`);
+      }
+    });
+  }
+
+  /**
    * Inserts or replaces the full session record in both cache and DB.
    *
    * Updates the cache synchronously. The DB write is fire-and-forget.
@@ -122,14 +136,10 @@ export class SupabaseSessionStore implements SessionStore {
   public put(record: SessionRecord): void {
     this.cache.set(record.token, record);
 
-    this.client
-      ?.from('auth_sessions')
-      .upsert(recordToRow(record), { onConflict: 'token' })
-      .then(({ error }) => {
-        if (error) {
-          this.loggerService.warn(`[auth sessions] put failed for token ...${record.token.slice(-6)}: ${error.message}`);
-        }
-      });
+    this.fireWrite(
+      this.client?.from('auth_sessions').upsert(recordToRow(record), { onConflict: 'token' }),
+      `put failed for token ...${record.token.slice(-6)}`,
+    );
   }
 
   /**
@@ -149,15 +159,10 @@ export class SupabaseSessionStore implements SessionStore {
     if (patch.lastActivityAt !== undefined) dbPatch.last_activity_at = patch.lastActivityAt;
     if (patch.expiresAt !== undefined) dbPatch.expires_at = patch.expiresAt;
 
-    this.client
-      ?.from('auth_sessions')
-      .update(dbPatch)
-      .eq('token', token)
-      .then(({ error }) => {
-        if (error) {
-          this.loggerService.warn(`[auth sessions] update failed for token ...${token.slice(-6)}: ${error.message}`);
-        }
-      });
+    this.fireWrite(
+      this.client?.from('auth_sessions').update(dbPatch).eq('token', token),
+      `update failed for token ...${token.slice(-6)}`,
+    );
   }
 
   /**
@@ -168,15 +173,10 @@ export class SupabaseSessionStore implements SessionStore {
   public delete(token: string): void {
     this.cache.delete(token);
 
-    this.client
-      ?.from('auth_sessions')
-      .delete()
-      .eq('token', token)
-      .then(({ error }) => {
-        if (error) {
-          this.loggerService.warn(`[auth sessions] delete failed for token ...${token.slice(-6)}: ${error.message}`);
-        }
-      });
+    this.fireWrite(
+      this.client?.from('auth_sessions').delete().eq('token', token),
+      `delete failed for token ...${token.slice(-6)}`,
+    );
   }
 
   /**
@@ -203,11 +203,7 @@ export class SupabaseSessionStore implements SessionStore {
       if (exceptToken) {
         query = query?.neq('token', exceptToken);
       }
-      query?.then(({ error }) => {
-        if (error) {
-          this.loggerService.warn(`[auth sessions] deleteByUsername failed for '${username}': ${error.message}`);
-        }
-      });
+      this.fireWrite(query, `deleteByUsername failed for '${username}'`);
     }
 
     return toDelete.length;
@@ -240,15 +236,7 @@ export class SupabaseSessionStore implements SessionStore {
 
     // Delete all expired rows from DB in one round-trip, including any that
     // were not in the cache (e.g., loaded by a previous process instance).
-    this.client
-      ?.from('auth_sessions')
-      .delete()
-      .lte('expires_at', nowMs)
-      .then(({ error }) => {
-        if (error) {
-          this.loggerService.warn(`[auth sessions] purgeExpired DB delete failed: ${error.message}`);
-        }
-      });
+    this.fireWrite(this.client?.from('auth_sessions').delete().lte('expires_at', nowMs), 'purgeExpired DB delete failed');
 
     if (removed > 0) {
       this.loggerService.debug(`[auth sessions] purged ${removed} expired session(s) from cache`);

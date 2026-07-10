@@ -8,6 +8,7 @@ import { LoggerService } from '../logger-service.ts';
 import { InMemoryUserStore } from '../auth/in-memory-user-store.ts';
 import { Argon2idHasher, BcryptHasher } from '../auth/password-hasher.ts';
 import { UserAccountAuthProvider } from '../auth/user-account-auth-provider.ts';
+import type { SessionStore } from '../auth/session-store.ts';
 
 // Env keys managed by this test suite.
 const AUTH_ENV_KEYS = [
@@ -105,6 +106,66 @@ const makeSupabaseClientProviderStub = (): SupabaseClientProvider =>
       throw new Error('SupabaseClientProvider stub: not available in in-memory tests');
     },
   }) as unknown as SupabaseClientProvider;
+
+/**
+ * A `SessionStore` that behaves like `InMemorySessionStore` but additionally
+ * records the name of every mutating call (`put` / `delete` / `deleteByUsername`)
+ * in call order. Used to verify the login session-write ordering fix (9.2):
+ * the new session must be `put` into the store BEFORE any prior session for
+ * the same user is revoked via `deleteByUsername`.
+ */
+class RecordingSessionStore implements SessionStore {
+  public readonly calls: string[] = [];
+  private readonly sessions = new Map<string, SessionRecord>();
+
+  get(token: string): SessionRecord | undefined {
+    return this.sessions.get(token);
+  }
+
+  put(record: SessionRecord): void {
+    this.calls.push(`put:${record.token}`);
+    this.sessions.set(record.token, record);
+  }
+
+  update(token: string, patch: Partial<Pick<SessionRecord, 'lastActivityAt' | 'expiresAt'>>): void {
+    const rec = this.sessions.get(token);
+    if (!rec) return;
+    if (patch.lastActivityAt !== undefined) rec.lastActivityAt = patch.lastActivityAt;
+    if (patch.expiresAt !== undefined) rec.expiresAt = patch.expiresAt;
+  }
+
+  delete(token: string): void {
+    this.calls.push(`delete:${token}`);
+    this.sessions.delete(token);
+  }
+
+  deleteByUsername(username: string, exceptToken?: string): number {
+    this.calls.push(`deleteByUsername:${username}:except=${exceptToken ?? 'none'}`);
+    let removed = 0;
+    for (const [token, rec] of this.sessions) {
+      if (rec.username === username && token !== exceptToken) {
+        this.sessions.delete(token);
+        removed++;
+      }
+    }
+    return removed;
+  }
+
+  listAll(): ReadonlyArray<SessionRecord> {
+    return [...this.sessions.values()];
+  }
+
+  purgeExpired(nowMs: number): number {
+    let removed = 0;
+    for (const [token, rec] of this.sessions) {
+      if (rec.expiresAt <= nowMs) {
+        this.sessions.delete(token);
+        removed++;
+      }
+    }
+    return removed;
+  }
+}
 
 // Builds the service under test with all dependencies wired.
 // Uses concrete in-memory implementations so integration-style tests can opt
@@ -307,6 +368,90 @@ Deno.test('ServerAuthRouteHandlerService: POST /auth/login body size > cap → 4
     );
 
     assertEquals(res.status, 413);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: POST /auth/login oversized body WITHOUT Content-Length header → 413', async () => {
+  // Regression test for 9.1: the Content-Length header is client-controlled
+  // and can simply be omitted (the Fetch/Request API does not compute one
+  // automatically for a string body — verified: `new Request(...).headers.get('content-length')`
+  // is null when the header is not explicitly set). Only the streaming
+  // byte-cap enforcement in readJsonBodyLimited can catch this case; the
+  // cheap header-based fast-path is bypassed entirely because the reported
+  // length is 0.
+  await withIsolatedEnv({ AUTH_MAX_BODY_BYTES: '256' }, async () => {
+    const { service } = makeService({});
+
+    const req = new Request('http://localhost/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'alice', password: 'x'.repeat(1000) }),
+    });
+    // Sanity check the premise: no content-length header is present.
+    assertEquals(req.headers.get('content-length'), null);
+
+    const res = await dispatch(service, req);
+
+    assertEquals(res.status, 413);
+  });
+});
+
+Deno.test('ServerAuthRouteHandlerService: login writes the new session before revoking priors (9.2 ordering)', async () => {
+  // Regression test for 9.2: previously the session service revoked all
+  // prior sessions for the username BEFORE the new session existed in the
+  // store. Because SessionStore backends persist to a DB via fire-and-forget
+  // writes, a slow revoke could race ahead of the new session's write and
+  // delete it. The fix creates/persists the new session first, then revokes
+  // priors excluding the new token. This test wires a real AuthSessionService
+  // (not the usual stub) around a call-order-recording SessionStore so we can
+  // assert the underlying store call ordering directly.
+  await withIsolatedEnv({}, async () => {
+    const store = new RecordingSessionStore();
+    const logger = makeLoggerStub();
+    const config = new ServerConfigService();
+    const clock = makeFakeClock(1_000);
+    const realSessionService = new AuthSessionService(logger, config, store, clock);
+    realSessionService.registerProvider({
+      name: 'user',
+      authenticate: async () => {
+        await Promise.resolve();
+        return { ok: true, username: 'alice' };
+      },
+    });
+    await realSessionService.initializeProviders();
+
+    const { service } = makeService({ sessionServiceStub: realSessionService });
+
+    const loginRequest = () =>
+      new Request('http://localhost/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: 'alice', password: 'correcthorsebattery' }),
+      });
+
+    const firstRes = await dispatch(service, loginRequest());
+    assertEquals(firstRes.status, 200);
+    const firstToken = (await firstRes.json()).token as string;
+
+    // Only inspect the second login's call ordering — the first login has
+    // no prior session to revoke.
+    store.calls.length = 0;
+
+    const secondRes = await dispatch(service, loginRequest());
+    assertEquals(secondRes.status, 200);
+    const secondToken = (await secondRes.json()).token as string;
+
+    const putIndex = store.calls.findIndex(c => c.startsWith('put:'));
+    const revokeIndex = store.calls.findIndex(c => c.startsWith('deleteByUsername:'));
+    assertEquals(putIndex >= 0, true);
+    assertEquals(revokeIndex >= 0, true);
+    // The load-bearing assertion: put (new session) happens before
+    // deleteByUsername (prior-session revocation).
+    assertEquals(putIndex < revokeIndex, true);
+
+    // End-to-end confirmation: the prior session is gone, the new one lives.
+    assertEquals(realSessionService.validateToken(firstToken), undefined);
+    assertEquals(realSessionService.validateToken(secondToken), 'alice');
   });
 });
 

@@ -82,7 +82,9 @@ export const registerEndGamePolicies = (registrar: EndGamePolicyRegistrar) => {
 };
 
 function isColonyPileEmpty(match: Match, findCardService: FindCardService): boolean {
-  const colonyPresent = match.config.kingdomSupply.some(supply => supply.name === 'colony');
+  // Colony is added to the BASIC supply by this configurator (see basicCards.push
+  // above), not kingdomSupply — check the pile it's actually configured into.
+  const colonyPresent = match.config.basicSupply.some(supply => supply.name === 'colony');
   if (!colonyPresent) {
     return false;
   }

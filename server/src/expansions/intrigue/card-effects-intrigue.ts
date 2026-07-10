@@ -4,6 +4,8 @@ import { CardExpansionModule } from '@server-types/index.ts';
 import { Card, CardId, CardKey, PlayerId } from 'shared/types/index.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { resolveChooseAbilities } from '../../utils/resolve-choose-abilities.ts';
+import { getAttackTargets } from '../../utils/get-attack-targets.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 
 const expansionModule: CardExpansionModule = {
   baron: {
@@ -23,30 +25,34 @@ const expansionModule: CardExpansionModule = {
 
         const handEstateIdx = hand.findLast(cId => cardLibrary.getCard(cId).cardKey === 'estate');
 
-        const supplyEstateIdx = args.findCardService
-          .findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'estate' }] })
-          ?.slice(-1)?.[0].id;
+        const supplyEstateCard = args.findCardService.findTopSupplyCardForPileKey({
+          pileKey: 'estate',
+          from: 'basicSupply',
+        });
 
         if (!handEstateIdx) {
           loggerService.debug(`[BARON EFFECT] player has no estates in hand, they gain one`);
 
-          if (!supplyEstateIdx) {
+          if (!supplyEstateCard) {
             loggerService.debug(`[BARON EFFECT] no estates in supply`);
             return;
           }
         } else {
           loggerService.debug(`[BARON EFFECT] player has an estate in hand`);
 
-          const confirm = (await actionService.run('userPrompt', {
-            playerId,
-            prompt: 'Discard estate?',
-            actionButtons: [
-              { label: `DON'T DISCARD`, action: 1 },
-              { label: 'DISCARD', action: 2 },
-            ],
-          })) as { action: number };
+          const shouldDiscard = await args.promptService.confirm(
+            {
+              playerId,
+              prompt: 'Discard estate?',
+              actionButtons: [
+                { label: `DON'T DISCARD`, action: 1 },
+                { label: 'DISCARD', action: 2 },
+              ],
+            },
+            2,
+          );
 
-          if (confirm.action === 2) {
+          if (shouldDiscard) {
             loggerService.debug(`[BARON EFFECT] player chooses to discard estate, gain 4 treasure`);
 
             await actionService.run('discardCard', {
@@ -62,19 +68,19 @@ const expansionModule: CardExpansionModule = {
           }
         }
 
-        if (!supplyEstateIdx) {
+        if (!supplyEstateCard) {
           loggerService.debug(`[BARON EFFECT] no estate in supply`);
           return;
         }
 
-        loggerService.debug(
-          `[BARON EFFECT] player not discarding estate, gain ${cardLibrary.getCard(supplyEstateIdx)}...`,
-        );
+        loggerService.debug(`[BARON EFFECT] player not discarding estate, gaining an estate...`);
 
-        await actionService.run('gainCard', {
+        await args.supplyGainService.gainTopSupplyCardForPileKey({
           playerId,
-          cardId: supplyEstateIdx,
+          pileKey: 'estate',
+          from: 'basicSupply',
           to: { location: 'playerDiscard' },
+          logTag: 'baron effect',
         });
       },
   },
@@ -234,23 +240,17 @@ const expansionModule: CardExpansionModule = {
               label: 'Gain a gold',
               action: 4,
               resolve: async () => {
-                const goldCardId = args.findCardService
-                  .findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }] })
-                  ?.slice(-1)?.[0].id;
-
-                if (!goldCardId) {
-                  loggerService.debug('[COURTIER EFFECT] no gold in supply...');
-                  return;
-                }
-
-                loggerService.debug(`[COURTIER EFFECT] gaining ${cardLibrary.getCard(goldCardId)}...`);
-                await actionService.run('gainCard', {
-                  cardId: goldCardId,
+                const gainedGoldId = await args.supplyGainService.gainTopSupplyCardForPileKey({
                   playerId,
-                  to: {
-                    location: 'playerDiscard',
-                  },
+                  pileKey: 'gold',
+                  from: 'basicSupply',
+                  to: { location: 'playerDiscard' },
+                  logTag: 'courtier effect',
                 });
+
+                if (!gainedGoldId) {
+                  loggerService.debug('[COURTIER EFFECT] no gold in supply...');
+                }
               },
             },
           ],
@@ -590,17 +590,18 @@ const expansionModule: CardExpansionModule = {
 
           const playerId = targets[(i + 1) % targets.length];
 
-          const card = cardLibrary.getCard(cardId);
-          card.owner = playerId;
-
           loggerService.debug(
             `[masquerade effect] moving ${cardLibrary.getCard(cardId!)} to ${getPlayerById(match, playerId!)}`,
           );
 
+          // Ownership transfers to the receiving player — route it through the
+          // action layer via moveCard's opt-in flag instead of mutating the
+          // card directly here.
           await actionService.run('moveCard', {
             cardId: cardId!,
             toPlayerId: playerId!,
             to: { location: 'playerHand' },
+            updateOwner: true,
           });
         }
 
@@ -678,7 +679,7 @@ const expansionModule: CardExpansionModule = {
   'mining-village': {
     registerEffects:
       () =>
-      async ({ loggerService, actionService, playerId, cardId, cardLibrary }) => {
+      async ({ loggerService, actionService, playerId, cardId, cardLibrary, promptService }) => {
         loggerService.debug(`[MINING VILLAGE EFFECT] drawing card...`);
 
         await actionService.run('drawCard', { playerId });
@@ -688,16 +689,19 @@ const expansionModule: CardExpansionModule = {
         await actionService.run('gainAction', { count: 2 });
 
         loggerService.debug(`[MINING VILLAGE EFFECT] prompting user to trash mining village or not`);
-        const results = (await actionService.run('userPrompt', {
-          playerId,
-          actionButtons: [
-            { action: 1, label: `DON'T TRASH` },
-            { action: 2, label: 'TRASH' },
-          ],
-          prompt: 'Trash Mining Village?',
-        })) as { action: number };
+        const shouldTrash = await promptService.confirm(
+          {
+            playerId,
+            actionButtons: [
+              { action: 1, label: `DON'T TRASH` },
+              { action: 2, label: 'TRASH' },
+            ],
+            prompt: 'Trash Mining Village?',
+          },
+          2,
+        );
 
-        if (results.action === 2) {
+        if (shouldTrash) {
           loggerService.debug(`[MINING VILLAGE EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
 
           await actionService.run('trashCard', {
@@ -850,26 +854,14 @@ const expansionModule: CardExpansionModule = {
           return;
         }
 
-        if (deck.length < numToReveal) {
-          loggerService.debug(`[PATROL EFFECT] not enough cards in deck, shuffling`);
-          await actionService.run('shuffleDeck', {
-            playerId,
-          });
-        }
-
-        const revealedCardIds: Card[] = args.findCardService
-          .findCards({ location: 'playerDeck', playerId })
-          .slice(-numToReveal);
-
-        for (const cardId of revealedCardIds) {
-          loggerService.debug(`[PATROL EFFECT] revealing ${cardId}...`);
-
-          await actionService.run('revealCard', {
-            cardId,
-            playerId,
-            moveToSetAside: true,
-          });
-        }
+        // Reveal the top numToReveal cards of the deck, set aside — shuffling
+        // the discard back in automatically if the deck runs dry mid-reveal.
+        const revealedCardIds: Card[] = await revealTopDeckCards(
+          { actionService, cardLibrary, loggerService },
+          playerId,
+          numToReveal,
+          { setAside: true },
+        );
 
         const [victoryCards, nonVictoryCards] = revealedCardIds.reduce(
           (prev, card) => {
@@ -1061,31 +1053,23 @@ const expansionModule: CardExpansionModule = {
 
         if (card.type.includes('VICTORY')) {
           loggerService.debug(`[REPLACE EFFECT] card is a victory card`);
-          const targets = findOrderedTargets({
-            startingPlayerId: playerId,
-            appliesTo: 'ALL_OTHER',
-            match,
-          }).filter(id => !isPlayerImmune(reactionContext, id));
+          const targets = getAttackTargets(match, playerId, reactionContext);
 
           for (const targetId of targets) {
-            const curseCardId = args.findCardService
-              .findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }] })
-              ?.slice(-1)?.[0].id;
+            loggerService.debug(`[REPLACE EFFECT] ${getPlayerById(match, targetId)} gaining a curse`);
 
-            if (!curseCardId) {
+            const gainedCurseId = await args.supplyGainService.gainTopSupplyCardForPileKey({
+              playerId: targetId,
+              pileKey: 'curse',
+              from: 'basicSupply',
+              to: { location: 'playerDiscard' },
+              logTag: 'replace effect',
+            });
+
+            if (!gainedCurseId) {
               loggerService.debug(`[REPLACE EFFECT] no curse cards in supply`);
               break;
             }
-
-            loggerService.debug(
-              `[REPLACE EFFECT] ${getPlayerById(match, targetId)} gaining ${cardLibrary.getCard(curseCardId)}`,
-            );
-
-            await actionService.run('gainCard', {
-              playerId: targetId,
-              cardId: curseCardId,
-              to: { location: 'playerDiscard' },
-            });
           }
         }
       },
@@ -1263,55 +1247,37 @@ const expansionModule: CardExpansionModule = {
   swindler: {
     registerEffects:
       () =>
-      async ({
-        loggerService,
-        reactionContext,
-        actionService,
-        playerId,
-        match,
-        cardLibrary,
-        cardPriceController,
-        ...args
-      }) => {
+      async ({ loggerService, reactionContext, actionService, playerId, match, cardLibrary, cardPriceController }) => {
         loggerService.debug(`[SWINDLER EFFECT] gaining 2 treasure...`);
 
         await actionService.run('gainTreasure', {
           count: 2,
         });
 
-        const targets = findOrderedTargets({
-          startingPlayerId: playerId,
-          appliesTo: 'ALL_OTHER',
-          match,
-        }).filter(id => !isPlayerImmune(reactionContext, id));
+        const targets = getAttackTargets(match, playerId, reactionContext);
 
         loggerService.debug(
           `[SWINDLER EFFECT] targets in order ${targets.map(id => getPlayerById(match, id)).join(',')}`,
         );
 
         for (const target of targets) {
-          const deck = args.cardSourceController.getSource('playerDeck', target);
+          // Reveal the top card of the target's deck, shuffling the discard
+          // in automatically if the deck is empty. Returning the actual
+          // revealed Card directly avoids re-deriving the id from a stale
+          // read of the deck array after the shuffle has mutated it.
+          const revealed = await revealTopDeckCards({ actionService, cardLibrary, loggerService }, target, 1);
+          const card = revealed[0];
 
-          if (deck.length === 0) {
-            loggerService.debug(`[SWINDLER EFFECT] ${getPlayerById(match, target)} as no cards, shuffling`);
-            await actionService.run('shuffleDeck', {
-              playerId: target,
-            });
-
-            if (deck.length === 0) {
-              loggerService.debug(`[SWINDLER EFFECT] ${getPlayerById(match, target)} still has no cards`);
-              continue;
-            }
+          if (!card) {
+            loggerService.debug(`[SWINDLER EFFECT] ${getPlayerById(match, target)} still has no cards`);
+            continue;
           }
 
-          let cardId = deck.slice(-1)?.[0];
-          const card = cardLibrary.getCard(cardId);
-
-          loggerService.debug(`[SWINDLER EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
+          loggerService.debug(`[SWINDLER EFFECT] trashing ${card}...`);
 
           await actionService.run('trashCard', {
             playerId: target,
-            cardId: cardId,
+            cardId: card.id,
           });
 
           const { cost } = cardPriceController.applyRules(card, { playerId });
@@ -1330,15 +1296,14 @@ const expansionModule: CardExpansionModule = {
             loggerService.debug('[SWINDLER EFFECT] no replacement card selected');
             continue;
           }
-          cardId = cardIdToGain;
 
           loggerService.debug(
-            `[SWINDLER EFFECT] ${getPlayerById(match, target)} gaining ${cardLibrary.getCard(cardId)}...`,
+            `[SWINDLER EFFECT] ${getPlayerById(match, target)} gaining ${cardLibrary.getCard(cardIdToGain)}...`,
           );
 
           await actionService.run('gainCard', {
             playerId: target,
-            cardId,
+            cardId: cardIdToGain,
             to: { location: 'playerDiscard' },
           });
         }
@@ -1352,11 +1317,7 @@ const expansionModule: CardExpansionModule = {
 
         await actionService.run('drawCard', { playerId, count: 3 });
 
-        const targets = findOrderedTargets({
-          startingPlayerId: playerId,
-          appliesTo: 'ALL_OTHER',
-          match,
-        }).filter(id => !isPlayerImmune(reactionContext, id));
+        const targets = getAttackTargets(match, playerId, reactionContext);
 
         loggerService.debug(`[TORTURER EFFECT] targets ${targets.map(id => getPlayerById(match, id)).join(',')}`);
 
@@ -1366,16 +1327,19 @@ const expansionModule: CardExpansionModule = {
           const player = getPlayerById(match, target);
           loggerService.debug(`[TORTURER EFFECT] prompting ${player} to choose to discard or gain curse to hand...`);
 
-          const result = (await actionService.run('userPrompt', {
-            playerId: target,
-            actionButtons: [
-              { action: 1, label: 'DISCARD' },
-              { action: 2, label: 'GAIN CURSE' },
-            ],
-            prompt: 'Choose one',
-          })) as { action: number };
+          const shouldDiscard = await args.promptService.confirm(
+            {
+              playerId: target,
+              actionButtons: [
+                { action: 1, label: 'DISCARD' },
+                { action: 2, label: 'GAIN CURSE' },
+              ],
+              prompt: 'Choose one',
+            },
+            1,
+          );
 
-          if (result.action === 1) {
+          if (shouldDiscard) {
             loggerService.debug(`[TORTURER EFFECT] prompting ${player} to discard 2 cards...`);
 
             const hand = args.cardSourceController.getSource('playerHand', target);
@@ -1399,27 +1363,23 @@ const expansionModule: CardExpansionModule = {
               });
             }
 
-            return;
-          }
-
-          const curseCardId = args.findCardService
-            .findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }] })
-            ?.slice(-1)?.[0]?.id;
-
-          if (!curseCardId) {
-            loggerService.debug(`[TORTURER EFFECT] no curse card in supply`);
+            // Continue to the next target — the attack applies to EVERY other
+            // player, not just up to the first one who discards.
             continue;
           }
 
-          const card = cardLibrary.getCard(curseCardId);
-
-          loggerService.debug(`[TORTURER EFFECT] gaining ${card}...`);
-
-          await actionService.run('gainCard', {
+          const gainedCurseId = await args.supplyGainService.gainTopSupplyCardForPileKey({
             playerId: target,
-            cardId: card.id,
+            pileKey: 'curse',
+            from: 'basicSupply',
             to: { location: 'playerHand' },
+            logTag: 'torturer effect',
           });
+
+          if (!gainedCurseId) {
+            loggerService.debug(`[TORTURER EFFECT] no curse card in supply`);
+            continue;
+          }
         }
       },
   },
@@ -1457,23 +1417,17 @@ const expansionModule: CardExpansionModule = {
         }
 
         if (cardIds.length === 2) {
-          const silverCardId = args.findCardService
-            .findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'silver' }] })
-            ?.slice(-1)?.[0].id;
-          if (!silverCardId) {
-            loggerService.debug(`[TRADING POST EFFECT] no silver in supply`);
-            return;
-          }
-
-          const card = cardLibrary.getCard(silverCardId);
-
-          loggerService.debug(`[TRADING POST EFFECT] gaining ${card}...`);
-
-          await actionService.run('gainCard', {
+          const gainedSilverId = await args.supplyGainService.gainTopSupplyCardForPileKey({
             playerId,
-            cardId: silverCardId,
+            pileKey: 'silver',
+            from: 'basicSupply',
             to: { location: 'playerHand' },
+            logTag: 'trading post effect',
           });
+
+          if (!gainedSilverId) {
+            loggerService.debug(`[TRADING POST EFFECT] no silver in supply`);
+          }
         } else {
           loggerService.debug(`[TRADING POST EFFECT] player trashed ${cardIds.length}, so no treasure gained`);
         }
@@ -1555,7 +1509,7 @@ const expansionModule: CardExpansionModule = {
   'wishing-well': {
     registerEffects:
       () =>
-      async ({ loggerService, match, cardLibrary, actionService, playerId, ...args }) => {
+      async ({ loggerService, cardLibrary, actionService, playerId }) => {
         loggerService.debug(`[WISHING WELL EFFECT] drawing card...`);
 
         await actionService.run('drawCard', { playerId });
@@ -1577,29 +1531,21 @@ const expansionModule: CardExpansionModule = {
 
         loggerService.debug(`[WISHING WELL EFFECT] player named '${cardKey}'`);
 
-        if (args.findCardService.findCards({ location: 'playerDeck', playerId }).length === 0) {
-          loggerService.debug(`[WISHING WELL EFFECT] shuffling player's deck...`);
+        // Reveal the top card of the deck, shuffling the discard in
+        // automatically if the deck is empty.
+        const revealed = await revealTopDeckCards({ actionService, cardLibrary, loggerService }, playerId, 1);
+        const card = revealed[0];
 
-          await actionService.run('shuffleDeck', {
-            playerId,
-          });
+        if (!card) {
+          loggerService.debug(`[WISHING WELL EFFECT] no card to reveal`);
+          return;
         }
 
-        const cardId = args.findCardService.findCards({ location: 'playerDeck', playerId }).slice(-1)[0]?.id;
-
-        loggerService.debug(`[WISHING WELL EFFECT] revealing card ${cardLibrary.getCard(cardId)}...`);
-
-        await actionService.run('revealCard', {
-          cardId,
-          playerId,
-        });
-
-        const card = cardLibrary.getCard(cardId);
         if (card.cardKey === cardKey) {
           loggerService.debug(`[WISHING WELL EFFECT] moving ${card} to hand`);
 
           await actionService.run('moveCard', {
-            cardId,
+            cardId: card.id,
             toPlayerId: playerId,
             to: { location: 'playerHand' },
           });

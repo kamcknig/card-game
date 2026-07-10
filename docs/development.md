@@ -223,7 +223,7 @@ This starts the server on port 3000 and the frontend on port 80. The frontend ng
 
 ## CI/CD Pipeline
 
-The project uses **GitHub Actions** for continuous integration and continuous deployment targeting **Microsoft Azure**.
+The project uses **GitHub Actions** for continuous integration and for building/publishing release images to **GitHub Container Registry (GHCR)**. There is no automatic deployment step — rolling a new image out to production is a manual pull on the host. See [Production Deployment](#production-deployment-self-hosted-on-unraid) below.
 
 ### Continuous Integration
 
@@ -235,21 +235,23 @@ CI runs on every push and pull request, scoped by path filters so only relevant 
 | Server Unit Tests | `.github/workflows/server-unit-tests.yml` | `server/**`, `shared/**` | Deno unit tests with coverage |
 | Frontend CI | `.github/workflows/frontend-ci.yml` | `angular-frontend/**`, `shared/**` | TypeScript type-check |
 
-### Continuous Deployment
+### Release Image Publishing
 
-CD is triggered by publishing a GitHub release with a semver tag (`vX.Y.Z`). Both the server and frontend images are built and pushed together from the same release.
+Publishing a GitHub release with a semver tag (`vX.Y.Z`) builds and pushes both the server and frontend images together from the same release — a single tag covers both components (see `server/deno.json#version` and `angular-frontend/package.json#version`, both stamped to match the release tag during the build).
 
 | Tag pattern | Built images |
 |-------------|-------------|
-| `vX.Y.Z` | `dominion-clone-server:X.Y.Z` and `dominion-clone-frontend:X.Y.Z` (both also tagged `:latest`) |
+| `vX.Y.Z` | `ghcr.io/<owner>/dominion-clone-server:X.Y.Z` and `ghcr.io/<owner>/dominion-clone-frontend:X.Y.Z` (both also tagged `:latest`) |
 
 | Workflow | File | Trigger | What It Does |
 |----------|------|---------|--------------|
 | Build and Push | `.github/workflows/build-and-push.yml` | GitHub release published with `vX.Y.Z` tag | Builds and pushes both the server and frontend Docker images to GHCR |
 
 ```
-GitHub release `vX.Y.Z`  → Build server image + Build frontend image
+GitHub release `vX.Y.Z`  → Build server image + Build frontend image  → GHCR
 ```
+
+No deploy step follows automatically — see [Rolling Out a Release](unraid-operations.md#rolling-out-a-release) for the manual pull-and-restart flow on the Unraid host.
 
 Bumping a version: edit `server/deno.json#version` and `angular-frontend/package.json#version` to the new version, commit, then create a `vX.Y.Z` GitHub release pointing at that commit. Both images are stamped from the same tag, so both files should be updated to the same version before tagging. The runtime versions surfaced in logs and the UI read from those two files, so the file changes must precede the release tag.
 
@@ -264,90 +266,43 @@ Both the server and frontend share the same semver from the release tag. Both fi
 
 ### Required GitHub Secrets
 
-| Secret | Description |
-|--------|-------------|
-| `AZURE_CREDENTIALS` | Service principal JSON for Azure login |
-| `ACR_LOGIN_SERVER` | ACR login server (e.g. `turkeysunite.azurecr.io`) |
-| `ACR_USERNAME` | ACR admin username |
-| `ACR_PASSWORD` | ACR admin password |
-| `AZURE_RESOURCE_GROUP` | Azure resource group name |
-| `AZURE_SERVER_APP_NAME` | Server Container App name |
-| `AZURE_FRONTEND_APP_NAME` | Frontend Container App name |
+None. GHCR pushes authenticate with the workflow's built-in `GITHUB_TOKEN` (granted `packages: write` in the workflow's `permissions:` block) — no repository secrets need to be configured for CI or image publishing.
 
-## Production Deployment (Azure)
+## Production Deployment (Self-Hosted on Unraid)
 
-The application runs on **Azure Container Apps** within the `turkeysunite` resource group.
+The application runs as two Docker containers on a self-hosted Unraid server, pulling prebuilt images from GHCR. Public access is via a Cloudflare Tunnel — no ports are published on the host.
 
 ### Architecture
 
 ```
-Azure Container Apps Environment (card-game-env)
-├── dominion-clone-server    ← Deno game server, port 3000, external ingress
-└── dominion-clone-frontend  ← nginx + Angular static files, port 80, external ingress
+Cloudflare edge → Cloudflare Tunnel → cloudflared container
+                                            │
+                                            ▼ (shared Docker network)
+                                     frontend container (nginx + Angular SPA)
+                                            │ proxies /auth, /socket.io, /debug, /status
+                                            ▼ (app Docker network)
+                                     server container (Deno game server)
+                                            │
+                                            ▼
+                                        Supabase (auth + game data)
 ```
 
-Both apps have external ingress and are accessible via their `.azurecontainerapps.io` FQDNs (HTTPS provided by default). The frontend nginx **reverse-proxies** `/auth/`, `/socket.io/`, `/debug/`, and `/status` to the server using the `WS_HOST` environment variable, so the browser only ever talks to the frontend domain. See [Backend Proxying](./azure-operations.md#backend-proxying) in the Azure operations guide for the per-route configuration and proxying behaviour.
+The frontend nginx **reverse-proxies** `/auth/`, `/socket.io/`, `/debug/`, and `/status` to the `server` container over the compose network, so the browser only ever talks to the public hostname. See [unraid-operations.md](unraid-operations.md) for day-to-day operations — manually updating containers, setting environment variables and secrets, viewing logs, managing GHCR images, and troubleshooting.
 
-### Azure Services
+### Container Topology
 
-| Service | Purpose |
-|---------|---------|
-| Resource Group: `turkeysunite` | Contains all project resources |
-| Azure Container Registry (ACR) | Stores Docker images (`dominion-clone-server`, `dominion-clone-frontend`) |
-| Azure Container Apps Environment | Shared networking layer for containers |
-| Container App: `dominion-clone-server` | Deno game server with Socket.IO/WebSocket |
-| Container App: `dominion-clone-frontend` | nginx serving the Angular SPA |
+| Container | Purpose |
+|-----------|---------|
+| `server` | Deno game server with Socket.IO/WebSocket, port 3000 (internal only) |
+| `frontend` | nginx serving the Angular SPA, reverse-proxies backend paths, port 80 (internal only) |
+| `cloudflared` | Cloudflare Tunnel client, provides the only path in from the public internet |
 
-### Server Environment Variables (Production)
-
-| Variable | Value | Description |
-|----------|-------|-------------|
-| `PORT` | `3000` | Server listen port |
-| `LOG_TO_FILE` | `false` | Disable file logging in container |
-| `GAME_DATA_ROOT` | `./game-data` | Game data directory |
-| `END_MATCH_ON_NO_HUMANS` | `true` | End matches when all humans leave |
-| `MATCH_STATE_MERGE_ENABLED` | `true` | Enable match state merging |
-| `AUTH_ALLOWED_ORIGINS` | _(required)_ | Comma-separated CORS origin allowlist for `/auth/*` (e.g. the frontend FQDN) |
-| `STORAGE_BACKEND` | `supabase` | Unified storage backend — drives both auth and game data. Allowed values: `in-memory` (no persistence, dev/test only) or `supabase`. When unset/invalid the server still starts and `/status` reports a `STORAGE_BACKEND_INVALID` error so the frontend can render `/server-status` instead of crashing — production revisions should always set it explicitly |
-| `SUPABASE_URL` | _(required for `supabase`)_ | Supabase project URL. Required when `STORAGE_BACKEND=supabase` |
-| `SUPABASE_SERVICE_ROLE_KEY` | _(required for `supabase`)_ | Supabase service-role key. Required when `STORAGE_BACKEND=supabase` — store as a Container Apps secret, never as a plain env var |
-| `AUTH_LOCKOUT_THRESHOLD` | `5` | Failed logins before per-account lockout |
-| `AUTH_LOCKOUT_DURATION_MS` | `600000` | Account lockout duration (ms) |
-| `AUTH_MIN_PASSWORD_LENGTH` | `10` | Minimum password length for registration and password change |
-
-### Frontend Environment Variables (Production)
-
-| Variable | Description |
-|----------|-------------|
-| `WS_HOST` | Upstream backend URL nginx proxies `/auth/`, `/socket.io/`, `/debug/`, and `/status` to (e.g. `https://dominion-clone-server.<region>.azurecontainerapps.io`). |
-| `WS_HOST_OVERRIDE` | Optional. When set, written verbatim into `env.js` so the Angular bundle issues fully-qualified backend URLs instead of relative ones. Only useful when bypassing the nginx proxy. Leave unset in production. |
+`docker-compose.unraid.yml` (repo root) is the source of truth for image references, environment variables, and network wiring.
 
 ### Rollback
 
-Azure Container Apps maintains revision history. Roll back by activating a previous revision:
-
-```bash
-# List revisions
-az containerapp revision list \
-  --name dominion-clone-server \
-  --resource-group turkeysunite \
-  --output table
-
-# Activate a previous revision
-az containerapp revision activate \
-  --revision <previous-revision-name> \
-  --resource-group turkeysunite
-```
+Set `SERVER_VERSION` / `FRONTEND_VERSION` in the host's `.env` back to a previous released semver, then `docker compose pull && docker compose up -d`. See [unraid-operations.md#rollback](unraid-operations.md#rollback).
 
 ### Scaling Note
 
-The server currently runs with 1 replica. If scaling beyond 1 replica, session affinity must be enabled for Socket.IO:
-
-```bash
-az containerapp ingress sticky-sessions set \
-  --name dominion-clone-server \
-  --resource-group turkeysunite \
-  --affinity sticky
-```
-
-For day-to-day Azure operations — manually updating containers, setting environment variables and secrets, viewing logs, managing ACR images, and troubleshooting — see [azure-operations.md](azure-operations.md).
+The stack runs a single replica of each service. Scaling the server beyond one replica would require session affinity for Socket.IO, which is not currently configured.

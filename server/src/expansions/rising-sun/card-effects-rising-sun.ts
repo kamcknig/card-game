@@ -10,6 +10,7 @@ import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { resolveChooseAbilities } from '../../utils/resolve-choose-abilities.ts';
 import { returnCardToConfiguredPileTop } from '../../utils/return-card-to-configured-pile-top.ts';
+import { registerStartTurnEffect } from '../../utils/register-start-turn-effect.ts';
 
 const CURSE_PILE_KEY: CardKey = 'curse';
 const SILVER_PILE_KEY: CardKey = 'silver';
@@ -1014,62 +1015,55 @@ const cards: CardExpansionModule = {
       let pendingStartTurnReplay = true;
       let replayedDurationCardId: CardId | null = null;
 
-      cardEffectArgs.registerDurationEffect(
+      registerStartTurnEffect(
+        cardEffectArgs,
         riverboatCard,
-        {
-          listeningFor: 'startTurn',
-          playerId: cardEffectArgs.playerId,
-          once: true,
-          compulsory: true,
-          allowMultipleInstances: true,
-          condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-          triggeredEffectFn: async triggeredArgs => {
-            pendingStartTurnReplay = false;
+        async triggeredArgs => {
+          pendingStartTurnReplay = false;
 
-            const setAsideCardId = getRiverboatSetAsideCardId(triggeredArgs, riverboatCard);
-            if (setAsideCardId === undefined) {
-              return;
-            }
+          const setAsideCardId = getRiverboatSetAsideCardId(triggeredArgs, riverboatCard);
+          if (setAsideCardId === undefined) {
+            return;
+          }
 
-            // Route through selectCard play-selection so players can choose normal play vs Way.
-            const selectedPlayCardIds = await triggeredArgs.actionService.run('selectCard', {
-              playerId: cardEffectArgs.playerId,
-              prompt: 'Play the Riverboat set-aside card',
-              restrict: [setAsideCardId],
-              count: { kind: 'exact', count: 1 },
-              selectionIntent: { kind: 'play-card', cardTypes: ['ACTION'] },
-            });
-            const resolvedSetAsideCardId = selectedPlayCardIds[0] ?? setAsideCardId;
-            if (selectedPlayCardIds.length !== 1) {
-              loggerService.debug(
-                '[riverboat startTurn effect] set-aside play selection did not return exactly one card; using default card',
-              );
-            }
-
-            const setAsideCard = triggeredArgs.cardLibrary.getCard(resolvedSetAsideCardId);
-            loggerService.info(`[riverboat startTurn effect] playing set-aside card ${setAsideCard}`);
-            await triggeredArgs.actionService.run('playCard', {
-              playerId: cardEffectArgs.playerId,
-              cardId: resolvedSetAsideCardId,
-              overrides: {
-                actionCost: 0,
-                moveCard: false,
-              },
-            });
-
-            // Keep Riverboat if the set-aside card registered any duration follow-up work.
-            if (!hasRegisteredDurationTriggers(triggeredArgs.reactionManager, resolvedSetAsideCardId)) {
-              loggerService.debug(
-                '[riverboat startTurn effect] set-aside card has no active duration follow-up; no extended hold needed',
-              );
-              return;
-            }
-
-            replayedDurationCardId = resolvedSetAsideCardId;
+          // Route through selectCard play-selection so players can choose normal play vs Way.
+          const selectedPlayCardIds = await triggeredArgs.actionService.run('selectCard', {
+            playerId: cardEffectArgs.playerId,
+            prompt: 'Play the Riverboat set-aside card',
+            restrict: [setAsideCardId],
+            count: { kind: 'exact', count: 1 },
+            selectionIntent: { kind: 'play-card', cardTypes: ['ACTION'] },
+          });
+          const resolvedSetAsideCardId = selectedPlayCardIds[0] ?? setAsideCardId;
+          if (selectedPlayCardIds.length !== 1) {
             loggerService.debug(
-              '[riverboat startTurn effect] set-aside card registered duration follow-up; keeping Riverboat active',
+              '[riverboat startTurn effect] set-aside play selection did not return exactly one card; using default card',
             );
-          },
+          }
+
+          const setAsideCard = triggeredArgs.cardLibrary.getCard(resolvedSetAsideCardId);
+          loggerService.info(`[riverboat startTurn effect] playing set-aside card ${setAsideCard}`);
+          await triggeredArgs.actionService.run('playCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: resolvedSetAsideCardId,
+            overrides: {
+              actionCost: 0,
+              moveCard: false,
+            },
+          });
+
+          // Keep Riverboat if the set-aside card registered any duration follow-up work.
+          if (!hasRegisteredDurationTriggers(triggeredArgs.reactionManager, resolvedSetAsideCardId)) {
+            loggerService.debug(
+              '[riverboat startTurn effect] set-aside card has no active duration follow-up; no extended hold needed',
+            );
+            return;
+          }
+
+          replayedDurationCardId = resolvedSetAsideCardId;
+          loggerService.debug(
+            '[riverboat startTurn effect] set-aside card registered duration follow-up; keeping Riverboat active',
+          );
         },
         {
           hasActiveEffects: async durationContext => {
@@ -1171,22 +1165,15 @@ const cards: CardExpansionModule = {
       const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: cardEffectArgs.match }) ?? 0;
       const samuraiPlayInstance = getCurrentPlayInstanceForCardIdThisTurn(cardEffectArgs, cardEffectArgs.cardId);
 
-      cardEffectArgs.registerDurationEffect(
+      registerStartTurnEffect(
+        cardEffectArgs,
         samuraiCard,
-        {
-          listeningFor: 'startTurn',
-          playerId: cardEffectArgs.playerId,
-          once: false,
-          compulsory: true,
-          allowMultipleInstances: true,
-          condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-          triggeredEffectFn: async triggeredArgs => {
-            loggerService.debug('[samurai duration effect] gaining +$1 at start of turn');
-            await triggeredArgs.actionService.run('gainTreasure', { count: 1 });
-          },
+        async triggeredArgs => {
+          loggerService.debug('[samurai duration effect] gaining +$1 at start of turn');
+          await triggeredArgs.actionService.run('gainTreasure', { count: 1 });
         },
         {
-          hasActiveEffects: async () => true,
+          repeats: true,
           autoRemoveTriggersOnExhaust: true,
           idSuffix: `samurai:${turnHistoryIndex}:play:${samuraiPlayInstance}`,
         },

@@ -5,8 +5,9 @@ import {
   CardLifecycleCallbackContext,
   CardLifecycleEventArgMap,
 } from '@server-types/index.ts';
-import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { markPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
+import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
 import { getPlayerStartingFrom } from '@shared/get-player-position-utils.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
@@ -15,6 +16,8 @@ import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
+import { registerStartTurnEffect } from '../../utils/register-start-turn-effect.ts';
 
 const teacherTokenLabels: Record<string, string> = {
   [adventuresTokenIds.plusBuy]: '+1 Buy token',
@@ -162,25 +165,17 @@ const expansion: CardExpansionModule = {
 
       const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
-      cardEffectArgs.registerDurationEffect(card, {
-        id: `amulet:${cardEffectArgs.cardId}:startTurn`,
-        listeningFor: 'startTurn',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        allowMultipleInstances: true,
-        compulsory: true,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
-            return false;
-          }
-          return true;
-        },
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        card,
+        async triggeredArgs => {
           loggerService.debug(`[amulet startTurn effect] re-running decision fn`);
 
           await decision();
         },
-      });
+        // onLeavePlay unregisters this exact id — must match verbatim.
+        { id: `amulet:${cardEffectArgs.cardId}:startTurn` },
+      );
     },
   },
   artificer: {
@@ -286,11 +281,7 @@ const expansion: CardExpansionModule = {
         },
       });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         const alreadyActiveToken = Object.values(cardEffectArgs.match.tokens ?? {}).some(
@@ -318,20 +309,10 @@ const expansion: CardExpansionModule = {
 
       const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
-      cardEffectArgs.registerDurationEffect(card, {
-        id: `bridge-troll:${cardEffectArgs.cardId}:startTurn`,
-        listeningFor: 'startTurn',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        allowMultipleInstances: true,
-        compulsory: true,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
-            return false;
-          }
-          return true;
-        },
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        card,
+        async triggeredArgs => {
           // Move the duration card back to play and apply the next-turn bonuses.
           loggerService.debug(`[bridge-troll startTurn effect] gaining 1 buy`);
           await triggeredArgs.actionService.run('gainBuy', { count: 1 });
@@ -351,7 +332,9 @@ const expansion: CardExpansionModule = {
             },
           });
         },
-      });
+        // onLeavePlay unregisters this exact id — must match verbatim.
+        { id: `bridge-troll:${cardEffectArgs.cardId}:startTurn` },
+      );
     },
   },
   relic: {
@@ -360,11 +343,7 @@ const expansion: CardExpansionModule = {
       loggerService.debug(`[relic effect] gaining 2 treasure`);
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         const alreadyHasToken = Object.values(cardEffectArgs.match.tokens ?? {}).some(
@@ -384,7 +363,7 @@ const expansion: CardExpansionModule = {
             ownerId: targetPlayerId,
             location: { type: 'playerDeck', playerId: targetPlayerId },
           },
-          { loggingContext: { source: cardEffectArgs.cardId } },
+          { source: cardEffectArgs.cardId },
         );
       }
     },
@@ -433,26 +412,18 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
       const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      cardEffectArgs.registerDurationEffect(card, {
-        id: `caravan-guard:${cardEffectArgs.cardId}:startTurn`,
-        listeningFor: 'startTurn',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
-            return false;
-          }
-          return true;
-        },
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        card,
+        async triggeredArgs => {
           loggerService.debug(`[caravan-guard startTurn effect] gaining 1 treasure`);
           await triggeredArgs.actionService.run('gainTreasure', {
             count: 1,
           });
         },
-      });
+        // onLeavePlay unregisters this exact id — must match verbatim.
+        { id: `caravan-guard:${cardEffectArgs.cardId}:startTurn` },
+      );
     },
   },
   champion: {
@@ -505,7 +476,7 @@ const expansion: CardExpansionModule = {
               {
                 count: 1,
               },
-              { loggingContext: { source: thisCard.id } },
+              { source: thisCard.id },
             );
           },
         },
@@ -600,22 +571,19 @@ const expansion: CardExpansionModule = {
         });
       }
 
-      const copies = cardEffectArgs.findCardService.findCards({
-        all: [{ location: ['basicSupply', 'kingdomSupply'] }, { cardKeys: selectedCardToPlay.cardKey }],
-      });
-
-      if (!copies.length) {
-        loggerService.debug(`[disciple effect] no copies of ${selectedCardToPlay} in supply`);
-        return;
-      }
-
       loggerService.debug(`[disciple effect] gaining ${selectedCardToPlay}`);
 
-      await cardEffectArgs.actionService.run('gainCard', {
+      const gainedCardId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
         playerId: cardEffectArgs.playerId,
-        cardId: copies.slice(-1)[0],
+        pileKey: selectedCardToPlay.cardKey,
+        from: ['basicSupply', 'kingdomSupply'],
         to: { location: 'playerDiscard' },
+        logTag: 'disciple effect',
       });
+
+      if (!gainedCardId) {
+        loggerService.debug(`[disciple effect] no copies of ${selectedCardToPlay} in supply`);
+      }
     },
   },
   'distant-lands': {
@@ -688,21 +656,16 @@ const expansion: CardExpansionModule = {
       await effects();
 
       const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      cardEffectArgs.registerDurationEffect(card, {
-        id: `dungeon:${cardEffectArgs.cardId}:startTurn`,
-        listeningFor: 'startTurn',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: async conditionArgs => {
-          return conditionArgs.trigger.args.playerId === cardEffectArgs.playerId;
-        },
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        card,
+        async triggeredArgs => {
           loggerService.debug(`[dungeon startTurn effect] running`);
           await effects();
         },
-      });
+        // onLeavePlay unregisters this exact id — must match verbatim.
+        { id: `dungeon:${cardEffectArgs.cardId}:startTurn` },
+      );
     },
   },
   duplicate: {
@@ -741,24 +704,19 @@ const expansion: CardExpansionModule = {
 
           const cardGained = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
 
-          const copies = triggeredArgs.findCardService.findCards({
-            all: [{ location: ['basicSupply', 'kingdomSupply'] }, { cardKeys: cardGained.cardKey }],
-          });
+          loggerService.debug(`[duplicate cardGained] gaining a copy of ${cardGained}`);
 
-          if (!copies.length) {
-            loggerService.debug(`[duplicate cardGained], no copies of ${cardGained} in supply`);
-            return;
-          }
-
-          const cardToGain = copies.slice(-1)[0];
-
-          loggerService.debug(`[duplicate cardGained] gaining ${cardToGain}`);
-
-          await cardEffectArgs.actionService.run('gainCard', {
+          const gainedCardId = await triggeredArgs.supplyGainService.gainTopSupplyCardForPileKey({
             playerId: cardEffectArgs.playerId,
-            cardId: cardToGain.id,
+            pileKey: cardGained.cardKey,
+            from: ['basicSupply', 'kingdomSupply'],
             to: { location: 'playerDiscard' },
+            logTag: 'duplicate cardGained',
           });
+
+          if (!gainedCardId) {
+            loggerService.debug(`[duplicate cardGained], no copies of ${cardGained} in supply`);
+          }
         },
       });
     },
@@ -844,20 +802,10 @@ const expansion: CardExpansionModule = {
 
       const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
-      cardEffectArgs.registerDurationEffect(thisCard, {
-        id: `gear:${cardEffectArgs.cardId}:startTurn`,
-        playerId: cardEffectArgs.playerId,
-        listeningFor: 'startTurn',
-        once: true,
-        allowMultipleInstances: true,
-        compulsory: true,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
-            return false;
-          }
-          return true;
-        },
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        thisCard,
+        async triggeredArgs => {
           loggerService.debug(`[gear startTurn effect] moving ${selectedCardIds.length} to hand`);
 
           for (const selectedCardId of selectedCardIds) {
@@ -868,7 +816,9 @@ const expansion: CardExpansionModule = {
             });
           }
         },
-      });
+        // onLeavePlay unregisters this exact id — must match verbatim.
+        { id: `gear:${cardEffectArgs.cardId}:startTurn` },
+      );
     },
   },
   giant: {
@@ -913,57 +863,38 @@ const expansion: CardExpansionModule = {
       loggerService.debug(`[giant effect] Journey face up, gaining 5 treasure`);
       await cardEffectArgs.actionService.run('gainTreasure', { count: 5 });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
-        const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', targetPlayerId);
-
-        if (deck.length === 0) {
-          // Shuffle if the target has no cards in deck.
-          loggerService.debug(`[giant effect] no cards in deck, shuffling`);
-          await cardEffectArgs.actionService.run('shuffleDeck', {
-            playerId: targetPlayerId,
-          });
-        }
-
         const gainCurse = async () => {
-          const curseCards = cardEffectArgs.findCardService.findCards({
-            all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+          const gainedCurseId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+            playerId: targetPlayerId,
+            pileKey: 'curse',
+            from: 'basicSupply',
+            to: { location: 'playerDiscard' },
+            logTag: 'giant effect',
           });
-          if (!curseCards.length) {
+          if (!gainedCurseId) {
             loggerService.debug(`[giant effect] no curse cards in supply`);
             return false;
           }
-          await cardEffectArgs.actionService.run('gainCard', {
-            playerId: targetPlayerId,
-            cardId: curseCards.slice(-1)[0].id,
-            to: { location: 'playerDiscard' },
-          });
           return true;
         };
 
-        if (deck.length === 0) {
-          // Still empty: target gains a Curse.
+        // Reveal the top card of the target player's deck, set aside —
+        // shuffling the discard back in automatically if the deck is empty.
+        const revealed = await revealTopDeckCards(cardEffectArgs, targetPlayerId, 1, { setAside: true });
+        const revealedCard = revealed[0];
+
+        if (!revealedCard) {
+          // Deck and discard both empty: nothing to reveal, target gains a
+          // Curse instead.
           loggerService.debug(`[giant effect] still no cards, gaining a Curse`);
-          if (!(await gainCurse())) {
-            continue;
-          }
+          await gainCurse();
+          continue;
         }
 
-        // Reveal the top card of the target player's deck.
-        const revealedCardId = deck.slice(-1)[0];
-        const revealedCard = cardEffectArgs.cardLibrary.getCard(revealedCardId);
-
         loggerService.debug(`[giant effect] revealing ${revealedCard}`);
-        await cardEffectArgs.actionService.run('revealCard', {
-          playerId: targetPlayerId,
-          cardId: revealedCardId,
-          moveToSetAside: true,
-        });
 
         const { cost } = cardEffectArgs.cardPriceController.applyRules(revealedCard, { playerId: targetPlayerId });
 
@@ -1146,27 +1077,19 @@ const expansion: CardExpansionModule = {
       });
 
       const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      cardEffectArgs.registerDurationEffect(thisCard, {
-        id: `haunted-woods:${cardEffectArgs.cardId}:startTurn`,
-        listeningFor: 'startTurn',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
-            return false;
-          }
-          return true;
-        },
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        thisCard,
+        async triggeredArgs => {
           triggeredArgs.reactionManager.unregisterTrigger(`haunted-woods:${cardEffectArgs.cardId}:cardGained`);
           await triggeredArgs.actionService.run('drawCard', {
             playerId: cardEffectArgs.playerId,
             count: 2,
           });
         },
-      });
+        // onLeavePlay unregisters this exact id — must match verbatim.
+        { id: `haunted-woods:${cardEffectArgs.cardId}:startTurn` },
+      );
     },
   },
   hero: {
@@ -1280,29 +1203,17 @@ const expansion: CardExpansionModule = {
       });
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
-      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+      // Reveal the top card of the deck, set aside — shuffling the discard
+      // back in automatically if the deck is empty.
+      const revealed = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, 1, { setAside: true });
+      const revealedCard = revealed[0];
 
-      if (deck.length) {
-        loggerService.debug(`[magpie effect] no cards in deck, shuffling deck`);
-        await cardEffectArgs.actionService.run('shuffleDeck', {
-          playerId: cardEffectArgs.playerId,
-        });
-
-        if (!deck.length) {
-          loggerService.debug(`[magpie effect] still no cards in deck, no cards to reveal`);
-          return;
-        }
+      if (!revealedCard) {
+        loggerService.debug(`[magpie effect] still no cards in deck, no cards to reveal`);
+        return;
       }
 
-      const revealedCard = cardEffectArgs.cardLibrary.getCard(deck.slice(-1)[0]);
-
       loggerService.debug(`[magpie effect] revealing ${revealedCard}`);
-
-      await cardEffectArgs.actionService.run('revealCard', {
-        playerId: cardEffectArgs.playerId,
-        cardId: revealedCard,
-        moveToSetAside: true,
-      });
 
       if (revealedCard.type.includes('TREASURE')) {
         loggerService.debug(`[magpie effect] treasure revealed, moving revealed card to hand`);
@@ -1852,14 +1763,11 @@ const expansion: CardExpansionModule = {
         });
       }
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => {
-        const hand = cardEffectArgs.cardSourceController.getSource('playerHand', playerId);
-        return !isPlayerImmune(cardEffectArgs.reactionContext, playerId) && hand.length >= 4;
-      });
+      const targetPlayerIds = getAttackTargets(
+        cardEffectArgs.match,
+        cardEffectArgs.playerId,
+        cardEffectArgs.reactionContext,
+      ).filter(playerId => cardEffectArgs.cardSourceController.getSource('playerHand', playerId).length >= 4);
 
       for (const targetPlayerId of targetPlayerIds) {
         const hand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
@@ -1972,17 +1880,10 @@ const expansion: CardExpansionModule = {
 
       const ids: string[] = [];
 
-      cardEffectArgs.registerDurationEffect(thisCard, {
-        id: `swamp-hag:${thisCard.id}:startTurn`,
-        listeningFor: 'startTurn',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: async conditionArgs => {
-          return conditionArgs.trigger.args.playerId === cardEffectArgs.playerId;
-        },
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        thisCard,
+        async triggeredArgs => {
           for (const id of ids) {
             triggeredArgs.reactionManager.unregisterTrigger(id);
           }
@@ -1992,13 +1893,10 @@ const expansion: CardExpansionModule = {
             count: 3,
           });
         },
-      });
+        { id: `swamp-hag:${thisCard.id}:startTurn` },
+      );
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         const id = `swamp-hag:${thisCard.id}:cardGained:${targetPlayerId}`;
@@ -2017,24 +1915,19 @@ const expansion: CardExpansionModule = {
             return conditionArgs.trigger.args.bought;
           },
           triggeredEffectFn: async triggeredArgs => {
-            const curseCards = triggeredArgs.findCardService.findCards({
-              all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
-            });
+            loggerService.debug(`[swamp-hag cardGained effect] player ${targetPlayerId} gaining a curse`);
 
-            if (!curseCards.length) {
-              loggerService.debug(`[swamp-hag cardGained effect] no curse cards in supply`);
-              return;
-            }
-
-            loggerService.debug(
-              `[swamp-hag cardGained effect] player ${targetPlayerId} gaining ${curseCards.slice(-1)[0]}`,
-            );
-
-            await triggeredArgs.actionService.run('gainCard', {
+            const gainedCurseId = await triggeredArgs.supplyGainService.gainTopSupplyCardForPileKey({
               playerId: targetPlayerId,
-              cardId: curseCards.slice(-1)[0].id,
+              pileKey: 'curse',
+              from: 'basicSupply',
               to: { location: 'playerDiscard' },
+              logTag: 'swamp-hag cardGained effect',
             });
+
+            if (!gainedCurseId) {
+              loggerService.debug(`[swamp-hag cardGained effect] no curse cards in supply`);
+            }
           },
         });
       }
@@ -2344,11 +2237,7 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', targetPlayerId);

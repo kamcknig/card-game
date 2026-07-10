@@ -35,7 +35,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
         'drawCard',
         { playerId: eventArgs.playerId },
         {
-          loggingContext: { source: footpadCardIds[0].id },
+          source: footpadCardIds[0].id,
         },
       );
     });

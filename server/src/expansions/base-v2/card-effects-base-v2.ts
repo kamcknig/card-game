@@ -4,7 +4,9 @@ import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
 import { Card, CardId } from 'shared/types/index.ts';
-import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { markPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { getAttackTargets } from '../../utils/get-attack-targets.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 
 const expansionModule: CardExpansionModule = {
   // Include the source card id for treasure gains so state effects can adjust values.
@@ -94,66 +96,36 @@ const expansionModule: CardExpansionModule = {
         //Gain a Gold. Each other player reveals the top 2 cards of their deck,
         // trashes a revealed Treasure other than Copper, and discards the rest.
 
-        const goldCardId = args.findCardService
-          .findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }] })
-          ?.slice(-1)?.[0].id;
+        loggerService.debug(`[BANDIT EFFECT] gaining a gold to discard...`);
 
-        if (goldCardId) {
-          loggerService.debug(`[BANDIT EFFECT] gaining a gold to discard...`);
+        const gainedGoldId = await args.supplyGainService.gainTopSupplyCardForPileKey({
+          playerId,
+          pileKey: 'gold',
+          from: 'basicSupply',
+          to: { location: 'playerDiscard' },
+          logTag: 'bandit effect',
+        });
 
-          const goldCard = cardLibrary.getCard(goldCardId);
-
-          await actionService.run('gainCard', {
-            playerId,
-            cardId: goldCard.id,
-            to: {
-              location: 'playerDiscard',
-            },
-          });
-        } else {
+        if (!gainedGoldId) {
           loggerService.debug(`[BANDIT EFFECT] no gold in supply`);
         }
 
-        const targetPlayerIds = findOrderedTargets({
-          startingPlayerId: playerId,
-          appliesTo: 'ALL_OTHER',
-          match,
-        }).filter(id => !isPlayerImmune(reactionContext, id));
+        const targetPlayerIds = getAttackTargets(match, playerId, reactionContext);
 
         loggerService.debug(`[BANDIT EFFECT] targets ${targetPlayerIds}`);
 
         for (const targetPlayerId of targetPlayerIds) {
-          const playerDeck = args.cardSourceController.getSource('playerDeck', targetPlayerId);
-          const playerDiscard = args.cardSourceController.getSource('playerDiscard', targetPlayerId);
+          // Reveal the top 2 cards of the target's deck, set aside —
+          // shuffling the discard back in automatically if the deck runs
+          // dry mid-reveal.
+          const revealedCards = await revealTopDeckCards({ actionService, cardLibrary, loggerService }, targetPlayerId, 2, {
+            setAside: true,
+          });
+          const cardIdsToReveal = revealedCards.map(card => card.id);
 
-          let numToReveal = 2;
-          const totalCards = playerDiscard.length + playerDeck.length;
-
-          numToReveal = Math.min(numToReveal, totalCards);
-
-          if (numToReveal === 0) {
+          if (cardIdsToReveal.length === 0) {
             loggerService.debug(`[BANDIT EFFECT] player has no cards to reveal`);
             continue;
-          }
-
-          if (playerDeck.length < numToReveal) {
-            loggerService.debug(`[BANDIT EFFECT] not enough cards in deck, shuffling...`);
-
-            await actionService.run('shuffleDeck', {
-              playerId: targetPlayerId,
-            });
-          }
-
-          const cardIdsToReveal = playerDeck.slice(-numToReveal);
-
-          for (const cardId of cardIdsToReveal) {
-            loggerService.debug(`[BANDIT EFFECT] revealing ${cardLibrary.getCard(cardId)}...`);
-
-            await actionService.run('revealCard', {
-              playerId: targetPlayerId,
-              cardId,
-              moveToSetAside: true,
-            });
           }
 
           const possibleCardIdsToTrash = cardIdsToReveal.filter(cardId => {
@@ -239,27 +211,21 @@ const expansionModule: CardExpansionModule = {
       async ({ loggerService, reactionContext, match, actionService, playerId, ...args }) => {
         // Gain a Silver onto your deck. Each other player reveals a Victory card
         // from their hand and puts it onto their deck (or reveals a hand with no Victory cards).
-        const silverCardId = args.findCardService
-          .findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'silver' }] })
-          ?.slice(-1)?.[0].id;
+        loggerService.debug(`[BUREAUCRAT EFFECT] gaining silver to deck...`);
 
-        if (!silverCardId) {
+        const gainedSilverId = await args.supplyGainService.gainTopSupplyCardForPileKey({
+          playerId,
+          pileKey: 'silver',
+          from: 'basicSupply',
+          to: { location: 'playerDeck' },
+          logTag: 'bureaucrat effect',
+        });
+
+        if (!gainedSilverId) {
           loggerService.debug('[BUREAUCRAT EFFECT] no silver in supply');
-        } else {
-          loggerService.debug(`[BUREAUCRAT EFFECT] gaining silver to deck...`);
-
-          await actionService.run('gainCard', {
-            playerId,
-            cardId: silverCardId,
-            to: { location: 'playerDeck' },
-          });
         }
 
-        const targetPlayerIds = findOrderedTargets({
-          startingPlayerId: playerId,
-          appliesTo: 'ALL_OTHER',
-          match,
-        }).filter(id => !isPlayerImmune(reactionContext, id));
+        const targetPlayerIds = getAttackTargets(match, playerId, reactionContext);
 
         loggerService.debug(`[BUREAUCRAT EFFECT] targeting ${targetPlayerIds.map(id => getPlayerById(match, id))}`);
 
@@ -408,7 +374,7 @@ const expansionModule: CardExpansionModule = {
         }
 
         for (const cardId of cardIds) {
-          loggerService.debug(`[CELLAR EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
+          loggerService.debug(`[CHAPEL EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
 
           await actionService.run('trashCard', {
             playerId,
@@ -665,7 +631,7 @@ const expansionModule: CardExpansionModule = {
               {
                 count: 1,
               },
-              { loggingContext: { source: cardId } },
+              { source: cardId },
             );
           },
         });
@@ -693,11 +659,7 @@ const expansionModule: CardExpansionModule = {
           count: 2,
         });
 
-        const playerIds = findOrderedTargets({
-          startingPlayerId: playerId,
-          appliesTo: 'ALL_OTHER',
-          match,
-        }).filter(id => !isPlayerImmune(reactionContext, id));
+        const playerIds = getAttackTargets(match, playerId, reactionContext);
 
         loggerService.debug(`[MILITIA EFFECT] targets ${playerIds.map(id => getPlayerById(match, id))}`);
 
@@ -1339,28 +1301,23 @@ const expansionModule: CardExpansionModule = {
 
         await actionService.run('drawCard', { playerId, count: 2 });
 
-        const playerIds = findOrderedTargets({
-          startingPlayerId: playerId,
-          appliesTo: 'ALL_OTHER',
-          match,
-        }).filter(id => !isPlayerImmune(reactionContext, id));
+        const playerIds = getAttackTargets(match, playerId, reactionContext);
 
         loggerService.debug(`[WITCH EFFECT] targets ${playerIds.map(id => getPlayerById(match, id))}`);
 
         for (const playerId of playerIds) {
-          const curseCards = args.findCardService.findCards({
-            all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+          const gainedCurseId = await args.supplyGainService.gainTopSupplyCardForPileKey({
+            playerId,
+            pileKey: 'curse',
+            from: 'basicSupply',
+            to: { location: 'playerDiscard' },
+            logTag: 'witch effect',
           });
-          if (!curseCards.length) {
+
+          if (!gainedCurseId) {
             loggerService.debug(`[WITCH EFFECT] no curse cards in supply`);
             return;
           }
-
-          await actionService.run('gainCard', {
-            playerId,
-            cardId: curseCards.slice(-1)[0].id,
-            to: { location: 'playerDiscard' },
-          });
         }
       },
   },

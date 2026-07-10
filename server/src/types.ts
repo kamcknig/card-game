@@ -150,8 +150,6 @@ export type GameActionContext = {
   source?: CardId;
   loggingContext?: {
     suppress?: boolean;
-    /** @deprecated Prefer GameActionContext.source for attribution. */
-    source?: CardId;
   };
   suppressLifeCycle?: LifecycleSuppression;
   // Ephemeral lifecycle payload passed only for this specific action call.
@@ -301,6 +299,13 @@ export interface GameActionDefinitionMap {
     facing?: CardFacing;
     // Optional source metadata used when the destination is set-aside.
     setAsideSource?: SetAsideSourceInput;
+    // Opt-in: also updates card.owner to the resolved destination player.
+    // moveCard itself is a low-level primitive and leaves ownership alone by
+    // default (mirroring gainCard/exileCard/trashCard, which set it
+    // explicitly for their own semantics); effects that pass a card between
+    // two live players (e.g. Masquerade) opt in here instead of mutating
+    // card.owner directly outside the action layer.
+    updateOwner?: boolean;
   }) => Promise<{ location: CardLocation; playerId?: PlayerId; emptiedSupplyPileKey?: CardKey } | undefined>;
   // Removes a card from the active match (used for "remove from game" / "to the box" effects).
   removeCardFromGame: (args: { cardId: CardId | Card }) => Promise<void>;
@@ -1002,6 +1007,10 @@ export type PlayerScoreDecorator = (playerId: PlayerId, match: Match, cardLibrar
 
 export type EndGamePolicyDecision = 'continue' | 'end_now' | 'defer';
 export type EndGamePolicyFnContext = AppContext & { endTriggered: boolean };
+// `endTriggered` is ADDITIVE (OR-merged with the running value) — a policy can
+// only turn a trigger on, never clear one set by base rules or an earlier
+// policy. To suppress ending despite a trigger, return `decision: 'defer'`
+// (or 'continue' to leave the final decision to later policies/base rules).
 export type EndGamePolicyFnOutcome = {
   endTriggered?: boolean;
   decision?: EndGamePolicyDecision;

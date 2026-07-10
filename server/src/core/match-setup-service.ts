@@ -52,10 +52,15 @@ export class MatchSetupService {
 
   // Loads a card library snapshot for a loaded match state.
   public loadCardLibraryFromState(cardLibrary: Record<CardId, Card>): void {
+    let maxId = this.cardInstanceFactoryService.getCardCount();
     for (const card of Object.values(cardLibrary)) {
       // Rehydrate card instances so downstream logic uses Card class methods.
       this.cardLibrary.addCard(this.cardInstanceFactoryService.rehydrateCard(card));
+      maxId = Math.max(maxId, card.id);
     }
+    // Advance the id allocator past every loaded id so post-load card creation
+    // (e.g. Nocturne heirlooms) cannot mint a colliding id.
+    this.cardInstanceFactoryService.setCardCount(maxId);
   }
 
   public createBaseSupply(config: ComputedMatchConfiguration): void {
@@ -178,8 +183,11 @@ export class MatchSetupService {
             return instance.id;
           }),
         );
-        fisherYatesShuffle(deck, true, () => this.rngService.nextFloat());
       });
+      // Shuffle once after every starting-hand card key has been pushed —
+      // shuffling per-key inside the loop above was redundant work that only
+      // ever mattered for the effect of the final key's shuffle anyway.
+      fisherYatesShuffle(deck, true, () => this.rngService.nextFloat());
     }
   }
 

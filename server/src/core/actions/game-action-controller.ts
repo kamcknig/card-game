@@ -436,6 +436,53 @@ export class GameActionController implements GameActionDefinitionMap {
     return matchingShadowCardIds;
   }
 
+  // Merges `additions` into `base`, preserving order and skipping ids already present.
+  private mergeUnique(base: CardId[], additions: CardId[]): CardId[] {
+    const seen = new Set(base);
+    const merged = [...base];
+    for (const id of additions) {
+      if (seen.has(id)) {
+        continue;
+      }
+      seen.add(id);
+      merged.push(id);
+    }
+    return merged;
+  }
+
+  // Resolves deck Shadow Action card ids eligible to augment an explicit Action-play selection.
+  // Returns [] when the selection intent isn't scoped to Action, the player is a computer
+  // (Shadow augmentation only applies to human prompts), or no Shadow candidates qualify.
+  // Shared by appendShadowActionCardsForPlaySelection (selectCard) and
+  // augmentPromptSelectWithShadowCards (userPrompt).
+  private resolveShadowActionCandidates(args: {
+    playerId: PlayerId;
+    selectionIntent: SelectActionCardArgs['selectionIntent'];
+    cardFilter?: CardFilterExpr;
+    logTag: string;
+  }): CardId[] {
+    if (!this.playIntentIncludesType(args.selectionIntent, 'ACTION')) {
+      return [];
+    }
+
+    const player = getPlayerById(this.match, args.playerId);
+    if (player?.isComputer) {
+      this.loggerService.debug(`[${args.logTag}] skipping Shadow augmentation for computer player ${args.playerId}`);
+      return [];
+    }
+
+    const shadowActionCardIds = this.getShadowActionCardIdsInDeck(args.playerId);
+    if (shadowActionCardIds.length < 1) {
+      return [];
+    }
+
+    return this.filterShadowActionCardsForPlaySelection({
+      playerId: args.playerId,
+      cardFilter: args.cardFilter,
+      shadowActionCardIds,
+    });
+  }
+
   // Appends deck Shadow Action cards for explicit Action-play selections.
   private appendShadowActionCardsForPlaySelection(args: {
     playerId: PlayerId;
@@ -443,39 +490,17 @@ export class GameActionController implements GameActionDefinitionMap {
     selectionIntent: SelectActionCardArgs['selectionIntent'];
     cardFilter?: CardFilterExpr;
   }): CardId[] {
-    if (!this.playIntentIncludesType(args.selectionIntent, 'ACTION')) {
-      return args.selectableCardIds;
-    }
-
-    const player = getPlayerById(this.match, args.playerId);
-    if (player?.isComputer) {
-      this.loggerService.debug(`[selectCard action] skipping Shadow augmentation for computer player ${args.playerId}`);
-      return args.selectableCardIds;
-    }
-
-    const shadowActionCardIds = this.getShadowActionCardIdsInDeck(args.playerId);
-    if (shadowActionCardIds.length < 1) {
-      return args.selectableCardIds;
-    }
-
-    const matchingShadowCardIds = this.filterShadowActionCardsForPlaySelection({
+    const matchingShadowCardIds = this.resolveShadowActionCandidates({
       playerId: args.playerId,
+      selectionIntent: args.selectionIntent,
       cardFilter: args.cardFilter,
-      shadowActionCardIds,
+      logTag: 'selectCard action',
     });
     if (matchingShadowCardIds.length < 1) {
       return args.selectableCardIds;
     }
 
-    const selectableCardSet = new Set(args.selectableCardIds);
-    const augmentedSelectableIds = [...args.selectableCardIds];
-    for (const shadowCardId of matchingShadowCardIds) {
-      if (selectableCardSet.has(shadowCardId)) {
-        continue;
-      }
-      selectableCardSet.add(shadowCardId);
-      augmentedSelectableIds.push(shadowCardId);
-    }
+    const augmentedSelectableIds = this.mergeUnique(args.selectableCardIds, matchingShadowCardIds);
     this.loggerService.debug(
       `[selectCard action] augmented action-play selection with ${augmentedSelectableIds.length - args.selectableCardIds.length} Shadow card(s)`,
     );
@@ -488,50 +513,21 @@ export class GameActionController implements GameActionDefinitionMap {
       return args;
     }
 
-    if (!this.playIntentIncludesType(args.content.selectionIntent, 'ACTION')) {
-      return args;
-    }
-
-    const player = getPlayerById(this.match, args.playerId);
-    if (player?.isComputer) {
-      this.loggerService.debug(`[userPrompt] skipping Shadow prompt augmentation for computer player ${args.playerId}`);
-      return args;
-    }
-
-    const shadowActionCardIds = this.getShadowActionCardIdsInDeck(args.playerId);
-    if (shadowActionCardIds.length < 1) {
-      return args;
-    }
-
-    const matchingShadowCardIds = this.filterShadowActionCardsForPlaySelection({
+    const matchingShadowCardIds = this.resolveShadowActionCandidates({
       playerId: args.playerId,
+      selectionIntent: args.content.selectionIntent,
       cardFilter: args.content.cardFilter,
-      shadowActionCardIds,
+      logTag: 'userPrompt',
     });
     if (matchingShadowCardIds.length < 1) {
       return args;
     }
 
-    const mergedCardIds = [...args.content.cardIds];
-    const mergedCardIdSet = new Set(mergedCardIds);
-    for (const shadowCardId of matchingShadowCardIds) {
-      if (mergedCardIdSet.has(shadowCardId)) {
-        continue;
-      }
-      mergedCardIdSet.add(shadowCardId);
-      mergedCardIds.push(shadowCardId);
-    }
-
+    const mergedCardIds = this.mergeUnique(args.content.cardIds, matchingShadowCardIds);
+    // Mirrors the original fallback: default to the already-merged ids, not the raw input,
+    // when the caller didn't supply an explicit selectable set.
     const baseSelectableCardIds = args.content.selectableCardIds ?? mergedCardIds;
-    const mergedSelectableCardIds = [...baseSelectableCardIds];
-    const mergedSelectableSet = new Set(mergedSelectableCardIds);
-    for (const shadowCardId of matchingShadowCardIds) {
-      if (mergedSelectableSet.has(shadowCardId)) {
-        continue;
-      }
-      mergedSelectableSet.add(shadowCardId);
-      mergedSelectableCardIds.push(shadowCardId);
-    }
+    const mergedSelectableCardIds = this.mergeUnique(baseSelectableCardIds, matchingShadowCardIds);
 
     this.loggerService.debug(
       `[userPrompt] augmented select prompt with ${mergedCardIds.length - args.content.cardIds.length} Shadow card(s)`,
@@ -578,7 +574,7 @@ export class GameActionController implements GameActionDefinitionMap {
     playerId: PlayerId;
     gainedCardId: CardId;
     gainedCardKey: CardKey;
-    loggingContext?: GameActionContext['loggingContext'];
+    source?: CardId;
   }) {
     const exileSource = this.getExileSource(args.playerId);
     if (!exileSource || exileSource.length === 0) {
@@ -633,30 +629,23 @@ export class GameActionController implements GameActionDefinitionMap {
           playerId: args.playerId,
           cardId: exileCardId,
         },
-        { loggingContext: args.loggingContext },
+        { source: args.source },
       );
     }
   }
 
   // Resolves the count spec into a deterministic selection count for computer picks.
-  private resolveCountSpec(count: CountSpec | number, available: number, optional: boolean): number {
+  // 'exact' and 'upTo' share identical resolution; 'range' uses the upper bound. The
+  // `kind` union is exhaustive, so no further fallback (or `optional` distinction) is needed.
+  private resolveCountSpec(count: CountSpec | number, available: number): number {
     if (typeof count === 'number') {
       return Math.min(count, available);
     }
-    if (count.kind === 'exact') {
+    if (count.kind === 'exact' || count.kind === 'upTo') {
       return Math.min(count.count, available);
     }
-    if (count.kind === 'upTo') {
-      return Math.min(count.count, available);
-    }
-    if (count.kind === 'range') {
-      // Use the upper bound for deterministic computer selections.
-      return Math.min(count.max, available);
-    }
-    if (optional) {
-      return Math.min(1, available);
-    }
-    return Math.min(1, available);
+    // 'range': use the upper bound for deterministic computer selections.
+    return Math.min(count.max, available);
   }
 
   // Identifies direct card-id restrictions (including empty arrays).
@@ -947,7 +936,7 @@ export class GameActionController implements GameActionDefinitionMap {
         if (!actionArgs || typeof actionArgs !== 'object' || Array.isArray(actionArgs)) {
           return await this.actionService.run(action, ...runArgs);
         }
-        if (actionContext?.source !== undefined || actionContext?.loggingContext?.source !== undefined) {
+        if (actionContext?.source !== undefined) {
           return await this.actionService.run(action, ...runArgs);
         }
         const argsWithSource = [
@@ -972,9 +961,9 @@ export class GameActionController implements GameActionDefinitionMap {
     return await this.actionService.run(action, ...args);
   }
 
-  // Resolves action attribution source from context first, then legacy logging fallback.
+  // Resolves action attribution source from context.
   private resolveActionSource(context?: GameActionContext): CardId | undefined {
-    return context?.source ?? context?.loggingContext?.source;
+    return context?.source;
   }
 
   // Executes an effect with consistent logging and error reporting.
@@ -1240,7 +1229,7 @@ export class GameActionController implements GameActionDefinitionMap {
         type: 'tokenPlaced',
         playerId: targetPlayerId,
         tokenId: args.tokenId,
-        source: context.loggingContext?.source,
+        source: context.source,
       });
     }
     return tokenInstance;
@@ -1289,7 +1278,7 @@ export class GameActionController implements GameActionDefinitionMap {
         type: 'tokenConsumed',
         playerId: targetPlayerId,
         tokenId: token.tokenId,
-        source: context.loggingContext?.source,
+        source: context.source,
       });
     }
   }
@@ -1438,6 +1427,7 @@ export class GameActionController implements GameActionDefinitionMap {
     to: CardLocationSpec;
     facing?: CardFacing;
     setAsideSource?: SetAsideSourceInput;
+    updateOwner?: boolean;
   }): Promise<{ location: CardLocation; playerId?: PlayerId; emptiedSupplyPileKey?: CardKey } | undefined> {
     // Ensure we are only moving actual cards with moveCard.
     let card: Card;
@@ -1562,6 +1552,15 @@ export class GameActionController implements GameActionDefinitionMap {
           cardId,
         });
         break;
+    }
+
+    // Opt-in ownership transfer: only when explicitly requested and a destination
+    // player was actually resolved (shared zones like trash/supply have none).
+    if (args.updateOwner && destinationPlayerId !== undefined) {
+      this.loggerService.debug(
+        `[moveCard action] updating owner of ${card} from ${card.owner} to ${destinationPlayerId}`,
+      );
+      card.owner = destinationPlayerId;
     }
 
     const destinationLog =
@@ -1905,7 +1904,7 @@ export class GameActionController implements GameActionDefinitionMap {
       playerId: args.playerId,
       cardId: cardId,
       type: 'gainCard',
-      source: context?.loggingContext?.source,
+      source: context?.source,
     });
 
     const trigger = new ReactionTrigger('cardGained', {
@@ -1956,7 +1955,7 @@ export class GameActionController implements GameActionDefinitionMap {
       playerId: args.playerId,
       gainedCardId: cardId,
       gainedCardKey: card.cardKey,
-      loggingContext: context?.loggingContext,
+      source: context?.source,
     });
   }
 
@@ -2016,6 +2015,62 @@ export class GameActionController implements GameActionDefinitionMap {
     this.loggerService.debug(`[exileCard action] ${card} moved to exile for player ${args.playerId}`);
   }
 
+  // Shared socket round-trip for userPrompt/selectCard: registers the signal id with
+  // PromptAbortRegistry (so an approved undo can abort an in-flight prompt), fans out
+  // waitingForPlayer/doneWaitingForPlayer to other players when the target isn't the
+  // current player, emits the request, and resolves via `parseResponse` once a matching
+  // `userInputReceived` signal arrives. Listener cleanup (`socket.off`) happens on receipt.
+  private promptViaSocket<TResult>(
+    signalId: string,
+    emitEvent: 'userPrompt' | 'selectCard',
+    args: { socket: AppSocket; playerId: PlayerId; emitPayload: unknown },
+    parseResponse: (response: unknown) => TResult,
+  ): Promise<TResult> {
+    const { socket, playerId, emitPayload } = args;
+    const currentPlayerId = getCurrentPlayer(this.match).id;
+
+    if (playerId !== currentPlayerId) {
+      this.socketMap.forEach((otherSocket, id) => {
+        if (id !== playerId) {
+          otherSocket.emit('waitingForPlayer', playerId);
+        }
+      });
+    }
+
+    return new Promise<TResult>((resolve, reject) => {
+      // Register so PromptAbortRegistry can abort this prompt if a vote
+      // approves an undo while we're waiting for input.
+      const unregister = this.promptAbortRegistry.register(signalId, reject);
+
+      const onInput = (incomingSignalId: string, response: unknown) => {
+        if (incomingSignalId !== signalId) return;
+
+        socket.off('userInputReceived', onInput);
+        unregister();
+
+        if (playerId !== currentPlayerId) {
+          this.socketMap.forEach((otherSocket, id) => {
+            if (id !== playerId) {
+              otherSocket.emit('doneWaitingForPlayer', playerId);
+            }
+          });
+        }
+
+        resolve(parseResponse(response));
+      };
+
+      socket.on('userInputReceived', onInput);
+      // socket.emit's overloads key off a literal event name; narrow explicitly per branch
+      // rather than casting the payload/emit function, since emitPayload's shape is verified
+      // by each caller (userPrompt/selectCard) to match the event it requests.
+      if (emitEvent === 'userPrompt') {
+        socket.emit('userPrompt', signalId, emitPayload as UserPromptActionArgs);
+      } else {
+        socket.emit('selectCard', signalId, emitPayload as SelectActionCardArgs & { selectableCardIds: CardId[] });
+      }
+    });
+  }
+
   async userPrompt(args: UserPromptActionArgs) {
     const resolvedArgs = this.augmentPromptSelectWithShadowCards(args);
     const { playerId } = resolvedArgs;
@@ -2068,57 +2123,31 @@ export class GameActionController implements GameActionDefinitionMap {
       return null;
     }
 
-    const currentPlayerId = getCurrentPlayer(this.match).id;
-
-    if (playerId !== currentPlayerId) {
-      this.socketMap.forEach((socket, id) => {
-        if (id !== playerId) {
-          socket.emit('waitingForPlayer', playerId);
-        }
-      });
-    }
-
-    return new Promise((resolve, reject) => {
-      // Register so PromptAbortRegistry can abort this prompt if a vote
-      // approves an undo while we're waiting for input.
-      const unregister = this.promptAbortRegistry.register(signalId, reject);
-
-      const onInput = (incomingSignalId: string, response: unknown) => {
-        if (incomingSignalId !== signalId) return;
-
-        socket.off('userInputReceived', onInput);
-        unregister();
-
-        if (playerId !== currentPlayerId) {
-          this.socketMap.forEach((socket, id) => {
-            if (id !== playerId) {
-              socket.emit('doneWaitingForPlayer', playerId);
-            }
-          });
-        }
-
+    return this.promptViaSocket<unknown>(
+      signalId,
+      'userPrompt',
+      { socket, playerId, emitPayload: resolvedArgs },
+      response => {
         if (
           resolvedArgs.content?.type === 'select' &&
           this.isPlayCardSelectionIntent(resolvedArgs.content.selectionIntent)
         ) {
           const parsedSelection = this.parsePlayCardSelectionResult(response);
           if (!parsedSelection) {
+            // Match selectCard's defensive fallback: never surface a malformed payload.
             this.loggerService.warn('[userPrompt] invalid play-card selection payload');
-          } else {
-            this.queuePendingWaySelectionForPlay({
-              playerId,
-              selectedCardIds: parsedSelection.selectedCardIds,
-              selectedWayId: parsedSelection.selectedWayId,
-            });
+            return null;
           }
+          this.queuePendingWaySelectionForPlay({
+            playerId,
+            selectedCardIds: parsedSelection.selectedCardIds,
+            selectedWayId: parsedSelection.selectedWayId,
+          });
         }
 
-        resolve(response);
-      };
-
-      socket.on('userInputReceived', onInput);
-      socket.emit('userPrompt', signalId, resolvedArgs);
-    });
+        return response;
+      },
+    );
   }
 
   async selectCard(args: SelectActionCardArgs) {
@@ -2170,7 +2199,7 @@ export class GameActionController implements GameActionDefinitionMap {
     const player = getPlayerById(this.match, playerId);
     if (player?.isComputer) {
       // Computer players choose the first available card(s) from the selectable list.
-      const count = this.resolveCountSpec(args.count ?? 1, selectableCardIds.length, args.optional ?? false);
+      const count = this.resolveCountSpec(args.count ?? 1, selectableCardIds.length);
       return selectableCardIds.slice(0, count);
     }
 
@@ -2206,41 +2235,16 @@ export class GameActionController implements GameActionDefinitionMap {
     }
 
     const signalId = `selectCard:${playerId}:${Date.now()}`;
-    const currentPlayerId = getCurrentPlayer(this.match).id;
 
-    if (playerId !== currentPlayerId) {
-      this.socketMap.forEach((socket, id) => {
-        if (id !== playerId) {
-          socket.emit('waitingForPlayer', playerId);
-        }
-      });
-    }
-
-    return new Promise<CardId[]>((resolve, reject) => {
-      // Register so PromptAbortRegistry can abort this prompt if a vote
-      // approves an undo while we're waiting for input.
-      const unregister = this.promptAbortRegistry.register(signalId, reject);
-
-      const onInput = (incomingSignalId: string, cardIds: unknown) => {
-        if (incomingSignalId !== signalId) return;
-
-        socket.off('userInputReceived', onInput);
-        unregister();
-
-        // Clear "waiting" if needed
-        if (playerId !== currentPlayerId) {
-          this.socketMap.forEach((socket, id) => {
-            if (id !== playerId) {
-              socket.emit('doneWaitingForPlayer', playerId);
-            }
-          });
-        }
-
+    return this.promptViaSocket<CardId[]>(
+      signalId,
+      'selectCard',
+      { socket, playerId, emitPayload: { ...args, selectableCardIds } },
+      cardIds => {
         const parsedSelection = this.parsePlayCardSelectionResult(cardIds);
         if (!parsedSelection) {
           this.loggerService.warn(`[selectCard action] received invalid cardIds payload`);
-          resolve([]);
-          return;
+          return [];
         }
 
         if (playSelection) {
@@ -2251,12 +2255,9 @@ export class GameActionController implements GameActionDefinitionMap {
           });
         }
 
-        resolve(parsedSelection.selectedCardIds);
-      };
-
-      socket.on('userInputReceived', onInput);
-      socket.emit('selectCard', signalId, { ...args, selectableCardIds });
-    });
+        return parsedSelection.selectedCardIds;
+      },
+    );
   }
 
   // Wraps selectCard for single-card flows and returns null when no selection was made.
@@ -2298,7 +2299,7 @@ export class GameActionController implements GameActionDefinitionMap {
         cardId: card.id,
         previousLocation: oldLocation,
         emptiedSupplyPileKey: oldLocation?.emptiedSupplyPileKey,
-        source: context?.loggingContext?.source,
+        source: context?.source,
       },
     };
     await this.reactionManager.runTrigger({ trigger });
@@ -2314,7 +2315,7 @@ export class GameActionController implements GameActionDefinitionMap {
       playerId: args.playerId,
       cardId: cardId,
       type: 'trashCard',
-      source: context?.loggingContext?.source,
+      source: context?.source,
     });
   }
 
@@ -2461,10 +2462,23 @@ export class GameActionController implements GameActionDefinitionMap {
     );
   }
 
+  // Converts Coffers tokens into spendable treasure for the current turn.
   async exchangeCoffer(args: { playerId: PlayerId; count: number }, context?: GameActionContext) {
-    this.loggerService.log(`[exchangeCoffer action] player ${args.playerId} exchanged ${args.count} coffers`);
-    this.match.coffers[args.playerId] -= args.count;
-    this.match.playerTreasure += args.count;
+    this.match.coffers[args.playerId] ??= 0;
+    const available = this.match.coffers[args.playerId];
+    // Clamp to a non-negative integer no larger than the player's coffers —
+    // this handler is client-reachable and must not trust the payload.
+    const requested = Number.isFinite(args.count) ? Math.floor(args.count) : 0;
+    const count = Math.min(Math.max(0, requested), available);
+    if (count <= 0) {
+      this.loggerService.debug(
+        `[exchangeCoffer action] player ${args.playerId} has nothing to exchange (requested ${args.count}, available ${available})`,
+      );
+      return;
+    }
+    this.loggerService.log(`[exchangeCoffer action] player ${args.playerId} exchanged ${count} coffers`);
+    this.match.coffers[args.playerId] = available - count;
+    this.match.playerTreasure += count;
   }
 
   // Spends Villagers to gain actions during the Action phase.
@@ -2512,8 +2526,19 @@ export class GameActionController implements GameActionDefinitionMap {
       type: 'payDebt',
       playerId: args.playerId,
       count: payable,
-      source: context?.loggingContext?.source,
+      source: context?.source,
     });
+  }
+
+  // Shared debt gate for all buy actions (cards, events, projects): players holding debt
+  // tokens must pay them down before making further purchases.
+  private blockBuyForExistingDebt(playerId: PlayerId, actionTag: string): boolean {
+    const existingDebt = this.match.debt[playerId] ?? 0;
+    if (existingDebt > 0) {
+      this.loggerService.debug(`[${actionTag} action] player ${playerId} has debt (${existingDebt}), blocking buy`);
+      return true;
+    }
+    return false;
   }
 
   async buyCard(args: {
@@ -2524,9 +2549,7 @@ export class GameActionController implements GameActionDefinitionMap {
     buyOptionId?: string;
   }) {
     // Prevent buying if the player already has debt tokens.
-    const existingDebt = this.match.debt[args.playerId] ?? 0;
-    if (existingDebt > 0) {
-      this.loggerService.debug(`[buyCard action] player ${args.playerId} has debt (${existingDebt}), blocking buy`);
+    if (this.blockBuyForExistingDebt(args.playerId, 'buyCard')) {
       return;
     }
     const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
@@ -2549,16 +2572,27 @@ export class GameActionController implements GameActionDefinitionMap {
     const standardCost = resolvedBuyOptions.cost;
     let paidTreasure = 0;
 
+    // Holds the clamped overpay actually spent (coffer + treasure), so both the
+    // paid-total math and the gainCard context reflect real money, not the raw
+    // client-supplied values.
+    let spendableOverpay = 0;
+
     if (selectedBuyOption.kind === 'standard') {
       // Standard payments use normal treasure/potion/debt handling.
-      if (args.overpay?.inCoffer) {
+      // Clamp requested overpay to what the player actually holds; the values
+      // originate from a client prompt and must be validated server-side.
+      const cofferAvailable = this.match.coffers[args.playerId] ?? 0;
+      const overpayCoffer = Math.min(Math.max(0, Math.floor(args.overpay?.inCoffer ?? 0)), cofferAvailable);
+      const overpayTreasureRequested = Math.max(0, Math.floor(args.overpay?.inTreasure ?? 0));
+
+      if (overpayCoffer > 0) {
         this.loggerService.debug(
-          `[buyCard action] player ${args.playerId} overpaid ${args.overpay.inCoffer} coffers, exchanging for treasure`,
+          `[buyCard action] player ${args.playerId} overpaying with ${overpayCoffer} coffers, exchanging for treasure`,
         );
 
         await this.exchangeCoffer({
           playerId: args.playerId,
-          count: args.overpay.inCoffer,
+          count: overpayCoffer,
         });
       }
 
@@ -2567,7 +2601,15 @@ export class GameActionController implements GameActionDefinitionMap {
       );
 
       this.match.playerTreasure -= standardCost.treasure;
-      paidTreasure = standardCost.treasure + (args.overpay?.inTreasure ?? 0) + (args.overpay?.inCoffer ?? 0);
+
+      // Spend the overpay: coffers were exchanged into playerTreasure above, so
+      // both components come out of the (post-base-cost) treasure pool.
+      spendableOverpay = Math.min(
+        overpayTreasureRequested + overpayCoffer,
+        Math.max(0, this.match.playerTreasure),
+      );
+      this.match.playerTreasure -= spendableOverpay;
+      paidTreasure = standardCost.treasure + spendableOverpay;
 
       if (standardCost.potion !== undefined) {
         this.loggerService.debug(
@@ -2633,44 +2675,83 @@ export class GameActionController implements GameActionDefinitionMap {
       },
       {
         bought: true,
-        overpay: (args.overpay?.inTreasure ?? 0) + (args.overpay?.inCoffer ?? 0),
+        overpay: spendableOverpay,
       },
     );
   }
 
-  async buyEvent(args: { cardLikeId: CardLikeId; playerId: PlayerId }) {
+  // Shared implementation for buyEvent/buyProject: spends treasure/buys, records purchase
+  // stats, and runs the landscape's registered effect. Projects additionally gate on and
+  // consume an available cube token (marking ownership); this is the only divergent branch,
+  // along with events' debt-cost handling, which projects currently never use.
+  private async executeLandscapeBuy(kind: 'event' | 'project', args: { cardLikeId: CardLikeId; playerId: PlayerId }) {
+    const actionTag = kind === 'event' ? 'buyEvent' : 'buyProject';
+
     // Prevent buying landscapes if the player already has debt tokens.
-    const existingDebt = this.match.debt[args.playerId] ?? 0;
-    if (existingDebt > 0) {
-      this.loggerService.debug(`[buyEvent action] player ${args.playerId} has debt (${existingDebt}), blocking buy`);
-      return;
-    }
-    const event = findEventInMatch(this.match, args.cardLikeId);
-
-    if (!event) {
-      this.loggerService.warn(`[buyEvent action] could not find event ${args.cardLikeId}`);
+    if (this.blockBuyForExistingDebt(args.playerId, actionTag)) {
       return;
     }
 
-    this.loggerService.debug(`[buyEvent action] buying ${event}`);
+    const landscape =
+      kind === 'event'
+        ? findEventInMatch(this.match, args.cardLikeId)
+        : findProjectInMatch(this.match, args.cardLikeId);
 
-    const cost = event.cost.treasure;
+    if (!landscape) {
+      this.loggerService.warn(`[${actionTag} action] could not find ${kind} ${args.cardLikeId}`);
+      return;
+    }
 
+    // Project-only: reserve an available cube token before spending anything, and prevent
+    // placing a second cube on a project the player already owns.
+    let availableCube: TokenInstance | undefined;
+    if (kind === 'project') {
+      const cubeTokenId = renaissanceTokenIds.cube;
+      const tokens = Object.values(this.match.tokens);
+      availableCube = tokens.find(
+        token =>
+          token.tokenId === cubeTokenId &&
+          token.ownerId === args.playerId &&
+          token.location.type === 'playerAvailable' &&
+          token.location.playerId === args.playerId,
+      );
+
+      if (!availableCube) {
+        this.loggerService.debug(`[${actionTag} action] player ${args.playerId} has no available cube tokens`);
+        return;
+      }
+
+      const alreadyPlaced = tokens.some(
+        token =>
+          token.tokenId === cubeTokenId &&
+          token.ownerId === args.playerId &&
+          token.location.type === 'cardLike' &&
+          token.location.cardLikeId === landscape.id,
+      );
+
+      if (alreadyPlaced) {
+        this.loggerService.debug(`[${actionTag} action] player ${args.playerId} already owns ${landscape}`);
+        return;
+      }
+    }
+
+    this.loggerService.debug(`[${actionTag} action] buying ${landscape}`);
+
+    const cost = landscape.cost.treasure ?? 0;
     this.match.playerTreasure -= cost;
-
     this.loggerService.debug(
-      `[buyEvent action] reducing player ${args.playerId} treasure ${cost} to ${this.match.playerTreasure}`,
+      `[${actionTag} action] reducing player ${args.playerId} treasure ${cost} to ${this.match.playerTreasure}`,
     );
 
-    if ((event.cost.debt ?? 0) > 0) {
-      this.loggerService.debug(`[buyEvent action] adding ${event.cost.debt} debt to player ${args.playerId}`);
-      await this.gainDebt({ playerId: args.playerId, count: event.cost.debt! });
+    // Event-only: events can also cost debt; projects never do in the current card pool.
+    if (kind === 'event' && (landscape.cost.debt ?? 0) > 0) {
+      this.loggerService.debug(`[${actionTag} action] adding ${landscape.cost.debt} debt to player ${args.playerId}`);
+      await this.gainDebt({ playerId: args.playerId, count: landscape.cost.debt! });
     }
 
     this.match.playerBuys--;
-
     this.loggerService.debug(
-      `[buyEvent action] reducing player ${args.playerId} buys by 1 to ${this.match.playerBuys}`,
+      `[${actionTag} action] reducing player ${args.playerId} buys by 1 to ${this.match.playerBuys}`,
     );
 
     const turnStatsIndex = this.getCurrentTurnStatsIndex();
@@ -2684,563 +2765,409 @@ export class GameActionController implements GameActionDefinitionMap {
       turnPhase: getTurnPhase(this.match.turnPhaseIndex),
     };
 
-    const effectFn = this.eventEffectFunctionMap[event.cardKey];
+    // Project-only: explicit purchase log entry and cube-token placement to mark ownership.
+    if (kind === 'project' && availableCube) {
+      this.logManager.addLogEntry({
+        type: 'buyProject',
+        playerId: args.playerId,
+        cardLikeId: landscape.id,
+      });
+
+      await this.moveToken({
+        tokenInstanceId: availableCube.id,
+        location: { type: 'cardLike', cardLikeId: landscape.id },
+      });
+    }
+
+    const effectFunctionMap = kind === 'event' ? this.eventEffectFunctionMap : this.projectEffectFunctionMap;
+    const effectFn = effectFunctionMap[landscape.cardKey];
 
     if (effectFn) {
-      this.loggerService.debug(`[buyEvent action] running effect for ${event}`);
+      this.loggerService.debug(`[${actionTag} action] running effect for ${landscape}`);
 
       const context = this.createCardEffectContext({
         cardId: args.cardLikeId,
         playerId: args.playerId,
       });
 
-      // Run event effects with standardized logging.
+      // Run the effect with standardized logging.
       await this.runEffectWithLogging({
-        source: event.toString(),
-        sourceType: 'event',
+        source: landscape.toString(),
+        sourceType: kind,
         playerId: args.playerId,
         effectFn,
         context,
       });
     }
+  }
+
+  async buyEvent(args: { cardLikeId: CardLikeId; playerId: PlayerId }) {
+    await this.executeLandscapeBuy('event', args);
   }
 
   async buyProject(args: { cardLikeId: CardLikeId; playerId: PlayerId }) {
-    // Prevent buying projects if the player already has debt tokens.
-    const existingDebt = this.match.debt[args.playerId] ?? 0;
-    if (existingDebt > 0) {
-      this.loggerService.debug(`[buyProject action] player ${args.playerId} has debt (${existingDebt}), blocking buy`);
-      return;
-    }
-
-    const project = findProjectInMatch(this.match, args.cardLikeId);
-    if (!project) {
-      this.loggerService.warn(`[buyProject action] could not find project ${args.cardLikeId}`);
-      return;
-    }
-
-    // Ensure the player has an available cube token to place.
-    const cubeTokenId = renaissanceTokenIds.cube;
-    const tokens = Object.values(this.match.tokens);
-    const availableCube = tokens.find(
-      token =>
-        token.tokenId === cubeTokenId &&
-        token.ownerId === args.playerId &&
-        token.location.type === 'playerAvailable' &&
-        token.location.playerId === args.playerId,
-    );
-
-    if (!availableCube) {
-      this.loggerService.debug(`[buyProject action] player ${args.playerId} has no available cube tokens`);
-      return;
-    }
-
-    // Prevent placing multiple cubes on the same project for the same player.
-    const alreadyPlaced = tokens.some(
-      token =>
-        token.tokenId === cubeTokenId &&
-        token.ownerId === args.playerId &&
-        token.location.type === 'cardLike' &&
-        token.location.cardLikeId === project.id,
-    );
-
-    if (alreadyPlaced) {
-      this.loggerService.debug(`[buyProject action] player ${args.playerId} already owns ${project}`);
-      return;
-    }
-
-    this.loggerService.debug(`[buyProject action] buying ${project}`);
-
-    const cost = project.cost.treasure ?? 0;
-    this.match.playerTreasure -= cost;
-    this.loggerService.debug(
-      `[buyProject action] reducing player ${args.playerId} treasure ${cost} to ${this.match.playerTreasure}`,
-    );
-
-    this.match.playerBuys--;
-    this.loggerService.debug(
-      `[buyProject action] reducing player ${args.playerId} buys by 1 to ${this.match.playerBuys}`,
-    );
-
-    const turnStatsIndex = this.getCurrentTurnStatsIndex();
-    this.match.stats.cardLikesBoughtByTurn[turnStatsIndex] ??= [];
-    this.match.stats.cardLikesBoughtByTurn[turnStatsIndex]!.push(args.cardLikeId);
-
-    this.match.stats.cardLikesBought[args.cardLikeId] = {
-      playerId: args.playerId,
-      turnNumber: this.match.turnNumber,
-      turnHistoryIndex: this.getCurrentTurnHistoryIndex(),
-      turnPhase: getTurnPhase(this.match.turnPhaseIndex),
-    };
-
-    this.logManager.addLogEntry({
-      type: 'buyProject',
-      playerId: args.playerId,
-      cardLikeId: project.id,
-    });
-
-    // Move a cube token onto the project to mark ownership.
-    await this.moveToken({
-      tokenInstanceId: availableCube.id,
-      location: { type: 'cardLike', cardLikeId: project.id },
-    });
-
-    const effectFn = this.projectEffectFunctionMap[project.cardKey];
-    if (effectFn) {
-      this.loggerService.debug(`[buyProject action] running effect for ${project}`);
-
-      const context = this.createCardEffectContext({
-        cardId: args.cardLikeId,
-        playerId: args.playerId,
-      });
-
-      // Run project effects with standardized logging.
-      await this.runEffectWithLogging({
-        source: project.toString(),
-        sourceType: 'project',
-        playerId: args.playerId,
-        effectFn,
-        context,
-      });
-    }
+    await this.executeLandscapeBuy('project', args);
   }
 
-  // Receives a boon from the shared boon deck and resolves its effect.
-  async receiveBoon(
-    args: { playerId: PlayerId; immediate?: boolean; boonId?: CardLikeId; keepSetAside?: boolean },
-    context?: GameActionContext,
+  // Shared implementation for receiveBoon/receiveHex: draws (or resolves an explicit id)
+  // a landscape card-like from its shared deck and resolves its effect. Boons additionally
+  // support deferred resolution (`immediate: false`) and `keepSetAside`; hexes always
+  // resolve immediately and always end up in the hex discard pile.
+  private async receiveLandscapeFromDeck(
+    kind: 'boon' | 'hex',
+    args: { playerId: PlayerId; immediate?: boolean; cardLikeId?: CardLikeId; keepSetAside?: boolean },
   ) {
-    // Default to immediate resolution unless explicitly deferred.
-    const immediate = args.immediate ?? true;
-    this.loggerService.log(`[receiveBoon action] player ${args.playerId} receiving a boon`);
+    const label = kind === 'boon' ? 'Boon' : 'Hex';
+    const kindPlural = kind === 'boon' ? 'boons' : 'hexes';
+    const piles = kind === 'boon' ? this.match.boons : this.match.hexes;
+    const effectFunctionMap = kind === 'boon' ? this.boonEffectFunctionMap : this.hexEffectFunctionMap;
+    const findLandscape = (id: CardLikeId) =>
+      kind === 'boon' ? findBoonInMatch(this.match, id) : findHexInMatch(this.match, id);
+    // Only boons support deferred resolution; hexes always resolve immediately.
+    const immediate = kind === 'boon' ? (args.immediate ?? true) : true;
 
-    if (!immediate) {
-      this.loggerService.debug('[receiveBoon action] boon will be deferred until resolved');
+    this.loggerService.log(`[receive${label} action] player ${args.playerId} receiving a ${kind}`);
+
+    if (kind === 'boon' && !immediate) {
+      this.loggerService.debug(`[receive${label} action] boon will be deferred until resolved`);
     }
 
-    if (this.match.boons.cards.length < 1) {
-      this.loggerService.info('[receiveBoon action] no boons configured, skipping');
+    if (piles.cards.length < 1) {
+      this.loggerService.info(`[receive${label} action] no ${kindPlural} configured, skipping`);
       return;
     }
 
-    if (this.match.boons.deck.length < 1 && this.match.boons.discard.length > 0) {
-      this.loggerService.info('[receiveBoon action] boon deck empty, reshuffling discard');
-      await this.shuffleCardLike({ kind: 'boon', includeDiscard: true, playerId: args.playerId });
+    if (piles.deck.length < 1 && piles.discard.length > 0) {
+      this.loggerService.info(`[receive${label} action] ${kind} deck empty, reshuffling discard`);
+      await this.shuffleCardLike({ kind, includeDiscard: true, playerId: args.playerId });
     }
 
-    let boonId = args.boonId;
-    let boon = boonId !== undefined ? findBoonInMatch(this.match, boonId) : undefined;
+    let cardLikeId = args.cardLikeId;
+    let cardLike = cardLikeId !== undefined ? findLandscape(cardLikeId) : undefined;
 
-    if (boonId !== undefined && !boon) {
-      this.loggerService.warn(`[receiveBoon action] could not find boon ${boonId}`);
+    if (cardLikeId !== undefined && !cardLike) {
+      this.loggerService.warn(`[receive${label} action] could not find ${kind} ${cardLikeId}`);
       return;
     }
 
-    if (boonId === undefined || !boon) {
-      if (this.match.boons.deck.length < 1) {
-        this.loggerService.info('[receiveBoon action] no boons available to draw');
+    if (cardLikeId === undefined || !cardLike) {
+      if (piles.deck.length < 1) {
+        this.loggerService.info(`[receive${label} action] no ${kindPlural} available to draw`);
         return;
       }
 
-      boonId = this.match.boons.deck.pop();
-      if (boonId === undefined) {
-        this.loggerService.warn('[receiveBoon action] boon deck draw failed');
+      cardLikeId = piles.deck.pop();
+      if (cardLikeId === undefined) {
+        this.loggerService.warn(`[receive${label} action] ${kind} deck draw failed`);
         return;
       }
 
-      boon = findBoonInMatch(this.match, boonId);
-      if (!boon) {
-        this.loggerService.warn(`[receiveBoon action] could not find boon ${boonId}`);
-        this.match.boons.discard.push(boonId);
+      cardLike = findLandscape(cardLikeId);
+      if (!cardLike) {
+        this.loggerService.warn(`[receive${label} action] could not find ${kind} ${cardLikeId}`);
+        piles.discard.push(cardLikeId);
         return;
       }
     }
 
-    // Remove the boon from deck/discard if it was already staged there.
-    const deckIndex = this.match.boons.deck.indexOf(boonId);
+    // Narrow the resolved card-like/id for the remaining resolution flow.
+    if (cardLikeId === undefined || !cardLike) {
+      this.loggerService.warn(`[receive${label} action] ${kind} resolution incomplete, skipping`);
+      return;
+    }
+    const resolvedCardLikeId = cardLikeId;
+    const resolvedCardLike = cardLike;
+
+    // Remove the card-like from deck/discard if it was already staged there.
+    const deckIndex = piles.deck.indexOf(resolvedCardLikeId);
     if (deckIndex !== -1) {
-      this.match.boons.deck.splice(deckIndex, 1);
+      piles.deck.splice(deckIndex, 1);
     }
-    const discardIndex = this.match.boons.discard.indexOf(boonId);
+    const discardIndex = piles.discard.indexOf(resolvedCardLikeId);
     if (discardIndex !== -1) {
-      this.match.boons.discard.splice(discardIndex, 1);
+      piles.discard.splice(discardIndex, 1);
     }
 
-    // Helper to remove a boon from set-aside before resolving its effect.
+    // Boon-only: removes a boon from set-aside before resolving its effect. A no-op for
+    // hexes, which never move into set-aside as part of this flow.
     const removeSetAside = (source: string) => {
+      if (kind !== 'boon') return;
       try {
         const setAsideSource = this.cardSourceController.getSource('set-aside', args.playerId);
-        const setAsideIndex = setAsideSource.indexOf(boonId);
+        const setAsideIndex = setAsideSource.indexOf(resolvedCardLikeId);
         if (setAsideIndex !== -1) {
           setAsideSource.splice(setAsideIndex, 1);
-          this.clearSetAsideSource(boonId);
-          this.loggerService.debug(`[receiveBoon action] removed ${boon} from set-aside for ${source}`);
+          this.clearSetAsideSource(resolvedCardLikeId);
+          this.loggerService.debug(
+            `[receive${label} action] removed ${resolvedCardLike} from set-aside for ${source}`,
+          );
         }
       } catch (error) {
-        this.loggerService.warn(`[receiveBoon action] could not update set-aside for boon ${boonId}`);
+        this.loggerService.warn(`[receive${label} action] could not update set-aside for boon ${resolvedCardLikeId}`);
         this.loggerService.error(error);
       }
     };
 
-    // Show a non-blocking received-boon modal.
-    const receivedBoonPlayerName = getPlayerById(this.match, args.playerId)?.name ?? `Player ${args.playerId}`;
+    // Show a non-blocking received-<kind> modal.
+    const receivedPlayerName = getPlayerById(this.match, args.playerId)?.name ?? `Player ${args.playerId}`;
     await this.actionService.run('userPrompt', {
       playerId: args.playerId,
-      prompt: `${receivedBoonPlayerName} received a Boon`,
-      content: { type: 'display-cards', cardLikeIds: [boonId] },
+      prompt: `${receivedPlayerName} received a ${label}`,
+      content: { type: 'display-cards', cardLikeIds: [resolvedCardLikeId] },
       waitForInput: false,
     });
 
-    // Helper to resolve the boon effect and handle discard logic.
-    const resolveBoon = async (source: string) => {
-      const effectFn = this.boonEffectFunctionMap[boon.cardKey];
+    // Resolves the card-like's effect and handles discard logic.
+    const resolveLandscape = async (source: string) => {
+      const effectFn = effectFunctionMap[resolvedCardLike.cardKey];
 
       if (effectFn) {
-        this.loggerService.debug(`[receiveBoon action] running effect for ${boon} (${source})`);
+        this.loggerService.debug(`[receive${label} action] running effect for ${resolvedCardLike} (${source})`);
 
         const effectContext = this.createCardEffectContext({
-          cardId: boonId,
+          cardId: resolvedCardLikeId,
           playerId: args.playerId,
         });
 
-        // Run boon effects with standardized logging.
+        // Run the effect with standardized logging.
         await this.runEffectWithLogging({
-          source: boon.toString(),
-          sourceType: 'boon',
+          source: resolvedCardLike.toString(),
+          sourceType: kind,
           playerId: args.playerId,
           effectFn,
           context: effectContext,
         });
       } else {
-        this.loggerService.debug(`[receiveBoon action] no effect registered for ${boon.cardKey}`);
+        this.loggerService.debug(`[receive${label} action] no effect registered for ${resolvedCardLike.cardKey}`);
       }
 
-      // Skip discarding if the boon was set aside by its effect.
-      let isSetAside = false;
-      try {
-        const setAsideSource = this.cardSourceController.getSource('set-aside', args.playerId);
-        isSetAside = setAsideSource.includes(boonId);
-      } catch (error) {
-        this.loggerService.warn(`[receiveBoon action] could not verify set-aside for boon ${boonId}`);
-        this.loggerService.error(error);
+      if (kind === 'boon') {
+        // Skip discarding if the boon was set aside by its effect.
+        let isSetAside = false;
+        try {
+          const setAsideSource = this.cardSourceController.getSource('set-aside', args.playerId);
+          isSetAside = setAsideSource.includes(resolvedCardLikeId);
+        } catch (error) {
+          this.loggerService.warn(
+            `[receive${label} action] could not verify set-aside for boon ${resolvedCardLikeId}`,
+          );
+          this.loggerService.error(error);
+        }
+
+        if (isSetAside) {
+          this.loggerService.debug(`[receive${label} action] boon ${resolvedCardLike.cardKey} set aside until cleanup`);
+          return;
+        }
+
+        if (args.keepSetAside) {
+          this.loggerService.debug(`[receive${label} action] preserving ${resolvedCardLike} in set-aside`);
+          return;
+        }
       }
 
-      if (isSetAside) {
-        this.loggerService.debug(`[receiveBoon action] boon ${boon.cardKey} set aside until cleanup`);
-        return;
-      }
-
-      if (args.keepSetAside) {
-        this.loggerService.debug(`[receiveBoon action] preserving ${boon} in set-aside`);
-        return;
-      }
-
-      this.match.boons.discard.push(boonId);
-      this.loggerService.debug(`[receiveBoon action] discarded ${boon}`);
+      piles.discard.push(resolvedCardLikeId);
+      this.loggerService.debug(`[receive${label} action] discarded ${resolvedCardLike}`);
     };
 
-    if (!immediate) {
+    if (kind === 'boon' && !immediate) {
       // Set the boon aside for delayed resolution unless already set aside.
       let alreadySetAside = false;
       try {
         const setAsideSource = this.cardSourceController.getSource('set-aside', args.playerId);
-        alreadySetAside = setAsideSource.includes(boonId);
+        alreadySetAside = setAsideSource.includes(resolvedCardLikeId);
       } catch (error) {
-        this.loggerService.warn(`[receiveBoon action] could not check set-aside for boon ${boonId}`);
+        this.loggerService.warn(`[receive${label} action] could not check set-aside for boon ${resolvedCardLikeId}`);
         this.loggerService.error(error);
       }
 
       if (!alreadySetAside) {
         await this.moveCardLike({
-          cardLikeId: boonId,
+          cardLikeId: resolvedCardLikeId,
           toPlayerId: args.playerId,
           to: { location: 'set-aside' },
           setAsideSource: {
             ownerPlayerId: args.playerId,
             sourceKind: 'boon',
-            sourceCardLikeId: boonId,
+            sourceCardLikeId: resolvedCardLikeId,
           },
         });
       }
 
-      this.loggerService.debug(`[receiveBoon action] set aside ${boon} for deferred resolution`);
-      return boonId;
+      this.loggerService.debug(`[receive${label} action] set aside ${resolvedCardLike} for deferred resolution`);
+      return resolvedCardLikeId;
     }
 
-    // Ensure deferred boons are removed from set-aside before resolving.
+    // Ensure deferred boons are removed from set-aside before resolving (no-op for hexes).
     removeSetAside('immediate resolution');
 
-    // Resolve the boon immediately (default behavior).
-    await resolveBoon('immediate');
+    // Resolve the card-like immediately (default behavior).
+    await resolveLandscape('immediate');
 
-    return boonId;
+    return resolvedCardLikeId;
+  }
+
+  // Receives a boon from the shared boon deck and resolves its effect.
+  async receiveBoon(
+    args: { playerId: PlayerId; immediate?: boolean; boonId?: CardLikeId; keepSetAside?: boolean },
+    _context?: GameActionContext,
+  ) {
+    return await this.receiveLandscapeFromDeck('boon', {
+      playerId: args.playerId,
+      immediate: args.immediate,
+      cardLikeId: args.boonId,
+      keepSetAside: args.keepSetAside,
+    });
   }
 
   // Receives a hex from the shared hex deck and resolves its effect.
-  async receiveHex(args: { playerId: PlayerId; hexId?: CardLikeId }, context?: GameActionContext) {
-    this.loggerService.log(`[receiveHex action] player ${args.playerId} receiving a hex`);
-
-    if (this.match.hexes.cards.length < 1) {
-      this.loggerService.info('[receiveHex action] no hexes configured, skipping');
-      return;
-    }
-
-    if (this.match.hexes.deck.length < 1 && this.match.hexes.discard.length > 0) {
-      this.loggerService.info('[receiveHex action] hex deck empty, reshuffling discard');
-      await this.shuffleCardLike({ kind: 'hex', includeDiscard: true, playerId: args.playerId });
-    }
-
-    let hexId = args.hexId;
-    let hex = hexId !== undefined ? findHexInMatch(this.match, hexId) : undefined;
-
-    if (hexId !== undefined && !hex) {
-      this.loggerService.warn(`[receiveHex action] could not find hex ${hexId}`);
-      return;
-    }
-
-    if (hexId === undefined || !hex) {
-      if (this.match.hexes.deck.length < 1) {
-        this.loggerService.info('[receiveHex action] no hexes available to draw');
-        return;
-      }
-
-      hexId = this.match.hexes.deck.pop();
-      if (hexId === undefined) {
-        this.loggerService.warn('[receiveHex action] hex deck draw failed');
-        return;
-      }
-
-      hex = findHexInMatch(this.match, hexId);
-      if (!hex) {
-        this.loggerService.warn(`[receiveHex action] could not find hex ${hexId}`);
-        this.match.hexes.discard.push(hexId);
-        return;
-      }
-    }
-
-    // Narrow the resolved hex/hexId for the remaining resolution flow.
-    if (hexId === undefined || !hex) {
-      this.loggerService.warn('[receiveHex action] hex resolution incomplete, skipping');
-      return;
-    }
-    const resolvedHexId = hexId;
-    const resolvedHex = hex;
-
-    // Remove the hex from deck/discard if it was already staged there.
-    const deckIndex = this.match.hexes.deck.indexOf(resolvedHexId);
-    if (deckIndex !== -1) {
-      this.match.hexes.deck.splice(deckIndex, 1);
-    }
-    const discardIndex = this.match.hexes.discard.indexOf(resolvedHexId);
-    if (discardIndex !== -1) {
-      this.match.hexes.discard.splice(discardIndex, 1);
-    }
-
-    // Show a non-blocking received-hex modal before resolving hex effects.
-    const receivedHexPlayerName = getPlayerById(this.match, args.playerId)?.name ?? `Player ${args.playerId}`;
-    await this.actionService.run('userPrompt', {
+  async receiveHex(args: { playerId: PlayerId; hexId?: CardLikeId }, _context?: GameActionContext) {
+    return await this.receiveLandscapeFromDeck('hex', {
       playerId: args.playerId,
-      prompt: `${receivedHexPlayerName} received a Hex`,
-      content: { type: 'display-cards', cardLikeIds: [resolvedHexId] },
-      waitForInput: false,
+      cardLikeId: args.hexId,
+    });
+  }
+
+  // Shared implementation for gainState/gainArtifact: assigns a status-like card-like to a
+  // player and registers its effect triggers. Artifacts are always unique (stripped from any
+  // previous owner); states only strip previous owners when explicitly requested.
+  private async gainStatus(
+    kind: 'state' | 'artifact',
+    args: { playerId: PlayerId; statusId?: CardLikeId; statusKey?: CardKey; removeFromCurrentOwner?: boolean },
+    opts: { alwaysUnique: boolean },
+  ) {
+    const label = kind === 'state' ? 'State' : 'Artifact';
+    this.loggerService.log(`[gain${label} action] player ${args.playerId} gaining ${kind}`);
+
+    const store = this.getStatusStore(kind);
+    if (store.cards.length < 1) {
+      this.loggerService.info(`[gain${label} action] no ${kind}s configured, skipping`);
+      return;
+    }
+
+    const status = this.resolveStatusCard(store, { statusId: args.statusId, statusKey: args.statusKey });
+
+    if (!status) {
+      this.loggerService.warn(`[gain${label} action] could not resolve ${kind} to gain`);
+      return;
+    }
+
+    const ownedStatuses = store.byPlayer[args.playerId] ?? [];
+    if (ownedStatuses.includes(status.id)) {
+      this.loggerService.debug(`[gain${label} action] player ${args.playerId} already has ${status}`);
+      return status.id;
+    }
+
+    // Artifacts are always unique; states only strip previous owners when explicitly requested.
+    if (opts.alwaysUnique || args.removeFromCurrentOwner) {
+      const ownerIds = this.findStatusOwners(store, status.id);
+      for (const ownerId of ownerIds) {
+        await this.removeStatus(kind, { playerId: ownerId, statusId: status.id });
+      }
+    }
+
+    this.addStatusToPlayer(store, args.playerId, status.id);
+
+    const effectFunctionMap = kind === 'state' ? this.stateEffectFunctionMap : this.artifactEffectFunctionMap;
+    const effectFn = effectFunctionMap[status.cardKey];
+    if (!effectFn) {
+      this.loggerService.debug(`[gain${label} action] no effect registered for ${status.cardKey}`);
+      return status.id;
+    }
+
+    this.loggerService.debug(`[gain${label} action] registering effects for ${status}`);
+    const effectContext = this.createCardEffectContext({
+      cardId: status.id,
+      playerId: args.playerId,
     });
 
-    const effectFn = this.hexEffectFunctionMap[resolvedHex.cardKey];
-    if (effectFn) {
-      this.loggerService.debug(`[receiveHex action] running effect for ${resolvedHex}`);
+    // Run status effects with standardized logging.
+    await this.runEffectWithLogging({
+      source: status.toString(),
+      sourceType: kind,
+      playerId: args.playerId,
+      effectFn,
+      context: effectContext,
+    });
 
-      const effectContext = this.createCardEffectContext({
-        cardId: resolvedHexId,
-        playerId: args.playerId,
-      });
+    return status.id;
+  }
 
-      // Run hex effects with standardized logging.
-      await this.runEffectWithLogging({
-        source: resolvedHex.toString(),
-        sourceType: 'hex',
-        playerId: args.playerId,
-        effectFn,
-        context: effectContext,
-      });
-    } else {
-      this.loggerService.debug(`[receiveHex action] no effect registered for ${resolvedHex.cardKey}`);
+  // Shared implementation for removeState/removeArtifact: removes a status-like card-like from
+  // a player. Trigger cleanup is handled by the effect that registered them, not here.
+  private async removeStatus(
+    kind: 'state' | 'artifact',
+    args: { playerId: PlayerId; statusId?: CardLikeId; statusKey?: CardKey },
+  ): Promise<void> {
+    const label = kind === 'state' ? 'State' : 'Artifact';
+    this.loggerService.log(`[remove${label} action] player ${args.playerId} removing ${kind}`);
+
+    const store = this.getStatusStore(kind);
+    const status = this.resolveStatusCard(store, { statusId: args.statusId, statusKey: args.statusKey });
+
+    if (!status) {
+      this.loggerService.warn(`[remove${label} action] could not resolve ${kind} to remove`);
+      return;
     }
 
-    // Received hexes always go to the discard pile after resolving.
-    this.match.hexes.discard.push(resolvedHexId);
-    this.loggerService.debug(`[receiveHex action] discarded ${resolvedHex}`);
+    const ownedStatuses = store.byPlayer[args.playerId] ?? [];
+    const index = ownedStatuses.indexOf(status.id);
+    if (index === -1) {
+      this.loggerService.debug(`[remove${label} action] player ${args.playerId} does not have ${status}`);
+      return;
+    }
 
-    return resolvedHexId;
+    ownedStatuses.splice(index, 1);
+    // Status-trigger cleanup is handled by the effect that registered them.
+    this.loggerService.debug(`[remove${label} action] removed ${status} from player ${args.playerId}`);
   }
 
   // Assigns a state to a player and registers its effect triggers.
   async gainState(
     args: { playerId: PlayerId; stateId?: CardLikeId; stateKey?: CardKey; removeFromCurrentOwner?: boolean },
-    context?: GameActionContext,
+    _context?: GameActionContext,
   ) {
-    this.loggerService.log(`[gainState action] player ${args.playerId} gaining state`);
-
-    const store = this.getStatusStore('state');
-    if (store.cards.length < 1) {
-      this.loggerService.info('[gainState action] no states configured, skipping');
-      return;
-    }
-
-    const state = this.resolveStatusCard(store, { statusId: args.stateId, statusKey: args.stateKey });
-
-    if (!state) {
-      this.loggerService.warn('[gainState action] could not resolve state to gain');
-      return;
-    }
-
-    const ownedStates = store.byPlayer[args.playerId] ?? [];
-    if (ownedStates.includes(state.id)) {
-      this.loggerService.debug(`[gainState action] player ${args.playerId} already has ${state}`);
-      return state.id;
-    }
-
-    // Only strip the state from previous owners when explicitly requested.
-    if (args.removeFromCurrentOwner) {
-      const ownerIds = this.findStatusOwners(store, state.id);
-      for (const ownerId of ownerIds) {
-        await this.removeState({ playerId: ownerId, stateId: state.id });
-      }
-    }
-
-    this.addStatusToPlayer(store, args.playerId, state.id);
-
-    const effectFn = this.stateEffectFunctionMap[state.cardKey];
-    if (!effectFn) {
-      this.loggerService.debug(`[gainState action] no effect registered for ${state.cardKey}`);
-      return state.id;
-    }
-
-    this.loggerService.debug(`[gainState action] registering effects for ${state}`);
-    const effectContext = this.createCardEffectContext({
-      cardId: state.id,
-      playerId: args.playerId,
-    });
-
-    // Run state effects with standardized logging.
-    await this.runEffectWithLogging({
-      source: state.toString(),
-      sourceType: 'state',
-      playerId: args.playerId,
-      effectFn,
-      context: effectContext,
-    });
-
-    return state.id;
+    return await this.gainStatus(
+      'state',
+      {
+        playerId: args.playerId,
+        statusId: args.stateId,
+        statusKey: args.stateKey,
+        removeFromCurrentOwner: args.removeFromCurrentOwner,
+      },
+      { alwaysUnique: false },
+    );
   }
 
   // Removes a state from a player and cleans up any registered triggers.
   async removeState(
     args: { playerId: PlayerId; stateId?: CardLikeId; stateKey?: CardKey },
-    context?: GameActionContext,
+    _context?: GameActionContext,
   ): Promise<void> {
-    this.loggerService.log(`[removeState action] player ${args.playerId} removing state`);
-
-    const store = this.getStatusStore('state');
-    const state = this.resolveStatusCard(store, { statusId: args.stateId, statusKey: args.stateKey });
-
-    if (!state) {
-      this.loggerService.warn('[removeState action] could not resolve state to remove');
-      return;
-    }
-
-    const ownedStates = store.byPlayer[args.playerId] ?? [];
-    const index = ownedStates.indexOf(state.id);
-    if (index === -1) {
-      this.loggerService.debug(`[removeState action] player ${args.playerId} does not have ${state}`);
-      return;
-    }
-
-    ownedStates.splice(index, 1);
-    // State-trigger cleanup is handled by the state effect that registered them.
-    this.loggerService.debug(`[removeState action] removed ${state} from player ${args.playerId}`);
+    await this.removeStatus('state', { playerId: args.playerId, statusId: args.stateId, statusKey: args.stateKey });
   }
 
   // Assigns an artifact to a player and registers its effect triggers.
   async gainArtifact(
     args: { playerId: PlayerId; artifactId?: CardLikeId; artifactKey?: CardKey },
-    context?: GameActionContext,
+    _context?: GameActionContext,
   ) {
-    this.loggerService.log(`[gainArtifact action] player ${args.playerId} gaining artifact`);
-
-    const store = this.getStatusStore('artifact');
-    if (store.cards.length < 1) {
-      this.loggerService.info('[gainArtifact action] no artifacts configured, skipping');
-      return;
-    }
-
-    const artifact = this.resolveStatusCard(store, { statusId: args.artifactId, statusKey: args.artifactKey });
-    if (!artifact) {
-      this.loggerService.warn('[gainArtifact action] could not resolve artifact to gain');
-      return;
-    }
-
-    const ownedArtifacts = store.byPlayer[args.playerId] ?? [];
-    if (ownedArtifacts.includes(artifact.id)) {
-      this.loggerService.debug(`[gainArtifact action] player ${args.playerId} already has ${artifact}`);
-      return artifact.id;
-    }
-
-    // Artifacts are unique; remove from all previous owners.
-    const ownerIds = this.findStatusOwners(store, artifact.id);
-    for (const ownerId of ownerIds) {
-      await this.removeArtifact({ playerId: ownerId, artifactId: artifact.id });
-    }
-
-    this.addStatusToPlayer(store, args.playerId, artifact.id);
-
-    const effectFn = this.artifactEffectFunctionMap[artifact.cardKey];
-    if (!effectFn) {
-      this.loggerService.debug(`[gainArtifact action] no effect registered for ${artifact.cardKey}`);
-      return artifact.id;
-    }
-
-    this.loggerService.debug(`[gainArtifact action] registering effects for ${artifact}`);
-    const effectContext = this.createCardEffectContext({
-      cardId: artifact.id,
-      playerId: args.playerId,
-    });
-
-    // Run artifact effects with standardized logging.
-    await this.runEffectWithLogging({
-      source: artifact.toString(),
-      sourceType: 'artifact',
-      playerId: args.playerId,
-      effectFn,
-      context: effectContext,
-    });
-
-    return artifact.id;
+    return await this.gainStatus(
+      'artifact',
+      { playerId: args.playerId, statusId: args.artifactId, statusKey: args.artifactKey },
+      { alwaysUnique: true },
+    );
   }
 
   // Removes an artifact from a player and cleans up any registered triggers.
   async removeArtifact(
     args: { playerId: PlayerId; artifactId?: CardLikeId; artifactKey?: CardKey },
-    context?: GameActionContext,
+    _context?: GameActionContext,
   ): Promise<void> {
-    this.loggerService.log(`[removeArtifact action] player ${args.playerId} removing artifact`);
-
-    const store = this.getStatusStore('artifact');
-    const artifact = this.resolveStatusCard(store, { statusId: args.artifactId, statusKey: args.artifactKey });
-    if (!artifact) {
-      this.loggerService.warn('[removeArtifact action] could not resolve artifact to remove');
-      return;
-    }
-
-    const ownedArtifacts = store.byPlayer[args.playerId] ?? [];
-    const index = ownedArtifacts.indexOf(artifact.id);
-    if (index === -1) {
-      this.loggerService.debug(`[removeArtifact action] player ${args.playerId} does not have ${artifact}`);
-      return;
-    }
-
-    ownedArtifacts.splice(index, 1);
-    // Artifact-trigger cleanup is handled by the artifact effect that registered them.
-    this.loggerService.debug(`[removeArtifact action] removed ${artifact} from player ${args.playerId}`);
+    await this.removeStatus('artifact', {
+      playerId: args.playerId,
+      statusId: args.artifactId,
+      statusKey: args.artifactKey,
+    });
   }
 
   async revealCard(
@@ -3307,7 +3234,7 @@ export class GameActionController implements GameActionDefinitionMap {
       type: 'revealCard',
       cardId: cardId,
       playerId: args.playerId,
-      source: context?.loggingContext?.source,
+      source: context?.source,
     });
 
     await this.reactionManager.runCardLifecycleEvent('onRevealed', {
@@ -3448,7 +3375,7 @@ export class GameActionController implements GameActionDefinitionMap {
       playerId: args.playerId,
       cardId: lastDiscardCard.id,
       count: discardCards.length,
-      source: context?.loggingContext?.source,
+      source: context?.source,
     });
   }
 
@@ -3603,11 +3530,9 @@ export class GameActionController implements GameActionDefinitionMap {
       match.playerTreasure = 0;
       match.playerPotions = 0;
 
-      if (scheduledTurn) {
-        match.currentPlayerTurnIndex = getPlayerTurnIndex({ match, playerId: scheduledTurn.turn.playerId });
-      } else {
-        match.currentPlayerTurnIndex++;
-      }
+      // Invariant: action is index 0 in TurnPhaseOrderValues, so this branch only runs from the
+      // wraparound block above, which always assigns scheduledTurn — the old `else { ++ }` fallback was dead.
+      match.currentPlayerTurnIndex = getPlayerTurnIndex({ match, playerId: scheduledTurn!.turn.playerId });
 
       if (match.currentPlayerTurnIndex >= match.players.length) {
         match.currentPlayerTurnIndex = 0;
@@ -4166,7 +4091,7 @@ export class GameActionController implements GameActionDefinitionMap {
       type: 'cardPlayed',
       cardId,
       playerId,
-      source: context?.loggingContext?.source,
+      source: context?.source,
     });
 
     // find any reactions for the cardPlayed event type
@@ -4381,11 +4306,4 @@ export class GameActionController implements GameActionDefinitionMap {
     );
     this.loggerService.info(`[shuffleCardLike action] shuffled ${args.kind} deck (${deck.length} cards)`);
   }
-
-  /**
-   * Resolves an ExtraTurn instance
-   *
-   * @private
-   */
-  private async resolveExtraTurn(turn: ExtraTurn) {}
 }

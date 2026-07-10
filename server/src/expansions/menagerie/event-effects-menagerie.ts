@@ -7,6 +7,7 @@ import { getPlayerSourceSafe } from '../../utils/get-player-source-safe.ts';
 import { AppContext, CardEffectFunctionContext, CardExpansionModule } from '@server-types/index.ts';
 import { Card, CardCost, CardId, CardKey, PlayerId } from 'shared/types/index.ts';
 import { findEventInMatch } from '@shared/find-card-like-in-match.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 
 // Runtime metadata attached to cards Exiled by Invest.
 type InvestCardMetadata = {
@@ -376,35 +377,35 @@ const effectMap: CardExpansionModule = {
         },
       });
 
-      const promptResult = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId: cardEffectArgs.playerId,
-        prompt: 'Gain a Curse for +1 Buy and +$2?',
-        actionButtons: [
-          { label: 'NO', action: 1 },
-          { label: 'YES', action: 2 },
-        ],
-      })) as { action?: number } | null;
+      const shouldGainCurse = await cardEffectArgs.promptService.confirm(
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Gain a Curse for +1 Buy and +$2?',
+          actionButtons: [
+            { label: 'NO', action: 1 },
+            { label: 'YES', action: 2 },
+          ],
+        },
+        2,
+      );
 
-      if (promptResult?.action !== 2) {
+      if (!shouldGainCurse) {
         loggerService.debug('[desperation effect] player declined to gain a Curse');
         return;
       }
 
-      const curseCards = cardEffectArgs.findCardService.findCards({
-        all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+      const gainedCurseId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+        playerId: cardEffectArgs.playerId,
+        pileKey: 'curse',
+        from: 'basicSupply',
+        to: { location: 'playerDiscard' },
+        logTag: 'desperation effect',
       });
 
-      if (!curseCards.length) {
+      if (!gainedCurseId) {
         loggerService.debug('[desperation effect] no Curse in Supply; no bonus granted');
         return;
       }
-
-      const curseCard = curseCards.slice(-1)[0];
-      await cardEffectArgs.actionService.run('gainCard', {
-        playerId: cardEffectArgs.playerId,
-        cardId: curseCard.id,
-        to: { location: 'playerDiscard' },
-      });
 
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
@@ -548,16 +549,19 @@ const effectMap: CardExpansionModule = {
       }
 
       loggerService.debug(`[gamble effect] discarded card ${discardedCard} is playable; prompting player`);
-      const promptResult = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId: cardEffectArgs.playerId,
-        prompt: `Play ${discardedCard.cardName}?`,
-        actionButtons: [
-          { label: 'NO', action: 1 },
-          { label: 'YES', action: 2 },
-        ],
-      })) as { action?: number } | null;
+      const shouldPlay = await cardEffectArgs.promptService.confirm(
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: `Play ${discardedCard.cardName}?`,
+          actionButtons: [
+            { label: 'NO', action: 1 },
+            { label: 'YES', action: 2 },
+          ],
+        },
+        2,
+      );
 
-      if (promptResult?.action !== 2) {
+      if (!shouldPlay) {
         loggerService.debug('[gamble effect] player declined to play discarded card');
         return;
       }
@@ -775,19 +779,11 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      // Reveal up to 4 cards to set-aside so we can split and resolve them.
-      const revealedCardIds: CardId[] = [];
-      for (let revealIndex = 0; revealIndex < 4; revealIndex++) {
-        const revealedCardId = await cardEffectArgs.actionService.run('revealCard', {
-          playerId: cardEffectArgs.playerId,
-          source: 'playerDeck',
-          moveToSetAside: true,
-        });
-        if (revealedCardId === undefined) {
-          break;
-        }
-        revealedCardIds.push(revealedCardId);
-      }
+      // Reveal up to 4 cards to set-aside so we can split and resolve them;
+      // revealTopDeckCards shuffles the discard in automatically whenever
+      // the deck runs dry mid-reveal.
+      const revealedCards = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, 4, { setAside: true });
+      const revealedCardIds: CardId[] = revealedCards.map(card => card.id);
 
       if (!revealedCardIds.length) {
         loggerService.debug('[pursue effect] no cards revealed');
@@ -833,21 +829,18 @@ const effectMap: CardExpansionModule = {
       }
 
       // Reap gains a Gold and sets it aside to auto-play at next turn start.
-      const goldCards = cardEffectArgs.findCardService.findCards({
-        all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }],
+      const gainedGoldId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+        playerId: cardEffectArgs.playerId,
+        pileKey: 'gold',
+        from: 'basicSupply',
+        to: { location: 'set-aside' },
+        logTag: 'reap effect',
       });
 
-      if (!goldCards.length) {
+      if (!gainedGoldId) {
         loggerService.debug('[reap effect] no Gold in Supply to gain');
         return;
       }
-
-      const goldCard = goldCards.slice(-1)[0];
-      await cardEffectArgs.actionService.run('gainCard', {
-        playerId: cardEffectArgs.playerId,
-        cardId: goldCard.id,
-        to: { location: 'set-aside' },
-      });
 
       cardEffectArgs.reactionManager.registerReactionTemplate(
         event,
@@ -859,16 +852,16 @@ const effectMap: CardExpansionModule = {
           compulsory: true,
           condition: async conditionArgs =>
             conditionArgs.trigger.args.playerId === cardEffectArgs.playerId &&
-            getPlayerSourceSafe(conditionArgs, 'set-aside', cardEffectArgs.playerId).includes(goldCard.id),
+            getPlayerSourceSafe(conditionArgs, 'set-aside', cardEffectArgs.playerId).includes(gainedGoldId),
           triggeredEffectFn: async triggeredArgs => {
             await triggeredArgs.actionService.run('playCard', {
               playerId: cardEffectArgs.playerId,
-              cardId: goldCard.id,
+              cardId: gainedGoldId,
               overrides: { actionCost: 0 },
             });
           },
         },
-        { idSuffix: `reap:${goldCard.id}:startTurn` },
+        { idSuffix: `reap:${gainedGoldId}:startTurn` },
       );
     },
   },
@@ -992,15 +985,18 @@ const effectMap: CardExpansionModule = {
 
       let selectedMode: 'supply' | 'exile';
       if (canExileFromSupply && canTopdeckFromExile) {
-        const promptResult = (await cardEffectArgs.actionService.run('userPrompt', {
-          playerId: cardEffectArgs.playerId,
-          prompt: 'Choose one',
-          actionButtons: [
-            { label: 'EXILE SUPPLY ACTION', action: 1 },
-            { label: 'TOPDECK EXILED ACTION', action: 2 },
-          ],
-        })) as { action?: number } | null;
-        selectedMode = promptResult?.action === 2 ? 'exile' : 'supply';
+        const shouldTopdeckFromExile = await cardEffectArgs.promptService.confirm(
+          {
+            playerId: cardEffectArgs.playerId,
+            prompt: 'Choose one',
+            actionButtons: [
+              { label: 'EXILE SUPPLY ACTION', action: 1 },
+              { label: 'TOPDECK EXILED ACTION', action: 2 },
+            ],
+          },
+          2,
+        );
+        selectedMode = shouldTopdeckFromExile ? 'exile' : 'supply';
       } else {
         selectedMode = canExileFromSupply ? 'supply' : 'exile';
       }

@@ -1,11 +1,11 @@
 import { Card, CardId, CardKey } from 'shared/types/index.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
-import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getPlayerStartingFrom } from '@shared/get-player-position-utils.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
-import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { getAttackTargets } from '../../utils/get-attack-targets.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 
 const expansion: CardExpansionModule = {
   advisor: {
@@ -13,31 +13,11 @@ const expansion: CardExpansionModule = {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.debug(`[advisor effect] gaining 1 action`);
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
-      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
-      const cardsRevealed: Card[] = [];
-
       loggerService.debug(`[advisor effect] revealing 3 cards`);
 
-      for (let i = 0; i < 3; i++) {
-        if (deck.length === 0) {
-          loggerService.debug(`[advisor effect] no cards in deck, shuffling`);
-          await cardEffectArgs.actionService.run('shuffleDeck', { playerId: cardEffectArgs.playerId });
-
-          if (deck.length === 0) {
-            loggerService.debug(`[advisor effect] no cards in deck after shuffling`);
-            break;
-          }
-        }
-
-        const cardId = deck.slice(-1)[0];
-        const card = cardEffectArgs.cardLibrary.getCard(cardId);
-        cardsRevealed.push(card);
-        await cardEffectArgs.actionService.run('revealCard', {
-          cardId,
-          playerId: cardEffectArgs.playerId,
-          moveToSetAside: true,
-        });
-      }
+      // Reveal the top 3 cards, set aside — shuffling the discard back in
+      // automatically if the deck runs dry mid-reveal.
+      const cardsRevealed = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, 3, { setAside: true });
 
       const leftPlayer = getPlayerStartingFrom({
         startFromIdx: cardEffectArgs.match.currentPlayerTurnIndex,
@@ -177,32 +157,14 @@ const expansion: CardExpansionModule = {
   carnival: {
     registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
-      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
       const cardsToKeep: Card[] = [];
       const cardsToDiscard: Card[] = [];
 
-      for (let i = 0; i < 4; i++) {
-        if (deck.length === 0) {
-          loggerService.debug(`[carnival effect] no cards in deck, shuffling`);
-          await cardEffectArgs.actionService.run('shuffleDeck', { playerId: cardEffectArgs.playerId });
+      // Reveal the top 4 cards, set aside — shuffling the discard back in
+      // automatically if the deck runs dry mid-reveal.
+      const revealedCards = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, 4, { setAside: true });
 
-          if (deck.length === 0) {
-            loggerService.debug(`[carnival effect] no cards in deck after shuffling`);
-            break;
-          }
-        }
-
-        const revealedCardId = deck.slice(-1)[0];
-        const revealedCard = cardEffectArgs.cardLibrary.getCard(revealedCardId);
-
-        loggerService.debug(`[carnival effect] revealing ${revealedCard}`);
-
-        await cardEffectArgs.actionService.run('revealCard', {
-          cardId: revealedCardId,
-          playerId: cardEffectArgs.playerId,
-          moveToSetAside: true,
-        });
-
+      for (const revealedCard of revealedCards) {
         if (!cardsToKeep.find(card => card.cardKey === revealedCard.cardKey)) {
           loggerService.debug(`[carnival effect] adding ${revealedCard} to keep`);
           cardsToKeep.push(revealedCard);
@@ -377,24 +339,19 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainAction', { count: 2 });
       await cardEffectArgs.actionService.run('gainBuy', { count: 2 });
 
-      const goldCardIds = cardEffectArgs.findCardService.findCards({
-        all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }],
-      });
+      loggerService.debug(`[demesne effect] gaining gold`);
 
-      if (!goldCardIds.length) {
-        loggerService.debug(`[demesne effect] no gold cards in supply`);
-        return;
-      }
-
-      const goldCard = cardEffectArgs.cardLibrary.getCard(goldCardIds.slice(-1)[0].id);
-
-      loggerService.debug(`[demesne effect] gaining ${goldCard}`);
-
-      await cardEffectArgs.actionService.run('gainCard', {
+      const gainedGoldId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
         playerId: cardEffectArgs.playerId,
-        cardId: goldCard.id,
+        pileKey: 'gold',
+        from: 'basicSupply',
         to: { location: 'playerDiscard' },
+        logTag: 'demesne effect',
       });
+
+      if (!gainedGoldId) {
+        loggerService.debug(`[demesne effect] no gold cards in supply`);
+      }
     },
   },
   fairgrounds: {
@@ -495,7 +452,7 @@ const expansion: CardExpansionModule = {
                 playerId: eventArgs.playerId,
                 count: overpaid,
               },
-              { loggingContext: { source: eventArgs.cardId } },
+              { source: eventArgs.cardId },
             );
           },
         });
@@ -540,7 +497,7 @@ const expansion: CardExpansionModule = {
             cardId: cardIds.slice(-1)[0].id,
             to: { location: 'playerDiscard' },
           },
-          { loggingContext: { source: eventArgs.cardId } },
+          { source: eventArgs.cardId },
         );
       },
     }),
@@ -578,11 +535,7 @@ const expansion: CardExpansionModule = {
       loggerService.debug(`[footpad effect] gaining 2 coffers`);
       await cardEffectArgs.actionService.run('gainCoffer', { playerId: cardEffectArgs.playerId, count: 2 });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         const hand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
@@ -739,32 +692,22 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
-      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
+      // Reveal the top card of the deck, shuffling the discard in
+      // automatically if the deck is empty.
+      const revealed = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, 1);
+      const card = revealed[0];
 
-      if (deck.length === 0) {
-        loggerService.debug(`[herald effect] no cards in deck, shuffling`);
-        await cardEffectArgs.actionService.run('shuffleDeck', { playerId: cardEffectArgs.playerId });
-
-        if (deck.length === 0) {
-          loggerService.debug(`[herald effect] no cards in deck after shuffling`);
-          return;
-        }
+      if (!card) {
+        loggerService.debug(`[herald effect] no cards in deck after shuffling`);
+        return;
       }
 
-      const cardId = deck.slice(-1)[0];
-      const card = cardEffectArgs.cardLibrary.getCard(cardId);
-
       loggerService.debug(`[herald effect] player ${cardEffectArgs.playerId} revealing ${card}`);
-
-      await cardEffectArgs.actionService.run('revealCard', {
-        cardId,
-        playerId: cardEffectArgs.playerId,
-      });
 
       if (card.type.includes('ACTION')) {
         loggerService.debug(`[herald effect] card is an action card, playing it`);
         await cardEffectArgs.actionService.run('playCard', {
-          cardId,
+          cardId: card.id,
           playerId: cardEffectArgs.playerId,
         });
       }
@@ -894,42 +837,30 @@ const expansion: CardExpansionModule = {
 
       const uniqueHandCardNames = new Set(hand.map(cardEffectArgs.cardLibrary.getCard).map(card => card.cardName));
 
-      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
-      const discard = cardEffectArgs.cardSourceController.getSource('playerDiscard', cardEffectArgs.playerId);
-
       const cardsToDiscard: CardId[] = [];
 
-      while (deck.length + discard.length > 0) {
-        let cardId = deck.slice(-1)[0];
+      // Reveal cards one at a time, set aside, stopping after the first
+      // card that doesn't match a card name in hand; revealTopDeckCards
+      // shuffles the discard in automatically whenever the deck runs dry
+      // mid-reveal.
+      while (true) {
+        const revealed = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, 1, { setAside: true });
+        const card = revealed[0];
 
-        if (!cardId) {
-          await cardEffectArgs.actionService.run('shuffleDeck', { playerId: cardEffectArgs.playerId });
-
-          cardId = deck.slice(-1)[0];
-
-          if (!cardId) {
-            loggerService.warn(`[hunting party effect] no cards in deck after shuffling`);
-            return;
-          }
+        if (!card) {
+          loggerService.warn(`[hunting party effect] no cards in deck after shuffling`);
+          return;
         }
-
-        const card = cardEffectArgs.cardLibrary.getCard(cardId);
 
         loggerService.debug(`[hunting party effect] revealing ${card}`);
 
-        await cardEffectArgs.actionService.run('revealCard', {
-          cardId: card.id,
-          playerId: cardEffectArgs.playerId,
-          moveToSetAside: true,
-        });
-
         if (uniqueHandCardNames.has(card.cardName)) {
           loggerService.debug(`[hunting party effect] adding ${card.cardName} to discards`);
-          cardsToDiscard.push(cardId);
+          cardsToDiscard.push(card.id);
         } else {
           loggerService.debug(`[hunting party effect] moving ${card.cardName} to hand`);
           await cardEffectArgs.actionService.run('moveCard', {
-            cardId: cardId,
+            cardId: card.id,
             toPlayerId: cardEffectArgs.playerId,
             to: { location: 'playerHand' },
           });
@@ -1001,11 +932,7 @@ const expansion: CardExpansionModule = {
       loggerService.debug(`[jester effect] gaining 2 treasure`);
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', targetPlayerId);
@@ -1028,26 +955,27 @@ const expansion: CardExpansionModule = {
 
         if (card.type.includes('VICTORY')) {
           loggerService.debug(`[jester effect] card is a victory card, gaining curse`);
-          const curseCardIds = cardEffectArgs.findCardService.findCards({
-            all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+
+          // Note: `to` intentionally mirrors pre-existing behavior at this site.
+          const gainedCurseId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+            playerId: targetPlayerId,
+            pileKey: 'curse',
+            from: 'basicSupply',
+            to: { location: 'basicSupply' },
+            logTag: 'jester effect',
           });
 
-          if (!curseCardIds.length) {
+          if (!gainedCurseId) {
             loggerService.debug(`[jester effect] no curse cards in supply`);
             continue;
           }
-
-          await cardEffectArgs.actionService.run('gainCard', {
-            playerId: targetPlayerId,
-            cardId: curseCardIds.slice(-1)[0].id,
-            to: { location: 'basicSupply' },
-          });
         } else {
-          const copyIds = cardEffectArgs.findCardService.findCards({
-            all: [{ location: ['basicSupply', 'kingdomSupply'] }, { cardKeys: card.cardKey }],
+          const copyCard = cardEffectArgs.findCardService.findTopSupplyCardForPileKey({
+            pileKey: card.cardKey,
+            from: ['basicSupply', 'kingdomSupply'],
           });
 
-          if (!copyIds.length) {
+          if (!copyCard) {
             loggerService.debug(`[jester effect] no copies of ${card.cardName} in supply`);
             continue;
           }
@@ -1061,23 +989,16 @@ const expansion: CardExpansionModule = {
             ],
           })) as { action: number; result: number[] };
 
-          const copyId = copyIds.slice(-1)[0];
+          const recipientPlayerId = result.action === 1 ? targetPlayerId : cardEffectArgs.playerId;
+          loggerService.debug(`[jester effect] player ${recipientPlayerId} gaining ${card.cardName}`);
 
-          if (result.action === 1) {
-            loggerService.debug(`[jester effect] player ${targetPlayerId} gaining ${card.cardName}`);
-            await cardEffectArgs.actionService.run('gainCard', {
-              playerId: targetPlayerId,
-              cardId: copyId.id,
-              to: { location: 'playerDiscard' },
-            });
-          } else {
-            loggerService.debug(`[jester effect] player ${cardEffectArgs.playerId} gaining ${card.cardName}`);
-            await cardEffectArgs.actionService.run('gainCard', {
-              playerId: cardEffectArgs.playerId,
-              cardId: copyId.id,
-              to: { location: 'playerDiscard' },
-            });
-          }
+          await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+            playerId: recipientPlayerId,
+            pileKey: card.cardKey,
+            from: ['basicSupply', 'kingdomSupply'],
+            to: { location: 'playerDiscard' },
+            logTag: 'jester effect',
+          });
         }
       }
     },
@@ -1093,32 +1014,24 @@ const expansion: CardExpansionModule = {
 
       const key = result.result;
 
-      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
-      const discard = cardEffectArgs.cardSourceController.getSource('playerDiscard', cardEffectArgs.playerId);
       let count = 0;
-      while (deck.length + discard.length > 0 && count < 3) {
-        if (deck.length === 0) {
-          loggerService.warn(`[journeyman effect] no cards in deck, shuffling`);
-          await cardEffectArgs.actionService.run('shuffleDeck', { playerId: cardEffectArgs.playerId });
-
-          if (deck.length === 0) {
-            loggerService.warn(`[journeyman effect] no cards in deck after shuffling`);
-            break;
-          }
+      // Reveal cards one at a time, set aside, until 3 non-matching cards
+      // have been moved to hand or the player runs out of cards;
+      // revealTopDeckCards shuffles the discard in automatically whenever
+      // the deck runs dry mid-reveal.
+      while (count < 3) {
+        const revealed = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, 1, { setAside: true });
+        const card = revealed[0];
+        if (!card) {
+          loggerService.warn(`[journeyman effect] no cards in deck after shuffling`);
+          break;
         }
 
-        const cardId = deck.slice(-1)[0];
-        await cardEffectArgs.actionService.run('revealCard', {
-          cardId,
-          playerId: cardEffectArgs.playerId,
-          moveToSetAside: true,
-        });
-        const card = cardEffectArgs.cardLibrary.getCard(cardId);
         if (card.cardKey === key) {
-          await cardEffectArgs.actionService.run('discardCard', { cardId, playerId: cardEffectArgs.playerId });
+          await cardEffectArgs.actionService.run('discardCard', { cardId: card.id, playerId: cardEffectArgs.playerId });
         } else {
           await cardEffectArgs.actionService.run('moveCard', {
-            cardId,
+            cardId: card.id,
             toPlayerId: cardEffectArgs.playerId,
             to: { location: 'playerHand' },
           });
@@ -1305,7 +1218,7 @@ const expansion: CardExpansionModule = {
               playerId: cardEffectArgs.playerId,
               count: selfGainedCardIdsThisTurn.length,
             },
-            { loggingContext: { source: cardEffectArgs.cardId } },
+            { source: cardEffectArgs.cardId },
           );
         },
       });
@@ -1502,45 +1415,37 @@ const expansion: CardExpansionModule = {
   soothsayer: {
     registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
-      const goldCardIds = cardEffectArgs.findCardService.findCards({
-        all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }],
+      loggerService.debug(`[soothsayer effect] player ${cardEffectArgs.playerId} gaining gold`);
+
+      const gainedGoldId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+        playerId: cardEffectArgs.playerId,
+        pileKey: 'gold',
+        from: 'basicSupply',
+        to: { location: 'playerDiscard' },
+        logTag: 'soothsayer effect',
       });
 
-      if (!goldCardIds.length) {
+      if (!gainedGoldId) {
         loggerService.debug(`[soothsayer effect] no gold cards in supply`);
-      } else {
-        loggerService.debug(`[soothsayer effect] player ${cardEffectArgs.playerId} gaining gold`);
-
-        await cardEffectArgs.actionService.run('gainCard', {
-          playerId: cardEffectArgs.playerId,
-          cardId: goldCardIds.slice(-1)[0].id,
-          to: { location: 'playerDiscard' },
-        });
       }
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
-        const curseCardIds = cardEffectArgs.findCardService.findCards({
-          all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+        loggerService.debug(`[soothsayer effect] player ${targetPlayerId} gaining a curse`);
+
+        const gainedCurseId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+          playerId: targetPlayerId,
+          pileKey: 'curse',
+          from: 'basicSupply',
+          to: { location: 'playerDiscard' },
+          logTag: 'soothsayer effect',
         });
 
-        if (!curseCardIds.length) {
+        if (!gainedCurseId) {
           loggerService.debug(`[soothsayer effect] no curse cards in supply`);
           break;
         }
-
-        loggerService.debug(`[soothsayer effect] player ${targetPlayerId} gaining a curse`);
-
-        await cardEffectArgs.actionService.run('gainCard', {
-          playerId: targetPlayerId,
-          cardId: curseCardIds.slice(-1)[0].id,
-          to: { location: 'playerDiscard' },
-        });
 
         loggerService.debug(`[soothsayer effect] player ${targetPlayerId} drawing 1 card`);
 
@@ -1726,22 +1631,19 @@ const expansion: CardExpansionModule = {
         }
       }
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: cardEffectArgs.playerId,
-      }).filter(playerId => !isPlayerImmune(cardEffectArgs.reactionContext, playerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         const handIds = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
         const handCards = handIds.map(cardId => cardEffectArgs.cardLibrary.getCard(cardId));
         const baneCards = handCards.filter(card => card.tags?.includes('bane'));
 
-        const curseCardIds = cardEffectArgs.findCardService.findCards({
-          all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+        const topCurseCard = cardEffectArgs.findCardService.findTopSupplyCardForPileKey({
+          pileKey: 'curse',
+          from: 'basicSupply',
         });
 
-        if (!curseCardIds.length) {
+        if (!topCurseCard) {
           loggerService.debug(`[young witch effect] no curse cards in supply`);
           return;
         }
@@ -1775,10 +1677,12 @@ const expansion: CardExpansionModule = {
 
         if (!reveal) {
           loggerService.debug(`[young witch effect] player ${targetPlayerId} did not reveal a bane`);
-          await cardEffectArgs.actionService.run('gainCard', {
+          await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
             playerId: targetPlayerId,
-            cardId: curseCardIds[0].id,
+            pileKey: 'curse',
+            from: 'basicSupply',
             to: { location: 'playerDiscard' },
+            logTag: 'young witch effect',
           });
         }
       }

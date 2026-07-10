@@ -391,7 +391,9 @@ export class ReactionManager {
         // and the same card
         if (shouldPrompt || (promptReactions.length === 1 && compulsoryReactions.length === 0)) {
           const grouped = groupReactionsByCardKey(promptReactions);
-          const actionButtons = buildActionButtons(grouped, this.cardLibrary, this.loggerService);
+          // All-compulsory prompts are ordering-only choices — Cancel has no effect.
+          const includeCancel = compulsoryReactions.length !== promptReactions.length;
+          const actionButtons = buildActionButtons(grouped, this.cardLibrary, this.loggerService, includeCancel);
           const actionMap = buildActionMap(grouped);
 
           this.loggerService.info(`[REACTION MANAGER] prompting ${targetPlayer} to choose reaction`);
@@ -403,11 +405,26 @@ export class ReactionManager {
           });
 
           if (action === null || action === 0) {
-            this.loggerService.info(`[REACTION MANAGER] ${targetPlayer} chose not to react`);
-            break;
-          } else {
-            this.loggerService.info(`[REACTION MANAGER] ${targetPlayer} reacts with ${actionMap.get(action)}`);
+            if (compulsoryReactions.length === 0) {
+              // Only optional reactions were on offer — declining ends this pass.
+              this.loggerService.info(`[REACTION MANAGER] ${targetPlayer} chose not to react`);
+              break;
+            }
+            // Compulsory reactions cannot be declined. Drop only the optional
+            // candidates from this trigger pass and continue the loop so the
+            // remaining compulsory reactions auto-run.
+            this.loggerService.info(
+              `[REACTION MANAGER] ${targetPlayer} declined optional reactions; compulsory reactions still pending`,
+            );
+            for (const reaction of promptReactions) {
+              if (!reaction.compulsory) {
+                usedReactionIds.add(reaction.id);
+              }
+            }
+            continue;
           }
+
+          this.loggerService.info(`[REACTION MANAGER] ${targetPlayer} reacts with ${actionMap.get(action)}`);
 
           selectedReaction = actionMap.get(action);
         } else {
