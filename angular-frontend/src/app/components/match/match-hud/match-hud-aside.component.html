@@ -54,14 +54,14 @@
 @let currentVisibleMat = visibleMat();
 @if (currentVisibleMat) {
   <app-ui-dialog
-    [skin]="'none'"
-    [zIndex]="4100"
+    [skin]="'dark'"
+    [layer]="'hud'"
     [hasBackdrop]="false"
-    [backdropVariant]="'soft'"
+    [heading]="getVisibleMatTitle()"
+    [showClose]="true"
     (close)="closeVisibleMat()"
   >
     <div class="mat-modal-content">
-      <div class="mat-modal-title">{{ getVisibleMatTitle() }}</div>
       <div class="player-flex-container">
         @for (playerMatContent of getVisibleMatContent(); track playerMatContent.id) {
           <div class="player-item">
@@ -88,7 +88,6 @@
           </div>
         }
       </div>
-      <div (mousedown)="closeVisibleMat()">X</div>
     </div>
   </app-ui-dialog>
 }

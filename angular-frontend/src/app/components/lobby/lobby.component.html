@@ -47,69 +47,49 @@
   <!-- Email-required modal: shown when a legacy user tries to create or join a
        game without an email address attached to their account. Links them to
        /profile where they can complete the email-attachment flow. -->
-  <app-ui-dialog
-    [skin]="'none'"
-    [backdropVariant]="'soft'"
-    (close)="dismissEmailRequiredDialog()"
-  >
-    <div class="email-required-dialog">
-      <h3 class="email-required-dialog__title">Email required</h3>
-      <p class="email-required-dialog__body">
-        Add an email to your account before creating or joining a game.
-      </p>
-      <div class="email-required-dialog__actions">
-        <a
-          class="btn btn-primary email-required-dialog__link-button"
-          routerLink="/profile"
-          (click)="dismissEmailRequiredDialog()"
-        >
-          Open Account settings &rarr;
-        </a>
-        <button
-          type="button"
-          class="btn btn-primary-muted"
-          (click)="dismissEmailRequiredDialog()"
-        >
-          Dismiss
-        </button>
-      </div>
-    </div>
-  </app-ui-dialog>
+  <app-confirm-dialog
+    [heading]="'Email required'"
+    [message]="'Add an email to your account before creating or joining a game.'"
+    [confirmLabel]="'Open Account settings'"
+    [cancelLabel]="'Dismiss'"
+    [skin]="'light'"
+    [layer]="'base'"
+    (confirmed)="onEmailRequiredConfirm()"
+    (cancelled)="dismissEmailRequiredDialog()">
+  </app-confirm-dialog>
 }
 
 @if (showStillInGameDialog()) {
   <!-- Still-in-game confirmation: shown when the user clicks Create Game or
        Join while activeLobbyGameIdStore is set. Three actions: leave the
        existing game and continue with the original intent, return to the
-       existing game, or cancel and stay in the lobby. -->
+       existing game, or cancel and stay in the lobby. An explicit choice is
+       required — the dialog cannot be dismissed via Escape/backdrop. -->
   <app-ui-dialog
-    [skin]="'none'"
-    [backdropVariant]="'soft'"
-    [closeOnBackdrop]="false"
-    (close)="onStillInGameCancel()"
+    [skin]="'light'"
+    [layer]="'base'"
+    [heading]="'You\'re still in a game'"
+    [dismissable]="false"
   >
-    <div class="still-in-game-dialog">
-      <h3 class="still-in-game-dialog__title">You're still in a game</h3>
-      <p class="still-in-game-dialog__body">
-        @if (stillInGameMatchStarted()) {
-          You have an active match in progress. Leave it to start or join a new
-          game, or return to the match to keep playing.
-        } @else {
-          You're already in another lobby. Leave it to start or join a new game,
-          or return to it.
-        }
-      </p>
-      <div class="still-in-game-dialog__actions">
-        <button type="button" class="btn btn-danger" (click)="onStillInGameLeave()">
-          Leave game
-        </button>
-        <button type="button" class="btn btn-primary" (click)="onStillInGameReturn()">
-          Return to game
-        </button>
-        <button type="button" class="btn btn-primary-muted" (click)="onStillInGameCancel()">
-          Cancel
-        </button>
-      </div>
+    <p class="still-in-game-dialog__body">
+      @if (stillInGameMatchStarted()) {
+        You have an active match in progress. Leave it to start or join a new
+        game, or return to the match to keep playing.
+      } @else {
+        You're already in another lobby. Leave it to start or join a new game,
+        or return to it.
+      }
+    </p>
+    <div class="ui-dialog-footer">
+      <button type="button" class="btn btn-danger" (click)="onStillInGameLeave()">
+        Leave game
+      </button>
+      <button type="button" class="btn btn-primary" (click)="onStillInGameReturn()">
+        Return to game
+      </button>
+      <button type="button" class="btn btn-primary-muted" (click)="onStillInGameCancel()">
+        Cancel
+      </button>
     </div>
   </app-ui-dialog>
 }

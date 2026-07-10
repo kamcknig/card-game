@@ -134,94 +134,12 @@
   }
 }
 
-// Email-required dialog panel: shown when a legacy user tries to create or
-// join a game without an email address attached to their account.
-.email-required-dialog {
-  padding: var(--theme-space-3xl) var(--theme-space-2xl) var(--theme-space-xl);
-  max-width: 460px;
-  background: var(--theme-surface-card);
-  border: 1px solid var(--theme-border-subtle);
-  border-radius: var(--theme-radius-pill);
-  display: flex;
-  flex-direction: column;
-  gap: var(--theme-space-md);
-}
-
-.email-required-dialog__title {
-  margin: 0;
-  font-family: var(--theme-font-display);
-  font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--theme-text-primary);
-}
-
-.email-required-dialog__body {
-  margin: 0;
-  font-size: 0.9rem;
-  color: var(--theme-text-secondary);
-  line-height: 1.5;
-}
-
-.email-required-dialog__actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--theme-space-md);
-  margin-top: var(--theme-space-xs);
-}
-
-// Primary action: navigates to /profile/security styled as a button-link.
-// Visual identity comes from `.btn .btn-primary` in styles.scss; this rule
-// only handles the anchor-specific tweaks the global .btn class doesn't
-// cover (default anchor display is inline, default text-decoration is
-// underline — both need overriding so the <a> visually matches a <button>).
-.email-required-dialog__link-button {
-  display: inline-flex;
-  align-items: center;
-  white-space: nowrap;
-  text-decoration: none;
-}
-
-// Dismiss button uses the global `.btn .btn-primary-muted` recipe from
-// styles.scss; CDK overlay teleportation breaks emulated view-encapsulation
-// scoping, so any local rule wouldn't apply anyway.
-
-// Still-in-game dialog panel: shown when the user attempts to create or join
-// a game while still attached to an existing game on the server. Mirrors the
-// layout language of .email-required-dialog so both dialogs feel coherent.
-.still-in-game-dialog {
-  padding: var(--theme-space-3xl) var(--theme-space-2xl) var(--theme-space-xl);
-  max-width: 460px;
-  background: var(--theme-surface-card);
-  border: 1px solid var(--theme-border-subtle);
-  border-radius: var(--theme-radius-pill);
-  display: flex;
-  flex-direction: column;
-  gap: var(--theme-space-md);
-}
-
-.still-in-game-dialog__title {
-  margin: 0;
-  font-family: var(--theme-font-display);
-  font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--theme-text-primary);
-}
-
+// Still-in-game dialog body copy: shown when the user attempts to create or
+// join a game while still attached to an existing game on the server. Panel
+// chrome comes from the shell's light skin; only typography stays local.
 .still-in-game-dialog__body {
   margin: 0;
   font-size: 0.9rem;
   color: var(--theme-text-secondary);
   line-height: 1.5;
-}
-
-.still-in-game-dialog__actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--theme-space-md);
-  margin-top: var(--theme-space-xs);
 }

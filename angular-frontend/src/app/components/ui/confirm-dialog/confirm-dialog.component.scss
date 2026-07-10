@@ -1,0 +1,7 @@
+// Message body typography — panel chrome comes from the shell's skin.
+.confirm-dialog-message {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--theme-text-secondary);
+  line-height: 1.5;
+}

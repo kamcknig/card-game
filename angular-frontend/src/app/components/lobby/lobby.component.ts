@@ -9,6 +9,7 @@ import { activeLobbyGameIdStore, lobbyGamesStore, lobbyStatusMessageStore } from
 import { matchStartedStore } from '../../state/match-state';
 import { SceneContentComponent } from '../scene-content/scene-content.component';
 import { UiDialogComponent } from '../ui/dialog/ui-dialog.component';
+import { ConfirmDialogComponent } from '../ui/confirm-dialog/confirm-dialog.component';
 
 /**
  * Describes the deferred create/join action that triggered the still-in-game
@@ -36,7 +37,7 @@ type PendingIntent =
 @Component({
   selector: 'app-lobby',
   standalone: true,
-  imports: [SceneContentComponent, UiDialogComponent, RouterLink],
+  imports: [SceneContentComponent, UiDialogComponent, ConfirmDialogComponent, RouterLink],
   templateUrl: './lobby.component.html',
   styleUrl: './lobby.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -116,6 +117,16 @@ export class LobbyComponent implements OnInit {
   /** Dismisses the email-required dialog. */
   dismissEmailRequiredDialog(): void {
     this.showEmailRequiredDialog.set(false);
+  }
+
+  /**
+   * "Open Account settings" confirm action on the email-required dialog:
+   * dismisses the dialog and navigates the user to `/profile` where they
+   * can attach an email address.
+   */
+  onEmailRequiredConfirm(): void {
+    this.showEmailRequiredDialog.set(false);
+    void this._router.navigate(['/profile']);
   }
 
   /**
