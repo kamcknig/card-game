@@ -574,7 +574,7 @@ export class GameActionController implements GameActionDefinitionMap {
     playerId: PlayerId;
     gainedCardId: CardId;
     gainedCardKey: CardKey;
-    loggingContext?: GameActionContext['loggingContext'];
+    source?: CardId;
   }) {
     const exileSource = this.getExileSource(args.playerId);
     if (!exileSource || exileSource.length === 0) {
@@ -629,7 +629,7 @@ export class GameActionController implements GameActionDefinitionMap {
           playerId: args.playerId,
           cardId: exileCardId,
         },
-        { loggingContext: args.loggingContext },
+        { source: args.source },
       );
     }
   }
@@ -936,7 +936,7 @@ export class GameActionController implements GameActionDefinitionMap {
         if (!actionArgs || typeof actionArgs !== 'object' || Array.isArray(actionArgs)) {
           return await this.actionService.run(action, ...runArgs);
         }
-        if (actionContext?.source !== undefined || actionContext?.loggingContext?.source !== undefined) {
+        if (actionContext?.source !== undefined) {
           return await this.actionService.run(action, ...runArgs);
         }
         const argsWithSource = [
@@ -961,9 +961,9 @@ export class GameActionController implements GameActionDefinitionMap {
     return await this.actionService.run(action, ...args);
   }
 
-  // Resolves action attribution source from context first, then legacy logging fallback.
+  // Resolves action attribution source from context.
   private resolveActionSource(context?: GameActionContext): CardId | undefined {
-    return context?.source ?? context?.loggingContext?.source;
+    return context?.source;
   }
 
   // Executes an effect with consistent logging and error reporting.
@@ -1229,7 +1229,7 @@ export class GameActionController implements GameActionDefinitionMap {
         type: 'tokenPlaced',
         playerId: targetPlayerId,
         tokenId: args.tokenId,
-        source: context.loggingContext?.source,
+        source: context.source,
       });
     }
     return tokenInstance;
@@ -1278,7 +1278,7 @@ export class GameActionController implements GameActionDefinitionMap {
         type: 'tokenConsumed',
         playerId: targetPlayerId,
         tokenId: token.tokenId,
-        source: context.loggingContext?.source,
+        source: context.source,
       });
     }
   }
@@ -1904,7 +1904,7 @@ export class GameActionController implements GameActionDefinitionMap {
       playerId: args.playerId,
       cardId: cardId,
       type: 'gainCard',
-      source: context?.loggingContext?.source,
+      source: context?.source,
     });
 
     const trigger = new ReactionTrigger('cardGained', {
@@ -1955,7 +1955,7 @@ export class GameActionController implements GameActionDefinitionMap {
       playerId: args.playerId,
       gainedCardId: cardId,
       gainedCardKey: card.cardKey,
-      loggingContext: context?.loggingContext,
+      source: context?.source,
     });
   }
 
@@ -2299,7 +2299,7 @@ export class GameActionController implements GameActionDefinitionMap {
         cardId: card.id,
         previousLocation: oldLocation,
         emptiedSupplyPileKey: oldLocation?.emptiedSupplyPileKey,
-        source: context?.loggingContext?.source,
+        source: context?.source,
       },
     };
     await this.reactionManager.runTrigger({ trigger });
@@ -2315,7 +2315,7 @@ export class GameActionController implements GameActionDefinitionMap {
       playerId: args.playerId,
       cardId: cardId,
       type: 'trashCard',
-      source: context?.loggingContext?.source,
+      source: context?.source,
     });
   }
 
@@ -2526,7 +2526,7 @@ export class GameActionController implements GameActionDefinitionMap {
       type: 'payDebt',
       playerId: args.playerId,
       count: payable,
-      source: context?.loggingContext?.source,
+      source: context?.source,
     });
   }
 
@@ -3234,7 +3234,7 @@ export class GameActionController implements GameActionDefinitionMap {
       type: 'revealCard',
       cardId: cardId,
       playerId: args.playerId,
-      source: context?.loggingContext?.source,
+      source: context?.source,
     });
 
     await this.reactionManager.runCardLifecycleEvent('onRevealed', {
@@ -3375,7 +3375,7 @@ export class GameActionController implements GameActionDefinitionMap {
       playerId: args.playerId,
       cardId: lastDiscardCard.id,
       count: discardCards.length,
-      source: context?.loggingContext?.source,
+      source: context?.source,
     });
   }
 
@@ -4091,7 +4091,7 @@ export class GameActionController implements GameActionDefinitionMap {
       type: 'cardPlayed',
       cardId,
       playerId,
-      source: context?.loggingContext?.source,
+      source: context?.source,
     });
 
     // find any reactions for the cardPlayed event type

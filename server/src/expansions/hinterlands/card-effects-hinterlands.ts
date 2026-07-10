@@ -128,7 +128,7 @@ const expansion: CardExpansionModule = {
             cardId: selectedCard.id,
             to: { location: 'playerDiscard' },
           },
-          { loggingContext: { source: eventArgs.cardId } },
+          { source: eventArgs.cardId },
         );
       },
     }),
@@ -670,7 +670,7 @@ const expansion: CardExpansionModule = {
               cardId: selectedCard.id,
               to: { location: 'playerDiscard' },
             },
-            { loggingContext: { source: cardEffectArgs.cardId } },
+            { source: cardEffectArgs.cardId },
           );
         },
       });

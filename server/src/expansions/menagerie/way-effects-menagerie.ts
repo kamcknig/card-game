@@ -136,9 +136,7 @@ const registerWayOfTheChameleonDrawSwap = (args: CardEffectFunctionContext): voi
             count: swappedCount,
           },
           {
-            loggingContext: {
-              source: triggeredArgs.trigger.args.source,
-            },
+            source: triggeredArgs.trigger.args.source,
           },
         );
       },

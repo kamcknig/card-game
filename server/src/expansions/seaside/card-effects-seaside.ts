@@ -127,7 +127,7 @@ const expansion: CardExpansionModule = {
               cardId: curseCardIds.slice(-1)[0].id,
               to: { location: 'playerDiscard' },
             },
-            { loggingContext: { source: args.trigger.args.cardId } },
+            { source: args.trigger.args.cardId },
           );
         },
       });
@@ -150,7 +150,7 @@ const expansion: CardExpansionModule = {
           'drawCard',
           { playerId: cardEffectArgs.playerId },
           {
-            loggingContext: { source: cardEffectArgs.cardId },
+            source: cardEffectArgs.cardId,
           },
         );
       });
@@ -177,7 +177,7 @@ const expansion: CardExpansionModule = {
           {
             playerId: cardEffectArgs.playerId,
           },
-          { loggingContext: { source: cardEffectArgs.cardId } },
+          { source: cardEffectArgs.cardId },
         );
         cardEffectArgs.reactionManager.unregisterTrigger(cardPlayedTriggerId);
       });
@@ -220,9 +220,7 @@ const expansion: CardExpansionModule = {
               cardId: trigger.args.cardId!,
             },
             {
-              loggingContext: {
-                source: cardEffectArgs.cardId,
-              },
+              source: cardEffectArgs.cardId,
             },
           );
         },
@@ -277,7 +275,7 @@ const expansion: CardExpansionModule = {
           'gainAction',
           { count: 1 },
           {
-            loggingContext: { source: cardEffectArgs.cardId },
+            source: cardEffectArgs.cardId,
           },
         );
 
@@ -286,7 +284,7 @@ const expansion: CardExpansionModule = {
           'gainTreasure',
           { count: 1 },
           {
-            loggingContext: { source: cardEffectArgs.cardId },
+            source: cardEffectArgs.cardId,
           },
         );
       });
@@ -406,7 +404,7 @@ const expansion: CardExpansionModule = {
           'gainTreasure',
           { count: 1 },
           {
-            loggingContext: { source: args.cardId },
+            source: args.cardId,
           },
         );
       });
@@ -530,7 +528,7 @@ const expansion: CardExpansionModule = {
           'gainTreasure',
           { count: 2 },
           {
-            loggingContext: { source: cardEffectArgs.cardId },
+            source: cardEffectArgs.cardId,
           },
         );
       });
@@ -552,7 +550,7 @@ const expansion: CardExpansionModule = {
           'drawCard',
           { playerId: cardEffectArgs.playerId },
           {
-            loggingContext: { source: cardEffectArgs.cardId },
+            source: cardEffectArgs.cardId,
           },
         );
 
@@ -579,7 +577,7 @@ const expansion: CardExpansionModule = {
             'drawCard',
             { playerId: cardEffectArgs.playerId },
             {
-              loggingContext: { source: cardEffectArgs.cardId },
+              source: cardEffectArgs.cardId,
             },
           );
         },
@@ -646,7 +644,7 @@ const expansion: CardExpansionModule = {
                   actionCost: 0,
                 },
               },
-              { loggingContext: { source: cardId } },
+              { source: cardId },
             );
           },
         });
@@ -689,7 +687,7 @@ const expansion: CardExpansionModule = {
               cardId: selectedCardId,
               to: { location: 'playerHand' },
             },
-            { loggingContext: { source: cardId } },
+            { source: cardId },
           );
         });
       },
@@ -812,7 +810,7 @@ const expansion: CardExpansionModule = {
               cardId: triggeredArgs.trigger.args.cardId!,
               overrides: { actionCost: 0 },
             },
-            { loggingContext: { source: args.cardId } },
+            { source: args.cardId },
           );
         },
       });
@@ -825,7 +823,7 @@ const expansion: CardExpansionModule = {
           'gainTreasure',
           { count: 2 },
           {
-            loggingContext: { source: args.cardId },
+            source: args.cardId,
           },
         );
 
@@ -853,7 +851,7 @@ const expansion: CardExpansionModule = {
             playerId: args.playerId,
             cardId: selectedCardId,
           },
-          { loggingContext: { source: args.cardId } },
+          { source: args.cardId },
         );
       });
 
@@ -962,7 +960,7 @@ const expansion: CardExpansionModule = {
               cardId: selectedCardId,
               playerId: args.playerId,
             },
-            { loggingContext: { source: args.cardId } },
+            { source: args.cardId },
           );
         }
       });
@@ -1091,7 +1089,7 @@ const expansion: CardExpansionModule = {
             count: 5,
             playerId: args.playerId,
           },
-          { loggingContext: { source: args.cardId } },
+          { source: args.cardId },
         );
 
         loggerService.warn(`[tactician triggered effect] gaining 1 action`);
@@ -1137,7 +1135,7 @@ const expansion: CardExpansionModule = {
               cardId,
               playerId: args.playerId,
             },
-            { loggingContext: { source: sourceCardId } },
+            { source: sourceCardId },
           );
         }
       });
@@ -1275,7 +1273,7 @@ const expansion: CardExpansionModule = {
             playerId: args.playerId,
             count: 2,
           },
-          { loggingContext: { source: args.cardId } },
+          { source: args.cardId },
         );
 
         loggerService.debug(`[wharf triggered effect] gaining 1 buy`);

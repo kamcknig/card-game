@@ -631,7 +631,7 @@ const expansionModule: CardExpansionModule = {
               {
                 count: 1,
               },
-              { loggingContext: { source: cardId } },
+              { source: cardId },
             );
           },
         });

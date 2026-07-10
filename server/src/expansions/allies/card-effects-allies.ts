@@ -1028,7 +1028,7 @@ const cardEffects: CardExpansionModule = {
               sourceCardId: garrisonCard.id,
             },
             {
-              loggingContext: { source: garrisonCard.id },
+              source: garrisonCard.id,
             },
           );
           const garrisonTokenCount = getCoinTokenInstanceIdsOnCard({
@@ -1064,7 +1064,7 @@ const cardEffects: CardExpansionModule = {
                   'removeToken',
                   { tokenInstanceId },
                   {
-                    loggingContext: { source: garrisonCard.id },
+                    source: garrisonCard.id,
                   },
                 );
               }

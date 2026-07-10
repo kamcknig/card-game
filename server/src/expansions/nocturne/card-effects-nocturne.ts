@@ -716,7 +716,7 @@ const expansion: CardExpansionModule = {
             {
               count: 1,
             },
-            { loggingContext: { source: guardianCard.id } },
+            { source: guardianCard.id },
           );
         },
         { id: `guardian:${guardianCard.id}:startTurn`, autoResolve: true },
@@ -1002,7 +1002,7 @@ const expansion: CardExpansionModule = {
             {
               count: 3,
             },
-            { loggingContext: { source: raiderCard.id } },
+            { source: raiderCard.id },
           );
         },
         { id: `raider:${raiderCard.id}:startTurn` },
@@ -1528,7 +1528,7 @@ const expansion: CardExpansionModule = {
             {
               count: 3,
             },
-            { loggingContext: { source: secretCaveCard.id } },
+            { source: secretCaveCard.id },
           );
         },
         { id: `secret-cave:${secretCaveCard.id}:startTurn` },

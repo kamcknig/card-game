@@ -217,9 +217,7 @@ const expansion: CardExpansionModule = {
             to: { location: 'playerDiscard' },
           },
           {
-            loggingContext: {
-              source: args.cardId,
-            },
+            source: args.cardId,
           },
         );
       }

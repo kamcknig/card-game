@@ -2012,7 +2012,7 @@ const cardEffects: CardExpansionModule = {
             to: { location: 'playerDiscard' },
           },
           {
-            loggingContext: { source: eventArgs.cardId },
+            source: eventArgs.cardId,
           },
         );
       },
@@ -2057,7 +2057,7 @@ const cardEffects: CardExpansionModule = {
             count: 2,
           },
           {
-            loggingContext: { source: figureheadCard.id },
+            source: figureheadCard.id,
           },
         );
       });

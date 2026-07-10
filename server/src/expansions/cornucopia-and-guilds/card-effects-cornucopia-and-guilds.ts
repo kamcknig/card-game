@@ -452,7 +452,7 @@ const expansion: CardExpansionModule = {
                 playerId: eventArgs.playerId,
                 count: overpaid,
               },
-              { loggingContext: { source: eventArgs.cardId } },
+              { source: eventArgs.cardId },
             );
           },
         });
@@ -497,7 +497,7 @@ const expansion: CardExpansionModule = {
             cardId: cardIds.slice(-1)[0].id,
             to: { location: 'playerDiscard' },
           },
-          { loggingContext: { source: eventArgs.cardId } },
+          { source: eventArgs.cardId },
         );
       },
     }),
@@ -1218,7 +1218,7 @@ const expansion: CardExpansionModule = {
               playerId: cardEffectArgs.playerId,
               count: selfGainedCardIdsThisTurn.length,
             },
-            { loggingContext: { source: cardEffectArgs.cardId } },
+            { source: cardEffectArgs.cardId },
           );
         },
       });

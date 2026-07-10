@@ -1345,7 +1345,7 @@ const effectMap: CardExpansionModule = {
             },
             {
               // Mark the source so Sewers can ignore its own trash trigger.
-              loggingContext: { source: project.id },
+              source: project.id,
             },
           );
         },

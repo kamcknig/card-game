@@ -363,7 +363,7 @@ const expansion: CardExpansionModule = {
             ownerId: targetPlayerId,
             location: { type: 'playerDeck', playerId: targetPlayerId },
           },
-          { loggingContext: { source: cardEffectArgs.cardId } },
+          { source: cardEffectArgs.cardId },
         );
       }
     },
@@ -476,7 +476,7 @@ const expansion: CardExpansionModule = {
               {
                 count: 1,
               },
-              { loggingContext: { source: thisCard.id } },
+              { source: thisCard.id },
             );
           },
         },

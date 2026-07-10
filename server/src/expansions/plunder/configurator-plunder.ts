@@ -224,7 +224,7 @@ const registerCursedTraitEvents = (registrar: GameEventRegistrar, config: Comput
         'gainLoot',
         { playerId: eventArgs.playerId },
         {
-          loggingContext: { source: eventArgs.cardId },
+          source: eventArgs.cardId,
         },
       );
 
@@ -1035,7 +1035,7 @@ const registerPiousTraitEvents = (registrar: GameEventRegistrar, config: Compute
           cardId: selectedTrashCardId,
         },
         {
-          loggingContext: { source: eventArgs.cardId },
+          source: eventArgs.cardId,
         },
       );
     }

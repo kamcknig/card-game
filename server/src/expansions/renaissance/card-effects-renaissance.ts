@@ -417,7 +417,7 @@ const expansion: CardExpansionModule = {
             to: { location: 'playerDiscard' },
           },
           {
-            loggingContext: { source: eventArgs.cardId },
+            source: eventArgs.cardId,
             lifecycleContext: {
               onGained: {
                 sourceCardId: eventArgs.cardId,
@@ -440,7 +440,7 @@ const expansion: CardExpansionModule = {
           count: 2,
         },
         {
-          loggingContext: { source: cardEffectArgs.cardId },
+          source: cardEffectArgs.cardId,
         },
       );
       await cardEffectArgs.actionService.run(
@@ -449,7 +449,7 @@ const expansion: CardExpansionModule = {
           count: 1,
         },
         {
-          loggingContext: { source: cardEffectArgs.cardId },
+          source: cardEffectArgs.cardId,
         },
       );
 
@@ -611,7 +611,7 @@ const expansion: CardExpansionModule = {
               to: { location: 'playerDiscard' },
             },
             {
-              loggingContext: { source: cardEffectArgs.cardId },
+              source: cardEffectArgs.cardId,
             },
           );
         }

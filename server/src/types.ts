@@ -150,8 +150,6 @@ export type GameActionContext = {
   source?: CardId;
   loggingContext?: {
     suppress?: boolean;
-    /** @deprecated Prefer GameActionContext.source for attribution. */
-    source?: CardId;
   };
   suppressLifeCycle?: LifecycleSuppression;
   // Ephemeral lifecycle payload passed only for this specific action call.

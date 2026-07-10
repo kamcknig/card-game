@@ -283,7 +283,7 @@ const effectMap: CardExpansionModule = {
           tokenInstanceId: existingTokenEntry[0],
           location: { type: 'supplyPile', cardKey: selectedPile },
         },
-        { loggingContext: { source: event.id } },
+        { source: event.id },
       );
     },
   },
@@ -369,7 +369,7 @@ const effectMap: CardExpansionModule = {
           tokenInstanceId: existingTokenEntry[0],
           location: { type: 'supplyPile', cardKey: selectedPile },
         },
-        { loggingContext: { source: event.id } },
+        { source: event.id },
       );
     },
   },
@@ -439,7 +439,7 @@ const effectMap: CardExpansionModule = {
           tokenInstanceId: existingTokenEntry[0],
           location: { type: 'card', cardId: selectedCard.id },
         },
-        { loggingContext: { source: event.id } },
+        { source: event.id },
       );
 
       cardEffectArgs.cardPriceController.registerRule(event, (card, context) => {
@@ -710,7 +710,7 @@ const effectMap: CardExpansionModule = {
           tokenInstanceId: existingTokenEntry[0],
           location: { type: 'supplyPile', cardKey: selectedPile },
         },
-        { loggingContext: { source: cardEffectArgs.cardId } },
+        { source: cardEffectArgs.cardId },
       );
     },
   },
@@ -845,7 +845,7 @@ const effectMap: CardExpansionModule = {
           tokenInstanceId: existingTokenEntry[0],
           location: { type: 'supplyPile', cardKey: selectedPile },
         },
-        { loggingContext: { source: event.id } },
+        { source: event.id },
       );
     },
   },
@@ -961,7 +961,7 @@ const effectMap: CardExpansionModule = {
             tokenInstanceId: existingTokenEntry[0],
             location: { type: 'playerDeck', playerId: targetPlayerId },
           },
-          { loggingContext: { source: cardEffectArgs.cardId } },
+          { source: cardEffectArgs.cardId },
         );
       }
     },
@@ -1099,7 +1099,7 @@ const effectMap: CardExpansionModule = {
           tokenInstanceId: existingTokenEntry[0],
           location: { type: 'supplyPile', cardKey: pileKey },
         },
-        { loggingContext: { source: cardEffectArgs.cardId } },
+        { source: cardEffectArgs.cardId },
       );
     },
   },
@@ -1315,7 +1315,7 @@ const effectMap: CardExpansionModule = {
           tokenInstanceId: existingTokenEntry[0],
           location: { type: 'supplyPile', cardKey: selectedPile },
         },
-        { loggingContext: { source: event.id } },
+        { source: event.id },
       );
     },
   },
