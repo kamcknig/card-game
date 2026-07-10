@@ -1,3 +1,5 @@
+@use '../ui/dialog/dialog-search' as dialog-search;
+
 /* ——— Layout ——————————————————————————————— */
 $match-config-single-column-breakpoint: 940px;
 
@@ -529,24 +531,11 @@ $match-config-single-column-breakpoint: 940px;
   color: var(--theme-text-secondary);
 }
 
-.config-dialog {
+// Content wrapper sized to the original dialog's minimum width; chrome
+// (background/border/radius/padding) now comes from the shell's light skin.
+.config-dialog-body {
   min-width: min(560px, calc(100vw - 32px));
   max-width: calc(100vw - 32px);
-  max-height: calc(100vh - 32px);
-  overflow: auto;
-  padding: var(--theme-space-lg);
-  border-radius: var(--theme-radius-lg);
-  border: 1px solid var(--theme-border-strong);
-  background: var(--theme-surface-panel);
-  color: var(--theme-text-primary);
-}
-
-.config-dialog h3 {
-  margin: 0 0 var(--theme-space-md);
-  font-family: var(--theme-font-display);
-  font-size: 1.1rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
 }
 
 .config-dialog-input {
@@ -642,71 +631,14 @@ $match-config-single-column-breakpoint: 940px;
   padding: 0;
 }
 
-.config-dialog-actions {
-  margin-top: var(--theme-space-md);
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--theme-space-sm);
-}
-
-// Save / Cancel dialog buttons use the shared `.btn .btn-primary` and
-// `.btn .btn-secondary` classes from styles.scss. No local rules needed.
+// Save / Cancel / Load dialog footer buttons render in the shell's
+// `.ui-dialog-footer` band (shared `.btn .btn-primary` / `.btn .btn-secondary`
+// classes from styles.scss). No local rules needed.
 
 // ── Load-dialog search input ──
+@include dialog-search.field('.config-dialog-search-input');
+
+// Sits above the saved-configuration list within .config-dialog-body.
 .search-wrapper {
-  position: relative;
-  width: 100%;
   margin-bottom: var(--theme-space-sm);
-}
-
-.search-icon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--theme-text-tertiary);
-  pointer-events: none;
-}
-
-.config-dialog-search-input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: var(--theme-space-sm) var(--theme-space-3xl) var(--theme-space-sm) var(--theme-space-3xl);
-  background: var(--theme-surface-app-start);
-  border: 1px solid var(--theme-border-subtle);
-  border-radius: var(--theme-radius-lg);
-  color: var(--theme-text-primary);
-  font-size: 14px;
-  font-family: var(--theme-font-body);
-  outline: none;
-  transition: border-color 120ms;
-
-  &::placeholder {
-    color: var(--theme-text-tertiary);
-  }
-
-  &:focus {
-    border-color: var(--theme-border-strong);
-  }
-}
-
-.search-clear-button {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  color: var(--theme-text-tertiary);
-  cursor: pointer;
-  padding: var(--theme-space-2xs);
-  line-height: 1;
-  transition: color 120ms;
-
-  &:hover {
-    color: var(--theme-text-primary);
-  }
 }

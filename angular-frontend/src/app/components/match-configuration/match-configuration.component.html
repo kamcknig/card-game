@@ -385,37 +385,30 @@
   </section>
 </app-scene-content>
 
-<!-- single shared selection modal for kingdoms and landscapes -->
+<!-- single shared selection modal for kingdoms and landscapes — the modal
+     component owns its own dialog shell (light skin, picker layer). -->
 @if (activeSelectionModal(); as modal) {
-  <app-ui-dialog
-    [skin]="'none'"
-    [zIndex]="4300"
-    [backdropVariant]="'strong'"
+  <app-select-card-like-modal
+    [initialSelectionKeys]="modal.initialSelectionKeys"
+    [catalogKind]="modal.catalogKind"
+    [imageSize]="modal.imageSize"
+    [filterBasicCards]="modal.filterBasicCards"
+    [maxSelections]="modal.maxSelections"
+    [title]="modal.title"
     (close)="closeSelectionModal()"
+    (confirmed)="onSelectionModalConfirmed($event)"
   >
-    <app-select-card-like-modal
-      [initialSelectionKeys]="modal.initialSelectionKeys"
-      [catalogKind]="modal.catalogKind"
-      [imageSize]="modal.imageSize"
-      [filterBasicCards]="modal.filterBasicCards"
-      [maxSelections]="modal.maxSelections"
-      [title]="modal.title"
-      (close)="closeSelectionModal()"
-      (confirmed)="onSelectionModalConfirmed($event)"
-    >
-    </app-select-card-like-modal>
-  </app-ui-dialog>
+  </app-select-card-like-modal>
 }
 
 @if (saveDialogVisible()) {
   <app-ui-dialog
-    [skin]="'none'"
-    [zIndex]="4400"
-    [backdropVariant]="'strong'"
+    [skin]="'light'"
+    [layer]="'picker'"
+    [heading]="'Save Configuration'"
     (close)="closeSaveDialog()"
   >
-    <section class="config-dialog">
-      <h3>Save Match Configuration</h3>
+    <div class="config-dialog-body">
       <input
         #saveDialogNameInput
         class="config-dialog-input"
@@ -443,23 +436,22 @@
       } @else if (!hasConfigurationChanges()) {
         <div class="config-dialog-meta">No configuration changes to save.</div>
       }
-      <div class="config-dialog-actions">
-        <button class="btn btn-secondary" (click)="closeSaveDialog()">Cancel</button>
-        <button class="btn btn-primary" (click)="submitSaveDialog()" [disabled]="!canSubmitSaveDialog()">Save</button>
-      </div>
-    </section>
+    </div>
+    <div class="ui-dialog-footer">
+      <button class="btn btn-secondary" (click)="closeSaveDialog()">Cancel</button>
+      <button class="btn btn-primary" (click)="submitSaveDialog()" [disabled]="!canSubmitSaveDialog()">Save</button>
+    </div>
   </app-ui-dialog>
 }
 
 @if (loadDialogVisible()) {
   <app-ui-dialog
-    [skin]="'none'"
-    [zIndex]="4400"
-    [backdropVariant]="'strong'"
+    [skin]="'light'"
+    [layer]="'picker'"
+    [heading]="'Load Configuration'"
     (close)="closeLoadDialog()"
   >
-    <section class="config-dialog">
-      <h3>Load Match Configuration</h3>
+    <div class="config-dialog-body">
       @if (savedConfigurations().length < 1) {
         <div class="config-dialog-meta">No saved configurations found.</div>
       } @else {
@@ -501,9 +493,9 @@
       @if (dialogStatusMessage(); as statusMessage) {
         <div class="config-dialog-error">{{ statusMessage }}</div>
       }
-      <div class="config-dialog-actions">
-        <button class="btn btn-secondary" (click)="closeLoadDialog()">Cancel</button>
-      </div>
-    </section>
+    </div>
+    <div class="ui-dialog-footer">
+      <button class="btn btn-secondary" (click)="closeLoadDialog()">Cancel</button>
+    </div>
   </app-ui-dialog>
 }

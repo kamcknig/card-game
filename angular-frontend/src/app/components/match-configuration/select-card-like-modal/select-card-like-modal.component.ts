@@ -2,7 +2,6 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
-  HostListener,
   OnInit,
   ViewChild,
   computed,
@@ -31,6 +30,7 @@ import { Subject, debounceTime, startWith } from 'rxjs';
 import { LucideAngularModule, Search, X, Check } from 'lucide-angular';
 import { CardComponent } from '../../card/card.component';
 import { CardLikeComponent, CardLikeKind } from '../../card-like/card-like.component';
+import { UiDialogComponent } from '../../ui/dialog/ui-dialog.component';
 
 export type SelectableCardLikeNoId =
   | EventNoId
@@ -68,7 +68,7 @@ const CATALOG_KINDS_WITH_COST: ReadonlySet<SearchCatalogKind> = new Set<SearchCa
 
 @Component({
   selector: 'app-select-card-like-modal',
-  imports: [LucideAngularModule, CardComponent, CardLikeComponent],
+  imports: [LucideAngularModule, CardComponent, CardLikeComponent, UiDialogComponent],
   templateUrl: './select-card-like-modal.component.html',
   styleUrl: './select-card-like-modal.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -217,12 +217,6 @@ export class SelectCardLikeModalComponent implements OnInit {
 
   ngOnInit(): void {
     this.selectedCardKeys.set(new Set(this.initialSelectionKeys()));
-  }
-
-  /** Routes keyboard Escape to cancel. */
-  @HostListener('keydown.escape')
-  onEscapeKey(): void {
-    this.onCancel();
   }
 
   /** Updates the live search term (debounced) and the raw term (immediate). */

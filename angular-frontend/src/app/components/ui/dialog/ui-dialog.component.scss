@@ -33,9 +33,12 @@
   // 180ms standard dialog entry per design guidelines.
   animation: ui-dialog-enter 180ms ease-out;
 
-  // Shared structure for both skins; 'none' skin gets neither block.
+  // Shared structure for both skins; 'none' skin gets neither block (card
+  // detail manages its own sizing directly on the image/panel it projects).
   &.skin-light,
   &.skin-dark {
+    max-width: min(60vw, calc(100vw - 24px));
+    max-height: min(70vh, calc(100vh - 24px));
     border-radius: var(--theme-radius-xl);
     box-shadow: var(--theme-shadow-high);
   }
