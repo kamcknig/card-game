@@ -34,7 +34,8 @@
       "treasure": 0
     },
     "type": ["TREASURE", "REWARD"],
-    "kingdomSelectable": false
+    "kingdomSelectable": false,
+    "tags": ["coffers"]
   },
   "renown": {
     "cost": {
@@ -53,19 +54,22 @@
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "tags": ["coffers"]
   },
   "butcher": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "tags": ["coffers"]
   },
   "candlestick-maker": {
     "cost": {
       "treasure": 2
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "tags": ["coffers"]
   },
   "carnival": {
     "cost": {
@@ -106,7 +110,8 @@
     },
     "type": ["ACTION", "ATTACK"],
     "targetScheme": "ALL_OTHER",
-    "abilityText": "+2 Coffers\nEach other player discards down to 3 cards in hand.\nIn games using this, when you gain a card in an Action phase, +1 Card."
+    "abilityText": "+2 Coffers\nEach other player discards down to 3 cards in hand.\nIn games using this, when you gain a card in an Action phase, +1 Card.",
+    "tags": ["coffers"]
   },
   "hamlet": {
     "cost": {
@@ -171,13 +176,15 @@
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "tags": ["coffers"]
   },
   "plaza": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "tags": ["coffers"]
   },
   "remake": {
     "cost": {
