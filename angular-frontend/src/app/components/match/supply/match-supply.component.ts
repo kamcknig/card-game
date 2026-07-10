@@ -10,6 +10,7 @@ import { cardStore } from '../../../state/card-state';
 import { getCardSourceStore } from '../../../state/card-source-store';
 import { awaitingServerLockReleaseStore, promptInteractionLockStore, selectedCardStore, selectedPileStore } from '../../../state/interactive-state';
 import { selectablePileStore } from '../../../state/interactive-pile-logic';
+import { pileSelectionOverlayStore } from '../../../state/pile-selection-overlay-state';
 import { selectableCardStore, waySelectableCardStore } from '../../../state/interactive-logic';
 import { cardOverrideStore } from '../../../state/card-logic';
 import { basicSupplies, kingdomSupplies } from '../../../state/match-logic';
@@ -150,6 +151,10 @@ export class MatchSupplyComponent {
     initialValue: selectedPileStore.get(),
   });
 
+  private readonly _pileSelectionOverlay = toSignal(this._nanoStores.useStore(pileSelectionOverlayStore), {
+    initialValue: pileSelectionOverlayStore.get(),
+  });
+
   private readonly _awaitingServerLockRelease = toSignal(this._nanoStores.useStore(awaitingServerLockReleaseStore), {
     initialValue: awaitingServerLockReleaseStore.get(),
   });
@@ -211,10 +216,15 @@ export class MatchSupplyComponent {
       const existingIndex = selected.indexOf(pile.pileKey);
       if (existingIndex >= 0) {
         selected.splice(existingIndex, 1);
+        selectedPileStore.set(selected);
+      } else if (this._pileSelectionOverlay().singleSelection) {
+        // Exact-1 prompts replace the selection so only one pile is ever
+        // highlighted at once, matching the dialog selection policy.
+        selectedPileStore.set([pile.pileKey]);
       } else {
         selected.push(pile.pileKey);
+        selectedPileStore.set(selected);
       }
-      selectedPileStore.set(selected);
       return;
     }
 

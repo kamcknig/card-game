@@ -14,6 +14,7 @@ import { selfPlayerIdStore } from '../../../state/player-state';
 import { tokenDefinitionStore } from '../../../state/token-definition-state';
 import { awaitingServerLockReleaseStore, promptInteractionLockStore, selectedCardStore, selectedPileStore } from '../../../state/interactive-state';
 import { selectablePileStore } from '../../../state/interactive-pile-logic';
+import { pileSelectionOverlayStore } from '../../../state/pile-selection-overlay-state';
 import { selectableCardStore, waySelectableCardStore } from '../../../state/interactive-logic';
 import { getSupplyPileTokenVisualMap } from '../views/token-utils';
 import { displayCardDetail } from '../views/modal/display-card-detail';
@@ -149,6 +150,10 @@ export class MatchNonSupplyComponent {
 
   private readonly _selectedPiles = toSignal(this._nanoStores.useStore(selectedPileStore), {
     initialValue: selectedPileStore.get(),
+  });
+
+  private readonly _pileSelectionOverlay = toSignal(this._nanoStores.useStore(pileSelectionOverlayStore), {
+    initialValue: pileSelectionOverlayStore.get(),
   });
 
   private readonly _awaitingServerLockRelease = toSignal(this._nanoStores.useStore(awaitingServerLockReleaseStore), {
@@ -288,10 +293,15 @@ export class MatchNonSupplyComponent {
       const existingIndex = selected.indexOf(pile.pileKey as CardKey);
       if (existingIndex >= 0) {
         selected.splice(existingIndex, 1);
+        selectedPileStore.set(selected);
+      } else if (this._pileSelectionOverlay().singleSelection) {
+        // Exact-1 prompts replace the selection so only one pile is ever
+        // highlighted at once, matching the dialog selection policy.
+        selectedPileStore.set([pile.pileKey as CardKey]);
       } else {
         selected.push(pile.pileKey as CardKey);
+        selectedPileStore.set(selected);
       }
-      selectedPileStore.set(selected);
       return;
     }
 

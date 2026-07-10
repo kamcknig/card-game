@@ -337,6 +337,10 @@ export class MatchScene {
     const pileNames = content.pileNames ?? [];
     const selectCount = content.selectCount;
     const isOptional = content.optional ?? false;
+    const resolvedSelectCount = resolveCountSpec(selectCount);
+    const isSingleSelection = resolvedSelectCount.kind === 'fixed'
+      ? resolvedSelectCount.count === 1
+      : resolvedSelectCount.min === 1 && resolvedSelectCount.max === 1;
 
     if (!pileNames.length) {
       this._socketService.emit('userInputReceived', signalId, []);
@@ -357,6 +361,7 @@ export class MatchScene {
         prompt: 'Select pile',
         optional: false,
         submitEnabled: false,
+        singleSelection: false,
       });
       pileSelectionOverlayActionStore.set(null);
       selectedPileStore.set([]);
@@ -382,19 +387,13 @@ export class MatchScene {
       this._socketService.emit('userInputReceived', signalId, selectedPiles);
     };
 
+    // Selection state drives the floating bar's CONFIRM button; submission
+    // is always explicit (bar CONFIRM → 'submit' action) so the player can
+    // review/change picks before committing — no auto-complete on reaching
+    // the exact count.
     const updateSelectionState = (selected: readonly CardKey[]) => {
       const valid = validateCountSpec(selectCount, selected.length);
       pileSelectionOverlayStore.setKey('submitEnabled', valid);
-      if (!isOptional && typeof selectCount !== 'number' && selectCount.kind === 'exact' && selected.length === selectCount.count) {
-        doneListener();
-      }
-      if (!isOptional && typeof selectCount !== 'number' && selectCount.kind === 'range' && selectCount.min === selectCount.max && selected.length === selectCount.max) {
-        // Auto-complete when range is fixed to a single value.
-        doneListener();
-      }
-      if (!isOptional && typeof selectCount === 'number' && selected.length === selectCount) {
-        doneListener();
-      }
     };
 
     pileSelectionOverlayStore.set({
@@ -402,6 +401,7 @@ export class MatchScene {
       prompt: args.prompt ?? 'Select pile',
       optional: isOptional,
       submitEnabled: false,
+      singleSelection: isSingleSelection,
     });
     pileSelectionOverlayActionStore.set(null);
 
