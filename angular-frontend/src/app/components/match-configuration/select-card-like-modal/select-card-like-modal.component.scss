@@ -1,5 +1,3 @@
-@use '../../ui/dialog/dialog-search' as dialog-search;
-
 /* ── Toolbar (search input + selection count) ── */
 .modal-toolbar {
   display: flex;
@@ -8,13 +6,11 @@
   margin-bottom: var(--theme-space-md);
 }
 
-@include dialog-search.field('.search-input');
-
-// Toolbar layout override: the shared mixin sizes the wrapper full-width for
-// its other consumer (the load dialog, which stacks it above a list); here
-// it shares a row with the selection-count badge.
-.search-wrapper {
+// app-search-input sizes its wrapper full-width by default; here it shares
+// a row with the selection-count badge, so it takes the remaining space.
+.modal-search {
   flex: 1;
+  display: block;
 }
 
 .selected-count-badge {

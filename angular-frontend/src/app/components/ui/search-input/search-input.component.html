@@ -1,0 +1,16 @@
+<div class="search-wrapper">
+  <lucide-icon class="search-icon" [img]="SearchIcon" [size]="14" />
+  <input
+    class="search-input-field"
+    type="text"
+    [placeholder]="placeholder()"
+    [value]="value()"
+    [autofocus]="autofocus()"
+    (input)="onInput($any($event.target).value)"
+  />
+  @if (value().length > 0) {
+    <button type="button" class="search-clear-button" (click)="onClear()" aria-label="Clear search">
+      <lucide-icon [img]="XIcon" [size]="12" />
+    </button>
+  }
+</div>
