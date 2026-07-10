@@ -26,8 +26,7 @@
   @include tile.tile-base;
   background: transparent;
   cursor: default;
-  transform: translateY(0);
-  transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 
 .selection-entry.selectable {
@@ -39,7 +38,7 @@
 }
 
 .selection-entry.selected {
-  @include tile.tile-selected(-10px);
+  @include tile.tile-selected;
 }
 
 .selection-entry.non-selectable {
