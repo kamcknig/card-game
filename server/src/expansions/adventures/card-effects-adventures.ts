@@ -571,22 +571,19 @@ const expansion: CardExpansionModule = {
         });
       }
 
-      const copies = cardEffectArgs.findCardService.findCards({
-        all: [{ location: ['basicSupply', 'kingdomSupply'] }, { cardKeys: selectedCardToPlay.cardKey }],
-      });
-
-      if (!copies.length) {
-        loggerService.debug(`[disciple effect] no copies of ${selectedCardToPlay} in supply`);
-        return;
-      }
-
       loggerService.debug(`[disciple effect] gaining ${selectedCardToPlay}`);
 
-      await cardEffectArgs.actionService.run('gainCard', {
+      const gainedCardId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
         playerId: cardEffectArgs.playerId,
-        cardId: copies.slice(-1)[0],
+        pileKey: selectedCardToPlay.cardKey,
+        from: ['basicSupply', 'kingdomSupply'],
         to: { location: 'playerDiscard' },
+        logTag: 'disciple effect',
       });
+
+      if (!gainedCardId) {
+        loggerService.debug(`[disciple effect] no copies of ${selectedCardToPlay} in supply`);
+      }
     },
   },
   'distant-lands': {
@@ -707,24 +704,19 @@ const expansion: CardExpansionModule = {
 
           const cardGained = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
 
-          const copies = triggeredArgs.findCardService.findCards({
-            all: [{ location: ['basicSupply', 'kingdomSupply'] }, { cardKeys: cardGained.cardKey }],
-          });
+          loggerService.debug(`[duplicate cardGained] gaining a copy of ${cardGained}`);
 
-          if (!copies.length) {
-            loggerService.debug(`[duplicate cardGained], no copies of ${cardGained} in supply`);
-            return;
-          }
-
-          const cardToGain = copies.slice(-1)[0];
-
-          loggerService.debug(`[duplicate cardGained] gaining ${cardToGain}`);
-
-          await cardEffectArgs.actionService.run('gainCard', {
+          const gainedCardId = await triggeredArgs.supplyGainService.gainTopSupplyCardForPileKey({
             playerId: cardEffectArgs.playerId,
-            cardId: cardToGain.id,
+            pileKey: cardGained.cardKey,
+            from: ['basicSupply', 'kingdomSupply'],
             to: { location: 'playerDiscard' },
+            logTag: 'duplicate cardGained',
           });
+
+          if (!gainedCardId) {
+            loggerService.debug(`[duplicate cardGained], no copies of ${cardGained} in supply`);
+          }
         },
       });
     },
@@ -875,18 +867,17 @@ const expansion: CardExpansionModule = {
 
       for (const targetPlayerId of targetPlayerIds) {
         const gainCurse = async () => {
-          const curseCards = cardEffectArgs.findCardService.findCards({
-            all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+          const gainedCurseId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+            playerId: targetPlayerId,
+            pileKey: 'curse',
+            from: 'basicSupply',
+            to: { location: 'playerDiscard' },
+            logTag: 'giant effect',
           });
-          if (!curseCards.length) {
+          if (!gainedCurseId) {
             loggerService.debug(`[giant effect] no curse cards in supply`);
             return false;
           }
-          await cardEffectArgs.actionService.run('gainCard', {
-            playerId: targetPlayerId,
-            cardId: curseCards.slice(-1)[0].id,
-            to: { location: 'playerDiscard' },
-          });
           return true;
         };
 
@@ -1924,24 +1915,19 @@ const expansion: CardExpansionModule = {
             return conditionArgs.trigger.args.bought;
           },
           triggeredEffectFn: async triggeredArgs => {
-            const curseCards = triggeredArgs.findCardService.findCards({
-              all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
-            });
+            loggerService.debug(`[swamp-hag cardGained effect] player ${targetPlayerId} gaining a curse`);
 
-            if (!curseCards.length) {
-              loggerService.debug(`[swamp-hag cardGained effect] no curse cards in supply`);
-              return;
-            }
-
-            loggerService.debug(
-              `[swamp-hag cardGained effect] player ${targetPlayerId} gaining ${curseCards.slice(-1)[0]}`,
-            );
-
-            await triggeredArgs.actionService.run('gainCard', {
+            const gainedCurseId = await triggeredArgs.supplyGainService.gainTopSupplyCardForPileKey({
               playerId: targetPlayerId,
-              cardId: curseCards.slice(-1)[0].id,
+              pileKey: 'curse',
+              from: 'basicSupply',
               to: { location: 'playerDiscard' },
+              logTag: 'swamp-hag cardGained effect',
             });
+
+            if (!gainedCurseId) {
+              loggerService.debug(`[swamp-hag cardGained effect] no curse cards in supply`);
+            }
           },
         });
       }

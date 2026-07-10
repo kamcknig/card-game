@@ -167,20 +167,18 @@ const expansion: CardExpansionModule = {
       loggerService.debug(`[charlatan effect] targets ${targetPlayerIds} gaining a curse`);
 
       for (const targetPlayerId of targetPlayerIds) {
-        const curseCards = effectArgs.findCardService.findCards({
-          all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+        const gainedCurseId = await effectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+          playerId: targetPlayerId,
+          pileKey: 'curse',
+          from: 'basicSupply',
+          to: { location: 'playerDiscard' },
+          logTag: 'charlatan effect',
         });
 
-        if (!curseCards.length) {
+        if (!gainedCurseId) {
           loggerService.debug(`[charlatan effect] no curse cards in supply`);
           break;
         }
-
-        await effectArgs.actionService.run('gainCard', {
-          playerId: targetPlayerId,
-          cardId: curseCards.slice(-1)[0].id,
-          to: { location: 'playerDiscard' },
-        });
       }
     },
   },
@@ -520,20 +518,17 @@ const expansion: CardExpansionModule = {
           return true;
         },
         triggeredEffectFn: async triggeredEffectArgs => {
-          const goldCardIds = effectArgs.findCardService.findCards({
-            all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }],
-          });
-
-          if (!goldCardIds.length) {
-            loggerService.debug(`[hoard triggered effect] no gold in supply`);
-            return;
-          }
-
-          await triggeredEffectArgs.actionService.run('gainCard', {
+          const gainedGoldId = await triggeredEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
             playerId: effectArgs.playerId,
-            cardId: goldCardIds.slice(-1)[0].id,
+            pileKey: 'gold',
+            from: 'basicSupply',
             to: { location: 'playerDiscard' },
+            logTag: 'hoard triggered effect',
           });
+
+          if (!gainedGoldId) {
+            loggerService.debug(`[hoard triggered effect] no gold in supply`);
+          }
         },
         playerId: effectArgs.playerId,
       });
@@ -711,20 +706,17 @@ const expansion: CardExpansionModule = {
         playerId: effectArgs.playerId,
       });
 
-      const cardsInSupply = effectArgs.findCardService.findCards({
-        all: [{ location: selectedCard.isBasic ? 'basicSupply' : 'kingdomSupply' }, { cardKeys: selectedCard.cardKey }],
-      });
-
-      if (cardsInSupply.length === 0) {
-        loggerService.debug(`[mint effect] no copies of ${selectedCard} in supply`);
-        return;
-      }
-
-      await effectArgs.actionService.run('gainCard', {
+      const gainedCardId = await effectArgs.supplyGainService.gainTopSupplyCardForPileKey({
         playerId: effectArgs.playerId,
-        cardId: cardsInSupply.slice(-1)[0].id,
+        pileKey: selectedCard.cardKey,
+        from: selectedCard.isBasic ? 'basicSupply' : 'kingdomSupply',
         to: { location: 'playerDiscard' },
+        logTag: 'mint effect',
       });
+
+      if (!gainedCardId) {
+        loggerService.debug(`[mint effect] no copies of ${selectedCard} in supply`);
+      }
     },
   },
   monument: {

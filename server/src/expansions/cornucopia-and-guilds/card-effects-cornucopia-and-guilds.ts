@@ -339,24 +339,19 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainAction', { count: 2 });
       await cardEffectArgs.actionService.run('gainBuy', { count: 2 });
 
-      const goldCardIds = cardEffectArgs.findCardService.findCards({
-        all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }],
-      });
+      loggerService.debug(`[demesne effect] gaining gold`);
 
-      if (!goldCardIds.length) {
-        loggerService.debug(`[demesne effect] no gold cards in supply`);
-        return;
-      }
-
-      const goldCard = cardEffectArgs.cardLibrary.getCard(goldCardIds.slice(-1)[0].id);
-
-      loggerService.debug(`[demesne effect] gaining ${goldCard}`);
-
-      await cardEffectArgs.actionService.run('gainCard', {
+      const gainedGoldId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
         playerId: cardEffectArgs.playerId,
-        cardId: goldCard.id,
+        pileKey: 'gold',
+        from: 'basicSupply',
         to: { location: 'playerDiscard' },
+        logTag: 'demesne effect',
       });
+
+      if (!gainedGoldId) {
+        loggerService.debug(`[demesne effect] no gold cards in supply`);
+      }
     },
   },
   fairgrounds: {
@@ -960,26 +955,27 @@ const expansion: CardExpansionModule = {
 
         if (card.type.includes('VICTORY')) {
           loggerService.debug(`[jester effect] card is a victory card, gaining curse`);
-          const curseCardIds = cardEffectArgs.findCardService.findCards({
-            all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+
+          // Note: `to` intentionally mirrors pre-existing behavior at this site.
+          const gainedCurseId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+            playerId: targetPlayerId,
+            pileKey: 'curse',
+            from: 'basicSupply',
+            to: { location: 'basicSupply' },
+            logTag: 'jester effect',
           });
 
-          if (!curseCardIds.length) {
+          if (!gainedCurseId) {
             loggerService.debug(`[jester effect] no curse cards in supply`);
             continue;
           }
-
-          await cardEffectArgs.actionService.run('gainCard', {
-            playerId: targetPlayerId,
-            cardId: curseCardIds.slice(-1)[0].id,
-            to: { location: 'basicSupply' },
-          });
         } else {
-          const copyIds = cardEffectArgs.findCardService.findCards({
-            all: [{ location: ['basicSupply', 'kingdomSupply'] }, { cardKeys: card.cardKey }],
+          const copyCard = cardEffectArgs.findCardService.findTopSupplyCardForPileKey({
+            pileKey: card.cardKey,
+            from: ['basicSupply', 'kingdomSupply'],
           });
 
-          if (!copyIds.length) {
+          if (!copyCard) {
             loggerService.debug(`[jester effect] no copies of ${card.cardName} in supply`);
             continue;
           }
@@ -993,23 +989,16 @@ const expansion: CardExpansionModule = {
             ],
           })) as { action: number; result: number[] };
 
-          const copyId = copyIds.slice(-1)[0];
+          const recipientPlayerId = result.action === 1 ? targetPlayerId : cardEffectArgs.playerId;
+          loggerService.debug(`[jester effect] player ${recipientPlayerId} gaining ${card.cardName}`);
 
-          if (result.action === 1) {
-            loggerService.debug(`[jester effect] player ${targetPlayerId} gaining ${card.cardName}`);
-            await cardEffectArgs.actionService.run('gainCard', {
-              playerId: targetPlayerId,
-              cardId: copyId.id,
-              to: { location: 'playerDiscard' },
-            });
-          } else {
-            loggerService.debug(`[jester effect] player ${cardEffectArgs.playerId} gaining ${card.cardName}`);
-            await cardEffectArgs.actionService.run('gainCard', {
-              playerId: cardEffectArgs.playerId,
-              cardId: copyId.id,
-              to: { location: 'playerDiscard' },
-            });
-          }
+          await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+            playerId: recipientPlayerId,
+            pileKey: card.cardKey,
+            from: ['basicSupply', 'kingdomSupply'],
+            to: { location: 'playerDiscard' },
+            logTag: 'jester effect',
+          });
         }
       }
     },
@@ -1426,41 +1415,37 @@ const expansion: CardExpansionModule = {
   soothsayer: {
     registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
-      const goldCardIds = cardEffectArgs.findCardService.findCards({
-        all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }],
+      loggerService.debug(`[soothsayer effect] player ${cardEffectArgs.playerId} gaining gold`);
+
+      const gainedGoldId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+        playerId: cardEffectArgs.playerId,
+        pileKey: 'gold',
+        from: 'basicSupply',
+        to: { location: 'playerDiscard' },
+        logTag: 'soothsayer effect',
       });
 
-      if (!goldCardIds.length) {
+      if (!gainedGoldId) {
         loggerService.debug(`[soothsayer effect] no gold cards in supply`);
-      } else {
-        loggerService.debug(`[soothsayer effect] player ${cardEffectArgs.playerId} gaining gold`);
-
-        await cardEffectArgs.actionService.run('gainCard', {
-          playerId: cardEffectArgs.playerId,
-          cardId: goldCardIds.slice(-1)[0].id,
-          to: { location: 'playerDiscard' },
-        });
       }
 
       const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
-        const curseCardIds = cardEffectArgs.findCardService.findCards({
-          all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+        loggerService.debug(`[soothsayer effect] player ${targetPlayerId} gaining a curse`);
+
+        const gainedCurseId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+          playerId: targetPlayerId,
+          pileKey: 'curse',
+          from: 'basicSupply',
+          to: { location: 'playerDiscard' },
+          logTag: 'soothsayer effect',
         });
 
-        if (!curseCardIds.length) {
+        if (!gainedCurseId) {
           loggerService.debug(`[soothsayer effect] no curse cards in supply`);
           break;
         }
-
-        loggerService.debug(`[soothsayer effect] player ${targetPlayerId} gaining a curse`);
-
-        await cardEffectArgs.actionService.run('gainCard', {
-          playerId: targetPlayerId,
-          cardId: curseCardIds.slice(-1)[0].id,
-          to: { location: 'playerDiscard' },
-        });
 
         loggerService.debug(`[soothsayer effect] player ${targetPlayerId} drawing 1 card`);
 
@@ -1653,11 +1638,12 @@ const expansion: CardExpansionModule = {
         const handCards = handIds.map(cardId => cardEffectArgs.cardLibrary.getCard(cardId));
         const baneCards = handCards.filter(card => card.tags?.includes('bane'));
 
-        const curseCardIds = cardEffectArgs.findCardService.findCards({
-          all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+        const topCurseCard = cardEffectArgs.findCardService.findTopSupplyCardForPileKey({
+          pileKey: 'curse',
+          from: 'basicSupply',
         });
 
-        if (!curseCardIds.length) {
+        if (!topCurseCard) {
           loggerService.debug(`[young witch effect] no curse cards in supply`);
           return;
         }
@@ -1691,11 +1677,12 @@ const expansion: CardExpansionModule = {
 
         if (!reveal) {
           loggerService.debug(`[young witch effect] player ${targetPlayerId} did not reveal a bane`);
-          await cardEffectArgs.actionService.run('gainCard', {
+          await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
             playerId: targetPlayerId,
-            // Gain from the TOP of the pile — index 0 is the bottom.
-            cardId: curseCardIds.slice(-1)[0].id,
+            pileKey: 'curse',
+            from: 'basicSupply',
             to: { location: 'playerDiscard' },
+            logTag: 'young witch effect',
           });
         }
       }

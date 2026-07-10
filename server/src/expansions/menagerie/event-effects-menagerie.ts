@@ -391,21 +391,18 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
-      const curseCards = cardEffectArgs.findCardService.findCards({
-        all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+      const gainedCurseId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+        playerId: cardEffectArgs.playerId,
+        pileKey: 'curse',
+        from: 'basicSupply',
+        to: { location: 'playerDiscard' },
+        logTag: 'desperation effect',
       });
 
-      if (!curseCards.length) {
+      if (!gainedCurseId) {
         loggerService.debug('[desperation effect] no Curse in Supply; no bonus granted');
         return;
       }
-
-      const curseCard = curseCards.slice(-1)[0];
-      await cardEffectArgs.actionService.run('gainCard', {
-        playerId: cardEffectArgs.playerId,
-        cardId: curseCard.id,
-        to: { location: 'playerDiscard' },
-      });
 
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
@@ -826,21 +823,18 @@ const effectMap: CardExpansionModule = {
       }
 
       // Reap gains a Gold and sets it aside to auto-play at next turn start.
-      const goldCards = cardEffectArgs.findCardService.findCards({
-        all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }],
+      const gainedGoldId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+        playerId: cardEffectArgs.playerId,
+        pileKey: 'gold',
+        from: 'basicSupply',
+        to: { location: 'set-aside' },
+        logTag: 'reap effect',
       });
 
-      if (!goldCards.length) {
+      if (!gainedGoldId) {
         loggerService.debug('[reap effect] no Gold in Supply to gain');
         return;
       }
-
-      const goldCard = goldCards.slice(-1)[0];
-      await cardEffectArgs.actionService.run('gainCard', {
-        playerId: cardEffectArgs.playerId,
-        cardId: goldCard.id,
-        to: { location: 'set-aside' },
-      });
 
       cardEffectArgs.reactionManager.registerReactionTemplate(
         event,
@@ -852,16 +846,16 @@ const effectMap: CardExpansionModule = {
           compulsory: true,
           condition: async conditionArgs =>
             conditionArgs.trigger.args.playerId === cardEffectArgs.playerId &&
-            getPlayerSourceSafe(conditionArgs, 'set-aside', cardEffectArgs.playerId).includes(goldCard.id),
+            getPlayerSourceSafe(conditionArgs, 'set-aside', cardEffectArgs.playerId).includes(gainedGoldId),
           triggeredEffectFn: async triggeredArgs => {
             await triggeredArgs.actionService.run('playCard', {
               playerId: cardEffectArgs.playerId,
-              cardId: goldCard.id,
+              cardId: gainedGoldId,
               overrides: { actionCost: 0 },
             });
           },
         },
-        { idSuffix: `reap:${goldCard.id}:startTurn` },
+        { idSuffix: `reap:${gainedGoldId}:startTurn` },
       );
     },
   },

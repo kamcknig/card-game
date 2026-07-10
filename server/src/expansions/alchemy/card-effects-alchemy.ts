@@ -458,50 +458,40 @@ const expansion: CardExpansionModule = {
         cardId: selectedCardId,
       });
 
-      let cards: Card[] = [];
       if (selectedCard.type.includes('ACTION')) {
-        cards = args.findCardService.findCards({ all: [{ location: ['basicSupply'] }, { cardKeys: 'duchy' }] });
+        loggerService.debug(`[transmute effect] card is action, gaining duchy`);
 
-        const card = cards.slice(-1)[0];
-        if (card) {
-          loggerService.debug(`[transmute effect] card is action, gaining duchy`);
-
-          await args.actionService.run('gainCard', {
-            playerId: args.playerId,
-            cardId: card.id,
-            to: { location: 'playerDiscard' },
-          });
-        }
+        await args.supplyGainService.gainTopSupplyCardForPileKey({
+          playerId: args.playerId,
+          pileKey: 'duchy',
+          from: 'basicSupply',
+          to: { location: 'playerDiscard' },
+          logTag: 'transmute effect',
+        });
       }
 
       if (selectedCard.type.includes('TREASURE')) {
-        cards = args.findCardService.findCards({ all: [{ location: 'kingdomSupply' }, { cardKeys: 'transmute' }] });
+        loggerService.debug(`[transmute effect] card is treasure, gaining transmute`);
 
-        const card = cards.slice(-1)[0];
-        if (card) {
-          loggerService.debug(`[transmute effect] card is treasure, gaining transmute`);
-
-          await args.actionService.run('gainCard', {
-            playerId: args.playerId,
-            cardId: card.id,
-            to: { location: 'playerDiscard' },
-          });
-        }
+        await args.supplyGainService.gainTopSupplyCardForPileKey({
+          playerId: args.playerId,
+          pileKey: 'transmute',
+          from: 'kingdomSupply',
+          to: { location: 'playerDiscard' },
+          logTag: 'transmute effect',
+        });
       }
 
       if (selectedCard.type.includes('VICTORY')) {
-        cards = args.findCardService.findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }] });
+        loggerService.debug(`[transmute effect] card is victory, gaining gold`);
 
-        const card = cards.slice(-1)[0];
-        if (card) {
-          loggerService.debug(`[transmute effect] card is victory, gaining gold`);
-
-          await args.actionService.run('gainCard', {
-            playerId: args.playerId,
-            cardId: card.id,
-            to: { location: 'playerDiscard' },
-          });
-        }
+        await args.supplyGainService.gainTopSupplyCardForPileKey({
+          playerId: args.playerId,
+          pileKey: 'gold',
+          from: 'basicSupply',
+          to: { location: 'playerDiscard' },
+          logTag: 'transmute effect',
+        });
       }
     },
   },

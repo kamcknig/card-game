@@ -25,14 +25,15 @@ const expansionModule: CardExpansionModule = {
 
         const handEstateIdx = hand.findLast(cId => cardLibrary.getCard(cId).cardKey === 'estate');
 
-        const supplyEstateIdx = args.findCardService
-          .findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'estate' }] })
-          ?.slice(-1)?.[0].id;
+        const supplyEstateCard = args.findCardService.findTopSupplyCardForPileKey({
+          pileKey: 'estate',
+          from: 'basicSupply',
+        });
 
         if (!handEstateIdx) {
           loggerService.debug(`[BARON EFFECT] player has no estates in hand, they gain one`);
 
-          if (!supplyEstateIdx) {
+          if (!supplyEstateCard) {
             loggerService.debug(`[BARON EFFECT] no estates in supply`);
             return;
           }
@@ -64,19 +65,19 @@ const expansionModule: CardExpansionModule = {
           }
         }
 
-        if (!supplyEstateIdx) {
+        if (!supplyEstateCard) {
           loggerService.debug(`[BARON EFFECT] no estate in supply`);
           return;
         }
 
-        loggerService.debug(
-          `[BARON EFFECT] player not discarding estate, gain ${cardLibrary.getCard(supplyEstateIdx)}...`,
-        );
+        loggerService.debug(`[BARON EFFECT] player not discarding estate, gaining an estate...`);
 
-        await actionService.run('gainCard', {
+        await args.supplyGainService.gainTopSupplyCardForPileKey({
           playerId,
-          cardId: supplyEstateIdx,
+          pileKey: 'estate',
+          from: 'basicSupply',
           to: { location: 'playerDiscard' },
+          logTag: 'baron effect',
         });
       },
   },
@@ -236,23 +237,17 @@ const expansionModule: CardExpansionModule = {
               label: 'Gain a gold',
               action: 4,
               resolve: async () => {
-                const goldCardId = args.findCardService
-                  .findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }] })
-                  ?.slice(-1)?.[0].id;
-
-                if (!goldCardId) {
-                  loggerService.debug('[COURTIER EFFECT] no gold in supply...');
-                  return;
-                }
-
-                loggerService.debug(`[COURTIER EFFECT] gaining ${cardLibrary.getCard(goldCardId)}...`);
-                await actionService.run('gainCard', {
-                  cardId: goldCardId,
+                const gainedGoldId = await args.supplyGainService.gainTopSupplyCardForPileKey({
                   playerId,
-                  to: {
-                    location: 'playerDiscard',
-                  },
+                  pileKey: 'gold',
+                  from: 'basicSupply',
+                  to: { location: 'playerDiscard' },
+                  logTag: 'courtier effect',
                 });
+
+                if (!gainedGoldId) {
+                  loggerService.debug('[COURTIER EFFECT] no gold in supply...');
+                }
               },
             },
           ],
@@ -1055,24 +1050,20 @@ const expansionModule: CardExpansionModule = {
           const targets = getAttackTargets(match, playerId, reactionContext);
 
           for (const targetId of targets) {
-            const curseCardId = args.findCardService
-              .findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }] })
-              ?.slice(-1)?.[0].id;
+            loggerService.debug(`[REPLACE EFFECT] ${getPlayerById(match, targetId)} gaining a curse`);
 
-            if (!curseCardId) {
+            const gainedCurseId = await args.supplyGainService.gainTopSupplyCardForPileKey({
+              playerId: targetId,
+              pileKey: 'curse',
+              from: 'basicSupply',
+              to: { location: 'playerDiscard' },
+              logTag: 'replace effect',
+            });
+
+            if (!gainedCurseId) {
               loggerService.debug(`[REPLACE EFFECT] no curse cards in supply`);
               break;
             }
-
-            loggerService.debug(
-              `[REPLACE EFFECT] ${getPlayerById(match, targetId)} gaining ${cardLibrary.getCard(curseCardId)}`,
-            );
-
-            await actionService.run('gainCard', {
-              playerId: targetId,
-              cardId: curseCardId,
-              to: { location: 'playerDiscard' },
-            });
           }
         }
       },
@@ -1368,24 +1359,18 @@ const expansionModule: CardExpansionModule = {
             continue;
           }
 
-          const curseCardId = args.findCardService
-            .findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }] })
-            ?.slice(-1)?.[0]?.id;
+          const gainedCurseId = await args.supplyGainService.gainTopSupplyCardForPileKey({
+            playerId: target,
+            pileKey: 'curse',
+            from: 'basicSupply',
+            to: { location: 'playerHand' },
+            logTag: 'torturer effect',
+          });
 
-          if (!curseCardId) {
+          if (!gainedCurseId) {
             loggerService.debug(`[TORTURER EFFECT] no curse card in supply`);
             continue;
           }
-
-          const card = cardLibrary.getCard(curseCardId);
-
-          loggerService.debug(`[TORTURER EFFECT] gaining ${card}...`);
-
-          await actionService.run('gainCard', {
-            playerId: target,
-            cardId: card.id,
-            to: { location: 'playerHand' },
-          });
         }
       },
   },
@@ -1423,23 +1408,17 @@ const expansionModule: CardExpansionModule = {
         }
 
         if (cardIds.length === 2) {
-          const silverCardId = args.findCardService
-            .findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'silver' }] })
-            ?.slice(-1)?.[0].id;
-          if (!silverCardId) {
-            loggerService.debug(`[TRADING POST EFFECT] no silver in supply`);
-            return;
-          }
-
-          const card = cardLibrary.getCard(silverCardId);
-
-          loggerService.debug(`[TRADING POST EFFECT] gaining ${card}...`);
-
-          await actionService.run('gainCard', {
+          const gainedSilverId = await args.supplyGainService.gainTopSupplyCardForPileKey({
             playerId,
-            cardId: silverCardId,
+            pileKey: 'silver',
+            from: 'basicSupply',
             to: { location: 'playerHand' },
+            logTag: 'trading post effect',
           });
+
+          if (!gainedSilverId) {
+            loggerService.debug(`[TRADING POST EFFECT] no silver in supply`);
+          }
         } else {
           loggerService.debug(`[TRADING POST EFFECT] player trashed ${cardIds.length}, so no treasure gained`);
         }

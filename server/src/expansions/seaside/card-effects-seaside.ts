@@ -970,22 +970,20 @@ const expansion: CardExpansionModule = {
       const targetPlayerIds = getAttackTargets(args.match, args.playerId, args.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
-        const curseCardIds = args.findCardService.findCards({
-          all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+        loggerService.debug(`[sea witch effect] giving curse to ${getPlayerById(args.match, targetPlayerId)}`);
+
+        const gainedCurseId = await args.supplyGainService.gainTopSupplyCardForPileKey({
+          playerId: targetPlayerId,
+          pileKey: 'curse',
+          from: 'basicSupply',
+          to: { location: 'playerDiscard' },
+          logTag: 'sea witch effect',
         });
 
-        if (curseCardIds.length === 0) {
+        if (!gainedCurseId) {
           loggerService.debug(`[sea witch effect] no curses in supply...`);
           break;
         }
-
-        loggerService.debug(`[sea witch effect] giving curse to ${getPlayerById(args.match, targetPlayerId)}`);
-        await args.actionService.run('gainCard', {
-          // Gain from the TOP of the pile — index 0 is the bottom.
-          cardId: curseCardIds.slice(-1)[0].id,
-          playerId: targetPlayerId,
-          to: { location: 'playerDiscard' },
-        });
       }
     },
   },

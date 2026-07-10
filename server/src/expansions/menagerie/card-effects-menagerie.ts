@@ -1093,16 +1093,16 @@ const expansion: CardExpansionModule = {
           condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
           triggeredEffectFn: async triggeredArgs => {
             const playedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
-            const copyCandidates = triggeredArgs.findCardService.findCards({
-              all: [{ location: ['basicSupply', 'kingdomSupply'] }, { cardKeys: playedCard.cardKey }],
+            const copyCard = triggeredArgs.findCardService.findTopSupplyCardForPileKey({
+              pileKey: playedCard.cardKey,
+              from: ['basicSupply', 'kingdomSupply'],
             });
 
-            if (!copyCandidates.length) {
+            if (!copyCard) {
               loggerService.debug(`[kiln effect] no supply copy available for ${playedCard}`);
               return;
             }
 
-            const copyCard = copyCandidates.slice(-1)[0];
             const promptResult = (await triggeredArgs.actionService.run('userPrompt', {
               playerId: cardEffectArgs.playerId,
               prompt: `Gain a copy of ${playedCard.cardName} with Kiln?`,
@@ -1122,10 +1122,12 @@ const expansion: CardExpansionModule = {
             }
 
             loggerService.debug(`[kiln effect] gaining copy ${copyCard}`);
-            await triggeredArgs.actionService.run('gainCard', {
+            await triggeredArgs.supplyGainService.gainTopSupplyCardForPileKey({
               playerId: cardEffectArgs.playerId,
-              cardId: copyCard.id,
+              pileKey: playedCard.cardKey,
+              from: ['basicSupply', 'kingdomSupply'],
               to: { location: 'playerDiscard' },
+              logTag: 'kiln effect',
             });
           },
         },

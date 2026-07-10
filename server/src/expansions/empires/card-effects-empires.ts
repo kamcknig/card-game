@@ -15,25 +15,12 @@ import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 
 type ArchiveEffectContext = Pick<CardEffectFunctionContext, 'actionService' | 'cardLibrary' | 'cardSourceController'>;
 
-type GainTopSupplyContext = Pick<CardEffectFunctionContext, 'findCardService' | 'actionService' | 'loggerService'>;
+type GainTopSupplyContext = Pick<CardEffectFunctionContext, 'findCardService' | 'actionService' | 'loggerService' | 'supplyGainService'>;
 
 // Count the number of Castle cards owned by a player for variable scoring.
 const countOwnedCastles = (args: { cardLibrary: CardEffectFunctionContext['cardLibrary']; ownerId: PlayerId }) => {
   const ownedCards = args.cardLibrary.getCardsByOwner(args.ownerId);
   return ownedCards.filter(card => card.type.includes('CASTLE')).length;
-};
-
-// Resolve the top Castle card ID from the Castle split pile in the kingdoms supply.
-const getTopCastleCardId = (findCardService: CardEffectFunctionContext['findCardService']) => {
-  const castleCards = findCardService.findCards({
-    all: [
-      { location: 'kingdomSupply' },
-      {
-        cardType: ['CASTLE'],
-      },
-    ],
-  });
-  return castleCards.slice(-1)[0]?.id;
 };
 
 // Gain the top copy of a specific card from a supply location into a destination.
@@ -47,39 +34,23 @@ const gainTopSupplyCard = async (
     logTag: string;
   },
 ) => {
-  const supplyCards = context.findCardService.findCards({
-    all: [
-      { location: args.location },
-      {
-        cardKeys: [args.cardKey],
-      },
-    ],
-  });
-  const topCardId = supplyCards.slice(-1)[0]?.id;
-  if (!topCardId) {
-    context.loggerService.debug(`[${args.logTag}] no ${args.cardKey} remaining in ${args.location}`);
-    return;
-  }
-  context.loggerService.debug(`[${args.logTag}] gaining ${args.cardKey} to ${args.to.location}`);
-  await context.actionService.run('gainCard', {
+  await context.supplyGainService.gainTopSupplyCardForPileKey({
     playerId: args.playerId,
-    cardId: topCardId,
+    pileKey: args.cardKey,
+    from: args.location,
     to: args.to,
+    logTag: args.logTag,
   });
 };
 
 // Gain the current top Castle card to the player's discard pile.
 const gainTopCastleCard = async (context: GainTopSupplyContext, playerId: PlayerId) => {
-  const topCastleCardId = getTopCastleCardId(context.findCardService);
-  if (!topCastleCardId) {
-    context.loggerService.debug(`[castle pile] no castles left to gain`);
-    return;
-  }
-  context.loggerService.debug(`[castle pile] gaining top castle ${topCastleCardId} to discard`);
-  await context.actionService.run('gainCard', {
+  await context.supplyGainService.gainTopSupplyCardForPileKey({
     playerId,
-    cardId: topCastleCardId,
+    pileKey: 'castles',
+    from: 'kingdomSupply',
     to: { location: 'playerDiscard' },
+    logTag: 'castle pile',
   });
 };
 
@@ -425,25 +396,20 @@ const expansion: CardExpansionModule = {
       // Apply curse gains in turn order when the trashed card costs $3+.
       if (triggersCurse) {
         for (const targetPlayerId of targetPlayerIds) {
-          const curseCards = args.findCardService.findCards({
-            all: [
-              { location: 'basicSupply' },
-              {
-                cardKeys: 'curse',
-              },
-            ],
+          loggerService.debug(`[catapult effect] ${targetPlayerId} gaining Curse`);
+
+          const gainedCurseId = await args.supplyGainService.gainTopSupplyCardForPileKey({
+            playerId: targetPlayerId,
+            pileKey: 'curse',
+            from: 'basicSupply',
+            to: { location: 'playerDiscard' },
+            logTag: 'catapult effect',
           });
-          if (!curseCards.length) {
+
+          if (!gainedCurseId) {
             loggerService.debug(`[catapult effect] no curse cards left in supply`);
             break;
           }
-
-          loggerService.debug(`[catapult effect] ${targetPlayerId} gaining Curse`);
-          await args.actionService.run('gainCard', {
-            playerId: targetPlayerId,
-            cardId: curseCards.slice(-1)[0].id,
-            to: { location: 'playerDiscard' },
-          });
         }
       }
 
@@ -1722,26 +1688,18 @@ const expansion: CardExpansionModule = {
             label: `Gain an Estate and take the ${tokensOnPileCount}VP from the pile`,
             resolve: async () => {
               // Option 2: gain an Estate; only if gained do we take VP tokens from the pile.
-              const estateCards = args.findCardService.findCards({
-                all: [
-                  { location: 'basicSupply' },
-                  {
-                    cardKeys: 'estate',
-                  },
-                ],
+              loggerService.info('[wild hunt effect] gaining an Estate');
+              const estateCardId = await args.supplyGainService.gainTopSupplyCardForPileKey({
+                playerId: args.playerId,
+                pileKey: 'estate',
+                from: 'basicSupply',
+                to: { location: 'playerDiscard' },
+                logTag: 'wild hunt effect',
               });
-              const estateCardId = estateCards.slice(-1)[0]?.id;
               if (!estateCardId) {
                 loggerService.debug('[wild hunt effect] no Estates left to gain, skipping VP tokens');
                 return;
               }
-
-              loggerService.info('[wild hunt effect] gaining an Estate');
-              await args.actionService.run('gainCard', {
-                playerId: args.playerId,
-                cardId: estateCardId,
-                to: { location: 'playerDiscard' },
-              });
 
               // Move any gathered VP tokens from the Wild Hunt pile to the player.
               const tokensOnPile = Object.values(args.match.tokens).filter(

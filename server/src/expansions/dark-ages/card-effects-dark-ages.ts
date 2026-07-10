@@ -470,19 +470,17 @@ const cardEffects: CardExpansionModule = {
           break;
         }
         case 3: {
-          const copperCards = cardEffectArgs.findCardService.findCards({
-            all: [{ location: 'basicSupply' }, { cardKeys: 'copper' }],
-          });
-          if (!copperCards.length) {
-            loggerService.debug(`[count effect] no coppers in supply`);
-            break;
-          }
           loggerService.debug(`[count effect] gaining 1 copper`);
-          await cardEffectArgs.actionService.run('gainCard', {
+          const gainedCopperId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
             playerId: cardEffectArgs.playerId,
-            cardId: copperCards.slice(-1)[0].id,
+            pileKey: 'copper',
+            from: 'basicSupply',
             to: { location: 'playerDiscard' },
+            logTag: 'count effect',
           });
+          if (!gainedCopperId) {
+            loggerService.debug(`[count effect] no coppers in supply`);
+          }
           break;
         }
       }
@@ -517,19 +515,17 @@ const cardEffects: CardExpansionModule = {
           break;
         }
         case 3: {
-          const duchyCards = cardEffectArgs.findCardService.findCards({
-            all: [{ location: 'basicSupply' }, { cardKeys: 'duchy' }],
-          });
-          if (!duchyCards.length) {
-            loggerService.debug(`[count effect] no duchies in supply`);
-            break;
-          }
           loggerService.debug(`[count effect] gaining 1 duchy`);
-          await cardEffectArgs.actionService.run('gainCard', {
+          const gainedDuchyId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
             playerId: cardEffectArgs.playerId,
-            cardId: duchyCards.slice(-1)[0],
+            pileKey: 'duchy',
+            from: 'basicSupply',
             to: { location: 'playerDiscard' },
+            logTag: 'count effect',
           });
+          if (!gainedDuchyId) {
+            loggerService.debug(`[count effect] no duchies in supply`);
+          }
           break;
         }
       }
@@ -597,22 +593,20 @@ const cardEffects: CardExpansionModule = {
       const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
-        const ruinsCards = cardEffectArgs.findCardService.findCards({
-          all: [{ location: 'kingdomSupply' }, { kingdom: 'ruins' }],
+        loggerService.debug(`[cultist effect] player ${targetPlayerId} gaining a ruins card`);
+
+        const gainedRuinsId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+          playerId: targetPlayerId,
+          pileKey: 'ruins',
+          from: 'kingdomSupply',
+          to: { location: 'playerDiscard' },
+          logTag: 'cultist effect',
         });
 
-        if (!ruinsCards.length) {
+        if (!gainedRuinsId) {
           loggerService.debug(`[cultist effect] no ruins cards in non-supply`);
           break;
         }
-
-        loggerService.debug(`[cultist effect] player ${targetPlayerId} gaining ${ruinsCards.slice(-1)[0]}`);
-
-        await cardEffectArgs.actionService.run('gainCard', {
-          playerId: targetPlayerId,
-          cardId: ruinsCards.slice(-1)[0].id,
-          to: { location: 'playerDiscard' },
-        });
       }
 
       const cultistsInHand = cardEffectArgs.findCardService.findCards({
@@ -1207,30 +1201,23 @@ const cardEffects: CardExpansionModule = {
           ],
         })) as { action: number; result: number[] };
 
-        let cards: Card[];
-        let numToGain: number;
-
-        if (result.action === 1) {
-          cards = args.findCardService.findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'duchy' }] });
-          numToGain = Math.min(1, cards.length);
-        } else {
-          cards = args.findCardService.findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'estate' }] });
-          numToGain = Math.min(3, cards.length);
-        }
+        const pileKey = result.action === 1 ? 'duchy' : 'estate';
+        const cards = args.findCardService.findCards({ all: [{ location: 'basicSupply' }, { cardKeys: pileKey }] });
+        const numToGain = result.action === 1 ? Math.min(1, cards.length) : Math.min(3, cards.length);
 
         if (!numToGain) {
           loggerService.debug(`[hunting-grounds onTrashed effect] no cards to gain`);
         }
 
-        loggerService.debug(
-          `[hunting-grounds onTrashed effect] gaining ${numToGain} ${result.action === 1 ? 'duchy' : 'estate'}`,
-        );
+        loggerService.debug(`[hunting-grounds onTrashed effect] gaining ${numToGain} ${pileKey}`);
 
         for (let i = 0; i < numToGain; i++) {
-          await args.actionService.run('gainCard', {
+          await args.supplyGainService.gainTopSupplyCardForPileKey({
             playerId: eventArgs.playerId,
-            cardId: cards.slice(-1)[0].id,
+            pileKey,
+            from: 'basicSupply',
             to: { location: 'playerDiscard' },
+            logTag: 'hunting-grounds onTrashed effect',
           });
         }
       },
@@ -1392,10 +1379,12 @@ const cardEffects: CardExpansionModule = {
       loggerService.debug(`[marauder effect] targeting ${targetPlayerIds.length} players to gain ruins`);
 
       for (const targetPlayerId of targetPlayerIds) {
-        await cardEffectArgs.actionService.run('gainCard', {
+        await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
           playerId: targetPlayerId,
-          cardId: ruinCards.slice(-1)[0].id,
+          pileKey: 'ruins',
+          from: 'kingdomSupply',
           to: { location: 'playerDiscard' },
+          logTag: 'marauder effect',
         });
       }
     },
@@ -1429,22 +1418,19 @@ const cardEffects: CardExpansionModule = {
               playerId: eventArgs.playerId,
             });
 
-            const goldCards = triggeredArgs.findCardService.findCards({
-              all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }],
-            });
+            loggerService.debug(`[market-square cardTrashed effect] gaining gold`);
 
-            if (!goldCards.length) {
-              loggerService.debug(`[market-square cardTrashed effect] no gold cards in supply`);
-              return;
-            }
-
-            loggerService.debug(`[market-square cardTrashed effect] gaining ${goldCards.slice(-1)[0]}`);
-
-            await triggeredArgs.actionService.run('gainCard', {
+            const gainedGoldId = await triggeredArgs.supplyGainService.gainTopSupplyCardForPileKey({
               playerId: eventArgs.playerId,
-              cardId: goldCards.slice(-1)[0].id,
+              pileKey: 'gold',
+              from: 'basicSupply',
               to: { location: 'playerDiscard' },
+              logTag: 'market-square cardTrashed effect',
             });
+
+            if (!gainedGoldId) {
+              loggerService.debug(`[market-square cardTrashed effect] no gold cards in supply`);
+            }
           },
         });
       },
@@ -1788,23 +1774,20 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
-      const ratCards = cardEffectArgs.findCardService.findCards({
-        all: [{ location: 'kingdomSupply' }, { cardKeys: 'rats' }],
-      });
+      loggerService.debug(`[rats effect] gaining a rats card`);
 
-      if (!ratCards.length) {
-        loggerService.debug(`[rats effect] no rats in supply to gain`);
-      }
-
-      const ratCard = ratCards.slice(-1)[0];
-
-      loggerService.debug(`[rats effect] gaining card ${ratCard}`);
-
-      await cardEffectArgs.actionService.run('gainCard', {
+      const gainedRatId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
         playerId: cardEffectArgs.playerId,
-        cardId: ratCard.id,
+        pileKey: 'rats',
+        from: 'kingdomSupply',
         to: { location: 'playerDiscard' },
+        logTag: 'rats effect',
       });
+
+      if (!gainedRatId) {
+        loggerService.debug(`[rats effect] no rats in supply to gain`);
+        return;
+      }
 
       const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
 
@@ -2173,20 +2156,19 @@ const cardEffects: CardExpansionModule = {
           return;
         }
 
-        const goldCards = args.findCardService.findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }] });
+        loggerService.debug(`[sir-vander onTrashed effect] gaining gold`);
 
-        if (!goldCards.length) {
-          loggerService.debug(`[sir-vander onTrashed effect] no gold cards in supply to gain`);
-          return;
-        }
-
-        loggerService.debug(`[sir-vander onTrashed effect] gaining ${goldCards.slice(-1)[0]}`);
-
-        await args.actionService.run('gainCard', {
+        const gainedGoldId = await args.supplyGainService.gainTopSupplyCardForPileKey({
           playerId: eventArgs.playerId,
-          cardId: goldCards.slice(-1)[0].id,
+          pileKey: 'gold',
+          from: 'basicSupply',
           to: { location: 'playerDiscard' },
+          logTag: 'sir-vander onTrashed effect',
         });
+
+        if (!gainedGoldId) {
+          loggerService.debug(`[sir-vander onTrashed effect] no gold cards in supply to gain`);
+        }
       },
     }),
     registerEffects: () => async cardEffectArgs => {
@@ -2259,22 +2241,18 @@ const cardEffects: CardExpansionModule = {
         await cardEffectArgs.actionService.run('gainBuy', { count: 2 });
       } else {
         loggerService.debug(`[squire effect] gaining 1 silver`);
-        const silverCards = cardEffectArgs.findCardService.findCards({
-          all: [{ location: 'basicSupply' }, { cardKeys: 'silver' }],
-        });
 
-        if (!silverCards.length) {
-          loggerService.debug(`[squire effect] no silver cards in supply`);
-          return;
-        }
-
-        loggerService.debug(`[squire effect] gaining ${silverCards.slice(-1)[0]}`);
-
-        await cardEffectArgs.actionService.run('gainCard', {
+        const gainedSilverId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
           playerId: cardEffectArgs.playerId,
-          cardId: silverCards.slice(-1)[0].id,
+          pileKey: 'silver',
+          from: 'basicSupply',
           to: { location: 'playerDiscard' },
+          logTag: 'squire effect',
         });
+
+        if (!gainedSilverId) {
+          loggerService.debug(`[squire effect] no silver cards in supply`);
+        }
       }
     },
   },

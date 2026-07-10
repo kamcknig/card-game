@@ -96,23 +96,17 @@ const expansionModule: CardExpansionModule = {
         //Gain a Gold. Each other player reveals the top 2 cards of their deck,
         // trashes a revealed Treasure other than Copper, and discards the rest.
 
-        const goldCardId = args.findCardService
-          .findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }] })
-          ?.slice(-1)?.[0].id;
+        loggerService.debug(`[BANDIT EFFECT] gaining a gold to discard...`);
 
-        if (goldCardId) {
-          loggerService.debug(`[BANDIT EFFECT] gaining a gold to discard...`);
+        const gainedGoldId = await args.supplyGainService.gainTopSupplyCardForPileKey({
+          playerId,
+          pileKey: 'gold',
+          from: 'basicSupply',
+          to: { location: 'playerDiscard' },
+          logTag: 'bandit effect',
+        });
 
-          const goldCard = cardLibrary.getCard(goldCardId);
-
-          await actionService.run('gainCard', {
-            playerId,
-            cardId: goldCard.id,
-            to: {
-              location: 'playerDiscard',
-            },
-          });
-        } else {
+        if (!gainedGoldId) {
           loggerService.debug(`[BANDIT EFFECT] no gold in supply`);
         }
 
@@ -217,20 +211,18 @@ const expansionModule: CardExpansionModule = {
       async ({ loggerService, reactionContext, match, actionService, playerId, ...args }) => {
         // Gain a Silver onto your deck. Each other player reveals a Victory card
         // from their hand and puts it onto their deck (or reveals a hand with no Victory cards).
-        const silverCardId = args.findCardService
-          .findCards({ all: [{ location: 'basicSupply' }, { cardKeys: 'silver' }] })
-          ?.slice(-1)?.[0].id;
+        loggerService.debug(`[BUREAUCRAT EFFECT] gaining silver to deck...`);
 
-        if (!silverCardId) {
+        const gainedSilverId = await args.supplyGainService.gainTopSupplyCardForPileKey({
+          playerId,
+          pileKey: 'silver',
+          from: 'basicSupply',
+          to: { location: 'playerDeck' },
+          logTag: 'bureaucrat effect',
+        });
+
+        if (!gainedSilverId) {
           loggerService.debug('[BUREAUCRAT EFFECT] no silver in supply');
-        } else {
-          loggerService.debug(`[BUREAUCRAT EFFECT] gaining silver to deck...`);
-
-          await actionService.run('gainCard', {
-            playerId,
-            cardId: silverCardId,
-            to: { location: 'playerDeck' },
-          });
         }
 
         const targetPlayerIds = getAttackTargets(match, playerId, reactionContext);
@@ -1314,19 +1306,18 @@ const expansionModule: CardExpansionModule = {
         loggerService.debug(`[WITCH EFFECT] targets ${playerIds.map(id => getPlayerById(match, id))}`);
 
         for (const playerId of playerIds) {
-          const curseCards = args.findCardService.findCards({
-            all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+          const gainedCurseId = await args.supplyGainService.gainTopSupplyCardForPileKey({
+            playerId,
+            pileKey: 'curse',
+            from: 'basicSupply',
+            to: { location: 'playerDiscard' },
+            logTag: 'witch effect',
           });
-          if (!curseCards.length) {
+
+          if (!gainedCurseId) {
             loggerService.debug(`[WITCH EFFECT] no curse cards in supply`);
             return;
           }
-
-          await actionService.run('gainCard', {
-            playerId,
-            cardId: curseCards.slice(-1)[0].id,
-            to: { location: 'playerDiscard' },
-          });
         }
       },
   },

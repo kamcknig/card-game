@@ -301,33 +301,32 @@ const expansion: CardExpansionModule = {
       const pileKey = getCardPileKey(selectedCard);
       loggerService.debug(`[changeling effect] selected ${selectedCard} (pile ${pileKey})`);
 
-      // Determine which supply pile matches the selected card's pile key.
-      const basicPileCards = cardEffectArgs.findCardService.findCards({
-        all: [{ location: 'basicSupply' }, { kingdom: pileKey }],
-      });
-      const kingdomPileCards = cardEffectArgs.findCardService.findCards({
-        all: [{ location: 'kingdomSupply' }, { kingdom: pileKey }],
-      });
+      // Determine which supply pile matches the selected card's pile key, preferring basic supply.
+      let supplyLocation: 'basicSupply' | 'kingdomSupply' = 'basicSupply';
+      let topCard = cardEffectArgs.findCardService.findTopSupplyCardForPileKey({ pileKey, from: 'basicSupply' });
+      if (!topCard) {
+        supplyLocation = 'kingdomSupply';
+        topCard = cardEffectArgs.findCardService.findTopSupplyCardForPileKey({ pileKey, from: 'kingdomSupply' });
+      }
 
-      const pileCards = basicPileCards.length ? basicPileCards : kingdomPileCards;
-      if (!pileCards.length) {
+      if (!topCard) {
         loggerService.debug(`[changeling effect] no supply pile found for ${selectedCard}`);
         return;
       }
-      loggerService.debug(`[changeling effect] found ${pileCards.length} cards in pile ${pileKey}`);
 
       // The top card must match the selected card's name for split piles.
-      const topCard = pileCards.slice(-1)[0];
-      if (!topCard || topCard.cardKey !== selectedCard.cardKey) {
+      if (topCard.cardKey !== selectedCard.cardKey) {
         loggerService.debug(`[changeling effect] top of pile does not match ${selectedCard}`);
         return;
       }
 
       loggerService.debug(`[changeling effect] gaining a copy of ${selectedCard}`);
-      await cardEffectArgs.actionService.run('gainCard', {
+      await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
         playerId: cardEffectArgs.playerId,
-        cardId: topCard.id,
+        pileKey,
+        from: supplyLocation,
         to: { location: 'playerDiscard' },
+        logTag: 'changeling effect',
       });
     },
   },
@@ -758,21 +757,20 @@ const expansion: CardExpansionModule = {
       );
 
       for (const targetPlayerId of targetPlayerIds) {
-        const curseCards = cardEffectArgs.findCardService.findCards({
-          all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+        loggerService.debug(`[idol effect] giving curse to ${getPlayerById(cardEffectArgs.match, targetPlayerId)}`);
+
+        const gainedCurseId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+          playerId: targetPlayerId,
+          pileKey: 'curse',
+          from: 'basicSupply',
+          to: { location: 'playerDiscard' },
+          logTag: 'idol effect',
         });
-        if (!curseCards.length) {
+
+        if (!gainedCurseId) {
           loggerService.debug('[idol effect] no curse cards in supply');
           return;
         }
-
-        const curseCardId = curseCards.slice(-1)[0].id;
-        loggerService.debug(`[idol effect] giving curse to ${getPlayerById(cardEffectArgs.match, targetPlayerId)}`);
-        await cardEffectArgs.actionService.run('gainCard', {
-          playerId: targetPlayerId,
-          cardId: curseCardId,
-          to: { location: 'playerDiscard' },
-        });
       }
     },
   },
@@ -780,20 +778,16 @@ const expansion: CardExpansionModule = {
     registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       // Gain a Gold first.
-      const goldCards = cardEffectArgs.findCardService.findCards({
-        all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }],
+      const gainedGoldId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+        playerId: cardEffectArgs.playerId,
+        pileKey: 'gold',
+        from: 'basicSupply',
+        to: { location: 'playerDiscard' },
+        logTag: 'leprechaun effect',
       });
 
-      if (!goldCards.length) {
+      if (!gainedGoldId) {
         loggerService.debug('[leprechaun effect] no Gold cards in supply');
-      } else {
-        const goldCardId = goldCards.slice(-1)[0].id;
-        loggerService.debug(`[leprechaun effect] gaining Gold ${cardEffectArgs.cardLibrary.getCard(goldCardId)}`);
-        await cardEffectArgs.actionService.run('gainCard', {
-          playerId: cardEffectArgs.playerId,
-          cardId: goldCardId,
-          to: { location: 'playerDiscard' },
-        });
       }
 
       // Count cards in play after the Gold gain resolves.
@@ -1131,22 +1125,17 @@ const expansion: CardExpansionModule = {
       onGained: async (cardEffectArgs, eventArgs) => {
         const loggerService = cardEffectArgs.loggerService;
         // Gain a Gold when Skulk is gained.
-        const goldCards = cardEffectArgs.findCardService.findCards({
-          all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }],
-        });
-
-        if (!goldCards.length) {
-          loggerService.debug('[skulk onGained] no Gold cards available to gain');
-          return;
-        }
-
-        const goldCardId = goldCards.slice(-1)[0].id;
-        loggerService.debug(`[skulk onGained] gaining Gold ${cardEffectArgs.cardLibrary.getCard(goldCardId)}`);
-        await cardEffectArgs.actionService.run('gainCard', {
+        const gainedGoldId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
           playerId: eventArgs.playerId,
-          cardId: goldCardId,
+          pileKey: 'gold',
+          from: 'basicSupply',
           to: { location: 'playerDiscard' },
+          logTag: 'skulk onGained',
         });
+
+        if (!gainedGoldId) {
+          loggerService.debug('[skulk onGained] no Gold cards available to gain');
+        }
       },
     }),
     registerEffects: () => async cardEffectArgs => {
@@ -2018,22 +2007,17 @@ const expansion: CardExpansionModule = {
       }
 
       // Gain a Gold if no cards were gained previously this turn.
-      const goldCards = cardEffectArgs.findCardService.findCards({
-        all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }],
-      });
-
-      if (!goldCards.length) {
-        loggerService.warn('[devils-workshop effect] no Gold cards available to gain');
-        return;
-      }
-
-      const goldCardId = goldCards.slice(-1)[0].id;
-      loggerService.debug(`[devils-workshop effect] gaining Gold ${goldCardId}`);
-      await cardEffectArgs.actionService.run('gainCard', {
+      const gainedGoldId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
         playerId: cardEffectArgs.playerId,
-        cardId: goldCardId,
+        pileKey: 'gold',
+        from: 'basicSupply',
         to: { location: 'playerDiscard' },
+        logTag: 'devils-workshop effect',
       });
+
+      if (!gainedGoldId) {
+        loggerService.warn('[devils-workshop effect] no Gold cards available to gain');
+      }
     },
   },
   druid: {
@@ -2310,22 +2294,17 @@ const expansion: CardExpansionModule = {
       // Apply the immediate +$1.
       await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
 
-      const silverCards = cardEffectArgs.findCardService.findCards({
-        all: [{ location: 'basicSupply' }, { cardKeys: 'silver' }],
-      });
-
-      if (!silverCards.length) {
-        loggerService.debug('[lucky-coin effect] no Silver cards available to gain');
-        return;
-      }
-
-      const silverCardId = silverCards.slice(-1)[0].id;
-      loggerService.debug(`[lucky-coin effect] gaining ${cardEffectArgs.cardLibrary.getCard(silverCardId)}`);
-      await cardEffectArgs.actionService.run('gainCard', {
+      const gainedSilverId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
         playerId: cardEffectArgs.playerId,
-        cardId: silverCardId,
+        pileKey: 'silver',
+        from: 'basicSupply',
         to: { location: 'playerDiscard' },
+        logTag: 'lucky-coin effect',
       });
+
+      if (!gainedSilverId) {
+        loggerService.debug('[lucky-coin effect] no Silver cards available to gain');
+      }
     },
   },
   ghost: {
@@ -2514,22 +2493,17 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainTreasure', { count: 3 });
 
       // Gain a Curse when played.
-      const curseCards = cardEffectArgs.findCardService.findCards({
-        all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
-      });
-
-      if (!curseCards.length) {
-        loggerService.debug('[cursed-gold effect] no Curses available to gain');
-        return;
-      }
-
-      const curseCardId = curseCards.slice(-1)[0].id;
-      loggerService.debug(`[cursed-gold effect] gaining Curse ${cardEffectArgs.cardLibrary.getCard(curseCardId)}`);
-      await cardEffectArgs.actionService.run('gainCard', {
+      const gainedCurseId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
         playerId: cardEffectArgs.playerId,
-        cardId: curseCardId,
+        pileKey: 'curse',
+        from: 'basicSupply',
         to: { location: 'playerDiscard' },
+        logTag: 'cursed-gold effect',
       });
+
+      if (!gainedCurseId) {
+        loggerService.debug('[cursed-gold effect] no Curses available to gain');
+      }
     },
   },
   'magic-lamp': {
