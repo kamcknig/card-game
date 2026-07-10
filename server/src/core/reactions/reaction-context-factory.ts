@@ -37,6 +37,26 @@ export class ReactionContextFactory {
     private readonly promptService: PromptService,
   ) {}
 
+  // Common fields shared by every context this factory builds. Field differences between
+  // context shapes (trigger/reaction, isRootLog, cardInstanceFactoryService) are added by each
+  // create*Context method individually — see the type each returns before widening this.
+  private baseContext(reactionManager: ReactionManager) {
+    return {
+      cardSourceController: this.cardSourceController,
+      cardPriceController: this.cardPriceController,
+      logManager: this.logManager,
+      loggerService: this.loggerService,
+      rngService: this.rngService,
+      reactionManager,
+      actionService: this.actionService,
+      findCardService: this.findCardService,
+      supplyGainService: this.supplyGainService,
+      promptService: this.promptService,
+      match: this.match,
+      cardLibrary: this.cardLibrary,
+    };
+  }
+
   // Creates context for reaction condition checks.
   public createConditionContext<T extends TriggerEventType>(args: {
     reactionManager: ReactionManager;
@@ -44,18 +64,7 @@ export class ReactionContextFactory {
     reaction: Reaction;
   }): TriggeredEffectConditionContext<T> {
     return {
-      cardSourceController: this.cardSourceController,
-      cardPriceController: this.cardPriceController,
-      logManager: this.logManager,
-      loggerService: this.loggerService,
-      rngService: this.rngService,
-      reactionManager: args.reactionManager,
-      actionService: this.actionService,
-      findCardService: this.findCardService,
-      supplyGainService: this.supplyGainService,
-      promptService: this.promptService,
-      match: this.match,
-      cardLibrary: this.cardLibrary,
+      ...this.baseContext(args.reactionManager),
       trigger: args.trigger,
       reaction: args.reaction,
     };
@@ -66,37 +75,17 @@ export class ReactionContextFactory {
     reactionManager: ReactionManager;
   }): Omit<GameLifecycleCallbackContext, 'cardId'> {
     return {
-      cardSourceController: this.cardSourceController,
-      findCardService: this.findCardService,
-      supplyGainService: this.supplyGainService,
-      cardPriceController: this.cardPriceController,
-      logManager: this.logManager,
-      loggerService: this.loggerService,
-      rngService: this.rngService,
-      cardLibrary: this.cardLibrary,
+      ...this.baseContext(args.reactionManager),
+      // Only game lifecycle callbacks (e.g. onCardGained) currently need to mint new card
+      // instances; other context shapes intentionally omit this.
       cardInstanceFactoryService: this.cardInstanceFactoryService,
-      match: this.match,
-      reactionManager: args.reactionManager,
-      actionService: this.actionService,
-      promptService: this.promptService,
     };
   }
 
   // Creates context for card lifecycle callbacks.
   public createCardLifecycleContext(args: { reactionManager: ReactionManager }): CardLifecycleCallbackContext {
     return {
-      cardSourceController: this.cardSourceController,
-      actionService: this.actionService,
-      cardPriceController: this.cardPriceController,
-      logManager: this.logManager,
-      loggerService: this.loggerService,
-      rngService: this.rngService,
-      cardLibrary: this.cardLibrary,
-      match: this.match,
-      reactionManager: args.reactionManager,
-      findCardService: this.findCardService,
-      supplyGainService: this.supplyGainService,
-      promptService: this.promptService,
+      ...this.baseContext(args.reactionManager),
     };
   }
 
@@ -107,20 +96,9 @@ export class ReactionContextFactory {
     reaction: Reaction;
   }): TriggeredEffectContext<T> {
     return {
-      cardSourceController: this.cardSourceController,
-      findCardService: this.findCardService,
-      supplyGainService: this.supplyGainService,
-      reactionManager: args.reactionManager,
-      cardPriceController: this.cardPriceController,
-      logManager: this.logManager,
-      loggerService: this.loggerService,
-      rngService: this.rngService,
+      ...this.baseContext(args.reactionManager),
       isRootLog: false,
-      actionService: this.actionService,
-      promptService: this.promptService,
       trigger: args.trigger,
-      cardLibrary: this.cardLibrary,
-      match: this.match,
       reaction: args.reaction,
     };
   }
