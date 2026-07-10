@@ -10,6 +10,7 @@ import { markPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { findBoonInMatch } from '@shared/find-card-like-in-match.ts';
 import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
+import { registerStartTurnEffect } from '../../utils/register-start-turn-effect.ts';
 
 // Prompts a player to choose an Action from hand not already represented in play.
 const promptUniqueActionFromHand = async (
@@ -336,15 +337,10 @@ const expansion: CardExpansionModule = {
       const cobblerCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
       // Register the start-of-next-turn gain effect.
-      cardEffectArgs.registerDurationEffect(cobblerCard, {
-        id: `cobbler:${cobblerCard.id}:startTurn`,
-        listeningFor: 'startTurn',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        cobblerCard,
+        async triggeredArgs => {
           // Skip if no eligible cards remain in supply.
           const eligibleCards = triggeredArgs.findCardService.findCards({
             all: [
@@ -381,7 +377,8 @@ const expansion: CardExpansionModule = {
             to: { location: 'playerHand' },
           });
         },
-      });
+        { id: `cobbler:${cobblerCard.id}:startTurn` },
+      );
     },
   },
   conclave: {
@@ -612,22 +609,18 @@ const expansion: CardExpansionModule = {
       const denOfSinCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
       // Register the start-of-next-turn draw effect.
-      cardEffectArgs.registerDurationEffect(denOfSinCard, {
-        id: `den-of-sin:${denOfSinCard.id}:startTurn`,
-        listeningFor: 'startTurn',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        denOfSinCard,
+        async triggeredArgs => {
           // Apply the +2 Cards at the start of the next turn.
           await triggeredArgs.actionService.run('drawCard', {
             playerId: cardEffectArgs.playerId,
             count: 2,
           });
         },
-      });
+        { id: `den-of-sin:${denOfSinCard.id}:startTurn` },
+      );
     },
   },
   'ghost-town': {
@@ -648,15 +641,10 @@ const expansion: CardExpansionModule = {
       const ghostTownCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
       // Register the start-of-next-turn +1 Card/+1 Action.
-      cardEffectArgs.registerDurationEffect(ghostTownCard, {
-        id: `ghost-town:${ghostTownCard.id}:startTurn`,
-        listeningFor: 'startTurn',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        ghostTownCard,
+        async triggeredArgs => {
           // Apply +1 Card.
           await triggeredArgs.actionService.run('drawCard', {
             playerId: cardEffectArgs.playerId,
@@ -668,7 +656,8 @@ const expansion: CardExpansionModule = {
             count: 1,
           });
         },
-      });
+        { id: `ghost-town:${ghostTownCard.id}:startTurn` },
+      );
     },
   },
   guardian: {
@@ -712,16 +701,10 @@ const expansion: CardExpansionModule = {
       const guardianCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
       // Keep the duration card active through cleanup and apply next-turn bonus.
-      cardEffectArgs.registerDurationEffect(guardianCard, {
-        id: `guardian:${guardianCard.id}:startTurn`,
-        playerId: cardEffectArgs.playerId,
-        listeningFor: 'startTurn',
-        once: true,
-        allowMultipleInstances: true,
-        compulsory: true,
-        autoResolve: true,
-        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        guardianCard,
+        async triggeredArgs => {
           // Return Guardian to the play area before resolving its next-turn effect.
 
           // Stop granting immunity after the start of the next turn.
@@ -736,7 +719,8 @@ const expansion: CardExpansionModule = {
             { loggingContext: { source: guardianCard.id } },
           );
         },
-      });
+        { id: `guardian:${guardianCard.id}:startTurn`, autoResolve: true },
+      );
     },
   },
   idol: {
@@ -1014,15 +998,10 @@ const expansion: CardExpansionModule = {
       const raiderCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
       // Register the start-of-next-turn +$3.
-      cardEffectArgs.registerDurationEffect(raiderCard, {
-        id: `raider:${raiderCard.id}:startTurn`,
-        listeningFor: 'startTurn',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        raiderCard,
+        async triggeredArgs => {
           await triggeredArgs.actionService.run(
             'gainTreasure',
             {
@@ -1031,7 +1010,8 @@ const expansion: CardExpansionModule = {
             { loggingContext: { source: raiderCard.id } },
           );
         },
-      });
+        { id: `raider:${raiderCard.id}:startTurn` },
+      );
     },
   },
   'sacred-grove': {
@@ -1540,15 +1520,10 @@ const expansion: CardExpansionModule = {
       const secretCaveCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
       // Register the start-of-next-turn +$3 if 3 cards were discarded.
-      cardEffectArgs.registerDurationEffect(secretCaveCard, {
-        id: `secret-cave:${secretCaveCard.id}:startTurn`,
-        listeningFor: 'startTurn',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        secretCaveCard,
+        async triggeredArgs => {
           await triggeredArgs.actionService.run(
             'gainTreasure',
             {
@@ -1557,7 +1532,8 @@ const expansion: CardExpansionModule = {
             { loggingContext: { source: secretCaveCard.id } },
           );
         },
-      });
+        { id: `secret-cave:${secretCaveCard.id}:startTurn` },
+      );
     },
   },
   pixie: {
@@ -2420,15 +2396,10 @@ const expansion: CardExpansionModule = {
 
       // Register the start-of-turn trigger to play the Action twice next turn.
       const ghostCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      cardEffectArgs.registerDurationEffect(ghostCard, {
-        id: `ghost:${ghostCard.id}:startTurn`,
-        listeningFor: 'startTurn',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        ghostCard,
+        async triggeredArgs => {
           // Bring Ghost back to play area for its next-turn effect.
 
           const actionCard = triggeredArgs.cardLibrary.getCard(actionCardId);
@@ -2443,7 +2414,8 @@ const expansion: CardExpansionModule = {
             });
           }
         },
-      });
+        { id: `ghost:${ghostCard.id}:startTurn` },
+      );
     },
   },
   'haunted-mirror': {

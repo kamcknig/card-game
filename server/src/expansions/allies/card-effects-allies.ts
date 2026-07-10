@@ -16,6 +16,7 @@ import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { getCurrentTurnHistoryIndex } from '../../utils/get-current-turn-history-index.ts';
 import { resolvePileDestinationForCardKey } from '../../utils/resolve-pile-destination-for-card-key.ts';
 import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
+import { registerStartTurnEffect } from '../../utils/register-start-turn-effect.ts';
 
 const AUGURS_PILE_KEY: CardKey = 'augurs';
 const FORTS_PILE_KEY: CardKey = 'forts';
@@ -556,15 +557,10 @@ const cardEffects: CardExpansionModule = {
       }
 
       const conjurerCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      cardEffectArgs.registerDurationEffect(conjurerCard, {
-        playerId,
-        listeningFor: 'startTurn',
-        once: true,
-        compulsory: true,
-        system: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger }) => trigger.args.playerId === playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        conjurerCard,
+        async triggeredArgs => {
           if (
             !isCardStillInPlay({
               cardId: conjurerCard.id,
@@ -581,7 +577,8 @@ const cardEffects: CardExpansionModule = {
             to: { location: 'playerHand' },
           });
         },
-      });
+        { system: true },
+      );
     },
   },
   sorcerer: {
@@ -1036,15 +1033,10 @@ const cardEffects: CardExpansionModule = {
 
           durationRegistered = true;
           // Register duration handling only when the first token is gained.
-          durationTriggerIds = cardEffectArgs.registerDurationEffect(garrisonCard, {
-            listeningFor: 'startTurn',
-            playerId,
-            once: true,
-            compulsory: true,
-            system: true,
-            allowMultipleInstances: true,
-            condition: conditionArgs => conditionArgs.trigger.args.playerId === playerId,
-            triggeredEffectFn: async triggeredArgs => {
+          durationTriggerIds = registerStartTurnEffect(
+            cardEffectArgs,
+            garrisonCard,
+            async triggeredArgs => {
               const tokenInstanceIds = getCoinTokenInstanceIdsOnCard({
                 match: triggeredArgs.match,
                 cardId: garrisonCard.id,
@@ -1074,7 +1066,8 @@ const cardEffects: CardExpansionModule = {
                 count: drawCount,
               });
             },
-          });
+            { system: true },
+          );
           loggerService.debug('[garrison cardGained effect] registered deferred duration effect');
         },
       });
@@ -1242,18 +1235,14 @@ const cardEffects: CardExpansionModule = {
             label: 'NEXT TURN +3 CARDS',
             resolve: async () => {
               loggerService.debug('[stronghold effect] registering next-turn +3 cards duration branch');
-              cardEffectArgs.registerDurationEffect(strongholdCard, {
-                playerId,
-                listeningFor: 'startTurn',
-                once: true,
-                compulsory: true,
-                system: true,
-                allowMultipleInstances: true,
-                condition: ({ trigger }) => trigger.args.playerId === playerId,
-                triggeredEffectFn: async triggeredArgs => {
+              registerStartTurnEffect(
+                cardEffectArgs,
+                strongholdCard,
+                async triggeredArgs => {
                   await triggeredArgs.actionService.run('drawCard', { playerId, count: 3 });
                 },
-              });
+                { system: true },
+              );
             },
           },
         ],
@@ -1439,20 +1428,16 @@ const cardEffects: CardExpansionModule = {
       loggerService.debug('[warlord effect] registered temporary Action play restriction for other players');
 
       // At the start of your next turn, draw 2 cards.
-      cardEffectArgs.registerDurationEffect(warlordCard, {
-        playerId,
-        listeningFor: 'startTurn',
-        once: true,
-        compulsory: true,
-        system: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger }) => trigger.args.playerId === playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        warlordCard,
+        async triggeredArgs => {
           unregisterPlayRestriction();
           loggerService.debug('[warlord effect] removed temporary Action play restriction');
           await triggeredArgs.actionService.run('drawCard', { playerId, count: 2 });
         },
-      });
+        { system: true },
+      );
     },
   },
   bauble: {
@@ -1917,15 +1902,10 @@ const cardEffects: CardExpansionModule = {
         to: { location: 'set-aside' },
       });
 
-      cardEffectArgs.registerDurationEffect(contractCard, {
-        playerId,
-        listeningFor: 'startTurn',
-        once: true,
-        compulsory: true,
-        system: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger }) => trigger.args.playerId === playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        contractCard,
+        async triggeredArgs => {
           const setAside = triggeredArgs.cardSourceController.getSource('set-aside', playerId);
           if (!setAside.includes(selectedSetAsideCardId)) {
             loggerService.debug('[contract startTurn effect] set-aside Action card is no longer available');
@@ -1938,7 +1918,8 @@ const cardEffects: CardExpansionModule = {
             overrides: { actionCost: 0 },
           });
         },
-      });
+        { system: true },
+      );
     },
   },
   courier: {
@@ -2129,16 +2110,10 @@ const cardEffects: CardExpansionModule = {
       const highwaymanCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       const targetPlayerIds = getAttackTargets(cardEffectArgs.match, playerId, cardEffectArgs.reactionContext);
 
-      cardEffectArgs.registerDurationEffect(highwaymanCard, {
-        listeningFor: 'startTurn',
-        playerId,
-        once: true,
-        compulsory: true,
-        system: true,
-        allowMultipleInstances: true,
-        autoResolve: true,
-        condition: ({ trigger }) => trigger.args.playerId === playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        highwaymanCard,
+        async triggeredArgs => {
           if (
             isCardStillInPlay({
               cardId: highwaymanCard.id,
@@ -2156,7 +2131,8 @@ const cardEffects: CardExpansionModule = {
 
           await triggeredArgs.actionService.run('drawCard', { playerId, count: 3 });
         },
-      });
+        { system: true, autoResolve: true },
+      );
 
       const attackTriggerIds = targetPlayerIds.map(targetPlayerId => {
         return cardEffectArgs.reactionManager.registerReactionTemplate(highwaymanCard, 'beforePlayedCardEffect', {
@@ -2274,15 +2250,10 @@ const cardEffects: CardExpansionModule = {
       const playerId = cardEffectArgs.playerId;
       const importerCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
-      cardEffectArgs.registerDurationEffect(importerCard, {
-        playerId,
-        listeningFor: 'startTurn',
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        system: true,
-        condition: ({ trigger }) => trigger.args.playerId === playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        importerCard,
+        async triggeredArgs => {
           const gainableCards = triggeredArgs.findCardService.findCards({
             all: [{ location: ['basicSupply', 'kingdomSupply'] }, { playerId, kind: 'upTo', amount: { treasure: 5 } }],
           });
@@ -2303,7 +2274,8 @@ const cardEffects: CardExpansionModule = {
             to: { location: 'playerDiscard' },
           });
         },
-      });
+        { system: true },
+      );
     },
   },
   innkeeper: {
@@ -2594,15 +2566,10 @@ const cardEffects: CardExpansionModule = {
         to: { location: 'set-aside' },
       });
 
-      cardEffectArgs.registerDurationEffect(royalGalleryCard, {
-        playerId,
-        listeningFor: 'startTurn',
-        once: true,
-        compulsory: true,
-        system: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger }) => trigger.args.playerId === playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        royalGalleryCard,
+        async triggeredArgs => {
           const setAside = triggeredArgs.cardSourceController.getSource('set-aside', playerId);
           if (!setAside.includes(selectedActionCardId)) {
             loggerService.debug('[royal-galley startTurn effect] set-aside card no longer available to replay');
@@ -2615,7 +2582,8 @@ const cardEffects: CardExpansionModule = {
             overrides: { actionCost: 0 },
           });
         },
-      });
+        { system: true },
+      );
     },
   },
   sentinel: {
@@ -3047,15 +3015,10 @@ const cardEffects: CardExpansionModule = {
       });
 
       // Keep Voyage in play through cleanup and arm the extra-turn hand-play limiter for its queued turn.
-      cardEffectArgs.registerDurationEffect(voyageCard, {
-        playerId,
-        listeningFor: 'startTurn',
-        once: true,
-        compulsory: true,
-        system: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger }) => trigger.args.playerId === playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        voyageCard,
+        async triggeredArgs => {
           const currentTurnStats = triggeredArgs.match.stats.turns[triggeredArgs.match.stats.turns.length - 1];
           const isVoyageExtraTurn =
             currentTurnStats?.playerId === playerId && currentTurnStats?.sourceId === voyageCard.id;
@@ -3098,7 +3061,8 @@ const cardEffects: CardExpansionModule = {
             },
           });
         },
-      });
+        { system: true },
+      );
     },
   },
   territory: {

@@ -17,6 +17,7 @@ import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
+import { registerStartTurnEffect } from '../../utils/register-start-turn-effect.ts';
 
 const teacherTokenLabels: Record<string, string> = {
   [adventuresTokenIds.plusBuy]: '+1 Buy token',
@@ -164,25 +165,17 @@ const expansion: CardExpansionModule = {
 
       const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
-      cardEffectArgs.registerDurationEffect(card, {
-        id: `amulet:${cardEffectArgs.cardId}:startTurn`,
-        listeningFor: 'startTurn',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        allowMultipleInstances: true,
-        compulsory: true,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
-            return false;
-          }
-          return true;
-        },
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        card,
+        async triggeredArgs => {
           loggerService.debug(`[amulet startTurn effect] re-running decision fn`);
 
           await decision();
         },
-      });
+        // onLeavePlay unregisters this exact id — must match verbatim.
+        { id: `amulet:${cardEffectArgs.cardId}:startTurn` },
+      );
     },
   },
   artificer: {
@@ -316,20 +309,10 @@ const expansion: CardExpansionModule = {
 
       const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
-      cardEffectArgs.registerDurationEffect(card, {
-        id: `bridge-troll:${cardEffectArgs.cardId}:startTurn`,
-        listeningFor: 'startTurn',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        allowMultipleInstances: true,
-        compulsory: true,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
-            return false;
-          }
-          return true;
-        },
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        card,
+        async triggeredArgs => {
           // Move the duration card back to play and apply the next-turn bonuses.
           loggerService.debug(`[bridge-troll startTurn effect] gaining 1 buy`);
           await triggeredArgs.actionService.run('gainBuy', { count: 1 });
@@ -349,7 +332,9 @@ const expansion: CardExpansionModule = {
             },
           });
         },
-      });
+        // onLeavePlay unregisters this exact id — must match verbatim.
+        { id: `bridge-troll:${cardEffectArgs.cardId}:startTurn` },
+      );
     },
   },
   relic: {
@@ -427,26 +412,18 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
       const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      cardEffectArgs.registerDurationEffect(card, {
-        id: `caravan-guard:${cardEffectArgs.cardId}:startTurn`,
-        listeningFor: 'startTurn',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
-            return false;
-          }
-          return true;
-        },
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        card,
+        async triggeredArgs => {
           loggerService.debug(`[caravan-guard startTurn effect] gaining 1 treasure`);
           await triggeredArgs.actionService.run('gainTreasure', {
             count: 1,
           });
         },
-      });
+        // onLeavePlay unregisters this exact id — must match verbatim.
+        { id: `caravan-guard:${cardEffectArgs.cardId}:startTurn` },
+      );
     },
   },
   champion: {
@@ -682,21 +659,16 @@ const expansion: CardExpansionModule = {
       await effects();
 
       const card = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      cardEffectArgs.registerDurationEffect(card, {
-        id: `dungeon:${cardEffectArgs.cardId}:startTurn`,
-        listeningFor: 'startTurn',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: async conditionArgs => {
-          return conditionArgs.trigger.args.playerId === cardEffectArgs.playerId;
-        },
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        card,
+        async triggeredArgs => {
           loggerService.debug(`[dungeon startTurn effect] running`);
           await effects();
         },
-      });
+        // onLeavePlay unregisters this exact id — must match verbatim.
+        { id: `dungeon:${cardEffectArgs.cardId}:startTurn` },
+      );
     },
   },
   duplicate: {
@@ -838,20 +810,10 @@ const expansion: CardExpansionModule = {
 
       const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
-      cardEffectArgs.registerDurationEffect(thisCard, {
-        id: `gear:${cardEffectArgs.cardId}:startTurn`,
-        playerId: cardEffectArgs.playerId,
-        listeningFor: 'startTurn',
-        once: true,
-        allowMultipleInstances: true,
-        compulsory: true,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
-            return false;
-          }
-          return true;
-        },
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        thisCard,
+        async triggeredArgs => {
           loggerService.debug(`[gear startTurn effect] moving ${selectedCardIds.length} to hand`);
 
           for (const selectedCardId of selectedCardIds) {
@@ -862,7 +824,9 @@ const expansion: CardExpansionModule = {
             });
           }
         },
-      });
+        // onLeavePlay unregisters this exact id — must match verbatim.
+        { id: `gear:${cardEffectArgs.cardId}:startTurn` },
+      );
     },
   },
   giant: {
@@ -1122,27 +1086,19 @@ const expansion: CardExpansionModule = {
       });
 
       const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      cardEffectArgs.registerDurationEffect(thisCard, {
-        id: `haunted-woods:${cardEffectArgs.cardId}:startTurn`,
-        listeningFor: 'startTurn',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) {
-            return false;
-          }
-          return true;
-        },
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        thisCard,
+        async triggeredArgs => {
           triggeredArgs.reactionManager.unregisterTrigger(`haunted-woods:${cardEffectArgs.cardId}:cardGained`);
           await triggeredArgs.actionService.run('drawCard', {
             playerId: cardEffectArgs.playerId,
             count: 2,
           });
         },
-      });
+        // onLeavePlay unregisters this exact id — must match verbatim.
+        { id: `haunted-woods:${cardEffectArgs.cardId}:startTurn` },
+      );
     },
   },
   hero: {
@@ -1933,17 +1889,10 @@ const expansion: CardExpansionModule = {
 
       const ids: string[] = [];
 
-      cardEffectArgs.registerDurationEffect(thisCard, {
-        id: `swamp-hag:${thisCard.id}:startTurn`,
-        listeningFor: 'startTurn',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: async conditionArgs => {
-          return conditionArgs.trigger.args.playerId === cardEffectArgs.playerId;
-        },
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        thisCard,
+        async triggeredArgs => {
           for (const id of ids) {
             triggeredArgs.reactionManager.unregisterTrigger(id);
           }
@@ -1953,7 +1902,8 @@ const expansion: CardExpansionModule = {
             count: 3,
           });
         },
-      });
+        { id: `swamp-hag:${thisCard.id}:startTurn` },
+      );
 
       const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 

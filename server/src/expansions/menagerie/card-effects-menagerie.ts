@@ -9,6 +9,7 @@ import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
+import { registerStartTurnEffect } from '../../utils/register-start-turn-effect.ts';
 
 const expansion: CardExpansionModule = {
   'animal-fair': {
@@ -101,16 +102,10 @@ const expansion: CardExpansionModule = {
       const delayedTriggerId = `barge:${cardEffectArgs.cardId}:startTurn:${bargePlayInstance}`;
 
       loggerService.debug(`[barge effect] registering delayed mode trigger ${delayedTriggerId}`);
-      cardEffectArgs.registerDurationEffect(bargeCard, {
-        id: delayedTriggerId,
-        listeningFor: 'startTurn',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger, reaction }) =>
-          trigger.args.playerId === cardEffectArgs.playerId && reaction.id === delayedTriggerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        bargeCard,
+        async triggeredArgs => {
           // Move the duration card back into play as its next-turn effect resolves.
 
           await triggeredArgs.actionService.run('drawCard', {
@@ -119,7 +114,9 @@ const expansion: CardExpansionModule = {
           });
           await triggeredArgs.actionService.run('gainBuy', { count: 1 });
         },
-      });
+        // Include the play-instance suffix so replayed Barge effects do not collide.
+        { id: delayedTriggerId },
+      );
     },
   },
   'black-cat': {
@@ -794,20 +791,15 @@ const expansion: CardExpansionModule = {
       });
 
       // Duration trigger: at start of your next turn, +$3 and end the gain-attack effect immediately.
-      cardEffectArgs.registerDurationEffect(gatekeeperCard, {
-        id: `gatekeeper:${cardEffectArgs.cardId}:startTurn`,
-        playerId: cardEffectArgs.playerId,
-        listeningFor: 'startTurn',
-        once: true,
-        compulsory: true,
-        system: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        gatekeeperCard,
+        async triggeredArgs => {
           triggeredArgs.reactionManager.unregisterTrigger(gainAttackTriggerId);
           await triggeredArgs.actionService.run('gainTreasure', { count: 3 });
         },
-      });
+        { id: `gatekeeper:${cardEffectArgs.cardId}:startTurn`, system: true },
+      );
     },
   },
   goatherd: {
@@ -1245,15 +1237,10 @@ const expansion: CardExpansionModule = {
       ).length;
 
       // Mastermind resolves at the start of the next turn.
-      cardEffectArgs.registerDurationEffect(mastermindCard, {
-        id: `mastermind:${cardEffectArgs.cardId}:startTurn:${mastermindPlayInstance}`,
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        listeningFor: 'startTurn',
-        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        mastermindCard,
+        async triggeredArgs => {
           loggerService.debug('[mastermind startTurn effect] resolving delayed triple-play');
 
           // Return Mastermind to play area while resolving its start-turn effect.
@@ -1385,7 +1372,8 @@ const expansion: CardExpansionModule = {
             { idSuffix: `duration-hold:${mastermindPlayInstance}` },
           );
         },
-      });
+        { id: `mastermind:${cardEffectArgs.cardId}:startTurn:${mastermindPlayInstance}` },
+      );
     },
   },
   paddock: {
@@ -1944,22 +1932,18 @@ const expansion: CardExpansionModule = {
       }
 
       loggerService.debug('[village-green effect] registering delayed mode');
-      cardEffectArgs.registerDurationEffect(villageGreenCard, {
-        id: `village-green:${cardEffectArgs.cardId}:startTurn:${villageGreenPlayInstance}`,
-        listeningFor: 'startTurn',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        villageGreenCard,
+        async triggeredArgs => {
           await triggeredArgs.actionService.run('drawCard', {
             playerId: cardEffectArgs.playerId,
             count: 1,
           });
           await triggeredArgs.actionService.run('gainAction', { count: 2 });
         },
-      });
+        { id: `village-green:${cardEffectArgs.cardId}:startTurn:${villageGreenPlayInstance}` },
+      );
     },
   },
   wayfarer: {

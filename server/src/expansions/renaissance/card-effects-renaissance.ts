@@ -7,6 +7,7 @@ import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 import { renaissanceArtifactKeys } from './artifact-keys-renaissance.ts';
 import { resolveChooseAbilities } from '../../utils/resolve-choose-abilities.ts';
 import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
+import { registerStartTurnEffect } from '../../utils/register-start-turn-effect.ts';
 
 // Renaissance card effects module (artifacts handled separately).
 const expansion: CardExpansionModule = {
@@ -268,15 +269,10 @@ const expansion: CardExpansionModule = {
             loggerService.debug('[cargo-ship cardGained effect] registering next-turn retrieval');
 
             // Keep Cargo Ship through cleanup and return the set-aside card next turn.
-            cardEffectArgs.registerDurationEffect(cargoShipCard, {
-              id: `cargo-ship:${cardEffectArgs.cardId}:startTurn:${cargoShipPlayInstance}`,
-              playerId: cardEffectArgs.playerId,
-              compulsory: true,
-              once: true,
-              allowMultipleInstances: true,
-              listeningFor: 'startTurn',
-              condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-              triggeredEffectFn: async startTurnArgs => {
+            registerStartTurnEffect(
+              cardEffectArgs,
+              cargoShipCard,
+              async startTurnArgs => {
                 // Move Cargo Ship back to playArea so it discards normally in this turn's cleanup.
 
                 if (setAsideCardId === undefined) {
@@ -303,7 +299,8 @@ const expansion: CardExpansionModule = {
                   to: { location: 'playerHand' },
                 });
               },
-            });
+              { id: `cargo-ship:${cardEffectArgs.cardId}:startTurn:${cargoShipPlayInstance}` },
+            );
           },
         },
         { idSuffix: cardGainedTriggerIdSuffix },
@@ -1123,15 +1120,10 @@ const expansion: CardExpansionModule = {
       loggerService.debug(`[research effect] set aside ${setAsideCardIds.length} card(s)`);
 
       // Keep Research through cleanup and return set-aside cards to hand next turn.
-      cardEffectArgs.registerDurationEffect(researchCard, {
-        id: `research:${cardEffectArgs.cardId}:startTurn:${researchPlayInstance}`,
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        listeningFor: 'startTurn',
-        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        researchCard,
+        async triggeredArgs => {
           loggerService.debug('[research startTurn effect] returning Research to play area');
 
           for (const setAsideCardId of setAsideCardIds) {
@@ -1151,7 +1143,8 @@ const expansion: CardExpansionModule = {
             });
           }
         },
-      });
+        { id: `research:${cardEffectArgs.cardId}:startTurn:${researchPlayInstance}` },
+      );
     },
   },
   scepter: {
