@@ -26,6 +26,93 @@
 
 .ui-dialog-panel {
   pointer-events: auto;
+  display: flex;
+  flex-direction: column;
   max-width: calc(100vw - 24px);
   max-height: calc(100vh - 24px);
+  // 180ms standard dialog entry per design guidelines.
+  animation: ui-dialog-enter 180ms ease-out;
+
+  // Shared structure for both skins; 'none' skin gets neither block.
+  &.skin-light,
+  &.skin-dark {
+    border-radius: var(--theme-radius-xl);
+    box-shadow: var(--theme-shadow-high);
+  }
+
+  // Light skin — the design-guidelines "Dialogs / Modals" standard.
+  &.skin-light {
+    background: var(--theme-surface-panel);
+    border: 1px solid var(--theme-border-medium);
+    color: var(--theme-text-primary);
+  }
+
+  // Dark skin — the design-guidelines "Overlay Panels" match standard.
+  &.skin-dark {
+    background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
+    border: 1px solid var(--theme-border-strong);
+    color: var(--theme-text-on-dark);
+  }
+}
+
+@keyframes ui-dialog-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ui-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--theme-space-sm);
+  padding: var(--theme-space-lg) var(--theme-space-xl);
+  border-bottom: 1px solid var(--theme-border-subtle);
+}
+
+.ui-dialog-heading {
+  margin: 0;
+  font-family: var(--theme-font-display);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.ui-dialog-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--theme-space-2xs);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  border-radius: var(--theme-radius-sm);
+
+  &:hover {
+    background: var(--theme-action-secondary-bg);
+  }
+}
+
+.ui-dialog-body {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding: var(--theme-space-lg) var(--theme-space-xl);
+}
+
+.ui-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--theme-space-sm);
+  padding: var(--theme-space-md) var(--theme-space-xl);
+  border-top: 1px solid var(--theme-border-subtle);
+}
+
+// Shared .btn buttons need contrast adjustments on the dark skin.
+.ui-dialog-panel.skin-dark {
+  .btn-secondary {
+    color: var(--theme-text-on-dark);
+    border-color: var(--theme-border-strong);
+  }
 }

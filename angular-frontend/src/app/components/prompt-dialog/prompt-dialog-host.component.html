@@ -1,6 +1,7 @@
 @let request = activeRequest();
 @if (request) {
   <app-ui-dialog
+    [skin]="'none'"
     [zIndex]="4300"
     [closeOnBackdrop]="false"
     [backdropVariant]="'strong'"

@@ -48,6 +48,7 @@
        game without an email address attached to their account. Links them to
        /profile where they can complete the email-attachment flow. -->
   <app-ui-dialog
+    [skin]="'none'"
     [backdropVariant]="'soft'"
     (close)="dismissEmailRequiredDialog()"
   >
@@ -82,6 +83,7 @@
        existing game and continue with the original intent, return to the
        existing game, or cancel and stay in the lobby. -->
   <app-ui-dialog
+    [skin]="'none'"
     [backdropVariant]="'soft'"
     [closeOnBackdrop]="false"
     (close)="onStillInGameCancel()"

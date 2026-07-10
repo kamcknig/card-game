@@ -388,6 +388,7 @@
 <!-- single shared selection modal for kingdoms and landscapes -->
 @if (activeSelectionModal(); as modal) {
   <app-ui-dialog
+    [skin]="'none'"
     [zIndex]="4300"
     [backdropVariant]="'strong'"
     (close)="closeSelectionModal()"
@@ -408,6 +409,7 @@
 
 @if (saveDialogVisible()) {
   <app-ui-dialog
+    [skin]="'none'"
     [zIndex]="4400"
     [backdropVariant]="'strong'"
     (close)="closeSaveDialog()"
@@ -451,6 +453,7 @@
 
 @if (loadDialogVisible()) {
   <app-ui-dialog
+    [skin]="'none'"
     [zIndex]="4400"
     [backdropVariant]="'strong'"
     (close)="closeLoadDialog()"
