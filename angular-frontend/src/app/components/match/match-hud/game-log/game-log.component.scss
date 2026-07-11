@@ -270,8 +270,6 @@
   padding: var(--theme-space-md) var(--theme-space-lg);
   box-sizing: border-box;
   overflow: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--theme-border-strong) transparent;
 
   // Spacing between log entries. Scoped to .log-content so the rule does NOT
   // bleed onto the header / settings-panel / row children, where it would

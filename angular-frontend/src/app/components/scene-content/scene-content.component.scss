@@ -26,20 +26,4 @@ app-scene-banner {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  // Keep scrollbar visible in the content section only.
-  scrollbar-width: thin;
-  scrollbar-color: var(--theme-border-strong) transparent;
-}
-
-.scene-content-body::-webkit-scrollbar {
-  width: 10px;
-}
-
-.scene-content-body::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.scene-content-body::-webkit-scrollbar-thumb {
-  background-color: var(--theme-border-strong);
-  border-radius: var(--theme-radius-lg);
 }
