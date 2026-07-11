@@ -50,6 +50,42 @@ hr {
   all: unset;
 }
 
+// ── Scrollbars ─────────────────────────────────────────────────────────────
+//
+// One themed recipe for every scrollbar in the app. scrollbar-width/
+// scrollbar-color are inherited CSS properties, so setting them once on
+// html cascades to every scrollable descendant — no per-component rule
+// needed for Firefox. WebKit's ::-webkit-scrollbar pseudo-elements don't
+// inherit, so they're targeted via the universal selector instead, which
+// covers every current AND future scrollable region automatically.
+//
+// --theme-border-strong is used as the thumb color for both engines — it
+// already reads clearly against every backdrop a scrollbar appears on in
+// this app: light/dark panel surfaces, the light/dark game-log background,
+// and the near-black rgba(0,0,0,0.8) dialog backdrop (skin="dark" dialogs,
+// the chromeless card-detail overlay).
+//
+// Do not add a component-local scrollbar-width / scrollbar-color /
+// ::-webkit-scrollbar* rule — this covers every overflow: auto region.
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--theme-border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--theme-border-strong);
+  border-radius: var(--theme-radius-lg);
+}
+
 // Hover-revealed remove affordance shown over chosen cards in the match
 // configuration screen (kingdoms, banned, events, landmarks, projects,
 // ways, traits, allies, prophecies). Renders a circular dark badge with

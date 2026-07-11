@@ -15,11 +15,12 @@
 4. [Spacing Scale](#spacing-scale)
 5. [Border Radii](#border-radii)
 6. [Shadows & Elevation](#shadows--elevation)
-7. [Animation & Transitions](#animation--transitions)
-8. [Component Patterns](#component-patterns)
-9. [Key Rules](#key-rules)
-10. [File Structure](#file-structure)
-11. [QA Checklist](#qa-checklist)
+7. [Scrollbars](#scrollbars)
+8. [Animation & Transitions](#animation--transitions)
+9. [Component Patterns](#component-patterns)
+10. [Key Rules](#key-rules)
+11. [File Structure](#file-structure)
+12. [QA Checklist](#qa-checklist)
 
 ---
 
@@ -345,6 +346,41 @@ Shadows should be minimal. Most elements use **no shadow** — the warm surface 
 
 ---
 
+## Scrollbars
+
+One themed recipe applies to every scrollbar in the app — thin, colored to `--theme-border-strong`, transparent track. Defined **once, globally**, in `styles.scss`. No component ever needs its own scrollbar rule.
+
+```css
+/* Firefox — scrollbar-width/scrollbar-color are inherited, so setting them
+   once on html cascades to every scrollable descendant. */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--theme-border-strong) transparent;
+}
+
+/* WebKit (Chrome/Edge/Safari) — ::-webkit-scrollbar doesn't inherit, so it's
+   targeted via the universal selector to cover every scrollable element. */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--theme-border-strong);
+  border-radius: var(--theme-radius-lg);
+}
+```
+
+`--theme-border-strong` was chosen because it already reads clearly against every backdrop a scrollbar appears on in this app: light panels, dark panels, and the near-black `rgba(0,0,0,0.8)` dialog backdrop used by `skin="dark"` dialogs and the chromeless `skin="none"` card-detail overlay.
+
+**Never add a component-local `scrollbar-width` / `scrollbar-color` / `::-webkit-scrollbar*` rule.** The global rule already covers every `overflow: auto` / `overflow-y: auto` / `overflow-x: auto` region automatically, including ones added in the future. If a specific scrollable region genuinely needs different treatment, override locally and leave a comment explaining why.
+
+---
+
 ## Animation & Transitions
 
 ### Standard durations
@@ -586,7 +622,8 @@ var(--theme-border-subtle)`. Title uses Display font, 15–16px, 600 weight,
 uppercase.
 
 **Scrollable body (shell-provided, `.ui-dialog-body`):** `flex: 1;
-overflow-y: auto; padding: 16px 20px`. Use `scrollbar-width: thin`.
+overflow-y: auto; padding: 16px 20px`. Scrollbar styling comes from the
+global recipe (see [Scrollbars](#scrollbars)) — no local rule needed.
 
 **Footer:** consumers project a `<div class="ui-dialog-footer">` into the
 shell (absent footer renders nothing). `padding: 12px 20px; border-top: 1px
@@ -646,6 +683,7 @@ Both use `transition: filter 120ms ease`. Dark overrides via `:host-context([dat
 8. **All new tokens must use the `--theme-` prefix.**
 9. **Spacing on a 4px grid.** All padding, margins, and gaps should be multiples of 4.
 10. **Use shared button/form classes** from `styles.scss` — don't re-implement.
+11. **Never re-implement scrollbar styling per component.** The global recipe in `styles.scss` (see [Scrollbars](#scrollbars)) covers every scrollable region automatically. Audit with: `grep -rn "scrollbar-width\|scrollbar-color\|::-webkit-scrollbar" angular-frontend/src/app/components` (should return nothing).
 
 ---
 
@@ -692,3 +730,4 @@ src/
 - [ ] Shadows match the elevation scale (none/low/medium/high)
 - [ ] Form fields use shared `.form-*` classes
 - [ ] Dialogs follow the modal pattern with proper backdrop, header, body, footer
+- [ ] Scrollable regions rely on the global scrollbar styling — no component-local `scrollbar-*` / `::-webkit-scrollbar*` rules added
