@@ -17,7 +17,7 @@ import { selectablePileStore } from '../../../state/interactive-pile-logic';
 import { boardSelectionOverlayStore } from '../../../state/board-selection-overlay-state';
 import { selectableCardStore, waySelectableCardStore } from '../../../state/interactive-logic';
 import { getSupplyPileTokenVisualMap } from '../views/token-utils';
-import { displayCardDetail } from '../views/modal/display-card-detail';
+import { openCardDetailDialog } from '../../../state/card-detail-dialog-state';
 import { WAY_PICKER_PANEL_WIDTH_PX, WayPickerOverlayService } from '../../../core/way-picker/way-picker-overlay.service';
 import { SUPPLY_PANEL_GAP_PX } from '../supply/supply-layout.constants';
 
@@ -383,13 +383,22 @@ export class MatchNonSupplyComponent {
   }
 
   // Opens trait detail art using the existing right-click detail dialog.
+  // Builds the dialog state directly (bypassing displayCardDetail's
+  // cardId-only path, since a Trait isn't a Card) so the base card shows as
+  // an extra alongside the trait's own art — makes the trait <-> base card
+  // relationship bidirectional (base -> trait already worked via
+  // displayCardDetail's extras lookup).
   onTraitContextMenu(event: MouseEvent, pile: NonSupplyPileRowViewModel): void {
     event.preventDefault();
     event.stopPropagation();
     if (!pile.trait) {
       return;
     }
-    void displayCardDetail({ detailImagePath: pile.trait.detailImagePath });
+    const baseCard = pile.cardId !== null ? this._cardsById()[pile.cardId] : undefined;
+    openCardDetailDialog({
+      primary: { detailImagePath: pile.trait.detailImagePath },
+      extras: baseCard ? [{ cardId: baseCard.id, detailImagePath: baseCard.detailImagePath }] : [],
+    });
   }
 
   // Forwards way selections from overlay to existing card-tap-as-way flow.

@@ -250,55 +250,10 @@
     }
   </div>
 
-  <!-- Bottom row: deck stack on the left, hand panel in the middle, discard
-       stack on the right. Phase status bar above is at the column level so
-       its top/bottom dividers reach the column borders. -->
+  <!-- Bottom row: hand panel, full width. Deck/discard stacks now render in
+       the basic-supply panel (column 1). Phase status bar above is at the
+       column level so its top/bottom dividers reach the column borders. -->
   <section class="player-bottom-row">
-    @let deck = deckPile();
-    <section class="stack-panel stack-panel-half">
-      <div class="stack-label stack-label-top">DECK</div>
-      <button
-        type="button"
-        class="board-card stack-card"
-        [class.selectable-card]="deck.selectable"
-        [class.selected-card]="deck.selected"
-        [class.way-selectable]="deck.waySelectable"
-        [disabled]="deck.cardId === null"
-        (click)="deck.cardId !== null && onCardClick(deck.cardId, $event)"
-        (mouseenter)="deck.cardId !== null && onCardMouseEnter(deck.cardId, $event)"
-        (mouseleave)="deck.cardId !== null && onCardMouseLeave(deck.cardId)"
-      >
-        @if (deck.cardId !== null) {
-          <app-card
-            [cardId]="deck.cardId"
-            [forceFacing]="deck.forceFacing"
-            [count]="deck.showCount ? deck.count : 0"
-          ></app-card>
-        } @else {
-          <div class="empty-stack">Empty</div>
-        }
-        @if (deck.tokenBadges.length > 0) {
-          <div class="stack-token-badges">
-            @for (badge of deck.tokenBadges; track badge.id) {
-              @if (badge.imagePath) {
-                <app-token-image-badge
-                  [imagePath]="badge.imagePath"
-                  [highlightColor]="badge.color"
-                ></app-token-image-badge>
-              } @else {
-                <div class="stack-token-badge" [style.background]="badge.color">
-                  {{ badge.label }}
-                  @if (badge.count > 1) {
-                    <span>{{ badge.count }}</span>
-                  }
-                </div>
-              }
-            }
-          </div>
-        }
-      </button>
-    </section>
-
     <section
       #handPanel
       class="hand-panel"
@@ -324,32 +279,6 @@
           </button>
         }
       </div>
-    </section>
-
-    @let discard = discardPile();
-    <section class="stack-panel stack-panel-half">
-      <div class="stack-label stack-label-top">DISCARD</div>
-      <button
-        type="button"
-        class="board-card stack-card"
-        [class.selectable-card]="discard.selectable"
-        [class.selected-card]="discard.selected"
-        [class.way-selectable]="discard.waySelectable"
-        [disabled]="discard.cardId === null"
-        (click)="discard.cardId !== null && onCardClick(discard.cardId, $event)"
-        (mouseenter)="discard.cardId !== null && onCardMouseEnter(discard.cardId, $event)"
-        (mouseleave)="discard.cardId !== null && onCardMouseLeave(discard.cardId)"
-      >
-        @if (discard.cardId !== null) {
-          <app-card
-            [cardId]="discard.cardId"
-            [forceFacing]="'front'"
-            [count]="discard.showCount ? discard.count : 0"
-          ></app-card>
-        } @else {
-          <div class="empty-stack">Empty</div>
-        }
-      </button>
     </section>
   </section>
 }

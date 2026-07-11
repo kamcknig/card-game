@@ -2,9 +2,17 @@ import { Supply } from 'shared/types/index.ts';
 import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 
 export const configureUrchin = async (args: ExpansionConfiguratorContext) => {
-  if (!args.config.kingdomSupply.some(supply => supply.name === 'urchin')) {
+  const urchinSupply = args.config.kingdomSupply.find(supply => supply.name === 'urchin');
+  if (!urchinSupply) {
     return;
   }
+
+  // Point Urchin at the Mercenary pile so the detail dialog can show them as
+  // siblings, regardless of whether the Mercenary pile itself still needs
+  // to be built below.
+  urchinSupply.cards.forEach(card => {
+    card.linkedPileKey = 'mercenary';
+  });
 
   if (args.config.nonSupply?.some(supply => supply.name === 'mercenary')) {
     return;

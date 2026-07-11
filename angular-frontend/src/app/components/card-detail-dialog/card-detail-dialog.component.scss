@@ -21,3 +21,35 @@
   user-select: none;
   pointer-events: none;
 }
+
+// Groups the primary image with its sibling column so the pair centers as
+// one unit within .card-detail-panel.
+.card-detail-group {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--theme-space-lg);
+}
+
+.card-detail-siblings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--theme-space-sm);
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+}
+
+// Siblings are smaller and clickable (right-click promotes them to
+// primary) — overrides the base image's pointer-events: none.
+.card-detail-sibling {
+  max-width: calc((100vw - 64px) * 0.25);
+  max-height: calc((100vh - 64px) * 0.36);
+  cursor: pointer;
+  pointer-events: auto;
+  opacity: 0.85;
+  transition: opacity 120ms ease;
+}
+
+.card-detail-sibling:hover {
+  opacity: 1;
+}

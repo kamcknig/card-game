@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, afterNextRender, input, output, viewChild } from '@angular/core';
 import { LucideAngularModule, Search, X } from 'lucide-angular';
 
 // Shared search box: magnifying-glass icon, text input, and a clear (X)
@@ -27,6 +27,23 @@ export class SearchInputComponent {
 
   readonly SearchIcon = Search;
   readonly XIcon = X;
+
+  private readonly _inputEl = viewChild<ElementRef<HTMLInputElement>>('inputEl');
+
+  constructor() {
+    // Imperative focus instead of the native `autofocus` attribute: the
+    // browser's autofocus-processed flag is scoped to the Document and is
+    // consumed permanently on first use, so a native `autofocus` attribute
+    // silently no-ops on every open after the first in an SPA that never
+    // navigates the top-level document. afterNextRender runs once per
+    // component instance, and the consuming modal is destroyed/recreated
+    // (not reused) on every open, so this fires fresh every time.
+    afterNextRender(() => {
+      if (this.autofocus()) {
+        this._inputEl()?.nativeElement.focus();
+      }
+    });
+  }
 
   onInput(next: string): void {
     this.valueChange.emit(next);

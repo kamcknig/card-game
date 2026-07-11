@@ -66,4 +66,12 @@ export const configureYoungWitch = (args: ExpansionConfiguratorContext) => {
     name: chosenCard.kingdom,
     cards: new Array(getDefaultKingdomSupplySize(chosenCard, args.config)).fill(chosenCard),
   });
+
+  // Point Young Witch at the bane pile so the detail dialog can show them as
+  // siblings of each other (bidirectional: bane -> young-witch resolved
+  // client-side by scanning for linkedPileKey === 'young-witch' pile key).
+  const youngWitchSupply = args.config.kingdomSupply.find(supply => supply.name === 'young-witch');
+  youngWitchSupply?.cards.forEach(card => {
+    card.linkedPileKey = chosenCard.kingdom;
+  });
 };

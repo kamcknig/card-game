@@ -4,7 +4,19 @@ import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 export const configureJoust = async (args: ExpansionConfiguratorContext) => {
   const joustPresent = args.config.kingdomSupply.some(supply => supply.name === 'joust');
 
-  if (!joustPresent || args.config.nonSupply?.some(supply => supply.name === 'rewards')) {
+  if (!joustPresent) {
+    return;
+  }
+
+  // Point Joust at the Prizes (rewards) pile so the detail dialog can show
+  // them as siblings, regardless of whether the rewards pile itself still
+  // needs to be built below.
+  const joustSupply = args.config.kingdomSupply.find(supply => supply.name === 'joust');
+  joustSupply?.cards.forEach(card => {
+    card.linkedPileKey = 'rewards';
+  });
+
+  if (args.config.nonSupply?.some(supply => supply.name === 'rewards')) {
     return;
   }
 

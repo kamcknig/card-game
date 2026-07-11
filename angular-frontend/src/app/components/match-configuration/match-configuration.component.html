@@ -141,7 +141,7 @@
             <span
               class="banned-card-item"
               [style.--banned-stack-index]="i"
-              (contextmenu)="onSlotContextMenu($event, bannedCard?.detailImagePath)"
+              (contextmenu)="onSlotContextMenu($event, bannedCard)"
             >
               <app-card [cardData]="bannedCard" [forceFacing]="'front'"></app-card>
               @if (isOwner) {
@@ -164,7 +164,7 @@
               class="kingdom"
               [ngStyle]="{'cursor': isOwner && kingdom === null ? 'pointer' : 'default'}"
               (click)="kingdom === null && isOwner ? openSelectionModal('kingdom') : null"
-              (contextmenu)="onSlotContextMenu($event, kingdom?.detailImagePath)"
+              (contextmenu)="onSlotContextMenu($event, kingdom)"
             >
               @if (kingdom !== null && isOwner) {
                 <div (click)="deleteKingdom(kingdom)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>
@@ -194,7 +194,7 @@
               [class.is-empty]="event === null"
               [ngStyle]="{'cursor': isOwner && event === null ? 'pointer' : 'default'}"
               (click)="event === null && isOwner ? openSelectionModal('events') : null"
-              (contextmenu)="onSlotContextMenu($event, event?.detailImagePath)"
+              (contextmenu)="onSlotContextMenu($event, event)"
             >
               @if (event !== null && isOwner) {
                 <div (click)="deleteEvent(event)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>
@@ -220,7 +220,7 @@
               [class.is-empty]="landmark === null"
               [ngStyle]="{'cursor': isOwner && landmark === null ? 'pointer' : 'default'}"
               (click)="landmark === null && isOwner ? openSelectionModal('landmarks') : null"
-              (contextmenu)="onSlotContextMenu($event, landmark?.detailImagePath)"
+              (contextmenu)="onSlotContextMenu($event, landmark)"
             >
               @if (landmark !== null && isOwner) {
                 <div (click)="deleteLandmark(landmark)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>
@@ -246,7 +246,7 @@
               [class.is-empty]="project === null"
               [ngStyle]="{'cursor': isOwner && project === null ? 'pointer' : 'default'}"
               (click)="project === null && isOwner ? openSelectionModal('projects') : null"
-              (contextmenu)="onSlotContextMenu($event, project?.detailImagePath)"
+              (contextmenu)="onSlotContextMenu($event, project)"
             >
               @if (project !== null && isOwner) {
                 <div (click)="deleteProject(project)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>
@@ -272,7 +272,7 @@
               [class.is-empty]="way === null"
               [ngStyle]="{'cursor': isOwner && way === null ? 'pointer' : 'default'}"
               (click)="way === null && isOwner ? openSelectionModal('ways') : null"
-              (contextmenu)="onSlotContextMenu($event, way?.detailImagePath)"
+              (contextmenu)="onSlotContextMenu($event, way)"
             >
               @if (way !== null && isOwner) {
                 <div (click)="deleteWay(way)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>
@@ -298,7 +298,7 @@
               [class.is-empty]="trait === null"
               [ngStyle]="{'cursor': isOwner && trait === null ? 'pointer' : 'default'}"
               (click)="trait === null && isOwner ? openSelectionModal('traits') : null"
-              (contextmenu)="onSlotContextMenu($event, trait?.detailImagePath)"
+              (contextmenu)="onSlotContextMenu($event, trait)"
             >
               @if (trait !== null && isOwner) {
                 <div (click)="deleteTrait(trait)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>
@@ -328,7 +328,7 @@
                 'cursor': isOwner && ally === null ? (canAddAllySelection ? 'pointer' : 'not-allowed') : 'default'
               }"
               (click)="ally === null && isOwner && canAddAllySelection ? openSelectionModal('allies') : null"
-              (contextmenu)="onSlotContextMenu($event, ally?.detailImagePath)"
+              (contextmenu)="onSlotContextMenu($event, ally)"
             >
               @if (ally !== null && isOwner) {
                 <div (click)="deleteAlly(ally)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>
@@ -362,7 +362,7 @@
                 'cursor': isOwner && prophecy === null ? (canAddProphecySelection ? 'pointer' : 'not-allowed') : 'default'
               }"
               (click)="prophecy === null && isOwner && canAddProphecySelection ? openSelectionModal('prophecies') : null"
-              (contextmenu)="onSlotContextMenu($event, prophecy?.detailImagePath)"
+              (contextmenu)="onSlotContextMenu($event, prophecy)"
             >
               @if (prophecy !== null && isOwner) {
                 <div (click)="deleteProphecy(prophecy)" class="close-button"><lucide-icon [img]="RemoveIcon" [size]="14" /></div>

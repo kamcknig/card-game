@@ -19,21 +19,46 @@
     }
   </div>
 
-  <!-- Type filter chips — only shown for card catalogs that expose types -->
-  @if (availableTypes().length > 0) {
-    <div class="type-chips">
-      <button
-        class="type-chip"
-        [class.active]="activeTypeFilter().size === 0"
-        (click)="clearTypeFilter()"
-      >All</button>
-      @for (type of availableTypes(); track type) {
+  <!-- Expansion filter chips — shown whenever more than one expansion is
+       present in the result set. -->
+  @if (availableExpansions().length > 0) {
+    <div class="filter-section">
+      <span class="filter-section-title">Expansion</span>
+      <div class="type-chips">
         <button
           class="type-chip"
-          [class.active]="activeTypeFilter().has(type)"
-          (click)="onTypeFilterClick(type)"
-        >{{ toTypeLabel(type) }}</button>
-      }
+          [class.active]="activeExpansionFilter().size === 0"
+          (click)="clearExpansionFilter()"
+        >All</button>
+        @for (expansionName of availableExpansions(); track expansionName) {
+          <button
+            class="type-chip"
+            [class.active]="activeExpansionFilter().has(expansionName)"
+            (click)="onExpansionFilterClick(expansionName)"
+          >{{ toExpansionLabel(expansionName) }}</button>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Type filter chips — only shown for card catalogs that expose types -->
+  @if (availableTypes().length > 0) {
+    <div class="filter-section" [class.filter-section-divided]="availableExpansions().length > 0">
+      <span class="filter-section-title">Card Type</span>
+      <div class="type-chips">
+        <button
+          class="type-chip"
+          [class.active]="activeTypeFilter().size === 0"
+          (click)="clearTypeFilter()"
+        >All</button>
+        @for (type of availableTypes(); track type) {
+          <button
+            class="type-chip"
+            [class.active]="activeTypeFilter().has(type)"
+            (click)="onTypeFilterClick(type)"
+          >{{ toTypeLabel(type) }}</button>
+        }
+      </div>
     </div>
   }
 

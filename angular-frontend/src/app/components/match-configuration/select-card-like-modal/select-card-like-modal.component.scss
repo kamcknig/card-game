@@ -22,6 +22,29 @@
   white-space: nowrap;
 }
 
+/* ── Filter sections (expansion, then card type) ── */
+.filter-section {
+  margin-bottom: var(--theme-space-md);
+}
+
+.filter-section-title {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--theme-text-tertiary);
+  margin-bottom: var(--theme-space-xs);
+  text-align: left;
+}
+
+// Visually delineates the type-chip section from the expansion-chip
+// section above it.
+.filter-section-divided {
+  padding-top: var(--theme-space-md);
+  border-top: 1px solid var(--theme-border-subtle);
+}
+
 /* ── Type filter chips ── */
 .type-chips {
   display: flex;

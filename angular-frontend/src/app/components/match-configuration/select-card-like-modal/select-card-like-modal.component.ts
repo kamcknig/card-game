@@ -24,6 +24,7 @@ import {
 } from 'shared/types';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { selectableSearchCatalogStore } from '../../../state/selectable-search-state';
+import { expansionListStore } from '../../../state/expansion-list-state';
 import { Subject, debounceTime, startWith } from 'rxjs';
 import { LucideAngularModule, Check } from 'lucide-angular';
 import { CardComponent } from '../../card/card.component';
@@ -112,12 +113,20 @@ export class SelectCardLikeModalComponent implements OnInit {
   /** Active type chip filters; empty set = show all types. */
   readonly activeTypeFilter = signal(new Set<string>());
 
+  /** Active expansion chip filters; empty set = show all expansions. */
+  readonly activeExpansionFilter = signal(new Set<string>());
+
   /** Set of currently selected card keys. */
   readonly selectedCardKeys = signal(new Set<string>());
 
   private readonly _searchCatalog = toSignal(
     this._nanoService.useStore(selectableSearchCatalogStore),
     { initialValue: selectableSearchCatalogStore.get() }
+  );
+
+  private readonly _expansionList = toSignal(
+    this._nanoService.useStore(expansionListStore),
+    { initialValue: expansionListStore.get() }
   );
 
   /** Full unfiltered result list for the active catalog kind, minus basic cards when requested. */
@@ -144,15 +153,31 @@ export class SelectCardLikeModalComponent implements OnInit {
     return [...typeSet].sort();
   });
 
-  /** Filtered result list driven by search term and type filter. */
+  /** Distinct expansions present in the full result set, sorted alphabetically. */
+  readonly availableExpansions = computed<string[]>(() => {
+    const expansionSet = new Set<string>();
+    for (const result of this.allCatalogResults()) {
+      if ('expansionName' in result && typeof result.expansionName === 'string') {
+        expansionSet.add(result.expansionName);
+      }
+    }
+    return [...expansionSet].sort();
+  });
+
+  /** Filtered result list driven by search term, type filter, and expansion filter. */
   readonly displaySearchResults = computed<readonly SelectableSearchResult[]>(() => {
     const searchTerm = this.searchTermValue().trim().toLowerCase();
     const typeFilter = this.activeTypeFilter();
+    const expansionFilter = this.activeExpansionFilter();
 
     return this.allCatalogResults().filter((result) => {
       if (typeFilter.size > 0) {
         const types = 'type' in result ? (result.type as CardType[]) : [];
         if (!types.some((t) => typeFilter.has(t))) return false;
+      }
+      if (expansionFilter.size > 0) {
+        const expansionName = 'expansionName' in result ? (result.expansionName as string) : '';
+        if (!expansionFilter.has(expansionName)) return false;
       }
       if (searchTerm.length < 1) return true;
       if (result.cardName.toLowerCase().includes(searchTerm)) return true;
@@ -162,6 +187,12 @@ export class SelectCardLikeModalComponent implements OnInit {
       }
       if ('expansionName' in result && typeof result.expansionName === 'string') {
         if (result.expansionName.toLowerCase().includes(searchTerm)) return true;
+      }
+      // Split-pile representatives (e.g. "Clashes", "Castles") carry every
+      // individual member's own name here — lets a search for "Battle
+      // Plan" or "Humble Castle" surface the single deduped pile row.
+      if ('searchAliases' in result && Array.isArray(result.searchAliases)) {
+        if ((result.searchAliases as string[]).some((alias) => alias.toLowerCase().includes(searchTerm))) return true;
       }
       return false;
     });
@@ -199,7 +230,9 @@ export class SelectCardLikeModalComponent implements OnInit {
 
   /** True when the search and type filter together yield no results. */
   readonly shouldShowNoResults = computed(() => {
-    const hasFilter = this.searchTermValue().trim().length > 0 || this.activeTypeFilter().size > 0;
+    const hasFilter = this.searchTermValue().trim().length > 0
+      || this.activeTypeFilter().size > 0
+      || this.activeExpansionFilter().size > 0;
     return hasFilter && this.displaySearchResults().length === 0;
   });
 
@@ -238,6 +271,22 @@ export class SelectCardLikeModalComponent implements OnInit {
   /** Clears all active type filters, showing all types. */
   clearTypeFilter(): void {
     this.activeTypeFilter.set(new Set());
+  }
+
+  /** Toggles an expansion in the active filter set. */
+  onExpansionFilterClick(expansionName: string): void {
+    const current = new Set(this.activeExpansionFilter());
+    if (current.has(expansionName)) {
+      current.delete(expansionName);
+    } else {
+      current.add(expansionName);
+    }
+    this.activeExpansionFilter.set(current);
+  }
+
+  /** Clears all active expansion filters, showing all expansions. */
+  clearExpansionFilter(): void {
+    this.activeExpansionFilter.set(new Set());
   }
 
   /**
@@ -282,6 +331,11 @@ export class SelectCardLikeModalComponent implements OnInit {
   /** Returns the display label for a type string (title-cased). */
   toTypeLabel(type: string): string {
     return type.charAt(0) + type.slice(1).toLowerCase();
+  }
+
+  /** Returns the display label for an expansion name (falls back to the raw name). */
+  toExpansionLabel(expansionName: string): string {
+    return this._expansionList().find((e) => e.name === expansionName)?.title ?? expansionName;
   }
 
   /** Retrieves the raw result array for the requested catalog kind. */

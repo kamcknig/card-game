@@ -2,12 +2,12 @@ import { ChangeDetectionStrategy, Component, computed, inject, input } from '@an
 import { NgTemplateOutlet } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
-import { Card, CardCost, CardId, CardKey, CardLikeId, Match, PlayerId, TokenDefinition, TokenId, Trait } from 'shared/types';
+import { Card, CardCost, CardId, CardKey, CardLikeId, Match, PlayerId, TokenDefinition, TokenId, TokenInstance, Trait } from 'shared/types';
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { CardComponent } from '../../card/card.component';
 import { TokenImageBadgeComponent } from '../token-image-badge/token-image-badge.component';
 import { cardStore } from '../../../state/card-state';
-import { getCardSourceStore } from '../../../state/card-source-store';
+import { cardSourceStore, getCardSourceStore } from '../../../state/card-source-store';
 import { awaitingServerLockReleaseStore, promptInteractionLockStore, selectedCardStore, selectedPileStore } from '../../../state/interactive-state';
 import { selectablePileStore } from '../../../state/interactive-pile-logic';
 import { boardSelectionOverlayStore } from '../../../state/board-selection-overlay-state';
@@ -17,8 +17,8 @@ import { basicSupplies, kingdomSupplies } from '../../../state/match-logic';
 import { matchStore } from '../../../state/match-state';
 import { selfPlayerIdStore } from '../../../state/player-state';
 import { tokenDefinitionStore } from '../../../state/token-definition-state';
-import { displayCardDetail } from '../views/modal/display-card-detail';
-import { getSupplyPileTokenVisualMap } from '../views/token-utils';
+import { openCardDetailDialog } from '../../../state/card-detail-dialog-state';
+import { getSupplyPileTokenVisualMap, getTokenImagePath, getTokenShortLabel } from '../views/token-utils';
 import { WAY_PICKER_PANEL_WIDTH_PX, WayPickerOverlayService } from '../../../core/way-picker/way-picker-overlay.service';
 import { SUPPLY_PANEL_GAP_PX } from './supply-layout.constants';
 
@@ -53,6 +53,19 @@ type SupplyTokenChipViewModel = {
   textColor: string;
 };
 
+// Render model for the local player's deck/discard stacks, rendered in the
+// basic-supply panel.
+type SupplyPlayerStackViewModel = {
+  cardId: CardId | null;
+  count: number;
+  showCount: boolean;
+  forceFacing: 'front' | 'back';
+  selectable: boolean;
+  selected: boolean;
+  waySelectable: boolean;
+  tokenBadges: SupplyTokenBadgeStackViewModel[];
+};
+
 type SupplyPileViewModel = {
   trackKey: string;
   sourceKey: string;
@@ -82,6 +95,13 @@ type SupplyPileViewModel = {
   templateUrl: './match-supply.component.html',
   styleUrl: './match-supply.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    // Only the basic-area instance (column 1) needs to grow to fill the
+    // rest of its column so the deck/discard row can bottom-anchor below
+    // the victory/treasure/curse piles. The kingdom-area instance sits in
+    // a horizontal row alongside the non-supply panel and must not grow.
+    '[class.supply-area-basic]': "area() === 'basic'",
+  },
 })
 export class MatchSupplyComponent {
   private static readonly WAY_PICKER_EDGE_OVERLAP_PX = 5;
@@ -163,6 +183,13 @@ export class MatchSupplyComponent {
     initialValue: promptInteractionLockStore.get(),
   });
 
+  // Full card-source map — used to resolve the local player's deck/discard
+  // piles (rendered here, in the basic-supply panel) the same way
+  // match-player-area.component.ts resolves hand/play-area cards.
+  private readonly _cardSources = toSignal(this._nanoStores.useStore(cardSourceStore), {
+    initialValue: cardSourceStore.get(),
+  });
+
   private readonly _traitByPile = computed(() => this.buildTraitByPile(this._match() ?? null));
 
   private readonly _tokenVisualByPile = computed(() => this.buildTokenVisualByPile(this._match() ?? null, this._tokenDefinitions()));
@@ -199,6 +226,24 @@ export class MatchSupplyComponent {
     const cardIds = this._kingdomSupplyCardIds() ?? [];
     const sortedKeys = this.sortKeysByCostDescending(keys, cardIds);
     return this.buildSupplyPileModels(sortedKeys, cardIds);
+  });
+
+  // Deck/discard piles for the local player — rendered only when
+  // area() === 'basic'. Mirrors match-player-area.component.ts's former
+  // deckPile/discardPile/buildPileViewModel (moved here so the
+  // basic-supply panel, not the player area, owns their layout).
+  readonly deckPile = computed(() => {
+    const cardsById = this._cardsById() ?? {};
+    const cards = this.resolveCardsBySourceKey(this.selfSourceKey('playerDeck'), cardsById);
+    const topCard = cards[cards.length - 1] ?? null;
+    return this.buildPlayerStackViewModel(topCard, cards.length, 'deck');
+  });
+
+  readonly discardPile = computed(() => {
+    const cardsById = this._cardsById() ?? {};
+    const cards = this.resolveCardsBySourceKey(this.selfSourceKey('playerDiscard'), cardsById);
+    const topCard = cards[cards.length - 1] ?? null;
+    return this.buildPlayerStackViewModel(topCard, cards.length, 'discard');
   });
 
   readonly pileSelectionModeActive = computed(() => (this._selectablePiles()?.length ?? 0) > 0);
@@ -332,6 +377,67 @@ export class MatchSupplyComponent {
     }
   }
 
+  // Click handler for the deck/discard stacks — mirrors the former
+  // onCardClick from match-player-area.component.ts (kept separate from
+  // onPileClick, which has unrelated pile-selection/card-selection
+  // semantics for supply piles).
+  onPlayerStackClick(cardId: CardId, event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (
+      this._awaitingServerLockRelease()
+      || this._promptInteractionLocked()
+      || !(this._selectableCards() ?? []).includes(cardId)
+    ) {
+      return;
+    }
+    const selfPlayerId = this._selfPlayerId();
+    if (selfPlayerId === undefined) {
+      return;
+    }
+    this._wayPickerOverlay.hidePicker();
+    this.emitCardTapWithLock(selfPlayerId, cardId, () => {
+      this._socketService.emit('cardTapped', selfPlayerId, cardId);
+    });
+  }
+
+  // Way-picker hover for the deck/discard stacks — mirrors the former
+  // onCardMouseEnter/onCardMouseLeave from match-player-area.component.ts.
+  onPlayerStackMouseEnter(cardId: CardId, event: MouseEvent): void {
+    if (
+      this._awaitingServerLockRelease()
+      || this._promptInteractionLocked()
+      || !(this._waySelectableCards() ?? []).includes(cardId)
+    ) {
+      return;
+    }
+    const ways = [...(this._match()?.ways ?? [])].sort((left, right) => left.cardKey.localeCompare(right.cardKey));
+    if (ways.length < 1) {
+      return;
+    }
+    const anchorElement = event.currentTarget as HTMLElement | null;
+    if (!anchorElement) {
+      return;
+    }
+    const rect = anchorElement.getBoundingClientRect();
+    const panelWidth = WAY_PICKER_PANEL_WIDTH_PX;
+    const maxLeft = Math.max(SUPPLY_PANEL_GAP_PX, window.innerWidth - panelWidth - SUPPLY_PANEL_GAP_PX);
+    let left = Math.floor(rect.right - MatchSupplyComponent.WAY_PICKER_EDGE_OVERLAP_PX);
+    const top = Math.max(SUPPLY_PANEL_GAP_PX, Math.floor(rect.top));
+    if (left > maxLeft) {
+      left = Math.floor(rect.left - panelWidth + MatchSupplyComponent.WAY_PICKER_EDGE_OVERLAP_PX);
+    }
+    left = Math.max(SUPPLY_PANEL_GAP_PX, Math.min(left, maxLeft));
+    this._wayPickerOverlay.showPicker({ cardId, wayCardLikeIds: ways.map((way) => way.id), left, top }, this.onWaySelected);
+  }
+
+  onPlayerStackMouseLeave(cardId: CardId): void {
+    const activeCardId = this._wayPickerOverlay.activePicker()?.cardId;
+    if (activeCardId === cardId) {
+      this._wayPickerOverlay.scheduleClose();
+    }
+  }
+
   // Opens trait detail art using the existing right-click detail dialog.
   onTraitContextMenu(event: MouseEvent, pile: SupplyPileViewModel) {
     event.preventDefault();
@@ -339,7 +445,16 @@ export class MatchSupplyComponent {
     if (!pile.trait) {
       return;
     }
-    void displayCardDetail({ detailImagePath: pile.trait.detailImagePath });
+    // Build the dialog state directly (bypassing displayCardDetail's
+    // cardId-only path, since a Trait isn't a Card) so the base card shows
+    // as an extra alongside the trait's own art — makes the trait <-> base
+    // card relationship bidirectional (base -> trait already worked via
+    // displayCardDetail's extras lookup).
+    const baseCard = pile.cardId !== null ? this._cardsById()[pile.cardId] : undefined;
+    openCardDetailDialog({
+      primary: { detailImagePath: pile.trait.detailImagePath },
+      extras: baseCard ? [{ cardId: baseCard.id, detailImagePath: baseCard.detailImagePath }] : [],
+    });
   }
 
   // Forwards way selections from the shared overlay to the existing socket event flow.
@@ -371,6 +486,60 @@ export class MatchSupplyComponent {
     };
     this._socketService.on('cardTappedComplete', updated);
     emitTap();
+  }
+
+  // Builds a render model for the local player's deck or discard stack,
+  // including selectability/way-picker state and (deck-only) token badges
+  // parked on the deck. Mirrors the former buildPileViewModel from
+  // match-player-area.component.ts.
+  private buildPlayerStackViewModel(topCard: Card | null, count: number, pileType: 'deck' | 'discard'): SupplyPlayerStackViewModel {
+    const cardId = topCard?.id ?? null;
+    const selectableCards = new Set(this._selectableCards() ?? []);
+    const selectedCards = new Set(this._selectedCards() ?? []);
+    const waySelectableCards = new Set(this._waySelectableCards() ?? []);
+    const match = this._match();
+    const selfPlayerId = this._selfPlayerId();
+    const tokenDefinitions = this._tokenDefinitions();
+
+    let tokenBadges: SupplyTokenBadgeStackViewModel[] = [];
+    if (pileType === 'deck' && match && selfPlayerId !== undefined) {
+      const playerColorMap = new Map(match.players.map((player) => [player.id, player.color]));
+      const deckTokens = (Object.values(match.tokens ?? {}) as TokenInstance[])
+        .filter((token) => token.location.type === 'playerDeck' && token.location.playerId === selfPlayerId)
+        .map((token) => ({
+          id: token.id,
+          label: getTokenShortLabel(token.tokenId, tokenDefinitions[token.tokenId]),
+          color: playerColorMap.get(token.ownerId ?? selfPlayerId) ?? '#ffffff',
+          imagePath: getTokenImagePath(token.tokenId),
+        }));
+      tokenBadges = this.buildTokenBadgeStacks(deckTokens);
+    }
+
+    return {
+      cardId,
+      count,
+      showCount: pileType !== 'discard',
+      forceFacing: topCard && pileType === 'deck' && topCard.type.includes('SHADOW') ? 'front' : (pileType === 'deck' ? 'back' : 'front'),
+      selectable: cardId !== null && selectableCards.has(cardId),
+      selected: cardId !== null && selectedCards.has(cardId),
+      waySelectable: cardId !== null && waySelectableCards.has(cardId),
+      tokenBadges,
+    };
+  }
+
+  // Resolves a source-key's live card list — same lookup match-player-area
+  // used for hand/deck/discard/play-area sources.
+  private resolveCardsBySourceKey(sourceKey: string, cardsById: Record<CardId, Card>): Card[] {
+    const sourceMap = this._cardSources() ?? {};
+    return (sourceMap[sourceKey] ?? [])
+      .map((cardId) => cardsById[cardId])
+      .filter((card): card is Card => !!card);
+  }
+
+  // Builds the per-player source key for the local player's deck/discard.
+  private selfSourceKey(baseKey: 'playerDeck' | 'playerDiscard'): string {
+    const selfPlayerId = this._selfPlayerId();
+    return selfPlayerId === undefined ? `${baseKey}:-1` : `${baseKey}:${selfPlayerId}`;
   }
 
   // Sorts supply pile keys by pile treasure cost descending, then by card
