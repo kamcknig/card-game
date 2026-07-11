@@ -26,6 +26,11 @@ let DUMMY_HASH: string | undefined;
  *
  * Behaviors:
  * - Case-insensitive username lookup (stored lowercase in the user store).
+ * - The sign-in identifier may be a username OR an email: the username
+ *   lookup is tried first, then an email lookup when the identifier
+ *   contains '@'. Lockout/failure counters are keyed by the resolved
+ *   user id, so login-by-email shares lockout state with login-by-username
+ *   for the same account.
  * - Unknown-user requests still run a constant-time dummy hash verification
  *   so timing does not reveal account existence (username enumeration).
  * - Supports both argon2id (preferred) and bcrypt (legacy) stored hashes.
@@ -76,9 +81,10 @@ export class UserAccountAuthProvider implements AuthProvider {
   /**
    * Validates the given credentials and returns an AuthResult.
    *
-   * Credentials shape: `{ username: string, password: string }`. Any missing
-   * or wrong-type field is treated as a generic rejection to avoid leaking
-   * which check failed.
+   * Credentials shape: `{ username: string, password: string }`. The
+   * `username` field accepts either a username or an email address — see
+   * {@link resolveUser}. Any missing or wrong-type field is treated as a
+   * generic rejection to avoid leaking which check failed.
    */
   public async authenticate(credentials: Record<string, unknown>): Promise<AuthResult> {
     const username =
@@ -103,7 +109,7 @@ export class UserAccountAuthProvider implements AuthProvider {
       return { ok: true, username };
     }
 
-    const user = await this.userStore.getByUsername(username);
+    const user = await this.resolveUser(username);
 
     // Run a dummy verify even when the user is missing to avoid leaking
     // existence via timing. Also matches the disabled-account case.
@@ -136,6 +142,30 @@ export class UserAccountAuthProvider implements AuthProvider {
     }
 
     return this.authenticateViaArgon2(user, password, now);
+  }
+
+  /**
+   * Resolves the login identifier as a username first (the existing common
+   * case, and safe even for email-shaped usernames since `USERNAME_REGEX`
+   * disallows '@' at registration time), falling back to an email lookup
+   * when the identifier looks like an email.
+   *
+   * `DevBypassUserStore.getByEmail` is explicitly a pass-through (not
+   * synthesized), so an email-shaped bypass login that doesn't match a real
+   * record still falls through to the synthetic-username bypass path via
+   * `getByUsername` — this method is not reached in dev-bypass mode since
+   * {@link authenticate} short-circuits before it, but the ordering keeps
+   * behavior consistent if that ever changes.
+   *
+   * @param identifier  The raw sign-in field value — may be a username or an email.
+   */
+  private async resolveUser(identifier: string): Promise<UserRecord | undefined> {
+    const byUsername = await this.userStore.getByUsername(identifier);
+    if (byUsername) return byUsername;
+    if (identifier.includes('@')) {
+      return this.userStore.getByEmail(identifier);
+    }
+    return undefined;
   }
 
   /**

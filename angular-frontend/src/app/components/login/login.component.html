@@ -26,7 +26,7 @@
 
     <form class="login-form" (ngSubmit)="onSubmit()">
       <label class="form-field">
-        <span class="form-label">Username</span>
+        <span class="form-label">{{ mode() === 'register' ? 'Username' : 'Username or Email' }}</span>
         <div class="form-input-wrapper">
           <input
             type="text"
