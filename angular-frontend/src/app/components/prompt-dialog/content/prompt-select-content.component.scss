@@ -26,6 +26,8 @@
   @include tile.tile-base;
   background: transparent;
   cursor: default;
+  // Anchors the "as Way" badge.
+  position: relative;
   transition: border-color 120ms ease, box-shadow 120ms ease;
 }
 
@@ -45,10 +47,40 @@
   opacity: 0.6;
 }
 
-// Position/z-index/width only — panel chrome + entry list styling now live
-// in WayPickerPanelComponent (shared with the board-level way-picker flyout).
-.way-picker {
+// A card that will be played as a Way trades the green selected ring for the
+// Way-blue one so dialog selection color communicates the play mode.
+.selection-entry.selected.selected-as-way {
+  border-color: var(--theme-color-way);
+  box-shadow: 0 0 0 3px var(--theme-color-way);
+}
+
+// Names the chosen Way on the selected card tile.
+.way-badge {
   position: absolute;
+  left: 50%;
+  bottom: var(--theme-space-2xs);
+  transform: translateX(-50%);
+  max-width: calc(100% - 2 * var(--theme-space-2xs));
+  padding: 1px var(--theme-space-2xs);
+  border-radius: var(--theme-radius-md);
+  background: var(--theme-color-way);
+  color: #1c2733;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+// Position/z-index/width only — panel chrome + entry list styling live in
+// WayPickerPanelComponent (shared with the board flyout). Fixed positioning
+// (viewport coords from resolveTooltipPosition) escapes the dialog body's
+// overflow clipping; same width recipe as way-picker-overlay.component.scss
+// so the 238px card-like entries fit without horizontal overflow. Must stay
+// in sync with TOOLTIP_ESTIMATED_WIDTH_PX (256).
+.way-picker {
+  position: fixed;
   z-index: 6;
-  width: 220px;
+  width: calc(var(--card-landscape-width) + 2 * var(--theme-space-sm) + 2px);
 }

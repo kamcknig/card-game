@@ -116,6 +116,10 @@ const registerWayOfTheChameleonDrawSwap = (args: CardEffectFunctionContext): voi
       allowMultipleInstances: true,
       compulsory: true,
       autoResolve: true,
+      // The swapped +$ replaces the draw entries this trigger suppresses, so
+      // it must log at the same depth they would have used (aligned with the
+      // card's other output), not one level deeper.
+      suppressLogIndent: true,
       condition: ({ trigger, match }) =>
         trigger.args.playerId === args.playerId &&
         trigger.args.count > 0 &&

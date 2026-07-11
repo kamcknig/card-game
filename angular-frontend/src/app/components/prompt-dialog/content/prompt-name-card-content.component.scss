@@ -28,6 +28,10 @@
   transform: translateY(-6px);
 }
 
+.name-card-result.selected {
+  @include tile.tile-selected;
+}
+
 .name-card-empty {
   color: var(--theme-text-on-dark);
   font-size: 14px;

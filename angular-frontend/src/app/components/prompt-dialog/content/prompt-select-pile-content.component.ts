@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, ou
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
 import { CardKey, UserPromptKinds } from 'shared/types';
-import { resolveCountSpec } from 'shared/resolve-count-spec';
 import { validateCountSpec } from 'shared/validate-count-spec';
 import { selectedPileStore } from '../../../state/interactive-state';
 import { createSelectionEmitter } from './selection-emitter';
@@ -22,18 +21,16 @@ export class PromptSelectPileContentComponent {
 
   validationUpdated = output<boolean>();
   resultsUpdated = output<CardKey[]>();
-  finished = output<void>();
 
   private readonly _selectedPiles = toSignal(this._nanoService.useStore(selectedPileStore), {
     initialValue: selectedPileStore.get(),
   });
 
-  // Shared dedup-and-emit machinery for results/validation/auto-finish; see
+  // Shared dedup-and-emit machinery for results/validation; see
   // selection-emitter.ts.
   private readonly _selectionEmitter = createSelectionEmitter<CardKey[]>({
     resultsUpdated: this.resultsUpdated,
     validationUpdated: this.validationUpdated,
-    finished: this.finished,
   });
 
   // Resets local emission signatures whenever prompt payload changes.
@@ -42,7 +39,8 @@ export class PromptSelectPileContentComponent {
     this._selectionEmitter.reset();
   });
 
-  // Emits result + validation updates and applies single-choice auto-finish semantics.
+  // Emits result + validation updates. Submission is always explicit via the
+  // host's Confirm button — this only tracks selection state.
   private readonly _emitSelectionState = effect(() => {
     const selectedPiles = this.selectedPiles();
     const valid = this.isValidSelection();
@@ -50,7 +48,6 @@ export class PromptSelectPileContentComponent {
     this._selectionEmitter.emit({
       result: [...selectedPiles],
       isValid: valid,
-      shouldAutoFinish: this.shouldAutoFinish(),
     });
   });
 
@@ -90,19 +87,5 @@ export class PromptSelectPileContentComponent {
   // Validation state derived from prompt count spec and current selection length.
   private isValidSelection(): boolean {
     return validateCountSpec(this.content().selectCount, this.selectedPiles().length);
-  }
-
-  // Mirrors prior auto-complete behavior for non-optional single-pile selects.
-  private shouldAutoFinish(): boolean {
-    if (this.isOptional()) {
-      return false;
-    }
-
-    const countSpec = resolveCountSpec(this.content().selectCount);
-    if (countSpec.kind === 'fixed') {
-      return countSpec.count === 1;
-    }
-
-    return countSpec.min === 1 && countSpec.max === 1;
   }
 }

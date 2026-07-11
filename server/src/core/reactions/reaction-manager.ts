@@ -477,14 +477,17 @@ export class ReactionManager {
     context: TriggeredEffectContext<T>,
     reactionContext?: ReactionContext,
   ) {
-    // Turn/phase-boundary reactions log flush with the turn's entries; their
-    // cause is conveyed by source attribution rather than indentation.
-    const detached = DETACHED_TRIGGER_EVENTS.has(reaction.listeningFor);
+    // Turn/phase-boundary reactions log flush with the turn's entries (their
+    // cause is conveyed by source attribution rather than indentation);
+    // replacement-style reactions (suppressLogIndent) log at the current
+    // depth so their output aligns with the entries they stand in for.
+    const skipIndent = DETACHED_TRIGGER_EVENTS.has(reaction.listeningFor) ||
+      reaction.suppressLogIndent === true;
     this.loggerService.debug(
-      `[REACTION MANAGER] running reaction ${reaction.id} (${detached ? 'detached: no log indent' : 'in-chain: log indented'})`,
+      `[REACTION MANAGER] running reaction ${reaction.id} (${skipIndent ? 'no log indent' : 'in-chain: log indented'})`,
     );
 
-    if (detached) {
+    if (skipIndent) {
       await reaction.triggeredEffectFn({
         ...context,
         reactionContext,

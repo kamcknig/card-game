@@ -19,7 +19,6 @@
             (validationUpdated)="onValidationUpdated($event)"
             (resultsUpdated)="onResultsUpdated($event)"
             (selectedWayUpdated)="onSelectedWayUpdated($event)"
-            (finished)="onContentFinished()"
           ></app-prompt-select-content>
         }
 
@@ -28,7 +27,6 @@
             [content]="promptContent"
             (validationUpdated)="onValidationUpdated($event)"
             (resultsUpdated)="onResultsUpdated($event)"
-            (finished)="onContentFinished()"
           ></app-prompt-select-content>
         }
 
@@ -44,7 +42,7 @@
           <app-prompt-name-card-content
             [selfPlayerId]="request.selfPlayerId"
             (resultsUpdated)="onResultsUpdated($event)"
-            (finished)="onContentFinished()"
+            (validationUpdated)="onValidationUpdated($event)"
           ></app-prompt-name-card-content>
         }
 
@@ -77,7 +75,6 @@
             [content]="promptContent"
             (validationUpdated)="onValidationUpdated($event)"
             (resultsUpdated)="onResultsUpdated($event)"
-            (finished)="onContentFinished()"
           ></app-prompt-select-pile-content>
         }
       }
