@@ -10,7 +10,7 @@
   <ng-content></ng-content>
   <div class="ui-dialog-footer">
     @if (cancelLabel()) {
-      <button type="button" class="btn btn-secondary" (click)="cancelled.emit()">{{ cancelLabel() }}</button>
+      <button type="button" class="btn btn-danger" (click)="cancelled.emit()">{{ cancelLabel() }}</button>
     }
     <button
       type="button"

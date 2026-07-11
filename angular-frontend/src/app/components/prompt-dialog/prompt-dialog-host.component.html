@@ -87,7 +87,7 @@
           <button
             type="button"
             class="btn"
-            [class.btn-secondary]="actionButton === declineButton()"
+            [class.btn-danger]="actionButton === declineButton()"
             [class.btn-primary]="actionButton !== declineButton()"
             [disabled]="isActionDisabled(actionButton.action)"
             (click)="onActionSelected(actionButton.action)">
