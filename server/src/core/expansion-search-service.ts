@@ -99,16 +99,20 @@ export class ExpansionSearchService {
           // `representative` above never touched `members`.
           representative.searchAliases = members.map(member => member.cardName);
 
-          // Record the OTHER members' cardKey+cardName (representative
-          // excluded — it's already shown as the primary) so the frontend
-          // can render them as detail-view siblings without needing full
+          // Record every member's cardKey+cardName+cost so the frontend can
+          // render them as detail-view siblings without needing full
           // CardNoId objects (see split-pile sibling display in the card
-          // detail dialog).
-          const otherMembers = members.filter(member => member.cardKey !== representative.cardKey);
-          if (otherMembers.length > 0) {
-            representative.pileMembers = otherMembers.map(member => ({
+          // detail dialog). This INCLUDES the representative's own original
+          // identity: its cardName/image are overridden to the pile-level
+          // randomizer art above, so the representative no longer visually
+          // corresponds to any specific member — every real member (not
+          // just "others") must be listed, or that member silently vanishes
+          // from the sibling column.
+          if (members.length > 1) {
+            representative.pileMembers = members.map(member => ({
               cardKey: member.cardKey,
               cardName: member.cardName,
+              cost: member.cost,
             }));
           }
         }

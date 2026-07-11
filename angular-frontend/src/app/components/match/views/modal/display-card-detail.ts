@@ -1,4 +1,5 @@
-import { CardId } from 'shared/types';
+import { Card, CardCost, CardId } from 'shared/types';
+import { compareCardCosts } from 'shared/compare-card-cost';
 import { cardStore } from '../../../../state/card-state';
 import { matchStore } from '../../../../state/match-state';
 import { CardDetailDialogEntry, openCardDetailDialog } from '../../../../state/card-detail-dialog-state';
@@ -18,7 +19,7 @@ type CardDetailArg =
       kingdom?: string;
       cardId?: CardId;
       expansionName?: string;
-      pileMembers?: { cardKey: string; cardName: string }[];
+      pileMembers?: { cardKey: string; cardName: string; cost: CardCost }[];
     };
 
 // Opens the global card detail dialog for a single card (by cardId or an
@@ -66,14 +67,17 @@ export async function displayCardDetail(arg: CardDetailArg) {
 // path is derived the same way CardComponent.onContextMenu derives the
 // primary's — expansionName + cardKey — since individual pile members never
 // carry an imageKeyOverride (that's only ever set on the pile's own
-// representative entry).
+// representative entry). Sorted by cost ascending, per the sibling-column
+// display order used everywhere else in this file.
 function resolveCatalogPileSiblings(arg: CardDetailArg): CardDetailDialogEntry[] {
   if (typeof arg === 'number' || !arg.pileMembers?.length || !arg.expansionName) {
     return [];
   }
-  return arg.pileMembers.map((member) => ({
-    detailImagePath: `/assets/card-images/${arg.expansionName}/${member.cardKey}-detail.jpg`,
-  }));
+  return [...arg.pileMembers]
+    .sort((a, b) => compareCardCosts(a.cost, b.cost))
+    .map((member) => ({
+      detailImagePath: `/assets/card-images/${arg.expansionName}/${member.cardKey}-detail.jpg`,
+    }));
 }
 
 // Finds one representative live Card per distinct sibling cardKey sharing
@@ -81,18 +85,20 @@ function resolveCatalogPileSiblings(arg: CardDetailArg): CardDetailDialogEntry[]
 // holds every card the server has ever created for the match (by id,
 // regardless of current zone), so every split-pile member's own Card
 // object — and its precomputed detailImagePath — is already available
-// client-side with no extra server round-trip.
+// client-side with no extra server round-trip. Sorted by cost ascending.
 function findLivePileSiblings(pileKey: string, excludeCardId?: CardId): CardDetailDialogEntry[] {
   const cardsById = cardStore.get();
   const excludeCardKey = excludeCardId !== undefined ? cardsById[excludeCardId]?.cardKey : undefined;
   const seenCardKeys = new Set<string>(excludeCardKey ? [excludeCardKey] : []);
-  const entries: CardDetailDialogEntry[] = [];
+  const matches: Card[] = [];
   for (const card of Object.values(cardsById)) {
     if (card.kingdom !== pileKey || seenCardKeys.has(card.cardKey)) continue;
     seenCardKeys.add(card.cardKey);
-    entries.push({ cardId: card.id, detailImagePath: card.detailImagePath });
+    matches.push(card);
   }
-  return entries.sort((a, b) => a.detailImagePath.localeCompare(b.detailImagePath));
+  return matches
+    .sort((a, b) => compareCardCosts(a.cost, b.cost))
+    .map((card) => ({ cardId: card.id, detailImagePath: card.detailImagePath }));
 }
 
 // Finds "caused by" siblings in both directions:
@@ -102,33 +108,33 @@ function findLivePileSiblings(pileKey: string, excludeCardId?: CardId): CardDeta
 // - If the primary card belongs to a TARGET pile, include every TRIGGER
 //   currently in the kingdom whose linkedPileKey points at this pile
 //   (naturally covers many:1 — e.g. every Looter present when viewing
-//   Ruins).
+//   Ruins), sorted by cost ascending.
 function findLinkedSiblings(pileKey: string, excludeCardId?: CardId): CardDetailDialogEntry[] {
   const cardsById = cardStore.get();
   const primaryCard = excludeCardId !== undefined ? cardsById[excludeCardId] : undefined;
   const seenCardKeys = new Set<string>(primaryCard ? [primaryCard.cardKey] : []);
   const entries: CardDetailDialogEntry[] = [];
 
-  const addRepresentative = (targetPileKey: string) => {
+  // Forward: I am a trigger — show my target (single representative card).
+  if (primaryCard?.linkedPileKey) {
     for (const card of Object.values(cardsById)) {
-      if (card.kingdom !== targetPileKey || seenCardKeys.has(card.cardKey)) continue;
+      if (card.kingdom !== primaryCard.linkedPileKey || seenCardKeys.has(card.cardKey)) continue;
       seenCardKeys.add(card.cardKey);
       entries.push({ cardId: card.id, detailImagePath: card.detailImagePath });
-      return;
+      break;
     }
-  };
-
-  // Forward: I am a trigger — show my target.
-  if (primaryCard?.linkedPileKey) {
-    addRepresentative(primaryCard.linkedPileKey);
   }
 
   // Reverse: I belong to a target pile — show every trigger pointing at me.
+  const triggers: Card[] = [];
   for (const card of Object.values(cardsById)) {
     if (card.linkedPileKey !== pileKey || seenCardKeys.has(card.cardKey)) continue;
     seenCardKeys.add(card.cardKey);
-    entries.push({ cardId: card.id, detailImagePath: card.detailImagePath });
+    triggers.push(card);
   }
+  triggers
+    .sort((a, b) => compareCardCosts(a.cost, b.cost))
+    .forEach((card) => entries.push({ cardId: card.id, detailImagePath: card.detailImagePath }));
 
   return entries;
 }

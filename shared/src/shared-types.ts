@@ -895,13 +895,16 @@ export class CardLike<M = unknown> {
   // Plan" surface the single "Clashes" row. Undefined for non-pile /
   // single-card entries. Search-index-only — never rendered.
   searchAliases?: string[];
-  // The OTHER members of the same split pile as this pile-representative
-  // catalog entry (cardKey + cardName only — enough to derive each member's
-  // own detail image path via expansionName + cardKey without needing full
-  // CardNoId objects). Undefined for non-pile / single-card entries. Powers
-  // the split-pile sibling display in the card detail dialog when the
-  // primary card comes from the lobby/match-configuration search catalog.
-  pileMembers?: { cardKey: string; cardName: string }[];
+  // Every member of the same split pile (INCLUDING this entry's own
+  // original identity — the representative's cardName/image are overridden
+  // to the pile-level randomizer art above, so it no longer visually
+  // corresponds to any specific member). cardKey + cardName + cost is
+  // enough to derive each member's own detail image path (expansionName +
+  // cardKey) and sort order (cost ascending) without needing full CardNoId
+  // objects. Undefined for non-pile / single-card entries. Powers the
+  // split-pile sibling display in the card detail dialog when the primary
+  // card comes from the lobby/match-configuration search catalog.
+  pileMembers?: { cardKey: string; cardName: string; cost: CardCost }[];
   // The pile key this card's presence in the kingdom causes to exist (e.g.
   // Young Witch's linkedPileKey is the chosen Bane pile's kingdom key; a
   // Looter-typed card's linkedPileKey is 'ruins'). Stamped only on the
