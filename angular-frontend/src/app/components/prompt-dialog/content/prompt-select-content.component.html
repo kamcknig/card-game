@@ -1,4 +1,4 @@
-<div class="prompt-select-content" #promptRoot>
+<div class="prompt-select-content">
   @if (cardEntries().length > 0) {
     <div class="selection-row">
       @for (entry of cardEntries(); track entry.key) {
@@ -7,6 +7,7 @@
           class="selection-entry"
           [class.selectable]="entry.selectable && !displayOnly()"
           [class.selected]="isSelected(entry)"
+          [class.selected-as-way]="isSelectedAsWay(entry)"
           [class.non-selectable]="!entry.selectable && !displayOnly()"
           (mouseenter)="onEntryMouseEnter(entry, $event)"
           (mouseleave)="onEntryMouseLeave(entry)"
@@ -15,6 +16,11 @@
             [cardId]="entry.sourceId"
             [forceFacing]="entry.forceFacing"
           ></app-card>
+          @if (isSelectedAsWay(entry)) {
+            <!-- Names the Way this card will be played as; the blue ring alone
+                 doesn't say which Way was picked. -->
+            <span class="way-badge">{{ selectedWayName() }}</span>
+          }
         </button>
       }
     </div>
@@ -45,6 +51,7 @@
       [style.top.px]="wayTooltipPosition().top"
       [wayIds]="sortedWayIds()"
       [selectedWayId]="selectedWayId()"
+      [wayKind]="'way'"
       [scrollable]="true"
       (waySelected)="selectWay($event)"
       (mouseenter)="onWayTooltipMouseEnter()"
