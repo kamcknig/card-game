@@ -26,6 +26,7 @@ import {
   BaseCardMetadata,
   SetAsideSourceDescriptor,
   SetAsideSourceKind,
+  Way,
 } from 'shared/types/index.ts';
 import { MatchCardLibrary } from '../match-card-library.ts';
 import { LogManager } from '../log-manager.ts';
@@ -3898,11 +3899,52 @@ export class GameActionController implements GameActionDefinitionMap {
     if (queuedWayId !== undefined) {
       return queuedWayId;
     }
-    // No explicit or queued way choice: resolve to normal play without opening a fallback prompt.
+
+    // No explicit or queued choice: per the Menagerie rules ("If you play an
+    // Action card multiple times ... you can choose for each play whether you
+    // want it to use a Way or not"), every effect-driven play (Throne Room's
+    // second play, Vassal, Golem, ...) offers its own way-vs-normal choice.
+    // Direct hand plays never reach here — cardTapped/cardTappedAsWay pass an
+    // explicit wayId (null or an id).
+    return await this.promptWaySelectionForPlay({
+      playerId: args.playerId,
+      card: args.card,
+      activeWays,
+    });
+  }
+
+  // Prompts the playing player to pick normal play or one of the active Ways
+  // for this specific play. Reached only by plays with no explicit or queued
+  // way choice (multiplied/effect-driven plays). The choice is required (the
+  // card is being played either way), so there is no cancel button and the
+  // dialog is non-dismissable client-side. Computer players auto-answer with
+  // the first button (normal play); a missing socket resolves to normal.
+  private async promptWaySelectionForPlay(args: {
+    playerId: PlayerId;
+    card: Card;
+    activeWays: Way[];
+  }): Promise<CardLikeId | null> {
+    const actionButtons = [
+      { label: 'Normally', action: 1 },
+      // Way buttons start at action 2; index maps back to activeWays below.
+      ...args.activeWays.map((way, wayIndex) => ({ label: way.cardName, action: wayIndex + 2 })),
+    ];
+
     this.loggerService.debug(
-      `[playCard action] no explicit/queued way selection for ${args.card}; using normal play path`,
+      `[playCard action] prompting per-play way choice player=${args.playerId} card=${args.card} ways=${args.activeWays.length}`,
     );
-    return null;
+
+    const action = await this.promptService.requestAction({
+      playerId: args.playerId,
+      prompt: `Play ${args.card.cardName} normally or as a Way?`,
+      actionButtons,
+    });
+
+    const selectedWay = action !== null && action >= 2 ? args.activeWays[action - 2] : undefined;
+    this.loggerService.info(
+      `[playCard action] per-play way choice for ${args.card}: ${selectedWay ? selectedWay.cardKey : 'normal'}`,
+    );
+    return selectedWay?.id ?? null;
   }
 
   // Activates a card's instruction pipeline without counting as a new play.
@@ -3993,7 +4035,8 @@ export class GameActionController implements GameActionDefinitionMap {
       playerId: PlayerId;
       cardId: CardId | Card;
       // Optional way selection that replaces the card's on-play effect path.
-      // undefined => prompt, null => explicit normal play, cardLikeId => explicit way play.
+      // undefined => resolve via queued prompt choice or a per-play prompt,
+      // null => explicit normal play, cardLikeId => explicit way play.
       wayId?: CardLikeId | null;
       overrides?: GameActionOverrides;
     },
