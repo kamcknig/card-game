@@ -888,6 +888,20 @@ export class CardLike<M = unknown> {
   // shows e.g. 'castles-art.jpg' rather than the first member's art. Real
   // in-play cards do not set this — they always render their own art.
   imageKeyOverride?: string;
+  // Alternate search terms for a pile-representative catalog entry: the
+  // cardName of every OTHER member of the same split pile (e.g. the
+  // "Clashes" representative carries ["Archer","Warlord","Territory"] when
+  // "Battle Plan" is the representative). Lets a kingdom search for "Battle
+  // Plan" surface the single "Clashes" row. Undefined for non-pile /
+  // single-card entries. Search-index-only — never rendered.
+  searchAliases?: string[];
+  // The OTHER members of the same split pile as this pile-representative
+  // catalog entry (cardKey + cardName only — enough to derive each member's
+  // own detail image path via expansionName + cardKey without needing full
+  // CardNoId objects). Undefined for non-pile / single-card entries. Powers
+  // the split-pile sibling display in the card detail dialog when the
+  // primary card comes from the lobby/match-configuration search catalog.
+  pileMembers?: { cardKey: string; cardName: string }[];
   metadata: M;
 
   constructor(args: CardLike) {

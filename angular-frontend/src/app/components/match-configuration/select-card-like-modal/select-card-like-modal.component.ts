@@ -163,6 +163,12 @@ export class SelectCardLikeModalComponent implements OnInit {
       if ('expansionName' in result && typeof result.expansionName === 'string') {
         if (result.expansionName.toLowerCase().includes(searchTerm)) return true;
       }
+      // Split-pile representatives (e.g. "Clashes", "Castles") carry every
+      // individual member's own name here — lets a search for "Battle
+      // Plan" or "Humble Castle" surface the single deduped pile row.
+      if ('searchAliases' in result && Array.isArray(result.searchAliases)) {
+        if ((result.searchAliases as string[]).some((alias) => alias.toLowerCase().includes(searchTerm))) return true;
+      }
       return false;
     });
   });

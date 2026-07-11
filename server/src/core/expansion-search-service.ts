@@ -88,6 +88,29 @@ export class ExpansionSearchService {
             .split('/')
             .map(segment => formatCardName(segment))
             .join(' / ');
+
+          // Surface EVERY member's own name (including the representative's
+          // own pre-override name, e.g. "Battle Plan" or "King's Castle" —
+          // it's no longer reachable via `cardName` once overridden above)
+          // as an alternate search term, so searching any individual
+          // member's name finds this row. `members` still holds each
+          // card's original, un-overridden cardName at this point —
+          // getPileDefinitionCard returns a spread copy, so mutating
+          // `representative` above never touched `members`.
+          representative.searchAliases = members.map(member => member.cardName);
+
+          // Record the OTHER members' cardKey+cardName (representative
+          // excluded — it's already shown as the primary) so the frontend
+          // can render them as detail-view siblings without needing full
+          // CardNoId objects (see split-pile sibling display in the card
+          // detail dialog).
+          const otherMembers = members.filter(member => member.cardKey !== representative.cardKey);
+          if (otherMembers.length > 0) {
+            representative.pileMembers = otherMembers.map(member => ({
+              cardKey: member.cardKey,
+              cardName: member.cardName,
+            }));
+          }
         }
         dedupedCards.push(representative);
       }
@@ -218,14 +241,20 @@ export class ExpansionSearchService {
     return structuredClone(this._selectableCatalog);
   }
 
-  // Builds a Fuse index for landscape search by display name.
-  private createFuse<T extends { cardName: string }>(items: T[]): Fuse<T> {
-    const index = Fuse.createIndex(['cardName'], items);
+  // Builds a Fuse index for landscape search by display name, plus any
+  // alternate search terms (searchAliases) the entry carries — used by
+  // split-pile representatives so an individual member's own name (e.g.
+  // "Battle Plan") still surfaces the pile's single row (e.g. "Clashes").
+  // Fuse.js 7.x indexes array-valued keys natively — each string in
+  // searchAliases becomes its own candidate match target, but a hit still
+  // resolves to the single owning object, so "one row per pile" holds.
+  private createFuse<T extends { cardName: string; searchAliases?: string[] }>(items: T[]): Fuse<T> {
+    const index = Fuse.createIndex(['cardName', 'searchAliases'], items);
     const fuseOptions: IFuseOptions<T> = {
       ignoreDiacritics: true,
       minMatchCharLength: 1,
       distance: 2,
-      keys: ['cardName'],
+      keys: ['cardName', 'searchAliases'],
     };
     return new Fuse(items, fuseOptions, index);
   }
