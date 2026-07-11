@@ -801,6 +801,17 @@ export class Reaction<T extends TriggerEventType = TriggerEventType> {
   public autoResolve?: boolean = false;
 
   /**
+   * When true, the reaction's triggered effect logs at the current depth
+   * instead of one level deeper. For replacement-style system reactions
+   * (e.g. Way of the Chameleon's draw→treasure swap) whose output stands in
+   * for the entry the trigger would have produced — it must align with
+   * sibling entries rather than nest under them.
+   *
+   * @default false
+   */
+  public suppressLogIndent?: boolean = false;
+
+  /**
    * Indicates that the reaction can be used by multiple different instances of the same card.
    *
    * @default true
@@ -833,6 +844,7 @@ export class Reaction<T extends TriggerEventType = TriggerEventType> {
     this.compulsory = arg.compulsory ?? false;
     this.system = arg.system ?? false;
     this.autoResolve = arg.autoResolve ?? false;
+    this.suppressLogIndent = arg.suppressLogIndent ?? false;
     // Preserve explicit reaction source metadata when provided.
     this.sourceId = arg.sourceId;
     this.sourceKey = arg.sourceKey;
