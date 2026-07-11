@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input } from '@an
 import { NgTemplateOutlet } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
-import { Card, CardId, CardKey, CardLikeId, Match, PlayerId, TokenDefinition, TokenId, Trait } from 'shared/types';
+import { Card, CardCost, CardId, CardKey, CardLikeId, Match, PlayerId, TokenDefinition, TokenId, Trait } from 'shared/types';
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { CardComponent } from '../../card/card.component';
 import { TokenImageBadgeComponent } from '../token-image-badge/token-image-badge.component';
@@ -203,6 +203,13 @@ export class MatchSupplyComponent {
 
   readonly pileSelectionModeActive = computed(() => (this._selectablePiles()?.length ?? 0) > 0);
 
+  // True while a board card-selection prompt is running (gain-from-supply):
+  // clicks record the pile's top card id instead of tapping/buying it.
+  readonly cardSelectionModeActive = computed(() => {
+    const overlay = this._pileSelectionOverlay();
+    return overlay.visible && overlay.selectionKind === 'card';
+  });
+
   // Handles pile card clicks for normal taps and select-pile prompt toggles.
   onPileClick(pile: SupplyPileViewModel, event: MouseEvent) {
     event.preventDefault();
@@ -224,6 +231,28 @@ export class MatchSupplyComponent {
       } else {
         selected.push(pile.pileKey);
         selectedPileStore.set(selected);
+      }
+      return;
+    }
+
+    if (this.cardSelectionModeActive()) {
+      if (pile.cardId === null || !pile.selectableCard) {
+        return;
+      }
+      const selected = [...(this._selectedCards() ?? [])];
+      const existingIndex = selected.indexOf(pile.cardId);
+      if (existingIndex >= 0) {
+        // Re-clicking the selected pile deselects it; the confirm button
+        // disables again when the selection drops below the count spec.
+        selected.splice(existingIndex, 1);
+        selectedCardStore.set(selected);
+      } else if (this._pileSelectionOverlay().singleSelection) {
+        // Exact-1 prompts replace the selection so only one pile is ever
+        // highlighted at once, matching the dialog selection policy.
+        selectedCardStore.set([pile.cardId]);
+      } else {
+        selected.push(pile.cardId);
+        selectedCardStore.set(selected);
       }
       return;
     }
@@ -344,8 +373,8 @@ export class MatchSupplyComponent {
     emitTap();
   }
 
-  // Sorts supply pile keys by representative-card treasure cost descending, then
-  // by card name descending. Shared by the kingdom grid and the basic supply
+  // Sorts supply pile keys by pile treasure cost descending, then by card
+  // name descending. Shared by the kingdom grid and the basic supply
   // victory/treasure columns so the highest-value pile renders first (top).
   private sortKeysByCostDescending(keys: readonly CardKey[], cardIds: readonly CardId[]): CardKey[] {
     const cardsById = this._cardsById() ?? {};
@@ -356,12 +385,24 @@ export class MatchSupplyComponent {
       if (!leftCard || !rightCard) {
         return leftKey.localeCompare(rightKey);
       }
-      const costResult = (rightCard.cost?.treasure ?? 0) - (leftCard.cost?.treasure ?? 0);
+      const leftCost = this.resolvePileCost(leftCard);
+      const rightCost = this.resolvePileCost(rightCard);
+      const costResult = (rightCost?.treasure ?? 0) - (leftCost?.treasure ?? 0);
       if (costResult !== 0) {
         return costResult;
       }
       return rightCard.cardName.localeCompare(leftCard.cardName);
     });
+  }
+
+  // Resolves a card's stable display cost: split-pile members (Castles,
+  // Clashes, Knights, etc.) all share one pile-level cost stamped onto
+  // `randomizerData.cost` at load time (expansion-loader-service.ts:93-97),
+  // independent of which member currently sits on top — rotateSplitPile
+  // changes the top card (and its own base cost) without changing this.
+  // Non-split cards have no randomizerData and fall back to their own cost.
+  private resolvePileCost(card: Card | null): CardCost | undefined {
+    return card?.randomizerData?.cost ?? card?.cost;
   }
 
   // Converts one source-key list and card-source ids into render-ready supply pile models.
@@ -373,9 +414,13 @@ export class MatchSupplyComponent {
 
   // Builds a stable render model for one pile, including overlays and selectability.
   private buildPileModel(sourceKey: CardKey, pileCards: readonly Card[], cardsById: Record<CardId, Card>): SupplyPileViewModel {
-    const sortedPileCards = [...pileCards].sort((left, right) => left.id - right.id);
-    const topCard = sortedPileCards[sortedPileCards.length - 1] ?? null;
-    const representativeCard = this.getRepresentativeCard(sourceKey, sortedPileCards, cardsById);
+    // `pileCards` (from groupCardIdsByKingdom) is already in the supply
+    // source array's own order — the LAST entry is the true top of the
+    // pile. Do not re-sort by id: rotateSplitPile reorders array positions
+    // in place without renumbering card ids, so an id-sort would resurrect
+    // the pre-rotation top for a rotated split pile.
+    const topCard = pileCards[pileCards.length - 1] ?? null;
+    const representativeCard = this.getRepresentativeCard(sourceKey, pileCards, cardsById);
     const pileCard = topCard ?? representativeCard ?? null;
     const pileKey = pileCard?.randomizerData?.randomizer ?? pileCard?.cardKey ?? sourceKey;
 
@@ -383,9 +428,9 @@ export class MatchSupplyComponent {
     const trait = this._traitByPile()[pileKey] ?? null;
     const cardId = pileCard?.id ?? null;
 
-    // Use the effective cost from card overrides if available, otherwise fall back to the base cost.
+    // Use the effective cost from card overrides if available, otherwise fall back to the pile's stable cost.
     const overrides = this._cardOverrides();
-    const effectiveCost = (representativeCard && overrides[representativeCard.id]?.cost) ?? representativeCard?.cost;
+    const effectiveCost = (representativeCard && overrides[representativeCard.id]?.cost) ?? this.resolvePileCost(representativeCard);
 
     const selectableCards = new Set(this._selectableCards() ?? []);
     const selectedCards = new Set(this._selectedCards() ?? []);
@@ -398,7 +443,7 @@ export class MatchSupplyComponent {
       sourceKey,
       pileKey,
       cardId,
-      count: sortedPileCards.length,
+      count: pileCards.length,
       treasureCost: effectiveCost?.treasure ?? 0,
       potionCost: effectiveCost?.potion ?? 0,
       debtCost: effectiveCost?.debt ?? 0,

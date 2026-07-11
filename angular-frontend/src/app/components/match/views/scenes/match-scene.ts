@@ -14,7 +14,7 @@ import {resolveCountSpec} from 'shared/resolve-count-spec';
 import {validateCountSpec} from 'shared/validate-count-spec';
 import {currentPlayerTurnIdStore, turnNumberStore, turnPhaseStore} from '../../../../state/turn-state';
 import {SocketService} from '../../../../core/socket-service/socket.service';
-import {waySelectableCardStore} from '../../../../state/interactive-logic';
+import {supplyPileTopCardIdsStore, waySelectableCardStore} from '../../../../state/interactive-logic';
 import {SelectCardArgs} from '../../../../../types';
 import { PromptDialogCoordinatorService } from '../../../../core/prompt-dialog/prompt-dialog-coordinator.service';
 import { WayPickerOverlayService } from '../../../../core/way-picker/way-picker-overlay.service';
@@ -28,6 +28,10 @@ export class MatchScene {
   private _cleanup: (() => void)[] = [];
   private _selecting: boolean = false;
   private _selectingPiles: boolean = false;
+  // Tears down an in-flight board card-selection without emitting a reply —
+  // invoked when the server abandons the request (empty selectableCardIds
+  // refresh) or the scene is destroyed mid-selection.
+  private _boardCardSelectionTeardown: (() => void) | null = null;
   private _selfId: PlayerId = selfPlayerIdStore.get()!;
   // Tracks the turn number the start-of-turn sound has been played for so we
   // don't replay it when matchStore updates within the same turn.
@@ -153,6 +157,7 @@ export class MatchScene {
 
   public destroy = () => {
     this.closeWayPicker();
+    this._boardCardSelectionTeardown?.();
     this.resetPromptPlaySelectionState();
     this._cleanup.forEach(c => c());
     this._cleanup = [];
@@ -259,6 +264,9 @@ export class MatchScene {
   private doSelectCards = async (signalId: string, arg: SelectCardArgs) => {
     this.closeWayPicker();
     this.resetPromptPlaySelectionState();
+    // A new select-card request supersedes any pending board selection
+    // (e.g. the server re-issued the request after an undo).
+    this._boardCardSelectionTeardown?.();
     const cardIds = arg.selectableCardIds ?? [];
 
     // no more selectable cards, clean up local prompt-selection state and return.
@@ -279,6 +287,17 @@ export class MatchScene {
     const promptAllowsWaySelection = this.supportsActionPlaySelectionIntent(arg.selectionIntent);
     const activeWayCount = matchStore.get()?.ways?.length ?? 0;
     const supportsWaySelection = promptAllowsWaySelection && isSingleSelection && activeWayCount > 0;
+
+    // Gain-from-supply style selections run directly on the board when every
+    // candidate is the visible top card of a supply pile (the server already
+    // collapses supply candidates to pile tops). Way-play selections always
+    // keep the dialog — the Way tooltip machinery lives there.
+    const supplyTopIds = supplyPileTopCardIdsStore.get();
+    const allCandidatesAreSupplyTops = cardIds.every((cardId) => supplyTopIds.has(cardId));
+    if (!promptAllowsWaySelection && allCandidatesAreSupplyTops) {
+      this.doSelectCardsOnBoard(signalId, arg, isSingleSelection);
+      return;
+    }
 
     this._selecting = true;
     // Hide turn action controls while modal selection prompt is active.
@@ -325,6 +344,102 @@ export class MatchScene {
     }
   }
 
+  // Handles gain-style card selections directly on the board: highlights the
+  // candidate supply-pile tops, records clicks into selectedCardStore, and
+  // submits only via the floating bar's validation-gated confirm button.
+  private doSelectCardsOnBoard = (signalId: string, arg: SelectCardArgs, isSingleSelection: boolean) => {
+    const cardIds = arg.selectableCardIds ?? [];
+    const selectCount = arg.count ?? 1;
+    const isOptional = arg.optional ?? false;
+
+    clientSelectableCardsOverrideStore.set([...cardIds]);
+    selectedCardStore.set([]);
+    this._selecting = true;
+    // Hide turn action controls while board card selection is active.
+    promptInteractionLockStore.set(true);
+
+    const cleanupSelection = () => {
+      pileSelectionOverlayStore.set({
+        visible: false,
+        prompt: 'Select pile',
+        optional: false,
+        submitEnabled: false,
+        singleSelection: false,
+        selectionKind: 'pile',
+      });
+      pileSelectionOverlayActionStore.set(null);
+      selectedCardStore.set([]);
+      clientSelectableCardsOverrideStore.set(null);
+      this._selecting = false;
+      promptInteractionLockStore.set(false);
+      this._boardCardSelectionTeardown = null;
+    };
+
+    let selectedListenerCleanup: () => void = () => undefined;
+    let actionListenerCleanup: () => void = () => undefined;
+    let completed = false;
+
+    const doneListener = (cancelled?: boolean) => {
+      if (completed) {
+        return;
+      }
+      completed = true;
+      const selectedCardIds = cancelled ? [] : selectedCardStore.get();
+      selectedListenerCleanup();
+      actionListenerCleanup();
+      cleanupSelection();
+      this._socketService.emit('userInputReceived', signalId, selectedCardIds);
+    };
+
+    // Teardown path (server abandoned the request / scene destroyed): clean
+    // up all board-selection state without emitting a reply.
+    this._boardCardSelectionTeardown = () => {
+      if (completed) {
+        return;
+      }
+      completed = true;
+      selectedListenerCleanup();
+      actionListenerCleanup();
+      cleanupSelection();
+    };
+
+    // Selection state drives the floating bar's confirm button; submission
+    // is always explicit so the player can review/change the pick.
+    const updateSelectionState = (selected: readonly CardId[]) => {
+      const valid = validateCountSpec(selectCount, selected.length);
+      pileSelectionOverlayStore.setKey('submitEnabled', valid);
+    };
+
+    pileSelectionOverlayStore.set({
+      visible: true,
+      prompt: arg.validPrompt ?? arg.prompt ?? 'Confirm',
+      optional: isOptional,
+      submitEnabled: false,
+      singleSelection: isSingleSelection,
+      selectionKind: 'card',
+    });
+    pileSelectionOverlayActionStore.set(null);
+
+    actionListenerCleanup = pileSelectionOverlayActionStore.subscribe((action) => {
+      if (!action) {
+        return;
+      }
+      if (action.action === 'cancel') {
+        doneListener(true);
+        return;
+      }
+      if (action.action === 'submit' && pileSelectionOverlayStore.get().submitEnabled) {
+        doneListener();
+      }
+    });
+
+    selectedListenerCleanup = selectedCardStore.subscribe((selected) => {
+      updateSelectionState(selected);
+    });
+
+    updateSelectionState(selectedCardStore.get());
+  }
+
   // Handles pile selection prompts by highlighting piles and capturing a selection.
   private doSelectPiles = async (signalId: string, args: UserPromptActionArgs) => {
     this.closeWayPicker();
@@ -362,6 +477,7 @@ export class MatchScene {
         optional: false,
         submitEnabled: false,
         singleSelection: false,
+        selectionKind: 'pile',
       });
       pileSelectionOverlayActionStore.set(null);
       selectedPileStore.set([]);
@@ -402,6 +518,7 @@ export class MatchScene {
       optional: isOptional,
       submitEnabled: false,
       singleSelection: isSingleSelection,
+      selectionKind: 'pile',
     });
     pileSelectionOverlayActionStore.set(null);
 
