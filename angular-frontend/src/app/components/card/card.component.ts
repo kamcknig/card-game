@@ -233,6 +233,8 @@ export class CardComponent {
       detailImagePath,
       kingdom: card.kingdom,
       cardId: this.cardId(),
+      expansionName: card.expansionName,
+      pileMembers: card.pileMembers,
     });
   }
 

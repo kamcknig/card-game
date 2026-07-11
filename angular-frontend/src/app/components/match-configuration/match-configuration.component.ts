@@ -752,12 +752,25 @@ export class MatchConfigurationComponent implements OnDestroy {
   // menu so the gesture is reserved for the in-app action; empty slots and
   // missing detail paths are no-ops so the right-click on a "?" placeholder
   // simply prevents the default menu without opening anything.
-  onSlotContextMenu(event: MouseEvent, detailImagePath: string | null | undefined): void {
+  // Accepts the full catalog item (not just its detail path) so split-pile
+  // kingdom slots can surface their pileMembers as detail-dialog siblings —
+  // only CardNoId (the "kingdom" slot type) ever carries a `kingdom` field
+  // or populated `pileMembers`; the other landscape catalog types pass
+  // through with no siblings, unchanged from before.
+  onSlotContextMenu(
+    event: MouseEvent,
+    item: CardNoId | EventNoId | LandmarkNoId | ProjectNoId | WayNoId | TraitNoId | AllyNoId | ProphecyNoId | null | undefined,
+  ): void {
     event.preventDefault();
-    if (!detailImagePath) {
+    if (!item?.detailImagePath) {
       return;
     }
-    void displayCardDetail({ detailImagePath });
+    void displayCardDetail({
+      detailImagePath: item.detailImagePath,
+      kingdom: 'kingdom' in item ? item.kingdom : undefined,
+      expansionName: item.expansionName,
+      pileMembers: item.pileMembers,
+    });
   }
 
   // Removes one selected kingdom card from the fixed kingdom list.
