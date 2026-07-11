@@ -902,6 +902,17 @@ export class CardLike<M = unknown> {
   // the split-pile sibling display in the card detail dialog when the
   // primary card comes from the lobby/match-configuration search catalog.
   pileMembers?: { cardKey: string; cardName: string }[];
+  // The pile key this card's presence in the kingdom causes to exist (e.g.
+  // Young Witch's linkedPileKey is the chosen Bane pile's kingdom key; a
+  // Looter-typed card's linkedPileKey is 'ruins'). Stamped only on the
+  // TRIGGER side by each mechanic's configurator at match-configuration
+  // time. The reverse direction (viewing the target pile, seeing every
+  // trigger currently in the kingdom) is resolved client-side by scanning
+  // for any card whose linkedPileKey equals the viewed pile's own kingdom
+  // key — no field is needed on the target side, which also naturally
+  // covers many:1 relationships (several Looters sharing one Ruins pile)
+  // without enumerating triggers anywhere.
+  linkedPileKey?: string | null;
   metadata: M;
 
   constructor(args: CardLike) {
@@ -925,6 +936,13 @@ export class CardLike<M = unknown> {
     this.randomizerData = args.randomizerData;
     this.kingdomSelectable = args.kingdomSelectable ?? true;
     this.imageKeyOverride = args.imageKeyOverride;
+    this.searchAliases = args.searchAliases;
+    this.pileMembers = args.pileMembers;
+    // Preserved through card instantiation (unlike searchAliases/pileMembers,
+    // which are catalog-only plain objects) since real in-play Card instances
+    // are built via `new Card(...)` (card-instance-factory-service.ts) and
+    // need this field to resolve "caused by" siblings in the detail dialog.
+    this.linkedPileKey = args.linkedPileKey ?? null;
     this.cost = args.cost ?? { treasure: 0 };
     const metadata = args.metadata ?? {};
     this.metadata = metadata as M;

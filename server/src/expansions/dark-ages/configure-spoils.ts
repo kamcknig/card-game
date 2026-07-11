@@ -4,6 +4,20 @@ export const configureSpoils = async (args: ExpansionConfiguratorContext) => {
   const hasSpoilsSource = args.config.kingdomSupply.some(kingdom =>
     ['marauder', 'pillage', 'bandit-camp'].includes(kingdom.name),
   );
+
+  // Point every present trigger pile at Spoils so the detail dialog can show
+  // them as siblings. Stamped every pass, independent of whether the Spoils
+  // pile itself still needs to be (re)built below.
+  if (hasSpoilsSource) {
+    for (const kingdom of args.config.kingdomSupply) {
+      if (['marauder', 'pillage', 'bandit-camp'].includes(kingdom.name)) {
+        kingdom.cards.forEach(card => {
+          card.linkedPileKey = 'spoils';
+        });
+      }
+    }
+  }
+
   const existingSpoilsPiles = (args.config.nonSupply ?? []).filter(supply => supply.name === 'spoils');
 
   // Remove stale Spoils piles when no source card is configured.

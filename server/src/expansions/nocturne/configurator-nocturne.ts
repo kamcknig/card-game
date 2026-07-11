@@ -244,6 +244,29 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   const hasNecromancer = config.kingdomSupply.some(supply =>
     supply.cards.some(card => getCardPileKey(card) === 'necromancer'),
   );
+
+  // Points a heirloom trigger card's kingdomSupply entry at the minted
+  // heirloom's own pile key (heirlooms default kingdom === cardKey, see
+  // createCardData.ts) so the detail dialog can show trigger <-> heirloom
+  // as siblings of each other.
+  const stampHeirloomLink = (triggerPileKey: string, heirloomCardKey: string) => {
+    for (const supply of config.kingdomSupply) {
+      for (const card of supply.cards) {
+        if (getCardPileKey(card) === triggerPileKey) {
+          card.linkedPileKey = heirloomCardKey;
+        }
+      }
+    }
+  };
+
+  if (hasCemetery) stampHeirloomLink('cemetery', 'haunted-mirror');
+  if (hasFool) stampHeirloomLink('fool', 'lucky-coin');
+  if (hasPixie) stampHeirloomLink('pixie', 'goat');
+  if (hasPooka) stampHeirloomLink('pooka', 'cursed-gold');
+  if (hasSecretCave) stampHeirloomLink('secret-cave', 'magic-lamp');
+  if (hasShepherd) stampHeirloomLink('shepherd', 'pasture');
+  if (hasTracker) stampHeirloomLink('tracker', 'pouch');
+
   if (hasCemetery) {
     registrar('onGameStartSetup', async args => {
       for (const player of args.match.players) {

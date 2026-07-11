@@ -17,7 +17,7 @@ import { basicSupplies, kingdomSupplies } from '../../../state/match-logic';
 import { matchStore } from '../../../state/match-state';
 import { selfPlayerIdStore } from '../../../state/player-state';
 import { tokenDefinitionStore } from '../../../state/token-definition-state';
-import { displayCardDetail } from '../views/modal/display-card-detail';
+import { openCardDetailDialog } from '../../../state/card-detail-dialog-state';
 import { getSupplyPileTokenVisualMap, getTokenImagePath, getTokenShortLabel } from '../views/token-utils';
 import { WAY_PICKER_PANEL_WIDTH_PX, WayPickerOverlayService } from '../../../core/way-picker/way-picker-overlay.service';
 import { SUPPLY_PANEL_GAP_PX } from './supply-layout.constants';
@@ -445,7 +445,16 @@ export class MatchSupplyComponent {
     if (!pile.trait) {
       return;
     }
-    void displayCardDetail({ detailImagePath: pile.trait.detailImagePath });
+    // Build the dialog state directly (bypassing displayCardDetail's
+    // cardId-only path, since a Trait isn't a Card) so the base card shows
+    // as an extra alongside the trait's own art — makes the trait <-> base
+    // card relationship bidirectional (base -> trait already worked via
+    // displayCardDetail's extras lookup).
+    const baseCard = pile.cardId !== null ? this._cardsById()[pile.cardId] : undefined;
+    openCardDetailDialog({
+      primary: { detailImagePath: pile.trait.detailImagePath },
+      extras: baseCard ? [{ cardId: baseCard.id, detailImagePath: baseCard.detailImagePath }] : [],
+    });
   }
 
   // Forwards way selections from the shared overlay to the existing socket event flow.

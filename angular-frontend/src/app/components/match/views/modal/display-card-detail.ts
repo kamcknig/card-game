@@ -29,7 +29,9 @@ export async function displayCardDetail(arg: CardDetailArg) {
     pileKey = arg.kingdom;
   }
 
-  const siblings = pileKey ? findLivePileSiblings(pileKey, primary.cardId) : [];
+  const siblings = pileKey
+    ? [...findLivePileSiblings(pileKey, primary.cardId), ...findLinkedSiblings(pileKey, primary.cardId)]
+    : [];
 
   const extras: CardDetailDialogEntry[] = [];
   if (pileKey) {
@@ -59,4 +61,42 @@ function findLivePileSiblings(pileKey: string, excludeCardId?: CardId): CardDeta
     entries.push({ cardId: card.id, detailImagePath: card.detailImagePath });
   }
   return entries.sort((a, b) => a.detailImagePath.localeCompare(b.detailImagePath));
+}
+
+// Finds "caused by" siblings in both directions:
+// - If the primary card is a TRIGGER (its own linkedPileKey is set),
+//   include a representative of the target pile it causes to exist (e.g.
+//   Young Witch -> its chosen Bane card).
+// - If the primary card belongs to a TARGET pile, include every TRIGGER
+//   currently in the kingdom whose linkedPileKey points at this pile
+//   (naturally covers many:1 — e.g. every Looter present when viewing
+//   Ruins).
+function findLinkedSiblings(pileKey: string, excludeCardId?: CardId): CardDetailDialogEntry[] {
+  const cardsById = cardStore.get();
+  const primaryCard = excludeCardId !== undefined ? cardsById[excludeCardId] : undefined;
+  const seenCardKeys = new Set<string>(primaryCard ? [primaryCard.cardKey] : []);
+  const entries: CardDetailDialogEntry[] = [];
+
+  const addRepresentative = (targetPileKey: string) => {
+    for (const card of Object.values(cardsById)) {
+      if (card.kingdom !== targetPileKey || seenCardKeys.has(card.cardKey)) continue;
+      seenCardKeys.add(card.cardKey);
+      entries.push({ cardId: card.id, detailImagePath: card.detailImagePath });
+      return;
+    }
+  };
+
+  // Forward: I am a trigger — show my target.
+  if (primaryCard?.linkedPileKey) {
+    addRepresentative(primaryCard.linkedPileKey);
+  }
+
+  // Reverse: I belong to a target pile — show every trigger pointing at me.
+  for (const card of Object.values(cardsById)) {
+    if (card.linkedPileKey !== pileKey || seenCardKeys.has(card.cardKey)) continue;
+    seenCardKeys.add(card.cardKey);
+    entries.push({ cardId: card.id, detailImagePath: card.detailImagePath });
+  }
+
+  return entries;
 }
