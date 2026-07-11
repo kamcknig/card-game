@@ -19,9 +19,9 @@ import {SelectCardArgs} from '../../../../../types';
 import { PromptDialogCoordinatorService } from '../../../../core/prompt-dialog/prompt-dialog-coordinator.service';
 import { WayPickerOverlayService } from '../../../../core/way-picker/way-picker-overlay.service';
 import {
-  pileSelectionOverlayActionStore,
-  pileSelectionOverlayStore
-} from '../../../../state/pile-selection-overlay-state';
+  boardSelectionOverlayActionStore,
+  boardSelectionOverlayStore
+} from '../../../../state/board-selection-overlay-state';
 import { SoundService } from '../../../../core/sound.service';
 
 export class MatchScene {
@@ -359,7 +359,7 @@ export class MatchScene {
     promptInteractionLockStore.set(true);
 
     const cleanupSelection = () => {
-      pileSelectionOverlayStore.set({
+      boardSelectionOverlayStore.set({
         visible: false,
         prompt: 'Select pile',
         optional: false,
@@ -367,7 +367,7 @@ export class MatchScene {
         singleSelection: false,
         selectionKind: 'pile',
       });
-      pileSelectionOverlayActionStore.set(null);
+      boardSelectionOverlayActionStore.set(null);
       selectedCardStore.set([]);
       clientSelectableCardsOverrideStore.set(null);
       this._selecting = false;
@@ -407,10 +407,10 @@ export class MatchScene {
     // is always explicit so the player can review/change the pick.
     const updateSelectionState = (selected: readonly CardId[]) => {
       const valid = validateCountSpec(selectCount, selected.length);
-      pileSelectionOverlayStore.setKey('submitEnabled', valid);
+      boardSelectionOverlayStore.setKey('submitEnabled', valid);
     };
 
-    pileSelectionOverlayStore.set({
+    boardSelectionOverlayStore.set({
       visible: true,
       prompt: arg.validPrompt ?? arg.prompt ?? 'Confirm',
       optional: isOptional,
@@ -418,9 +418,9 @@ export class MatchScene {
       singleSelection: isSingleSelection,
       selectionKind: 'card',
     });
-    pileSelectionOverlayActionStore.set(null);
+    boardSelectionOverlayActionStore.set(null);
 
-    actionListenerCleanup = pileSelectionOverlayActionStore.subscribe((action) => {
+    actionListenerCleanup = boardSelectionOverlayActionStore.subscribe((action) => {
       if (!action) {
         return;
       }
@@ -428,7 +428,7 @@ export class MatchScene {
         doneListener(true);
         return;
       }
-      if (action.action === 'submit' && pileSelectionOverlayStore.get().submitEnabled) {
+      if (action.action === 'submit' && boardSelectionOverlayStore.get().submitEnabled) {
         doneListener();
       }
     });
@@ -471,7 +471,7 @@ export class MatchScene {
     promptInteractionLockStore.set(true);
 
     const cleanupSelection = () => {
-      pileSelectionOverlayStore.set({
+      boardSelectionOverlayStore.set({
         visible: false,
         prompt: 'Select pile',
         optional: false,
@@ -479,7 +479,7 @@ export class MatchScene {
         singleSelection: false,
         selectionKind: 'pile',
       });
-      pileSelectionOverlayActionStore.set(null);
+      boardSelectionOverlayActionStore.set(null);
       selectedPileStore.set([]);
       clientSelectablePilesOverrideStore.set(null);
       clientSelectableCardsOverrideStore.set(null);
@@ -509,10 +509,10 @@ export class MatchScene {
     // the exact count.
     const updateSelectionState = (selected: readonly CardKey[]) => {
       const valid = validateCountSpec(selectCount, selected.length);
-      pileSelectionOverlayStore.setKey('submitEnabled', valid);
+      boardSelectionOverlayStore.setKey('submitEnabled', valid);
     };
 
-    pileSelectionOverlayStore.set({
+    boardSelectionOverlayStore.set({
       visible: true,
       prompt: args.prompt ?? 'Select pile',
       optional: isOptional,
@@ -520,9 +520,9 @@ export class MatchScene {
       singleSelection: isSingleSelection,
       selectionKind: 'pile',
     });
-    pileSelectionOverlayActionStore.set(null);
+    boardSelectionOverlayActionStore.set(null);
 
-    actionListenerCleanup = pileSelectionOverlayActionStore.subscribe((action) => {
+    actionListenerCleanup = boardSelectionOverlayActionStore.subscribe((action) => {
       if (!action) {
         return;
       }
@@ -530,7 +530,7 @@ export class MatchScene {
         doneListener(true);
         return;
       }
-      if (action.action === 'submit' && pileSelectionOverlayStore.get().submitEnabled) {
+      if (action.action === 'submit' && boardSelectionOverlayStore.get().submitEnabled) {
         doneListener();
       }
     });

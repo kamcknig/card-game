@@ -48,6 +48,10 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  // Positioning context for app-board-selection-action's absolutely
+  // positioned confirm bar, so it anchors to this panel's own bottom edge
+  // instead of the viewport.
+  position: relative;
   flex: 1 1 auto;
   min-height: var(--card-height);
   border: 1px dashed var(--theme-border-subtle);

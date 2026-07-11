@@ -20,7 +20,6 @@ import { MatchSupplyComponent } from './supply/match-supply.component';
 import { MatchLandscapesComponent } from './landscapes/match-landscapes.component';
 import { MatchPlayerAreaComponent } from './player-area/match-player-area.component';
 import { MatchNonSupplyComponent } from './non-supply/match-non-supply.component';
-import { PileSelectionActionComponent } from './pile-selection/pile-selection-action.component';
 import { MatchHudComponent } from './match-hud/match-hud.component';
 import { MatchScorePanelComponent } from './match-hud/match-score-panel.component';
 import { MatchHudAsideComponent } from './match-hud/match-hud-aside.component';
@@ -40,7 +39,6 @@ import { undoAvailableStore, undoInFlightStore } from '../../state/undo-state';
     MatchLandscapesComponent,
     MatchPlayerAreaComponent,
     MatchNonSupplyComponent,
-    PileSelectionActionComponent,
     MatchHudComponent,
     MatchScorePanelComponent,
     MatchHudAsideComponent,

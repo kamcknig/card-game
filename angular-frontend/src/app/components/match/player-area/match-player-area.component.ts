@@ -13,6 +13,7 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
 import { CardComponent } from '../../card/card.component';
+import { BoardSelectionActionComponent } from '../board-selection/board-selection-action.component';
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { WAY_PICKER_PANEL_WIDTH_PX, WayPickerOverlayService } from '../../../core/way-picker/way-picker-overlay.service';
 import { PromptDialogCoordinatorService } from '../../../core/prompt-dialog/prompt-dialog-coordinator.service';
@@ -110,6 +111,7 @@ const WAY_PICKER_EDGE_OVERLAP_PX = 5;
   imports: [
     CardComponent,
     TokenImageBadgeComponent,
+    BoardSelectionActionComponent,
   ],
   templateUrl: './match-player-area.component.html',
   styleUrl: './match-player-area.component.scss',

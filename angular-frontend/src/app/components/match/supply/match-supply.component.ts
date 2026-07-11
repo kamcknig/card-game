@@ -10,7 +10,7 @@ import { cardStore } from '../../../state/card-state';
 import { getCardSourceStore } from '../../../state/card-source-store';
 import { awaitingServerLockReleaseStore, promptInteractionLockStore, selectedCardStore, selectedPileStore } from '../../../state/interactive-state';
 import { selectablePileStore } from '../../../state/interactive-pile-logic';
-import { pileSelectionOverlayStore } from '../../../state/pile-selection-overlay-state';
+import { boardSelectionOverlayStore } from '../../../state/board-selection-overlay-state';
 import { selectableCardStore, waySelectableCardStore } from '../../../state/interactive-logic';
 import { cardOverrideStore } from '../../../state/card-logic';
 import { basicSupplies, kingdomSupplies } from '../../../state/match-logic';
@@ -151,8 +151,8 @@ export class MatchSupplyComponent {
     initialValue: selectedPileStore.get(),
   });
 
-  private readonly _pileSelectionOverlay = toSignal(this._nanoStores.useStore(pileSelectionOverlayStore), {
-    initialValue: pileSelectionOverlayStore.get(),
+  private readonly _boardSelectionOverlay = toSignal(this._nanoStores.useStore(boardSelectionOverlayStore), {
+    initialValue: boardSelectionOverlayStore.get(),
   });
 
   private readonly _awaitingServerLockRelease = toSignal(this._nanoStores.useStore(awaitingServerLockReleaseStore), {
@@ -206,7 +206,7 @@ export class MatchSupplyComponent {
   // True while a board card-selection prompt is running (gain-from-supply):
   // clicks record the pile's top card id instead of tapping/buying it.
   readonly cardSelectionModeActive = computed(() => {
-    const overlay = this._pileSelectionOverlay();
+    const overlay = this._boardSelectionOverlay();
     return overlay.visible && overlay.selectionKind === 'card';
   });
 
@@ -224,7 +224,7 @@ export class MatchSupplyComponent {
       if (existingIndex >= 0) {
         selected.splice(existingIndex, 1);
         selectedPileStore.set(selected);
-      } else if (this._pileSelectionOverlay().singleSelection) {
+      } else if (this._boardSelectionOverlay().singleSelection) {
         // Exact-1 prompts replace the selection so only one pile is ever
         // highlighted at once, matching the dialog selection policy.
         selectedPileStore.set([pile.pileKey]);
@@ -246,7 +246,7 @@ export class MatchSupplyComponent {
         // disables again when the selection drops below the count spec.
         selected.splice(existingIndex, 1);
         selectedCardStore.set(selected);
-      } else if (this._pileSelectionOverlay().singleSelection) {
+      } else if (this._boardSelectionOverlay().singleSelection) {
         // Exact-1 prompts replace the selection so only one pile is ever
         // highlighted at once, matching the dialog selection policy.
         selectedCardStore.set([pile.cardId]);
