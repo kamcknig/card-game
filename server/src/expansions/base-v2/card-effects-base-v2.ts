@@ -1,5 +1,6 @@
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getConfiguredSupplyPileKeys } from '../../utils/get-configured-supply-pile-keys.ts';
+import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
@@ -880,7 +881,7 @@ const expansionModule: CardExpansionModule = {
 
         const remainingSupplyCardKeys = args.findCardService
           .findCards({ location: ['basicSupply', 'kingdomSupply'] })
-          .map(card => card.cardKey)
+          .map(card => getCardPileKey(card))
           .reduce((prev, cardKey) => {
             if (prev.includes(cardKey)) {
               return prev;
