@@ -91,17 +91,6 @@ type ResourceStateViewModel = {
   debt: number;
 };
 
-type CardPileViewModel = {
-  cardId: CardId | null;
-  forceFacing: 'front' | 'back';
-  count: number;
-  showCount: boolean;
-  selectable: boolean;
-  selected: boolean;
-  waySelectable: boolean;
-  tokenBadges: TokenBadgeViewModel[];
-};
-
 const CUBE_TOKEN_ID = 'cube-token';
 const VICTORY_TOKEN_ID = 'prosperity:victory';
 const WAY_PICKER_EDGE_OVERLAP_PX = 5;
@@ -324,20 +313,6 @@ export class MatchPlayerAreaComponent {
         dimmed,
       } as CardEntryViewModel;
     });
-  });
-
-  readonly deckPile = computed(() => {
-    const cardsById = this._cardsById() ?? {};
-    const cards = this.resolveCardsBySourceKey(this.selfSourceKey('playerDeck'), cardsById);
-    const topCard = cards[cards.length - 1] ?? null;
-    return this.buildPileViewModel(topCard, cards.length, 'deck');
-  });
-
-  readonly discardPile = computed(() => {
-    const cardsById = this._cardsById() ?? {};
-    const cards = this.resolveCardsBySourceKey(this.selfSourceKey('playerDiscard'), cardsById);
-    const topCard = cards[cards.length - 1] ?? null;
-    return this.buildPileViewModel(topCard, cards.length, 'discard');
   });
 
   readonly activeDurationCardIds = computed(() => {
@@ -891,41 +866,6 @@ export class MatchPlayerAreaComponent {
     emitTap();
   }
 
-  private buildPileViewModel(topCard: Card | null, count: number, pileType: 'deck' | 'discard'): CardPileViewModel {
-    const cardId = topCard?.id ?? null;
-    const selectableCards = new Set(this._selectableCards() ?? []);
-    const selectedCards = new Set(this._selectedCards() ?? []);
-    const waySelectableCards = new Set(this._waySelectableCards() ?? []);
-    const match = this._match();
-    const selfPlayerId = this._selfPlayerId();
-    const tokenDefinitions = this._tokenDefinitions();
-
-    let tokenBadges: TokenBadgeViewModel[] = [];
-    if (pileType === 'deck' && match && selfPlayerId !== undefined) {
-      const playerColorMap = new Map(match.players.map((player) => [player.id, player.color]));
-      const deckTokens = (Object.values(match.tokens ?? {}) as TokenInstance[])
-        .filter((token) => token.location.type === 'playerDeck' && token.location.playerId === selfPlayerId)
-        .map((token) => ({
-          id: token.id,
-          label: getTokenShortLabel(token.tokenId, tokenDefinitions[token.tokenId]),
-          color: playerColorMap.get(token.ownerId ?? selfPlayerId) ?? '#ffffff',
-          imagePath: getTokenImagePath(token.tokenId),
-        }));
-      tokenBadges = this.buildTokenBadgeStacks(deckTokens);
-    }
-
-    return {
-      cardId,
-      count,
-      showCount: pileType !== 'discard',
-      forceFacing: topCard && pileType === 'deck' && topCard.type.includes('SHADOW') ? 'front' : (pileType === 'deck' ? 'back' : 'front'),
-      selectable: cardId !== null && selectableCards.has(cardId),
-      selected: cardId !== null && selectedCards.has(cardId),
-      waySelectable: cardId !== null && waySelectableCards.has(cardId),
-      tokenBadges,
-    };
-  }
-
   private resolveCardsBySourceKey(sourceKey: string, cardsById: Record<CardId, Card>): Card[] {
     const sourceMap = this._cardSources() ?? {};
     return (sourceMap[sourceKey] ?? [])
@@ -933,7 +873,9 @@ export class MatchPlayerAreaComponent {
       .filter((card): card is Card => !!card);
   }
 
-  private selfSourceKey(baseKey: 'playerHand' | 'playerDeck' | 'playerDiscard'): string {
+  // Deck/discard sources moved to MatchSupplyComponent (basic-supply
+  // panel) — this helper is now only used for the local player's hand.
+  private selfSourceKey(baseKey: 'playerHand'): string {
     const selfPlayerId = this._selfPlayerId();
     if (selfPlayerId === undefined) {
       return `${baseKey}:-1`;
