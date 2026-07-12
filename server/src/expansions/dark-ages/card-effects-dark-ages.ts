@@ -1776,7 +1776,7 @@ const cardEffects: CardExpansionModule = {
       onTrashed: async (args, eventArgs) => {
         const loggerService = args.loggerService;
         const trashedCard = args.cardLibrary.getCard(eventArgs.cardId);
-        if (args.match.stats.trashedCards[eventArgs.cardId].playerId !== trashedCard.owner) {
+        if (eventArgs.playerId !== trashedCard.owner) {
           return;
         }
 
@@ -1801,8 +1801,7 @@ const cardEffects: CardExpansionModule = {
       });
 
       if (!gainedRatId) {
-        loggerService.debug(`[rats effect] no rats in supply to gain`);
-        return;
+        loggerService.debug(`[rats effect] no rats in supply to gain, still trashing a card from hand`);
       }
 
       const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
