@@ -48,6 +48,18 @@ const expansion: CardExpansionModule = {
             return false;
           }
 
+          // "if you have this ... in play" — skip offering the choice once
+          // Alchemist itself has left play (e.g. trashed mid-turn).
+          let alchemistSourceKey: string | undefined;
+          try {
+            alchemistSourceKey = conditionArgs.cardSourceController.findCardSource(args.cardId).sourceKey;
+          } catch {
+            // Card is in no registered zone.
+          }
+          if (alchemistSourceKey !== 'playArea') {
+            return false;
+          }
+
           const cardsInPlay = args.findCardService.getCardsInPlay();
           const ownedCardsInPlay = cardsInPlay.filter(card => card.owner === args.playerId);
           const potionCardsInPlay = ownedCardsInPlay.filter(card => card.cardKey === 'potion');
@@ -66,11 +78,16 @@ const expansion: CardExpansionModule = {
 
           if (result.action === 2) {
             loggerService.debug(`[alchemist triggered effect] player chose to top-deck alchemist`);
-            await triggerEffectArgs.actionService.run('moveCard', {
+            const moved = await triggerEffectArgs.actionService.run('moveCard', {
               cardId: args.cardId,
               toPlayerId: args.playerId,
               to: { location: 'playerDeck' },
+              expectedFrom: { location: 'playArea', playerId: args.playerId },
             });
+
+            if (!moved) {
+              loggerService.debug('[alchemist triggered effect] lose track: alchemist no longer in play, not moved');
+            }
           } else {
             loggerService.debug(`[alchemist triggered effect] player chose not to top-deck alchemist`);
           }
