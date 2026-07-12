@@ -806,7 +806,7 @@ const expansion: CardExpansionModule = {
 
         if (cardsToRearrange.length === 0) {
           loggerService.debug(`[rabble effect] no cards to rearrange`);
-          return;
+          continue;
         }
 
         if (cardsToRearrange.length === 1) {
