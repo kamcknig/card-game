@@ -100,6 +100,19 @@ const expansion: CardExpansionModule = {
             return false;
           }
 
+          // Only OTHER players who gain a copy are cursed — the owner gaining
+          // one (e.g. buying another copy the same turn Blockade was played)
+          // must not curse themselves.
+          if (conditionArgs.trigger.args.playerId === args.playerId) {
+            return false;
+          }
+
+          // Respect attack immunity (Moat/Lighthouse) recorded when Blockade
+          // was played, mirroring Corsair's deferred-reaction immunity check.
+          if (isPlayerImmune(args.reactionContext, conditionArgs.trigger.args.playerId!)) {
+            return false;
+          }
+
           return (
             conditionArgs.trigger.args.cardId !== undefined &&
             args.cardLibrary.getCard(conditionArgs.trigger.args.cardId).cardKey == cardGained.cardKey
