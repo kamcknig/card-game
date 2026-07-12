@@ -739,7 +739,7 @@ const expansion: CardExpansionModule = {
           return;
         }
 
-        const matCardIds = args.findCardService.findCards({ location: 'native-village' });
+        const matCardIds = args.findCardService.findCards({ location: 'native-village', playerId });
 
         loggerService.debug(
           `[NATIVE VILLAGE EFFECT] moving ${matCardIds.length} cards from native village mat to hand...`,
