@@ -427,10 +427,14 @@ const expansion: CardExpansionModule = {
   farrier: {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
+        if (!eventArgs.bought) {
+          return;
+        }
+
         const boughtStats = cardEffectArgs.match.stats.cardsBought[eventArgs.cardId];
         const overpaid = boughtStats.paid - boughtStats.cost;
 
-        if (!eventArgs.bought || overpaid <= 0) {
+        if (overpaid <= 0) {
           return;
         }
 
@@ -461,17 +465,6 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
-
-      cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: `farrier:${cardEffectArgs.cardId}:endTurn`,
-        listeningFor: 'endTurn',
-        playerId: cardEffectArgs.playerId,
-        allowMultipleInstances: true,
-        once: true,
-        compulsory: true,
-        condition: conditionArgs => true,
-        triggeredEffectFn: async triggerEffectArgs => {},
-      });
     },
   },
   ferryman: {
