@@ -2187,7 +2187,7 @@ const cardEffects: CardExpansionModule = {
         }
 
         const attackCards = args.findCardService.findCards({
-          all: [{ location: 'kingdomSupply' }, { cardType: 'ACTION' }],
+          all: [{ location: 'kingdomSupply' }, { cardType: 'ATTACK' }],
         });
 
         if (!attackCards.length) {
