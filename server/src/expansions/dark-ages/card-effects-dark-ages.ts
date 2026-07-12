@@ -1152,6 +1152,24 @@ const cardEffects: CardExpansionModule = {
           });
         },
       });
+
+      // "This turn" scoping: if the buy-phase-end condition never fires (the
+      // player gained something in Buy phase), the once:true trigger above
+      // would otherwise stay registered forever and could fire on a future
+      // turn's empty Buy phase. Force it gone at the true end of this turn
+      // regardless of whether it already fired (a harmless no-op unregister
+      // if it did).
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `hermit:${cardEffectArgs.cardId}:endTurn`,
+        listeningFor: 'endTurn',
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        allowMultipleInstances: true,
+        condition: () => true,
+        triggeredEffectFn: async triggeredArgs => {
+          triggeredArgs.reactionManager.unregisterTrigger(`hermit:${cardEffectArgs.cardId}:endTurnPhase`);
+        },
+      });
     },
   },
   hovel: {
