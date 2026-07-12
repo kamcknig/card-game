@@ -8,6 +8,7 @@ import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.
 import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 import { registerStartTurnEffect } from '../../utils/register-start-turn-effect.ts';
+import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 
 const expansion: CardExpansionModule = {
   astrolabe: {
@@ -1043,10 +1044,16 @@ const expansion: CardExpansionModule = {
 
       loggerService.debug(`[smugglers effect] found ${cards.length} costing up to 6 that were played`);
 
-      const inSupply = (card: Card) =>
-        cardEffectArgs.findCardService
-          .findCards({ location: ['kingdomSupply', 'basicSupply'] })
-          .find(supplyCard => supplyCard.cardKey === card.cardKey);
+      // Gains must take the top card of the pile, and for split/mixed piles
+      // the top card must be the exact same card the right-hand player
+      // gained — a pile whose top has since become a different member is
+      // not a legal target even though the pile itself still matches.
+      const inSupply = (card: Card) => {
+        const topOfPile = cardEffectArgs.findCardService.findTopSupplyCardForPileKey({
+          pileKey: getCardPileKey(card),
+        });
+        return topOfPile?.cardKey === card.cardKey ? topOfPile : undefined;
+      };
 
       const cardsInSupply = cards.map(inSupply).filter(id => id !== undefined);
 
