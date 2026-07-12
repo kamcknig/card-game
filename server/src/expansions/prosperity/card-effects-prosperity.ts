@@ -1116,7 +1116,7 @@ const expansion: CardExpansionModule = {
 
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
-        count: hand.length - 6,
+        count: numToDraw,
       });
     },
   },
