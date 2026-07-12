@@ -149,7 +149,9 @@ export const registerGameEvents: (
 
             const rule: CardPriceRule = (ruleCard, ruleContext) => {
               const cardsInPlay = args.findCardService.getCardsInPlay();
-              const actionsInPlay = cardsInPlay.filter(card => card.type.includes('ACTION'));
+              const actionsInPlay = cardsInPlay.filter(
+                card => card.type.includes('ACTION') && card.owner === ruleContext.playerId,
+              );
               if (actionsInPlay.length === 0) {
                 return { restricted: false, cost: { treasure: 0 } };
               }
