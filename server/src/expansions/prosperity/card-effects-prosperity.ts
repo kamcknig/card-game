@@ -139,7 +139,7 @@ const expansion: CardExpansionModule = {
         const selectedCardId = (await effectArgs.actionService.run('selectSingleCard', {
           playerId: targetPlayerId,
           prompt: `Trash card`,
-          restrict: effectArgs.cardSourceController.getSource('playerHand', effectArgs.playerId),
+          restrict: effectArgs.cardSourceController.getSource('playerHand', targetPlayerId),
           count: 1,
           optional: true,
         })) as CardId | null;
@@ -242,7 +242,7 @@ const expansion: CardExpansionModule = {
         const selectedCardId = await effectArgs.actionService.run('selectSingleCard', {
           playerId: targetPlayerId,
           prompt: `Top-deck card`,
-          restrict: effectArgs.cardSourceController.getSource('playerHand', effectArgs.playerId),
+          restrict: effectArgs.cardSourceController.getSource('playerHand', targetPlayerId),
           count: 1,
         });
 
