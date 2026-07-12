@@ -765,11 +765,11 @@ const expansion: CardExpansionModule = {
           });
         }
 
-        loggerService.debug(`[inn onGained effect] shuffling player deck`);
+        loggerService.debug(`[inn onGained effect] shuffling player deck (excluding remaining discard pile)`);
 
         // Route through the engine action so the shuffle uses the injected RNG
         // instead of the shuffler's (now removed) Math.random default.
-        await args.actionService.run('shuffleDeck', { playerId: eventArgs.playerId });
+        await args.actionService.run('shuffleDeck', { playerId: eventArgs.playerId, includeDiscard: false });
       },
     }),
     registerEffects: () => async cardEffectArgs => {
