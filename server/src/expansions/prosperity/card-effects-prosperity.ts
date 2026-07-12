@@ -691,27 +691,20 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const uniqueTreasureCount = new Set(treasuresInHand.map(card => card.cardKey)).size;
+      const selectedCardId = (await effectArgs.actionService.run('selectSingleCard', {
+        playerId: effectArgs.playerId,
+        prompt: `Reveal treasure`,
+        restrict: { all: [{ location: 'playerHand', playerId: effectArgs.playerId }, { cardType: 'TREASURE' }] },
+        count: 1,
+        optional: true,
+      })) as CardId | null;
 
-      let selectedCard: Card | undefined = undefined;
-
-      if (uniqueTreasureCount === 1) {
-        selectedCard = treasuresInHand[0];
-      } else {
-        const selectedCardId = (await effectArgs.actionService.run('selectSingleCard', {
-          playerId: effectArgs.playerId,
-          prompt: `Reveal card`,
-          restrict: effectArgs.cardSourceController.getSource('playerHand', effectArgs.playerId),
-          count: 1,
-        })) as CardId | null;
-
-        if (!selectedCardId) {
-          loggerService.warn(`[mint effect] no card selected to reveal`);
-          return;
-        }
-
-        selectedCard = effectArgs.cardLibrary.getCard(selectedCardId);
+      if (!selectedCardId) {
+        loggerService.debug(`[mint effect] no card selected to reveal`);
+        return;
       }
+
+      const selectedCard = effectArgs.cardLibrary.getCard(selectedCardId);
 
       loggerService.debug(`[mint effect] card to reveal ${selectedCard}`);
 
