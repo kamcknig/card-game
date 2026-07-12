@@ -2512,7 +2512,7 @@ const cardEffects: CardExpansionModule = {
     registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.debug(`[ruined village effect] gaining 1 action`);
-      await cardEffectArgs.actionService.run('gainAction', { count: cardEffectArgs.playerId });
+      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
     },
   },
   spoils: {
