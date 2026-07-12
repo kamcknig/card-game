@@ -1222,15 +1222,20 @@ const expansion: CardExpansionModule = {
         condition: conditionArgs => {
           if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') return false;
 
-          const victoryCardsGained = Object.entries(conditionArgs.match.stats.cardsGained)
-            .filter(([id, stats]) => {
-              const currentTurnHistoryIndex = conditionArgs.match.stats.turns.length - 1;
-              const gainedThisTurn = stats.turnHistoryIndex === currentTurnHistoryIndex;
-              return gainedThisTurn && conditionArgs.cardLibrary.getCard(+id).type.includes('VICTORY');
-            })
-            .map(results => Number(results[0]));
+          // "if you didn't gain a Victory card in your Buy phase this turn" —
+          // ANY means of gaining counts (not just buying), but only gains by
+          // the Treasury owner, and only ones that happened during a Buy
+          // phase. CardStats already records the phase each gain happened in.
+          const currentTurnHistoryIndex = conditionArgs.match.stats.turns.length - 1;
+          const gainedVictoryInBuyPhase = Object.entries(conditionArgs.match.stats.cardsGained).some(
+            ([id, stats]) =>
+              stats.turnHistoryIndex === currentTurnHistoryIndex &&
+              stats.playerId === args.playerId &&
+              stats.turnPhase === 'buy' &&
+              conditionArgs.cardLibrary.getCard(+id).type.includes('VICTORY'),
+          );
 
-          if (victoryCardsGained.length > 0) {
+          if (gainedVictoryInBuyPhase) {
             return false;
           }
 
