@@ -954,12 +954,11 @@ const expansion: CardExpansionModule = {
         if (card.type.includes('VICTORY')) {
           loggerService.debug(`[jester effect] card is a victory card, gaining curse`);
 
-          // Note: `to` intentionally mirrors pre-existing behavior at this site.
           const gainedCurseId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
             playerId: targetPlayerId,
             pileKey: 'curse',
             from: 'basicSupply',
-            to: { location: 'basicSupply' },
+            to: { location: 'playerDiscard' },
             logTag: 'jester effect',
           });
 
