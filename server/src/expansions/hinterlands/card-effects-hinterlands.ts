@@ -1004,50 +1004,73 @@ const expansion: CardExpansionModule = {
     },
   },
   scheme: {
-    registerEffects: () => async cardEffectArgs => {
-      const loggerService = cardEffectArgs.loggerService;
-      loggerService.debug(`[scheme effect] drawing 1 card, and gaining 1 action`);
-      await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
-      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
+    registerEffects: () => {
+      const playCountByCardId: Record<CardId, number> = {};
 
-      cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: `scheme:${cardEffectArgs.cardId}:discardCard`,
-        listeningFor: 'discardCard',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: async conditionArgs => {
-          if (!conditionArgs.trigger.args.previousLocation) return false;
-          if (!isLocationInPlay(conditionArgs.trigger.args.previousLocation.location)) return false;
-          const card = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
-          if (card.owner !== cardEffectArgs.playerId) return false;
-          if (!card.type.includes('ACTION')) return false;
+      return async cardEffectArgs => {
+        const loggerService = cardEffectArgs.loggerService;
+        loggerService.debug(`[scheme effect] drawing 1 card, and gaining 1 action`);
+        await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
+        await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
-          const action = await conditionArgs.promptService.requestAction({
-            prompt: `Top-deck ${card.cardName}?`,
-            playerId: conditionArgs.trigger.args.playerId,
-            actionButtons: [
-              { label: 'CANCEL', action: 1 },
-              { label: 'CONFIRM', action: 2 },
-            ],
-          });
-          if (action === 1 || action === null) return false;
+        const cardId = cardEffectArgs.cardId;
+        const playInstance = (playCountByCardId[cardId] ?? 0) + 1;
+        playCountByCardId[cardId] = playInstance;
 
-          return true;
-        },
-        triggeredEffectFn: async triggeredEffectArgs => {
-          const card = triggeredEffectArgs.cardLibrary.getCard(triggeredEffectArgs.trigger.args.cardId);
+        const discardReactionId = `scheme:${cardId}:${playInstance}:discardCard`;
 
-          loggerService.debug(`[scheme triggered effect] moving ${card} to deck`);
+        cardEffectArgs.reactionManager.registerReactionTemplate({
+          id: discardReactionId,
+          listeningFor: 'discardCard',
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          condition: async conditionArgs => {
+            if (!conditionArgs.trigger.args.previousLocation) return false;
+            if (!isLocationInPlay(conditionArgs.trigger.args.previousLocation.location)) return false;
+            const card = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+            if (card.owner !== cardEffectArgs.playerId) return false;
+            if (!card.type.includes('ACTION')) return false;
 
-          await triggeredEffectArgs.actionService.run('moveCard', {
-            cardId: triggeredEffectArgs.trigger.args.cardId,
-            toPlayerId: cardEffectArgs.playerId,
-            to: { location: 'playerDeck' },
-          });
-        },
-      });
+            const action = await conditionArgs.promptService.requestAction({
+              prompt: `Top-deck ${card.cardName}?`,
+              playerId: conditionArgs.trigger.args.playerId,
+              actionButtons: [
+                { label: 'CANCEL', action: 1 },
+                { label: 'CONFIRM', action: 2 },
+              ],
+            });
+            if (action === 1 || action === null) return false;
+
+            return true;
+          },
+          triggeredEffectFn: async triggeredEffectArgs => {
+            const card = triggeredEffectArgs.cardLibrary.getCard(triggeredEffectArgs.trigger.args.cardId);
+
+            loggerService.debug(`[scheme triggered effect] moving ${card} to deck`);
+
+            await triggeredEffectArgs.actionService.run('moveCard', {
+              cardId: triggeredEffectArgs.trigger.args.cardId,
+              toPlayerId: cardEffectArgs.playerId,
+              to: { location: 'playerDeck' },
+            });
+          },
+        });
+
+        cardEffectArgs.reactionManager.registerReactionTemplate({
+          id: `scheme:${cardId}:${playInstance}:endTurn`,
+          listeningFor: 'endTurn',
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          condition: () => true,
+          triggeredEffectFn: async () => {
+            cardEffectArgs.reactionManager.unregisterTrigger(discardReactionId);
+          },
+        });
+      };
     },
   },
   souk: {
