@@ -1077,7 +1077,7 @@ const expansion: CardExpansionModule = {
       const handSize = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId).length;
       const numToLose = Math.min(cardEffectArgs.match.playerTreasure, handSize);
       loggerService.debug(`[souk effect] losing ${numToLose} treasure`);
-      await cardEffectArgs.actionService.run('gainTreasure', { count: -handSize });
+      await cardEffectArgs.actionService.run('spendTreasure', { count: handSize });
     },
   },
   'spice-merchant': {
