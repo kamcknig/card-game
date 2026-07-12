@@ -576,6 +576,11 @@ const expansion: CardExpansionModule = {
       if (result.action === 1) {
         await effectArgs.actionService.run('gainTreasure', { count: 1 });
       } else {
+        await effectArgs.actionService.run('trashCard', {
+          playerId: effectArgs.playerId,
+          cardId: effectArgs.cardId,
+        });
+
         const hand = effectArgs.cardSourceController.getSource('playerHand', effectArgs.playerId);
         let uniqueTreasureCount: CardKey[] = [];
         const l = hand.length - 1;
@@ -585,7 +590,9 @@ const expansion: CardExpansionModule = {
             playerId: effectArgs.playerId,
           });
           const card = effectArgs.cardLibrary.getCard(hand[i]);
-          uniqueTreasureCount.push(card.cardKey);
+          if (card.type.includes('TREASURE')) {
+            uniqueTreasureCount.push(card.cardKey);
+          }
         }
         uniqueTreasureCount = Array.from(new Set(uniqueTreasureCount));
         await effectArgs.actionService.run('gainVictoryToken', {
