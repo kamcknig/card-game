@@ -301,7 +301,8 @@ const expansion: CardExpansionModule = {
   'crystal-ball': {
     registerEffects: () => async effectArgs => {
       const loggerService = effectArgs.loggerService;
-      await effectArgs.actionService.run('gainBuy', { count: 1 });
+      // Crystal Ball's own Treasure value is $1 — there is no Buy on this card.
+      await effectArgs.actionService.run('gainTreasure', { count: 1 });
 
       const deck = effectArgs.cardSourceController.getSource('playerDeck', effectArgs.playerId);
       const discard = effectArgs.cardSourceController.getSource('playerDiscard', effectArgs.playerId);
@@ -318,7 +319,10 @@ const expansion: CardExpansionModule = {
       const cardId = deck.slice(-1)[0];
       const card = effectArgs.cardLibrary.getCard(cardId);
 
+      // All three dispositions (trash/discard/play) are optional per the card
+      // text ("You may ..."), so leaving the card on top must be a legal choice.
       const actions = [
+        { label: 'Leave on top', action: 0, role: 'cancel' as const },
         { label: 'Trash', action: 1 },
         { label: 'Discard', action: 2 },
       ];
@@ -349,6 +353,9 @@ const expansion: CardExpansionModule = {
             cardId,
             overrides: { actionCost: 0 },
           });
+          break;
+        default:
+          loggerService.debug(`[crystal-ball effect] player left ${card.cardName} on top of deck`);
           break;
       }
     },
