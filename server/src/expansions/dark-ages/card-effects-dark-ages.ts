@@ -1424,10 +1424,7 @@ const cardEffects: CardExpansionModule = {
           allowMultipleInstances: true,
           condition: conditionArgs => {
             const trashedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
-            if (trashedCard.owner !== eventArgs.playerId) return false;
-            if (conditionArgs.trigger.args.previousLocation.location !== 'playerHand') return false;
-            if (conditionArgs.trigger.args.previousLocation.playerId !== eventArgs.playerId) return false;
-            return true;
+            return trashedCard.owner === eventArgs.playerId;
           },
           triggeredEffectFn: async triggeredArgs => {
             const marketSquareCard = triggeredArgs.cardLibrary.getCard(eventArgs.cardId);
