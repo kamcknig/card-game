@@ -133,16 +133,22 @@ const expansionModule: CardExpansionModule = {
 
         await actionService.run('gainTreasure', { count: 2 });
 
-        // we want those cards played on the player's turn that are actions and played by THAT player
-        const actionCardCount = Object.keys(match.stats.playedCards).filter(
-          cardId =>
-            cardLibrary.getCard(+cardId).type.includes('ACTION') &&
-            match.stats.playedCards[+cardId].playerId === playerId,
+        // Count Action *plays* this turn (counting this Conspirator) made by this
+        // player — playedCardsByTurn records one entry per play, so Throne-Room
+        // replays count as additional plays per the official ruling. playedCards
+        // (whole-match, per-card) must NOT be used here: it never resets between
+        // turns and collapses replays into one entry.
+        const turnHistoryIndex = match.stats.turns.length - 1;
+        const playedThisTurn = match.stats.playedCardsByTurn[turnHistoryIndex] ?? [];
+        const actionPlaysThisTurn = playedThisTurn.filter(
+          playedCardId =>
+            cardLibrary.getCard(playedCardId).type.includes('ACTION') &&
+            match.stats.playedCards[playedCardId]?.playerId === playerId,
         );
 
-        loggerService.debug(`[CONSPIRATOR EFFECT] action cards played so far ${actionCardCount.length}`);
+        loggerService.debug(`[CONSPIRATOR EFFECT] action plays this turn ${actionPlaysThisTurn.length}`);
 
-        if (actionCardCount?.length >= 3) {
+        if (actionPlaysThisTurn.length >= 3) {
           loggerService.debug(`[CONSPIRATOR EFFECT] drawing card...`);
 
           await actionService.run('drawCard', { playerId });
