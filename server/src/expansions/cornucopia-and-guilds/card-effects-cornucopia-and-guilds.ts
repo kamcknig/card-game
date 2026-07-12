@@ -1584,7 +1584,7 @@ const expansion: CardExpansionModule = {
             playerId: cardEffectArgs.playerId,
             amount: {
               treasure: cost.treasure - 1,
-              potion: 1,
+              potion: cost.potion ?? 0,
             },
           },
         ],
