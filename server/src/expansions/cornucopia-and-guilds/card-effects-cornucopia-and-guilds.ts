@@ -1343,41 +1343,49 @@ const expansion: CardExpansionModule = {
     },
   },
   renown: {
-    registerEffects: () => async cardEffectArgs => {
-      const loggerService = cardEffectArgs.loggerService;
-      await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
+    registerEffects: () => {
+      const unsubsByCardId: Record<CardId, (() => void)[]> = {};
 
-      const rule: CardPriceRule = (card, context) => {
-        return {
+      return async cardEffectArgs => {
+        const loggerService = cardEffectArgs.loggerService;
+        await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
+
+        const rule: CardPriceRule = () => ({
           restricted: false,
-          cost: {
-            treasure: -2,
-            potion: card.cost.potion,
+          cost: { treasure: -2, potion: 0 },
+        });
+
+        const cardId = cardEffectArgs.cardId;
+        const alreadyActiveThisTurn = (unsubsByCardId[cardId]?.length ?? 0) > 0;
+
+        const allCards = cardEffectArgs.cardLibrary.getAllCardsAsArray();
+        unsubsByCardId[cardId] ??= [];
+        for (const card of allCards) {
+          unsubsByCardId[cardId].push(cardEffectArgs.cardPriceController.registerRule(card, rule));
+        }
+
+        if (alreadyActiveThisTurn) {
+          loggerService.debug(
+            `[renown effect] card ${cardId} already active this turn, skipping cleanup registration`,
+          );
+          return;
+        }
+
+        cardEffectArgs.reactionManager.registerReactionTemplate({
+          id: `renown:${cardId}:endTurn`,
+          listeningFor: 'endTurn',
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          allowMultipleInstances: true,
+          compulsory: true,
+          condition: () => true,
+          triggeredEffectFn: async () => {
+            loggerService.debug(`[renown triggered effect] removing price rule`);
+            unsubsByCardId[cardId].forEach(unsub => unsub());
+            delete unsubsByCardId[cardId];
           },
-        };
+        });
       };
-
-      const ruleSubs: (() => void)[] = [];
-      const allCards = cardEffectArgs.cardLibrary.getAllCardsAsArray();
-      for (const card of allCards) {
-        ruleSubs.push(cardEffectArgs.cardPriceController.registerRule(card, rule));
-      }
-
-      cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: `renown:${cardEffectArgs.cardId}:endTurn`,
-        listeningFor: 'endTurn',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        allowMultipleInstances: true,
-        compulsory: true,
-        condition: () => true,
-        triggeredEffectFn: async () => {
-          loggerService.debug(`[renown triggered effect] removing price rule`);
-          for (const unsub of ruleSubs) {
-            unsub();
-          }
-        },
-      });
     },
   },
   shop: {
