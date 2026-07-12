@@ -181,7 +181,7 @@ const expansion: CardExpansionModule = {
 
       const { cost } = args.cardPriceController.applyRules(card, { playerId: args.playerId });
 
-      const numCardsToDraw = cost.treasure + (cost.potion !== undefined ? 2 : 0);
+      const numCardsToDraw = cost.treasure + ((cost.potion ?? 0) > 0 ? 2 : 0);
 
       loggerService.debug(`[apprentice effect] drawing ${numCardsToDraw} cards`);
 
