@@ -227,16 +227,21 @@ const expansion: CardExpansionModule = {
         },
         triggeredEffectFn: async ({ loggerService, trigger }) => {
           loggerService.debug(`[CORSAIR TRIGGERED EFFECT] trashing card...`);
-          await cardEffectArgs.actionService.run(
+          const trashed = await cardEffectArgs.actionService.run(
             'trashCard',
             {
               playerId: trigger.args.playerId!,
               cardId: trigger.args.cardId!,
+              expectedFrom: { location: 'playArea' },
             },
             {
               source: cardEffectArgs.cardId,
             },
           );
+
+          if (!trashed) {
+            loggerService.debug('[CORSAIR TRIGGERED EFFECT] lose track: card already trashed by another Corsair');
+          }
         },
       });
     },
