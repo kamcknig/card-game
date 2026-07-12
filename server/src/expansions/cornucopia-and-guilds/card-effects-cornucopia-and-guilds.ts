@@ -1012,6 +1012,7 @@ const expansion: CardExpansionModule = {
       const key = result.result;
 
       let count = 0;
+      const cardsToDiscard: CardId[] = [];
       // Reveal cards one at a time, set aside, until 3 non-matching cards
       // have been moved to hand or the player runs out of cards;
       // revealTopDeckCards shuffles the discard in automatically whenever
@@ -1025,7 +1026,7 @@ const expansion: CardExpansionModule = {
         }
 
         if (card.cardKey === key) {
-          await cardEffectArgs.actionService.run('discardCard', { cardId: card.id, playerId: cardEffectArgs.playerId });
+          cardsToDiscard.push(card.id);
         } else {
           await cardEffectArgs.actionService.run('moveCard', {
             cardId: card.id,
@@ -1034,6 +1035,11 @@ const expansion: CardExpansionModule = {
           });
           count++;
         }
+      }
+
+      loggerService.debug(`[journeyman effect] discarding ${cardsToDiscard.length} matching cards`);
+      for (const cardId of cardsToDiscard) {
+        await cardEffectArgs.actionService.run('discardCard', { cardId, playerId: cardEffectArgs.playerId });
       }
     },
   },
