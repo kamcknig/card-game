@@ -692,36 +692,53 @@ const expansion: CardExpansionModule = {
     },
   },
   highway: {
-    registerEffects: () => async cardEffectArgs => {
-      const loggerService = cardEffectArgs.loggerService;
-      loggerService.debug(`[highway effect] drawing 1 card, and gaining 1 action`);
-      await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
-      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
+    registerEffects: () => {
+      // Turn-scoped, cross-play accumulator keyed by card id (mirrors the Quarry
+      // fix in prosperity) so replaying the same physical Highway (King's
+      // Court/Throne Room) doesn't leak duplicate endTurn cleanup reactions.
+      const unsubsByCardId: Record<CardId, (() => void)[]> = {};
 
-      const cards = cardEffectArgs.cardLibrary.getAllCardsAsArray();
+      return async cardEffectArgs => {
+        const loggerService = cardEffectArgs.loggerService;
+        loggerService.debug(`[highway effect] drawing 1 card, and gaining 1 action`);
+        await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
+        await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
-      const unsubs: (() => void)[] = [];
+        const cards = cardEffectArgs.cardLibrary.getAllCardsAsArray();
+        const cardId = cardEffectArgs.cardId;
+        const alreadyActiveThisTurn = (unsubsByCardId[cardId]?.length ?? 0) > 0;
 
-      const rule: CardPriceRule = (card, context) => {
-        return { restricted: false, cost: { treasure: -1, potion: 0 } };
+        const rule: CardPriceRule = () => ({ restricted: false, cost: { treasure: -1, potion: 0 } });
+
+        unsubsByCardId[cardId] ??= [];
+        for (const card of cards) {
+          unsubsByCardId[cardId].push(cardEffectArgs.cardPriceController.registerRule(card, rule));
+        }
+
+        if (alreadyActiveThisTurn) {
+          // Same physical Highway replayed this turn (Throne Room/King's Court) —
+          // the endTurn cleanup below is already registered for this card id and
+          // will unsubscribe every accumulated rule, including this play's.
+          loggerService.debug(
+            `[highway effect] card ${cardId} already active this turn, skipping cleanup registration`,
+          );
+          return;
+        }
+
+        cardEffectArgs.reactionManager.registerReactionTemplate({
+          id: `highway:${cardId}:endTurn`,
+          listeningFor: 'endTurn',
+          condition: () => true,
+          once: true,
+          compulsory: true,
+          playerId: cardEffectArgs.playerId,
+          allowMultipleInstances: true,
+          triggeredEffectFn: async () => {
+            unsubsByCardId[cardId].forEach(c => c());
+            delete unsubsByCardId[cardId];
+          },
+        });
       };
-
-      for (const card of cards) {
-        unsubs.push(cardEffectArgs.cardPriceController.registerRule(card, rule));
-      }
-
-      cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: `highway:${cardEffectArgs.cardId}:endTurn`,
-        listeningFor: 'endTurn',
-        condition: () => true,
-        once: true,
-        compulsory: true,
-        playerId: cardEffectArgs.playerId,
-        allowMultipleInstances: true,
-        triggeredEffectFn: async () => {
-          unsubs.forEach(c => c());
-        },
-      });
     },
   },
   inn: {
