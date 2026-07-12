@@ -1372,14 +1372,16 @@ const expansion: CardExpansionModule = {
 
       const cardsInPlay = cardEffectArgs.findCardService.getCardsInPlay();
 
-      const uniqueInPlayCardNames = new Set(cardsInPlay.map(card => card.cardName));
+      const uniqueInPlayCardKeys = new Set(
+        cardsInPlay.filter(card => card.owner === cardEffectArgs.playerId).map(card => card.cardKey),
+      );
 
       const cardsInHand = cardEffectArgs.findCardService
         .findCards({
           location: 'playerHand',
           playerId: cardEffectArgs.playerId,
         })
-        .filter(card => !uniqueInPlayCardNames.has(card.cardKey) && card.type.includes('ACTION'));
+        .filter(card => !uniqueInPlayCardKeys.has(card.cardKey) && card.type.includes('ACTION'));
 
       if (cardsInHand.length === 0) {
         loggerService.debug(`[shop effect] no action cards in hand that are not in play`);
