@@ -930,19 +930,18 @@ const expansion: CardExpansionModule = {
         },
       });
 
-      if (!selectedCardIds.length) {
+      if (selectedCardIds.length) {
+        loggerService.debug(`[vault effect] discarding ${selectedCardIds.length} cards`);
+
+        for (const cardId of selectedCardIds) {
+          await cardEffectArgs.actionService.run('discardCard', { cardId, playerId: cardEffectArgs.playerId });
+        }
+
+        loggerService.debug(`[vault effect] gaining ${selectedCardIds.length} treasure`);
+        await cardEffectArgs.actionService.run('gainTreasure', { count: selectedCardIds.length });
+      } else {
         loggerService.debug(`[vault effect] no cards selected`);
-        return;
       }
-
-      loggerService.debug(`[vault effect] discarding ${selectedCardIds.length} cards`);
-
-      for (const cardId of selectedCardIds) {
-        await cardEffectArgs.actionService.run('discardCard', { cardId, playerId: cardEffectArgs.playerId });
-      }
-
-      loggerService.debug(`[vault effect] gaining ${selectedCardIds.length} treasure`);
-      await cardEffectArgs.actionService.run('gainTreasure', { count: selectedCardIds.length });
 
       const targetPlayerIds = findOrderedTargets({
         match: cardEffectArgs.match,
@@ -960,7 +959,7 @@ const expansion: CardExpansionModule = {
         const selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
           playerId: targetPlayerId,
           prompt: `Discard${hand.length > 1 ? ' to draw' : ''}?`,
-          restrict: cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId),
+          restrict: cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId),
           count: Math.min(2, hand.length),
           optional: true,
         });
@@ -977,7 +976,7 @@ const expansion: CardExpansionModule = {
           loggerService.debug(
             `[vault effect] ${targetPlayerId} did not discard 2 cards, only ${selectedCardIds.length}`,
           );
-          return;
+          continue;
         }
 
         await cardEffectArgs.actionService.run('drawCard', { playerId: targetPlayerId });
