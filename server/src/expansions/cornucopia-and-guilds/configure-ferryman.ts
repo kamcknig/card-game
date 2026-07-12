@@ -38,8 +38,8 @@ export const configureFerryman = (args: ExpansionConfiguratorContext) => {
     expansions: selectedExpansions,
     excludedPileKeys: existingPileKeys,
     bannedPileKeys,
-    // Ferryman uses an extra kingdoms card costing exactly 3 or 4.
-    cardFilter: card => card.cost.treasure === 3 || card.cost.treasure === 4,
+    // Ferryman uses an extra kingdoms card costing exactly 3 or 4, with no potion/debt component.
+    cardFilter: card => (card.cost.treasure === 3 || card.cost.treasure === 4) && !card.cost.potion && !card.cost.debt,
   });
 
   if (!availableGroups.length) {
