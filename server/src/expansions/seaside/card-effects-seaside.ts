@@ -1171,9 +1171,10 @@ const expansion: CardExpansionModule = {
       () =>
       async ({ loggerService, actionService, playerId, cardId, match, cardLibrary, ...args }) => {
         loggerService.debug(`[treasure map effect] trashing played treasure map...`);
-        await actionService.run('trashCard', {
+        const playedMapTrashed = await actionService.run('trashCard', {
           playerId,
           cardId,
+          expectedFrom: { location: 'playArea' },
         });
 
         const hand = args.cardSourceController.getSource('playerHand', playerId);
@@ -1187,12 +1188,22 @@ const expansion: CardExpansionModule = {
           return;
         }
 
+        // "Trash this and a Treasure Map from your hand" are two separate
+        // instructions — the hand trash still happens even if the "this"
+        // trash lost track (e.g. a Throne Room replay whose card is already
+        // in the trash). But "if you trashed two Treasure Maps" requires
+        // BOTH to have actually happened this resolution.
         loggerService.debug(`[treasure map effect] trashing treasure map from hand...`);
 
         await actionService.run('trashCard', {
           playerId,
           cardId: inHand,
         });
+
+        if (!playedMapTrashed) {
+          loggerService.debug('[treasure map effect] lose track: played copy already trashed, no Golds');
+          return;
+        }
 
         const goldCardIds = args.findCardService.findCards({
           all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }],
