@@ -2557,6 +2557,10 @@ const cardEffects: CardExpansionModule = {
       }
 
       const numToLookAt = Math.min(2, deck.length);
+      // Snapshot the looked-at card IDs once: `deck` mutates as we
+      // discard/move cards below, so re-slicing it inside the loop would
+      // pick up the wrong cards (mirrors the Catacombs implementation).
+      const cardsToLookAt = deck.slice(-numToLookAt);
 
       const result = (await cardEffectArgs.actionService.run('userPrompt', {
         prompt: 'Discard or put back on deck?',
@@ -2567,22 +2571,22 @@ const cardEffects: CardExpansionModule = {
         ],
         content: {
           type: 'display-cards',
-          cardIds: deck.slice(-numToLookAt),
+          cardIds: cardsToLookAt,
         },
       })) as { action: number; result: number[] };
 
       if (result.action === 1) {
-        loggerService.debug(`[survivors effect] discarding ${numToLookAt} cards`);
-        for (let i = 0; i < numToLookAt; i++) {
+        loggerService.debug(`[survivors effect] discarding ${cardsToLookAt.length} cards`);
+        for (const cardId of cardsToLookAt) {
           await cardEffectArgs.actionService.run('discardCard', {
-            cardId: deck.slice(-i - 1)[0],
+            cardId,
             playerId: cardEffectArgs.playerId,
           });
         }
       } else {
-        loggerService.debug(`[survivors effect] putting back ${numToLookAt} cards`);
+        loggerService.debug(`[survivors effect] putting back ${cardsToLookAt.length} cards`);
 
-        if (numToLookAt > 1) {
+        if (cardsToLookAt.length > 1) {
           loggerService.debug(`[survivors effect] rearranging cards`);
 
           const result = (await cardEffectArgs.actionService.run('userPrompt', {
@@ -2590,7 +2594,7 @@ const cardEffects: CardExpansionModule = {
             playerId: cardEffectArgs.playerId,
             content: {
               type: 'rearrange',
-              cardIds: deck.slice(-numToLookAt),
+              cardIds: cardsToLookAt,
             },
           })) as { action: number; result: number[] };
 
