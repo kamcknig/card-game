@@ -524,7 +524,7 @@ const expansion: CardExpansionModule = {
           triggeredEffectFn: async triggeredEffectArgs => {
             loggerService.debug(`[fools-gold triggered effect] trashing fools gold`);
             await triggeredEffectArgs.actionService.run('trashCard', {
-              playerId: triggeredEffectArgs.trigger.args.playerId,
+              playerId: eventArgs.playerId,
               cardId: eventArgs.cardId,
             });
 
