@@ -377,6 +377,12 @@ const expansion: CardExpansionModule = {
         return;
       }
 
+      await cardEffectArgs.actionService.run('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCardId,
+        to: { location: 'playerDeck' },
+      });
+
       combined = [];
 
       let nextPrompt = '';
@@ -410,7 +416,7 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainCard', {
         playerId: cardEffectArgs.playerId,
         cardId: selectedCardId,
-        to: { location: 'playerDiscard' },
+        to: { location: 'playerDeck' },
       });
     },
   },
