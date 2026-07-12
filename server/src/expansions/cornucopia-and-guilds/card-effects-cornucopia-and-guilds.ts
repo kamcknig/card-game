@@ -761,7 +761,7 @@ const expansion: CardExpansionModule = {
       const uniqueActionCardsInPlay = Array.from(
         cardEffectArgs.findCardService
           .getCardsInPlay()
-          .filter(card => card.type.includes('ACTION'))
+          .filter(card => card.type.includes('ACTION') && card.owner === cardEffectArgs.playerId)
           .reduce((map, card) => {
             if (!map.has(card.cardKey)) {
               map.set(card.cardKey, card);
