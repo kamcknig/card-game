@@ -1740,6 +1740,7 @@ const cardEffects: CardExpansionModule = {
       const cards = cardEffectArgs.findCardService.findCards({
         all: [
           { location: 'kingdomSupply' },
+          { cardType: 'ACTION' },
           {
             kind: 'exact',
             playerId: cardEffectArgs.playerId,
