@@ -414,7 +414,7 @@ const expansion: CardExpansionModule = {
         const card = revealed[0];
         if (!card) {
           loggerService.debug(`[scrying-pool effect] still no cards in deck`);
-          return;
+          break;
         }
 
         cardsRevealed.push(card);
