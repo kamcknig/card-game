@@ -1418,6 +1418,9 @@ const expansion: CardExpansionModule = {
         await args.actionService.run('playCard', {
           playerId: eventArgs.playerId,
           cardId: eventArgs.cardId,
+          overrides: {
+            actionCost: 0,
+          },
         });
       },
     }),
@@ -1474,6 +1477,12 @@ const expansion: CardExpansionModule = {
           loggerService.warn(`[weaver effect] no card selected`);
           return;
         }
+
+        await cardEffectArgs.actionService.run('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedCardId,
+          to: { location: 'playerDiscard' },
+        });
       }
     },
   },
