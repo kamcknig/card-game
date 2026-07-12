@@ -28,6 +28,9 @@ const expansion: CardExpansionModule = {
         await args.actionService.run('playCard', {
           playerId: eventArgs.playerId,
           cardId: eventArgs.cardId,
+          overrides: {
+            actionCost: 0,
+          },
         });
       },
     }),
