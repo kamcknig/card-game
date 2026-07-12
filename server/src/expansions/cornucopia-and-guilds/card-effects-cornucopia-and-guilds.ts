@@ -1088,7 +1088,7 @@ const expansion: CardExpansionModule = {
       });
 
       cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: `joust:${cardEffectArgs.cardId}:startPhase`,
+        id: `joust:${provinceCard.id}:startPhase`,
         listeningFor: 'startTurnPhase',
         condition: conditionArgs => {
           if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'cleanup') return false;
