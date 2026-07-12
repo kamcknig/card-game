@@ -276,9 +276,10 @@ const expansion: CardExpansionModule = {
         playerId: effectArgs.playerId,
         listeningFor: 'cardGained',
         compulsory: true,
-        once: true,
+        once: false,
         allowMultipleInstances: true,
         condition: conditionArgs => {
+          if (conditionArgs.trigger.args.playerId !== effectArgs.playerId) return false;
           const gainStats = conditionArgs.match.stats.cardsGained[conditionArgs.trigger.args.cardId];
           if (!gainStats) return false;
           const currentTurnHistoryIndex = conditionArgs.match.stats.turns.length - 1;
