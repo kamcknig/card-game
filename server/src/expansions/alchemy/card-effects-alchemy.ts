@@ -120,8 +120,8 @@ const expansion: CardExpansionModule = {
       }
 
       const result =
-        setAside.length === 1
-          ? { cardIds: setAside.map(card => card.id) }
+        setAside.length <= 1
+          ? { result: setAside.map(card => card.id) }
           : ((await args.actionService.run('userPrompt', {
               prompt: 'Put on top of deck in any order',
               playerId: args.playerId,
@@ -130,13 +130,13 @@ const expansion: CardExpansionModule = {
                 type: 'rearrange',
                 cardIds: setAside.map(card => card.id),
               },
-            })) as { action: number; cardIds: number[] });
+            })) as { action: number; result: CardId[] });
 
-      if (result.cardIds.length > 0) {
+      if (result.result.length > 0) {
         loggerService.debug(
-          `[apothecary effect] putting cards back on top of deck ${result.cardIds.map(args.cardLibrary.getCard)}`,
+          `[apothecary effect] putting cards back on top of deck ${result.result.map(args.cardLibrary.getCard)}`,
         );
-        for (const cardId of result.cardIds) {
+        for (const cardId of result.result) {
           await args.actionService.run('moveCard', {
             cardId: cardId,
             toPlayerId: args.playerId,
