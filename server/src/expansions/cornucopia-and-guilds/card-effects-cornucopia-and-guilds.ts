@@ -547,7 +547,7 @@ const expansion: CardExpansionModule = {
         loggerService.debug(`[footpad effect] player ${targetPlayerId} discarding ${numToDiscard} cards`);
 
         const selectedCardId = await cardEffectArgs.actionService.run('selectCard', {
-          playerId: cardEffectArgs.playerId,
+          playerId: targetPlayerId,
           prompt: `Discard cards`,
           restrict: hand,
           count: numToDiscard,
