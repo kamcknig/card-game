@@ -623,64 +623,60 @@ const expansion: CardExpansionModule = {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
         const loggerService = cardEffectArgs.loggerService;
-        cardEffectArgs.reactionManager.registerReactionTemplate({
-          id: `herald:${eventArgs.cardId}:endTurn`,
+
+        if (!eventArgs.bought) {
+          loggerService.debug(`[herald onGained effect] ${eventArgs.cardId} was not bought, skipping`);
+          return;
+        }
+
+        const boughtStats = cardEffectArgs.match.stats.cardsBought[eventArgs.cardId];
+        const overpaid = boughtStats.paid - boughtStats.cost;
+
+        if (overpaid <= 0) {
+          loggerService.debug(`[herald onGained effect] no overpay cost spent for ${eventArgs.cardId}`);
+          return;
+        }
+
+        loggerService.debug(`[herald onGained effect] ${eventArgs.playerId} overpaid for ${eventArgs.cardId}`);
+
+        const discardIds = cardEffectArgs.findCardService
+          .findCards({
+            location: 'playerDiscard',
+            playerId: eventArgs.playerId,
+          })
+          .map(card => card.id);
+
+        const numToChoose = Math.min(overpaid, discardIds.length);
+
+        if (!numToChoose) {
+          loggerService.debug(`[herald onGained effect] no cards in discard`);
+          return;
+        }
+
+        const result = (await cardEffectArgs.actionService.run('userPrompt', {
+          prompt: `You may choose up to ${numToChoose} from your discard to top-deck`,
           playerId: eventArgs.playerId,
-          once: true,
-          compulsory: true,
-          allowMultipleInstances: true,
-          listeningFor: 'endTurn',
-          condition: () => true,
-          triggeredEffectFn: async triggerEffectArgs => {
-            const boughtStats = triggerEffectArgs.match.stats.cardsBought[eventArgs.cardId];
-            const overpaid = boughtStats.paid - boughtStats.cost;
-            if (!eventArgs.bought || overpaid <= 0) {
-              loggerService.debug(`[herald triggered effect] no overpay cost spent for ${eventArgs.cardId}`);
-              return;
-            }
-
-            loggerService.debug(`[herald triggered effect] ${eventArgs.playerId} overpaid for ${eventArgs.cardId}`);
-
-            const discardIds = triggerEffectArgs.findCardService
-              .findCards({
-                location: 'playerDiscard',
-                playerId: eventArgs.playerId,
-              })
-              .map(card => card.id);
-
-            const numToChoose = Math.min(overpaid, discardIds.length);
-
-            if (!numToChoose) {
-              loggerService.debug(`[herald onGained effect] no cards in discard`);
-              return;
-            }
-
-            const result = (await triggerEffectArgs.actionService.run('userPrompt', {
-              prompt: `You may choose up to ${numToChoose} from your discard to top-deck`,
-              playerId: eventArgs.playerId,
-              actionButtons: [{ label: 'DONE', action: 1 }],
-              content: {
-                type: 'select',
-                cardIds: discardIds,
-                selectCount: {
-                  kind: 'upTo',
-                  count: numToChoose,
-                },
-              },
-              validationAction: 1,
-            })) as { action: number; result: CardId[] };
-
-            loggerService.debug(`[herald triggered effect] putting ${result.result.length} cards on top of deck`);
-
-            for (const cardId of result.result) {
-              await cardEffectArgs.actionService.run('moveCard', {
-                cardId: cardId,
-                toPlayerId: eventArgs.playerId,
-                to: { location: 'playerDeck' },
-              });
-            }
+          actionButtons: [{ label: 'DONE', action: 1 }],
+          content: {
+            type: 'select',
+            cardIds: discardIds,
+            selectCount: {
+              kind: 'upTo',
+              count: numToChoose,
+            },
           },
-        });
+          validationAction: 1,
+        })) as { action: number; result: CardId[] };
+
+        loggerService.debug(`[herald onGained effect] putting ${result.result.length} cards on top of deck`);
+
+        for (const cardId of result.result) {
+          await cardEffectArgs.actionService.run('moveCard', {
+            cardId: cardId,
+            toPlayerId: eventArgs.playerId,
+            to: { location: 'playerDeck' },
+          });
+        }
       },
     }),
     registerEffects: () => async cardEffectArgs => {
@@ -706,6 +702,9 @@ const expansion: CardExpansionModule = {
         await cardEffectArgs.actionService.run('playCard', {
           cardId: card.id,
           playerId: cardEffectArgs.playerId,
+          overrides: {
+            actionCost: 0,
+          },
         });
       }
     },
