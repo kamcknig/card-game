@@ -522,6 +522,9 @@ const expansion: CardExpansionModule = {
 
           if (conditionArgs.trigger.args.playerId !== effectArgs.playerId) return false;
 
+          if (!conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId).type.includes('VICTORY'))
+            return false;
+
           return true;
         },
         triggeredEffectFn: async triggeredEffectArgs => {
