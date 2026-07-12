@@ -870,9 +870,15 @@ const expansion: CardExpansionModule = {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
         const loggerService = cardEffectArgs.loggerService;
+
+        if (!eventArgs.bought) {
+          loggerService.debug(`[infirmary onGained] ${eventArgs.cardId} was not bought, skipping`);
+          return;
+        }
+
         const boughtStats = cardEffectArgs.match.stats.cardsBought[eventArgs.cardId];
         const overpaid = boughtStats.paid - boughtStats.cost;
-        if (!eventArgs.bought || overpaid <= 0) {
+        if (overpaid <= 0) {
           loggerService.debug(`[infirmary onGained] no overpay cost spent for ${eventArgs.cardId}`);
           return;
         }
@@ -883,6 +889,9 @@ const expansion: CardExpansionModule = {
           await cardEffectArgs.actionService.run('playCard', {
             playerId: eventArgs.playerId,
             cardId: eventArgs.cardId,
+            overrides: {
+              actionCost: 0,
+            },
           });
         }
       },
