@@ -685,7 +685,7 @@ const expansionModule: CardExpansionModule = {
   'mining-village': {
     registerEffects:
       () =>
-      async ({ loggerService, actionService, playerId, cardId, cardLibrary, promptService }) => {
+      async ({ loggerService, actionService, playerId, cardId, cardLibrary, promptService, cardSourceController }) => {
         loggerService.debug(`[MINING VILLAGE EFFECT] drawing card...`);
 
         await actionService.run('drawCard', { playerId });
@@ -693,6 +693,17 @@ const expansionModule: CardExpansionModule = {
         loggerService.debug(`[MINING VILLAGE EFFECT] gaining 2 actions`);
 
         await actionService.run('gainAction', { count: 2 });
+
+        // Lose Track rule: on a replay (Throne Room) the physical card may
+        // already be in the trash — "trash this" then does nothing, so don't
+        // even offer the prompt.
+        const currentSource = cardSourceController.findCardSource(cardId);
+        if (currentSource.sourceKey !== 'playArea') {
+          loggerService.debug(
+            `[MINING VILLAGE EFFECT] card is in ${currentSource.sourceKey}, not playArea; skipping trash option`,
+          );
+          return;
+        }
 
         loggerService.debug(`[MINING VILLAGE EFFECT] prompting user to trash mining village or not`);
         const shouldTrash = await promptService.confirm(
@@ -710,16 +721,22 @@ const expansionModule: CardExpansionModule = {
         if (shouldTrash) {
           loggerService.debug(`[MINING VILLAGE EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
 
-          await actionService.run('trashCard', {
+          const trashed = await actionService.run('trashCard', {
             playerId,
             cardId,
+            expectedFrom: { location: 'playArea' },
           });
 
-          loggerService.debug(`[MINING VILLAGE EFFECT] gaining 2 treasure...`);
+          // "You may trash this for +$2" — the +$2 only happens if the trash did.
+          if (trashed) {
+            loggerService.debug(`[MINING VILLAGE EFFECT] gaining 2 treasure...`);
 
-          await actionService.run('gainTreasure', {
-            count: 2,
-          });
+            await actionService.run('gainTreasure', {
+              count: 2,
+            });
+          } else {
+            loggerService.debug(`[MINING VILLAGE EFFECT] trash failed (lose track); no treasure gained`);
+          }
         } else {
           loggerService.debug(`[MINING VILLAGE EFFECT] player chose not to trash mining village`);
         }

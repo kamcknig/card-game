@@ -39,6 +39,7 @@ import {
   CardEffectFunctionMap,
   DurationReactionTemplate,
   DurationEffectOptions,
+  ExpectedCardSource,
   FindCardService,
   GameActionContext,
   GameActionContextMap,
@@ -1387,6 +1388,7 @@ export class GameActionController implements GameActionDefinitionMap {
     facing?: CardFacing;
     setAsideSource?: SetAsideSourceInput;
     updateOwner?: boolean;
+    expectedFrom?: ExpectedCardSource;
   }): Promise<{ location: CardLocation; playerId?: PlayerId; emptiedSupplyPileKey?: CardKey } | undefined> {
     // Ensure we are only moving actual cards with moveCard.
     let card: Card;
@@ -1417,6 +1419,29 @@ export class GameActionController implements GameActionDefinitionMap {
       oldSource = this.cardSourceController.findCardSource(cardId);
     } catch (e) {
       this.loggerService.warn(`[moveCard action] could not find source for ${card}`);
+    }
+
+    // Lose Track rule: an effect that would move a card fails when the card
+    // is not where that effect expects it to be. Nothing else is prevented —
+    // the caller decides what was contingent on the move via the undefined
+    // result. requireTop covers the covering-up clause (top of a deck or
+    // discard pile getting buried); top of a pile is the array END by
+    // codebase convention.
+    if (args.expectedFrom) {
+      const locationMatches = oldSource?.sourceKey === args.expectedFrom.location;
+      const playerMatches =
+        args.expectedFrom.playerId === undefined || oldSource?.playerId === args.expectedFrom.playerId;
+      const topMatches =
+        args.expectedFrom.requireTop !== true ||
+        (oldSource !== null && oldSource.index === oldSource.source.length - 1);
+      if (!oldSource || !locationMatches || !playerMatches || !topMatches) {
+        this.loggerService.debug(
+          `[moveCard action] lose track: ${card} expected at ${args.expectedFrom.location}${
+            args.expectedFrom.requireTop ? ' (top)' : ''
+          } but found at ${oldSource?.sourceKey ?? 'nowhere'}; move to ${args.to.location} fails`,
+        );
+        return undefined;
+      }
     }
 
     // Global base metadata can mark cards as immovable regardless of expansion source.
@@ -2228,13 +2253,27 @@ export class GameActionController implements GameActionDefinitionMap {
     return selectedCardIdList[0] ?? null;
   }
 
-  async trashCard(args: { cardId: CardId | Card; playerId: PlayerId }, context?: GameActionContext) {
+  async trashCard(
+    args: { cardId: CardId | Card; playerId: PlayerId; expectedFrom?: ExpectedCardSource },
+    context?: GameActionContext,
+  ): Promise<boolean> {
     const oldLocation = await this.moveCard({
       cardId: args.cardId,
       to: { location: 'trash' },
+      expectedFrom: args.expectedFrom,
     });
 
     const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
+
+    // Lose Track rule: when the guard was requested and the move did not
+    // happen, the trash failed — skip every trash side effect (stats,
+    // cardTrashed trigger, onTrashed lifecycle, owner reset, log entry) so
+    // a trash→trash replay cannot double-fire on-trash reactions.
+    if (args.expectedFrom && oldLocation === undefined) {
+      this.loggerService.debug(`[trashCard action] lose track: ${card} was not trashed`);
+      return false;
+    }
+
     const cardId = card.id;
 
     this.match.stats.trashedCards[cardId] = {
@@ -2276,6 +2315,8 @@ export class GameActionController implements GameActionDefinitionMap {
       type: 'trashCard',
       source: context?.source,
     });
+
+    return true;
   }
 
   async gainVictoryToken(args: { playerId: PlayerId; count: number }, context?: GameActionContext) {

@@ -146,6 +146,20 @@ export type SetAsideSourceInput = {
   sourceLabel?: string;
 };
 
+// Lose Track rule guard (opt-in): where the calling effect expects the card
+// to be right now. When provided and the card is not there — wrong zone,
+// wrong owner, buried under other cards when requireTop is set, or in no
+// registered zone — the move does not happen ("the effect has lost track of
+// the card"). Only the movement fails; the caller keeps running and uses the
+// action's result to resolve any "if you do …" riders.
+export type ExpectedCardSource = {
+  location: CardLocation;
+  playerId?: PlayerId;
+  // The card must additionally be the top card of that source (array end).
+  // Implements the covering-up clause for decks and discard piles.
+  requireTop?: boolean;
+};
+
 export type GameActionContext = {
   source?: CardId;
   loggingContext?: {
@@ -306,6 +320,9 @@ export interface GameActionDefinitionMap {
     // two live players (e.g. Masquerade) opt in here instead of mutating
     // card.owner directly outside the action layer.
     updateOwner?: boolean;
+    // Lose Track rule guard (opt-in). Returns undefined (no move) when the
+    // card is not where the caller expects it to be.
+    expectedFrom?: ExpectedCardSource;
   }) => Promise<{ location: CardLocation; playerId?: PlayerId; emptiedSupplyPileKey?: CardKey } | undefined>;
   // Removes a card from the active match (used for "remove from game" / "to the box" effects).
   removeCardFromGame: (args: { cardId: CardId | Card }) => Promise<void>;
@@ -370,7 +387,13 @@ export interface GameActionDefinitionMap {
     args: { kind: 'boon' | 'hex'; includeDiscard?: boolean; playerId?: PlayerId },
     context?: GameActionContext,
   ) => Promise<void>;
-  trashCard: (args: { cardId: CardId | Card; playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
+  // Resolves true when the card was actually trashed; false when the
+  // lose-track guard failed (in which case no cardTrashed trigger,
+  // onTrashed lifecycle, stats, or log entries fire).
+  trashCard: (
+    args: { cardId: CardId | Card; playerId: PlayerId; expectedFrom?: ExpectedCardSource },
+    context?: GameActionContext,
+  ) => Promise<boolean>;
   userPrompt: (args: UserPromptActionArgs) => Promise<unknown | null>;
 }
 
