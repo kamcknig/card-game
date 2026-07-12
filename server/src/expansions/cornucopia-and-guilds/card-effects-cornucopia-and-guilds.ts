@@ -1181,50 +1181,63 @@ const expansion: CardExpansionModule = {
     },
   },
   'merchant-guild': {
-    registerEffects: () => async cardEffectArgs => {
-      const loggerService = cardEffectArgs.loggerService;
-      loggerService.debug(`[merchant guild effect] gaining 1 buy, and 1 treasure`);
-      await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
-      await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
+    registerEffects: () => {
+      const playCountByCardId: Record<CardId, number> = {};
 
-      cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: `merchant-guild:${cardEffectArgs.cardId}:endTurnPhase`,
-        playerId: cardEffectArgs.playerId,
-        listeningFor: 'endTurnPhase',
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: conditionArgs => {
-          if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') return false;
-          return true;
-        },
-        triggeredEffectFn: async triggerEffectArgs => {
-          const stats = triggerEffectArgs.match.stats;
-          const turnHistoryIndex = triggerEffectArgs.match.stats.turns.length - 1;
-          const turnStatsIndex = turnHistoryIndex;
+      return async cardEffectArgs => {
+        const loggerService = cardEffectArgs.loggerService;
+        loggerService.debug(`[merchant guild effect] gaining 1 buy, and 1 treasure`);
+        await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
+        await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
 
-          const cardIdsGainedThisTurn = stats.cardsGainedByTurn[turnStatsIndex];
-          const selfGainedCardIdsThisTurn =
-            cardIdsGainedThisTurn?.filter(cardId => stats.cardsGained[cardId].playerId === cardEffectArgs.playerId) ??
-            [];
+        const cardId = cardEffectArgs.cardId;
+        const playInstance = (playCountByCardId[cardId] ?? 0) + 1;
+        playCountByCardId[cardId] = playInstance;
 
-          if (!selfGainedCardIdsThisTurn.length) {
-            loggerService.debug(`[merchant guild triggered effect] no cards gained this buy phase`);
-            return;
-          }
+        cardEffectArgs.reactionManager.registerReactionTemplate({
+          id: `merchant-guild:${cardId}:${playInstance}:endTurnPhase`,
+          playerId: cardEffectArgs.playerId,
+          listeningFor: 'endTurnPhase',
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          condition: conditionArgs => {
+            if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') return false;
+            return true;
+          },
+          triggeredEffectFn: async triggerEffectArgs => {
+            const stats = triggerEffectArgs.match.stats;
+            const turnHistoryIndex = triggerEffectArgs.match.stats.turns.length - 1;
+            const turnStatsIndex = turnHistoryIndex;
 
-          loggerService.debug(`[merchant guild triggered effect] gaining ${selfGainedCardIdsThisTurn.length} coffers`);
+            const cardIdsGainedThisTurn = stats.cardsGainedByTurn[turnStatsIndex];
+            const selfGainedCardIdsThisTurn =
+              cardIdsGainedThisTurn?.filter(
+                gainedCardId =>
+                  stats.cardsGained[gainedCardId].playerId === cardEffectArgs.playerId &&
+                  stats.cardsGained[gainedCardId].turnPhase === 'buy',
+              ) ?? [];
 
-          await cardEffectArgs.actionService.run(
-            'gainCoffer',
-            {
-              playerId: cardEffectArgs.playerId,
-              count: selfGainedCardIdsThisTurn.length,
-            },
-            { source: cardEffectArgs.cardId },
-          );
-        },
-      });
+            if (!selfGainedCardIdsThisTurn.length) {
+              loggerService.debug(`[merchant guild triggered effect] no cards gained this buy phase`);
+              return;
+            }
+
+            loggerService.debug(
+              `[merchant guild triggered effect] gaining ${selfGainedCardIdsThisTurn.length} coffers`,
+            );
+
+            await cardEffectArgs.actionService.run(
+              'gainCoffer',
+              {
+                playerId: cardEffectArgs.playerId,
+                count: selfGainedCardIdsThisTurn.length,
+              },
+              { source: cardEffectArgs.cardId },
+            );
+          },
+        });
+      };
     },
   },
   plaza: {
