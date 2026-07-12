@@ -83,6 +83,7 @@ export class BuyOptionsResolver {
         match: this.match,
         cardLibrary: this.cardLibrary,
         playerId: args.playerId,
+        findCardService: this.findCardService,
       })
     ) {
       return { card, cost, options: [] };

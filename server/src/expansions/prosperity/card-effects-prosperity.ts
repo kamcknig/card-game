@@ -474,12 +474,8 @@ const expansion: CardExpansionModule = {
   },
   'grand-market': {
     registerActionConditions: () => ({
-      canBuy: ({ match, cardLibrary, playerId }) =>
-        !match.stats.playedCardsByTurn[match.stats.turns.length - 1]?.find(cardId => {
-          return (
-            cardLibrary.getCard(cardId).cardKey === 'copper' && match.stats.playedCards[cardId].playerId === playerId
-          );
-        }),
+      canBuy: ({ playerId, findCardService }) =>
+        !findCardService.getCardsInPlay().some(card => card.cardKey === 'copper' && card.owner === playerId),
     }),
     registerEffects: () => async effectArgs => {
       const loggerService = effectArgs.loggerService;

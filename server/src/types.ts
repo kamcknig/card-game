@@ -587,7 +587,12 @@ export type ExpansionConfiguratorFactory = () => ExpansionConfigurator;
 export type CardScoringFunction = (args: CardScoringFnContext) => number;
 
 export type CardExpansionActionConditionMap = {
-  canBuy?: (args: { match: Match; cardLibrary: MatchCardLibrary; playerId: PlayerId }) => boolean;
+  canBuy?: (args: {
+    match: Match;
+    cardLibrary: MatchCardLibrary;
+    playerId: PlayerId;
+    findCardService: FindCardService;
+  }) => boolean;
 };
 
 // Shared context for checking whether an alternate buy option can currently be bought.
