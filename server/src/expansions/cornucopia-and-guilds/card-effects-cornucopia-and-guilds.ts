@@ -358,8 +358,7 @@ const expansion: CardExpansionModule = {
     registerScoringFunction: () => args => {
       const cards = args.cardLibrary.getAllCardsAsArray().filter(card => card.owner === args.ownerId);
       const uniqueNameCardCount = new Set(cards.map(card => card.cardName)).size;
-      const score = Math.floor(uniqueNameCardCount / 5);
-      return score;
+      return 2 * Math.floor(uniqueNameCardCount / 5);
     },
   },
   farmhands: {
