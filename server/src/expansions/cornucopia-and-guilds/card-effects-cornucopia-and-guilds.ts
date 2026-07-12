@@ -197,15 +197,6 @@ const expansion: CardExpansionModule = {
   coronet: {
     registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
-      const handCards = cardEffectArgs.findCardService.findCards({
-        location: 'playerHand',
-        playerId: cardEffectArgs.playerId,
-      });
-
-      const cardSources = [
-        handCards.filter(card => !card.type.includes('REWARD') && card.type.includes('ACTION')),
-        handCards.filter(card => !card.type.includes('REWARD') && card.type.includes('TREASURE')),
-      ];
 
       for (let i = 0; i < 2; i++) {
         loggerService.debug(
@@ -213,11 +204,18 @@ const expansion: CardExpansionModule = {
             i === 0 ? 'non-reward action instruction' : 'non-reward treasure instruction'
           }`,
         );
-        const cardSource = cardSources[i];
+
+        const handCards = cardEffectArgs.findCardService.findCards({
+          location: 'playerHand',
+          playerId: cardEffectArgs.playerId,
+        });
+        const cardSource = handCards.filter(
+          card => !card.type.includes('REWARD') && card.type.includes(i === 0 ? 'ACTION' : 'TREASURE'),
+        );
 
         if (cardSource.length === 0) {
-          loggerService.debug(`[coronet effect] no non-reward action cards in hand`);
-          return;
+          loggerService.debug(`[coronet effect] no non-reward ${i === 0 ? 'action' : 'treasure'} cards in hand`);
+          continue;
         }
 
         const uniqueCardNames = Array.from(new Set(cardSource.map(card => card.cardName)));
@@ -256,14 +254,14 @@ const expansion: CardExpansionModule = {
 
         if (!selectedCardId) {
           loggerService.debug(`[coronet effect] no card selected`);
-          return;
+          continue;
         }
 
         const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
 
         loggerService.debug(`[coronet effect] playing ${selectedCard} twice`);
 
-        for (let i = 0; i < 2; i++) {
+        for (let j = 0; j < 2; j++) {
           await cardEffectArgs.actionService.run('playCard', {
             playerId: cardEffectArgs.playerId,
             cardId: selectedCardId,
