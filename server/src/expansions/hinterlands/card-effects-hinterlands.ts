@@ -861,9 +861,13 @@ const expansion: CardExpansionModule = {
       }
 
       const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
-      while (deck.length > 0 && hand.length < 5) {
+      while (hand.length < 5) {
         loggerService.debug(`[jack-of-all-trades effect] drawing card`);
-        await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
+        const drawnCardId = await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
+        if (!drawnCardId) {
+          loggerService.debug(`[jack-of-all-trades effect] no card drawn, deck and discard both empty`);
+          break;
+        }
       }
 
       const nonTreasureCardsInHand = hand
