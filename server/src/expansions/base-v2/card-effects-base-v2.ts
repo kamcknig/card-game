@@ -8,6 +8,7 @@ import { Card, CardId } from 'shared/types/index.ts';
 import { markPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
+import { MerchantMetadata } from './types.ts';
 
 const expansionModule: CardExpansionModule = {
   // Include the source card id for treasure gains so state effects can adjust values.
@@ -603,9 +604,18 @@ const expansionModule: CardExpansionModule = {
   },
   merchant: {
     registerLifeCycleMethods: () => ({
-      onCardPlayed: async ({ reactionManager }, { cardId, playerId }) => {
+      onCardPlayed: async ({ reactionManager, cardLibrary }, { cardId, playerId }) => {
+        // Each activation of this card's instructions (including Throne-Room-style
+        // replays of the same physical card) must independently register and pay
+        // out its own "first Silver this turn" bonus. A shared id would let the
+        // reaction-manager's once-unregister on the first payout silently delete
+        // the second, not-yet-fired registration — see 2026-07-11 audit finding.
+        const card = cardLibrary.getCard<MerchantMetadata>(cardId);
+        const playInstance = (card.metadata.merchantPlayCount ?? 0) + 1;
+        card.metadata.merchantPlayCount = playInstance;
+
         reactionManager.registerReactionTemplate({
-          id: `merchant:${cardId}:cardPlayed`,
+          id: `merchant:${cardId}:cardPlayed:${playInstance}`,
           playerId,
           once: true,
           compulsory: true,
@@ -637,8 +647,13 @@ const expansionModule: CardExpansionModule = {
           },
         });
       },
-      onLeavePlay: async ({ reactionManager }, { cardId }) => {
-        reactionManager.unregisterTrigger(`merchant:${cardId}:cardPlayed`);
+      onLeavePlay: async ({ reactionManager, cardLibrary }, { cardId }) => {
+        const card = cardLibrary.getCard<MerchantMetadata>(cardId);
+        const playCount = card.metadata.merchantPlayCount ?? 0;
+        for (let i = 1; i <= playCount; i++) {
+          reactionManager.unregisterTrigger(`merchant:${cardId}:cardPlayed:${i}`);
+        }
+        card.metadata.merchantPlayCount = 0;
       },
     }),
     registerEffects:
