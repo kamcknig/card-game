@@ -748,32 +748,52 @@ const expansion: CardExpansionModule = {
     },
   },
   quarry: {
-    registerEffects: () => async cardEffectArgs => {
-      const loggerService = cardEffectArgs.loggerService;
-      loggerService.debug(`[quarry effect] gaining 1 treasure`);
-      await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
+    registerEffects: () => {
+      // Turn-scoped, cross-play accumulator keyed by card id (mirrors the war-chest
+      // closure pattern in this file) so replaying the same physical Quarry
+      // (King's Court/Crown/Tiara) doesn't leak duplicate endTurn cleanup reactions.
+      const unsubsByCardId: Record<CardId, (() => void)[]> = {};
 
-      const actionCards = cardEffectArgs.findCardService.findCards({ cardType: 'ACTION' });
+      return async cardEffectArgs => {
+        const loggerService = cardEffectArgs.loggerService;
+        loggerService.debug(`[quarry effect] gaining 1 treasure`);
+        await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
 
-      const unsubs: (() => void)[] = [];
-      for (const actionCard of actionCards) {
-        const rule: CardPriceRule = () => ({ restricted: false, cost: { treasure: -2 } });
-        const unsub = cardEffectArgs.cardPriceController.registerRule(actionCard, rule);
-        unsubs.push(unsub);
-      }
+        const actionCards = cardEffectArgs.findCardService.findCards({ cardType: 'ACTION' });
+        const cardId = cardEffectArgs.cardId;
+        const alreadyActiveThisTurn = (unsubsByCardId[cardId]?.length ?? 0) > 0;
 
-      cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: `peddler:${cardEffectArgs.cardId}:endTurn`,
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        allowMultipleInstances: true,
-        compulsory: true,
-        listeningFor: 'endTurn',
-        condition: () => true,
-        triggeredEffectFn: async () => {
-          unsubs.forEach(e => e());
-        },
-      });
+        unsubsByCardId[cardId] ??= [];
+        for (const actionCard of actionCards) {
+          const rule: CardPriceRule = () => ({ restricted: false, cost: { treasure: -2 } });
+          const unsub = cardEffectArgs.cardPriceController.registerRule(actionCard, rule);
+          unsubsByCardId[cardId].push(unsub);
+        }
+
+        if (alreadyActiveThisTurn) {
+          // Same physical Quarry replayed this turn (King's Court/Crown/Tiara) —
+          // the endTurn cleanup below is already registered for this card id and
+          // will unsubscribe every accumulated rule, including this play's.
+          loggerService.debug(
+            `[quarry effect] card ${cardId} already active this turn, skipping cleanup registration`,
+          );
+          return;
+        }
+
+        cardEffectArgs.reactionManager.registerReactionTemplate({
+          id: `quarry:${cardId}:endTurn`,
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          allowMultipleInstances: true,
+          compulsory: true,
+          listeningFor: 'endTurn',
+          condition: () => true,
+          triggeredEffectFn: async () => {
+            unsubsByCardId[cardId].forEach(e => e());
+            delete unsubsByCardId[cardId];
+          },
+        });
+      };
     },
   },
   rabble: {
