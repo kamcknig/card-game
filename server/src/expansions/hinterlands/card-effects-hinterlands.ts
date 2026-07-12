@@ -226,8 +226,6 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
 
-      let actionGainCount = 0;
-
       cardEffectArgs.reactionManager.registerReactionTemplate({
         id: `cauldron:${cardEffectArgs.cardId}:cardGained`,
         listeningFor: 'cardGained',
@@ -236,14 +234,22 @@ const expansion: CardExpansionModule = {
         compulsory: true,
         allowMultipleInstances: true,
         condition: conditionArgs => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
+
           const card = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
-          if (card.type.includes('ACTION')) {
-            actionGainCount++;
-            loggerService.debug(
-              `[cauldron triggered condition] incrementing action gains for cauldron card ${cardEffectArgs.cardId} to ${actionGainCount}`,
-            );
-          }
-          return actionGainCount === 3;
+          if (!card.type.includes('ACTION')) return false;
+
+          const turnHistoryIndex = conditionArgs.match.stats.turns.length - 1;
+          const actionGainsThisTurn = (conditionArgs.match.stats.cardsGainedByTurn[turnHistoryIndex] ?? [])
+            .filter(gainedCardId => conditionArgs.match.stats.cardsGained[gainedCardId]?.playerId === cardEffectArgs.playerId)
+            .map(gainedCardId => conditionArgs.cardLibrary.getCard(gainedCardId))
+            .filter(gainedCard => gainedCard.type.includes('ACTION')).length;
+
+          loggerService.debug(
+            `[cauldron triggered condition] ${actionGainsThisTurn} action cards gained this turn for cauldron card ${cardEffectArgs.cardId}`,
+          );
+
+          return actionGainsThisTurn === 3;
         },
         triggeredEffectFn: async () => {
           cardEffectArgs.reactionManager.unregisterTrigger(`cauldron:${cardEffectArgs.cardId}:cardGained`);
