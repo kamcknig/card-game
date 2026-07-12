@@ -392,7 +392,7 @@ const expansion: CardExpansionModule = {
           });
 
           cardEffectArgs.reactionManager.registerReactionTemplate({
-            id: `farmhands:${cardEffectArgs.cardLibrary}:startTurn`,
+            id: `farmhands:${cardId}:startTurn`,
             listeningFor: 'startTurn',
             condition: conditionArgs => {
               if (conditionArgs.trigger.args.playerId !== eventArgs.playerId) return false;
