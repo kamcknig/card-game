@@ -64,22 +64,19 @@ const expansion: CardExpansionModule = {
   bank: {
     registerEffects: () => async effectArgs => {
       const loggerService = effectArgs.loggerService;
-      const turnHistoryIndex = effectArgs.match.stats.turns.length - 1;
-      const turnStatsIndex = turnHistoryIndex;
-      const playedCardIds = effectArgs.match.stats.playedCardsByTurn[turnStatsIndex];
-      const playedTreasureCards = playedCardIds
-        ?.map(effectArgs.cardLibrary.getCard)
-        .filter(card => card.type.includes('TREASURE'));
+      const treasuresInPlay = effectArgs.findCardService
+        .getCardsInPlay()
+        .filter(card => card.type.includes('TREASURE') && card.owner === effectArgs.playerId);
 
-      if (!playedTreasureCards?.length) {
-        loggerService.debug(`[bank effect] no treasure cards played this turn`);
+      if (!treasuresInPlay.length) {
+        loggerService.debug(`[bank effect] no treasure cards in play`);
         return;
       }
 
       loggerService.debug(
-        `[bank effect] played ${playedTreasureCards.length} treasure cards, gaining ${playedTreasureCards.length} treasure`,
+        `[bank effect] ${treasuresInPlay.length} treasure cards in play, gaining ${treasuresInPlay.length} treasure`,
       );
-      await effectArgs.actionService.run('gainTreasure', { count: playedTreasureCards.length });
+      await effectArgs.actionService.run('gainTreasure', { count: treasuresInPlay.length });
     },
   },
   bishop: {
