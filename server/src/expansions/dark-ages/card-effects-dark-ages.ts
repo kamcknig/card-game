@@ -1671,7 +1671,7 @@ const cardEffects: CardExpansionModule = {
         .filter(card => card.type.includes('TREASURE'));
 
       loggerService.debug(`[poor-house effect] losing ${treasureCardsInHand.length} treasure`);
-      await cardEffectArgs.actionService.run('gainTreasure', { count: -treasureCardsInHand.length });
+      await cardEffectArgs.actionService.run('spendTreasure', { count: treasureCardsInHand.length });
     },
   },
   procession: {
