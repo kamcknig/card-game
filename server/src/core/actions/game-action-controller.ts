@@ -2308,7 +2308,21 @@ export class GameActionController implements GameActionDefinitionMap {
       previousLocation: oldLocation,
     });
 
-    card.owner = null;
+    // Some onTrashed hooks move the trashed card elsewhere before this point
+    // (e.g. Fortress returns itself to hand via moveCard with
+    // updateOwner: true) — only clear ownership when the card is still
+    // actually sitting in the trash once the lifecycle event has run, so we
+    // don't stomp on an owner a hook just (re)assigned.
+    let postTrashSource: { sourceKey: CardLocation; source: CardId[]; index: number; playerId?: PlayerId } | null =
+      null;
+    try {
+      postTrashSource = this.cardSourceController.findCardSource(cardId);
+    } catch (e) {
+      this.loggerService.warn(`[trashCard action] could not find post-trash source for ${card}`);
+    }
+    if (postTrashSource?.sourceKey === 'trash') {
+      card.owner = null;
+    }
     this.logManager.addLogEntry({
       playerId: args.playerId,
       cardId: cardId,

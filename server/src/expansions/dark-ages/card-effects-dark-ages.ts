@@ -872,6 +872,7 @@ const cardEffects: CardExpansionModule = {
           cardId: eventArgs.cardId,
           toPlayerId: eventArgs.playerId,
           to: { location: 'playerHand' },
+          updateOwner: true,
         });
       },
     }),
