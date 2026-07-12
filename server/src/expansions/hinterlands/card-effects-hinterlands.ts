@@ -1207,6 +1207,15 @@ const expansion: CardExpansionModule = {
             return true;
           },
           triggeredEffectFn: async triggerArgs => {
+            const silverCardIds = triggerArgs.findCardService.findCards({
+              all: [{ location: 'basicSupply' }, { cardKeys: 'silver' }],
+            });
+
+            if (!silverCardIds.length) {
+              loggerService.debug(`[trader onEnterHand event] no silvers in supply, exchange fails`);
+              return;
+            }
+
             const traderCard = triggerArgs.cardLibrary.getCard(eventArgs.cardId);
 
             loggerService.debug(`[trader onEnterHand event] revealing trader`);
@@ -1225,17 +1234,9 @@ const expansion: CardExpansionModule = {
                 toPlayerId: triggerArgs.trigger.args.previousLocation.playerId,
                 to: { location: triggerArgs.trigger.args.previousLocation.location },
               });
+              gainedCard.owner = null;
             } else {
               loggerService.warn(`[trader onEnterHand event] gained ${gainedCard} has no previous location`);
-            }
-
-            const silverCardIds = triggerArgs.findCardService.findCards({
-              all: [{ location: 'basicSupply' }, { cardKeys: 'silver' }],
-            });
-
-            if (!silverCardIds.length) {
-              loggerService.debug(`[trader onEnterHand event] no silvers in supply`);
-              return;
             }
 
             const silverCard = silverCardIds[0];
@@ -1245,6 +1246,7 @@ const expansion: CardExpansionModule = {
               cardId: silverCard.id,
               toPlayerId: eventArgs.playerId,
               to: { location: 'playerDiscard' },
+              updateOwner: true,
             });
           },
         });
