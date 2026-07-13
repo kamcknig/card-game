@@ -1532,22 +1532,22 @@ const expansion: CardExpansionModule = {
 
       const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
 
-      if (deck.length === 0) {
-        loggerService.debug(`[raze effect] deck is empty, shuffling deck`);
-        await cardEffectArgs.actionService.run('shuffleDeck', {
-          playerId: cardEffectArgs.playerId,
-        });
-
-        if (deck.length === 0) {
-          loggerService.debug(`[raze effect] still empty, no cards to look at`);
-          return;
-        }
-      }
-
       const lookingAtCards: Card[] = [];
 
       for (let i = 0; i < numToLookAt; i++) {
-        const cardToLookAt = cardEffectArgs.cardLibrary.getCard(deck.slice(-i - 1)[0]);
+        if (deck.length === 0) {
+          loggerService.debug(`[raze effect] deck ran out, shuffling deck`);
+          await cardEffectArgs.actionService.run('shuffleDeck', {
+            playerId: cardEffectArgs.playerId,
+          });
+
+          if (deck.length === 0) {
+            loggerService.debug(`[raze effect] still empty after shuffle, stopping early`);
+            break;
+          }
+        }
+
+        const cardToLookAt = cardEffectArgs.cardLibrary.getCard(deck.slice(-1)[0]);
 
         loggerService.debug(`[raze effect] looking at ${cardToLookAt}`);
 
@@ -1558,6 +1558,11 @@ const expansion: CardExpansionModule = {
           cardId: cardToLookAt.id,
           to: { location: 'set-aside' },
         });
+      }
+
+      if (!lookingAtCards.length) {
+        loggerService.debug(`[raze effect] no cards to look at`);
+        return;
       }
 
       const result = (await cardEffectArgs.actionService.run('userPrompt', {
