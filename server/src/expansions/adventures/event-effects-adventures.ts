@@ -860,7 +860,7 @@ const effectMap: CardExpansionModule = {
         prompt: 'Choose one',
         actionButtons: [
           { label: 'DISCARD ATTACK', action: 1 },
-          { label: 'DISCARD 2 COPPER', action: 2 },
+          { label: 'DISCARD 2 CURSES', action: 2 },
           { label: 'DISCARD 6 CARDS', action: 3 },
         ],
       })) as { action: number; result: number[] };
@@ -873,15 +873,17 @@ const effectMap: CardExpansionModule = {
           playerId: cardEffectArgs.playerId,
           prompt: `Discard attack`,
           restrict: handCards.filter(card => card.type.includes('ATTACK')).map(card => card.id),
-          count: { kind: 'upTo', count: hand.length },
+          count: { kind: 'exact', count: 1 },
+          optional: true,
         });
-        gainGold = true;
+        gainGold = selectedCardIds.length === 1;
       } else if (result.action === 2) {
         selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
           playerId: cardEffectArgs.playerId,
-          prompt: `Discard 2 copper`,
-          restrict: handCards.filter(card => card.type.includes('ATTACK')).map(card => card.id),
-          count: { kind: 'upTo', count: hand.length },
+          prompt: `Discard 2 curses`,
+          restrict: handCards.filter(card => card.cardKey === 'curse').map(card => card.id),
+          count: { kind: 'exact', count: 2 },
+          optional: true,
         });
         gainGold = selectedCardIds.length === 2;
       } else {
@@ -897,6 +899,14 @@ const effectMap: CardExpansionModule = {
       if (!selectedCardIds.length) {
         loggerService.debug(`[quest effect] no card selected`);
         return;
+      }
+
+      loggerService.debug(`[quest effect] discarding ${selectedCardIds.length} cards`);
+      for (const selectedCardId of selectedCardIds) {
+        await cardEffectArgs.actionService.run('discardCard', {
+          cardId: selectedCardId,
+          playerId: cardEffectArgs.playerId,
+        });
       }
 
       if (gainGold) {
