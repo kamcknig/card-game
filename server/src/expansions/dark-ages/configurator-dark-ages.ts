@@ -8,11 +8,11 @@ import { configureShelters } from './configure-shelters.ts';
 
 const configurator: ExpansionConfiguratorFactory = () => async args => {
   await configureSpoils(args);
+  await configureShelters(args);
   await configureRuins(args);
   await configureKnights(args);
   await configureHermit(args);
   await configureUrchin(args);
-  await configureShelters(args);
   return args.config;
 };
 
