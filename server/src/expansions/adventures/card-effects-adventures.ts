@@ -2178,12 +2178,24 @@ const expansion: CardExpansionModule = {
         distance: -1,
       });
 
-      const turnHistoryIndex = cardEffectArgs.match.stats.turns.length - 1;
-      const turnStatsIndex = turnHistoryIndex;
+      // Walk turn history backwards to find the right-hand player's own most
+      // recent turn — the current turn belongs to the Treasure Hunter
+      // player, not them.
+      let rightPlayerTurnStatsIndex: number | undefined;
+      const turns = cardEffectArgs.match.stats.turns;
+      for (let i = turns.length - 1; i >= 0; i--) {
+        if (turns[i].playerId === rightPlayer.id) {
+          rightPlayerTurnStatsIndex = i;
+          break;
+        }
+      }
+
       const cardsGained =
-        cardEffectArgs.match.stats.cardsGainedByTurn?.[turnStatsIndex]
-          ?.map(cardEffectArgs.cardLibrary.getCard)
-          ?.filter(card => card.owner === rightPlayer.id) ?? [];
+        rightPlayerTurnStatsIndex !== undefined
+          ? (cardEffectArgs.match.stats.cardsGainedByTurn?.[rightPlayerTurnStatsIndex] ?? []).map(
+              cardEffectArgs.cardLibrary.getCard,
+            )
+          : [];
 
       const numToGain = Math.min(silverCards.length, cardsGained.length);
 
