@@ -1241,6 +1241,15 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
+      loggerService.debug(`[trade effect] trashing ${selectedCardIds.length} cards`);
+
+      for (const selectedCardId of selectedCardIds) {
+        await cardEffectArgs.actionService.run('trashCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedCardId,
+        });
+      }
+
       loggerService.debug(`[trade effect] gaining ${selectedCardIds.length} silver cards`);
 
       for (let i = 0; i < selectedCardIds.length; i++) {
