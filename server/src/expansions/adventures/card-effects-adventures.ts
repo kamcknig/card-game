@@ -89,10 +89,7 @@ const applyBridgeTrollCostReduction = (
   const allCards = context.cardLibrary.getAllCardsAsArray();
   const ruleCleanups: (() => void)[] = [];
   for (const card of allCards) {
-    const rule: CardPriceRule = (_card, ruleContext) => {
-      if (ruleContext.playerId !== ownerId) {
-        return { restricted: false, cost: { treasure: 0 } };
-      }
+    const rule: CardPriceRule = (_card, _ruleContext) => {
       if (getCurrentPlayer(context.match).id !== ownerId) {
         return { restricted: false, cost: { treasure: 0 } };
       }
