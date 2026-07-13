@@ -1,4 +1,9 @@
-import { CardEffectFunctionContext, CardExpansionModule } from '@server-types/index.ts';
+import {
+  CardEffectFunctionContext,
+  CardExpansionModule,
+  TriggeredEffectConditionContext,
+  TriggeredEffectContext,
+} from '@server-types/index.ts';
 import { CardId, CardKey, CardLocation, CostSpec, PlayerId } from 'shared/types/index.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { validateCostSpec } from '@shared/validate-cost-spec.ts';
@@ -13,6 +18,8 @@ import { resolveChooseAbilities } from '../../utils/resolve-choose-abilities.ts'
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
 import { getPlayerStartingFrom } from '@shared/get-player-position-utils.ts';
 import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
+import { isLocationInPlay } from '../../utils/is-in-play.ts';
+import { registerStartTurnEffect } from '../../utils/register-start-turn-effect.ts';
 
 type ArchiveEffectContext = Pick<CardEffectFunctionContext, 'actionService' | 'cardLibrary' | 'cardSourceController'>;
 
@@ -94,6 +101,41 @@ const resolveRocksSilverGain = async (
     to: toLocation,
     logTag: `rocks ${args.source}`,
   });
+};
+
+// Counts Action cards played by a player in the current turn-history index.
+const getActionPlayCountForPlayerThisTurn = (args: {
+  match: {
+    stats: {
+      playedCardsByTurn: Record<number, CardId[] | undefined>;
+      playedCards: Record<number, { playerId: PlayerId }>;
+    };
+  };
+  cardLibrary: {
+    getCard: (cardId: CardId) => { type: string[] };
+  };
+  playerId: PlayerId;
+  turnHistoryIndex: number;
+}): number => {
+  const playedCardIdsThisTurn = args.match.stats.playedCardsByTurn[args.turnHistoryIndex] ?? [];
+  return playedCardIdsThisTurn
+    .filter(playedCardId => args.match.stats.playedCards[playedCardId]?.playerId === args.playerId)
+    .filter(playedCardId => args.cardLibrary.getCard(playedCardId).type.includes('ACTION')).length;
+};
+
+// Returns true when the given card is currently in a play zone (playArea/activeDuration).
+const isCardStillInPlay = (args: {
+  cardId: CardId;
+  cardSourceController: {
+    findCardSource: (cardId: CardId) => { sourceKey: CardLocation };
+  };
+}): boolean => {
+  try {
+    const sourceKey = args.cardSourceController.findCardSource(args.cardId).sourceKey;
+    return isLocationInPlay(sourceKey);
+  } catch {
+    return false;
+  }
 };
 
 const expansion: CardExpansionModule = {
@@ -734,7 +776,93 @@ const expansion: CardExpansionModule = {
     },
   },
   enchantress: {
-    registerEffects: () => async args => {},
+    registerEffects: () => async args => {
+      const loggerService = args.loggerService;
+      const thisCard = args.cardLibrary.getCard(args.cardId);
+      // Resolve targets (and Moat-style immunity) once, right now — the FAQ
+      // requires reactions to be revealed at play time even though the attack
+      // only bites on the targets' own turns.
+      const targetPlayerIds = getAttackTargets(args.match, args.playerId, args.reactionContext);
+
+      loggerService.debug(`[enchantress effect] targeting players: ${targetPlayerIds.join(', ')}`);
+
+      const attackTriggerIds = targetPlayerIds.map(targetPlayerId => {
+        return args.reactionManager.registerReactionTemplate(thisCard, 'beforePlayedCardEffect', {
+          playerId: targetPlayerId,
+          once: false,
+          compulsory: true,
+          allowMultipleInstances: true,
+          autoResolve: true,
+          condition: (conditionArgs: TriggeredEffectConditionContext<'beforePlayedCardEffect'>) => {
+            if (conditionArgs.trigger.args.playerId !== targetPlayerId) return false;
+            // Another suppressor (e.g. a second Enchantress) already claimed
+            // this play — multiple Enchantresses never stack on one Action.
+            if (conditionArgs.trigger.args.skipPlayEffect) return false;
+
+            // Only Actions played on the target's OWN turn are enchanted —
+            // off-turn plays (e.g. Black Cat) are unaffected per the FAQ, and
+            // the +1 Action below mutates the current turn's shared action
+            // pool, so it must only fire on the target's turn.
+            if (getCurrentPlayer(conditionArgs.match).id !== targetPlayerId) return false;
+
+            const playedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+            if (!playedCard.type.includes('ACTION')) return false;
+
+            // The just-played card is already recorded in the stats, so the
+            // first Action of the turn sees a count of exactly 1.
+            const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: conditionArgs.match }) ?? 0;
+            const actionPlayCount = getActionPlayCountForPlayerThisTurn({
+              match: conditionArgs.match,
+              cardLibrary: conditionArgs.cardLibrary,
+              playerId: targetPlayerId,
+              turnHistoryIndex,
+            });
+            return actionPlayCount === 1;
+          },
+          triggeredEffectFn: async (triggeredArgs: TriggeredEffectContext<'beforePlayedCardEffect'>) => {
+            // Replace the Action's instructions with +1 Card / +1 Action.
+            triggeredArgs.trigger.args.skipPlayEffect = true;
+            loggerService.debug(
+              `[enchantress effect] player ${targetPlayerId} first Action this turn replaced with +1 Card +1 Action`,
+            );
+            await triggeredArgs.actionService.run('drawCard', { playerId: targetPlayerId, count: 1 });
+            await triggeredArgs.actionService.run('gainAction', { count: 1 });
+          },
+        });
+      });
+
+      // Tear the attack down if Enchantress leaves play early (e.g. trashed).
+      if (attackTriggerIds.length > 0) {
+        args.reactionManager.registerDurationTriggers(thisCard.id, attackTriggerIds);
+      }
+
+      // At the start of the owner's next turn: discard Enchantress from play
+      // and draw 2. The discard also unregisters the attack triggers above
+      // via the duration-trigger association, ending "until your next turn".
+      registerStartTurnEffect(
+        args,
+        thisCard,
+        async triggeredArgs => {
+          if (
+            isCardStillInPlay({
+              cardId: thisCard.id,
+              cardSourceController: triggeredArgs.cardSourceController,
+            })
+          ) {
+            await triggeredArgs.actionService.run('discardCard', {
+              playerId: args.playerId,
+              cardId: thisCard.id,
+            });
+            loggerService.debug('[enchantress startTurn effect] discarded Enchantress from play');
+          } else {
+            loggerService.debug('[enchantress startTurn effect] Enchantress not in play, skipping discard');
+          }
+
+          await triggeredArgs.actionService.run('drawCard', { playerId: args.playerId, count: 2 });
+        },
+        { system: true, autoResolve: true },
+      );
+    },
   },
   engineer: {
     registerEffects: () => async args => {
