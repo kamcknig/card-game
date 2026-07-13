@@ -56,17 +56,6 @@ const registerBadOmens = (registerHexEffect: HexEffectRegistrar) => {
       const discard = cardSourceController.getSource('playerDiscard', playerId);
       const copperIds = discard.filter(cardId => cardLibrary.getCard(cardId).cardKey === 'copper');
 
-      if (copperIds.length < 1) {
-        loggerService.debug('[bad-omens hex] no Copper cards available, revealing discard');
-        for (const cardId of discard) {
-          await actionService.run('revealCard', {
-            playerId,
-            cardId,
-          });
-        }
-        return;
-      }
-
       const coppersToTopdeck = copperIds.slice(-2);
       loggerService.debug(`[bad-omens hex] topdecking ${coppersToTopdeck.length} Copper card(s)`);
       for (const cardId of coppersToTopdeck) {
@@ -75,6 +64,20 @@ const registerBadOmens = (registerHexEffect: HexEffectRegistrar) => {
           toPlayerId: playerId,
           to: { location: 'playerDeck' },
         });
+      }
+
+      if (coppersToTopdeck.length < 2) {
+        // Fewer than 2 Coppers were found; reveal what remains in the discard
+        // pile to prove no second (or first) Copper existed, per the card's
+        // ruling that both the 0-Copper and 1-Copper cases require a reveal.
+        loggerService.debug('[bad-omens hex] fewer than 2 Coppers available, revealing remaining discard');
+        const remainingDiscard = cardSourceController.getSource('playerDiscard', playerId);
+        for (const cardId of remainingDiscard) {
+          await actionService.run('revealCard', {
+            playerId,
+            cardId,
+          });
+        }
       }
     },
   );
