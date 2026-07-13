@@ -1025,71 +1025,83 @@ const expansion: CardExpansionModule = {
     registerLifeCycleMethods: () => ({
       onLeavePlay: async (args, eventArgs) => {
         args.reactionManager.unregisterTrigger(`haunted-woods:${eventArgs.cardId}:startTurn`);
-        args.reactionManager.unregisterTrigger(`haunted-woods:${eventArgs.cardId}:cardGained`);
+        for (const player of args.match.players) {
+          args.reactionManager.unregisterTrigger(`haunted-woods:${eventArgs.cardId}:cardGained:${player.id}`);
+        }
       },
     }),
     registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
-      cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: `haunted-woods:${cardEffectArgs.cardId}:cardGained`,
-        listeningFor: 'cardGained',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.playerId === cardEffectArgs.playerId) {
-            return false;
-          }
-          return conditionArgs.trigger.args.bought;
-        },
-        triggeredEffectFn: async triggeredArgs => {
-          const triggeringPlayerId = triggeredArgs.trigger.args.playerId;
-          loggerService.debug(
-            `[haunted-woods cardGained effect] player ${triggeringPlayerId} rearranging hand and top-decking`,
-          );
-          const hand = triggeredArgs.cardSourceController.getSource('playerHand', triggeringPlayerId);
-          const result = (await triggeredArgs.actionService.run('userPrompt', {
-            playerId: triggeringPlayerId,
-            prompt: 'Rearrange hand to put on deck',
-            actionButtons: [{ label: 'DONE', action: 1 }],
-            content: {
-              type: 'rearrange',
-              cardIds: hand,
-            },
-          })) as { action: number; result: number[] };
-
-          if (!result.result.length) {
-            loggerService.warn(`[haunted-woods cardGained effect] no cards rearranged`);
-            return;
-          }
-
-          loggerService.warn(`[haunted-woods cardGained effect] moving ${result.result.length} cards to deck`);
-
-          for (const cardId of result.result) {
-            await triggeredArgs.actionService.run('moveCard', {
-              toPlayerId: triggeringPlayerId,
-              cardId,
-              to: { location: 'playerDeck' },
-            });
-          }
-        },
-      });
-
       const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
+
+      const ids: string[] = [];
+
       registerStartTurnEffect(
         cardEffectArgs,
         thisCard,
         async triggeredArgs => {
-          triggeredArgs.reactionManager.unregisterTrigger(`haunted-woods:${cardEffectArgs.cardId}:cardGained`);
+          for (const id of ids) {
+            triggeredArgs.reactionManager.unregisterTrigger(id);
+          }
           await triggeredArgs.actionService.run('drawCard', {
             playerId: cardEffectArgs.playerId,
-            count: 2,
+            count: 3,
           });
         },
         // onLeavePlay unregisters this exact id — must match verbatim.
         { id: `haunted-woods:${cardEffectArgs.cardId}:startTurn` },
       );
+
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
+
+      for (const targetPlayerId of targetPlayerIds) {
+        const id = `haunted-woods:${cardEffectArgs.cardId}:cardGained:${targetPlayerId}`;
+        ids.push(id);
+        cardEffectArgs.reactionManager.registerReactionTemplate({
+          id,
+          listeningFor: 'cardGained',
+          playerId: targetPlayerId,
+          once: false,
+          compulsory: true,
+          allowMultipleInstances: true,
+          condition: async conditionArgs => {
+            if (conditionArgs.trigger.args.playerId !== targetPlayerId) {
+              return false;
+            }
+            return conditionArgs.trigger.args.bought;
+          },
+          triggeredEffectFn: async triggeredArgs => {
+            loggerService.debug(
+              `[haunted-woods cardGained effect] player ${targetPlayerId} rearranging hand and top-decking`,
+            );
+            const hand = triggeredArgs.cardSourceController.getSource('playerHand', targetPlayerId);
+            const result = (await triggeredArgs.actionService.run('userPrompt', {
+              playerId: targetPlayerId,
+              prompt: 'Rearrange hand to put on deck',
+              actionButtons: [{ label: 'DONE', action: 1 }],
+              content: {
+                type: 'rearrange',
+                cardIds: hand,
+              },
+            })) as { action: number; result: number[] };
+
+            if (!result.result.length) {
+              loggerService.warn(`[haunted-woods cardGained effect] no cards rearranged`);
+              return;
+            }
+
+            loggerService.warn(`[haunted-woods cardGained effect] moving ${result.result.length} cards to deck`);
+
+            for (const cardId of result.result) {
+              await triggeredArgs.actionService.run('moveCard', {
+                toPlayerId: targetPlayerId,
+                cardId,
+                to: { location: 'playerDeck' },
+              });
+            }
+          },
+        });
+      }
     },
   },
   hero: {
