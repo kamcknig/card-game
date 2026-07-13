@@ -2294,7 +2294,7 @@ const expansion: CardExpansionModule = {
             loggerService.debug(`[warrior effect] no cards in deck, shuffling`);
 
             await cardEffectArgs.actionService.run('shuffleDeck', {
-              playerId: cardEffectArgs.playerId,
+              playerId: targetPlayerId,
             });
 
             if (deck.length === 0) {
@@ -2313,11 +2313,11 @@ const expansion: CardExpansionModule = {
           });
 
           const { cost } = cardEffectArgs.cardPriceController.applyRules(cardToDiscard, {
-            playerId: cardEffectArgs.playerId,
+            playerId: targetPlayerId,
           });
 
-          if (cost.treasure === 3 || cost.treasure === 4) {
-            loggerService.debug(`[warrior effect] card costs 3 or 3, trashing ${cardToDiscard}`);
+          if ((cost.treasure === 3 || cost.treasure === 4) && !cost.potion) {
+            loggerService.debug(`[warrior effect] card costs 3 or 4, trashing ${cardToDiscard}`);
 
             await cardEffectArgs.actionService.run('trashCard', {
               playerId: targetPlayerId,
