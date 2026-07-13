@@ -574,6 +574,7 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.actionService.run('trashCard', {
         playerId: cardEffectArgs.playerId,
         cardId: selectedCard.id,
+        expectedFrom: { location: 'playArea', playerId: cardEffectArgs.playerId },
       });
     },
   },
@@ -1731,6 +1732,7 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.actionService.run('trashCard', {
         playerId: cardEffectArgs.playerId,
         cardId: selectedCard.id,
+        expectedFrom: { location: 'playArea', playerId: cardEffectArgs.playerId },
       });
 
       const { cost } = cardEffectArgs.cardPriceController.applyRules(selectedCard, {
