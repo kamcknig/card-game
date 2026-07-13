@@ -59,10 +59,9 @@ const registerEarthsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       }
 
       loggerService.debug(`[the-earths-gift boon] discarding Treasure ${cardLibrary.getCard(discardedTreasureId)}`);
-      await actionService.run('moveCard', {
+      await actionService.run('discardCard', {
+        playerId,
         cardId: discardedTreasureId,
-        toPlayerId: playerId,
-        to: { location: 'playerDiscard' },
       });
 
       loggerService.debug('[the-earths-gift boon] selecting card to gain costing up to $4');
