@@ -1467,10 +1467,11 @@ const cardEffects: CardExpansionModule = {
         playerId: cardEffectArgs.playerId,
         prompt: `Trash cards?`,
         restrict: hand,
-        count: {
-          kind: 'upTo',
-          count: Math.min(2, hand.length),
-        },
+        // "Trash 2 cards" is an atomic choice, not "up to 2" — with 2+ cards
+        // in hand the player must decline or trash exactly 2; only with
+        // exactly 1 card in hand is the smaller "trash the 1 available card"
+        // choice legal.
+        count: hand.length >= 2 ? { kind: 'exact', count: 2 } : { kind: 'upTo', count: 1 },
         optional: true,
       });
 
