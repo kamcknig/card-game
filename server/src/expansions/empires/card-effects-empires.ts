@@ -9,7 +9,6 @@ import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 import { resolveChooseAbilities } from '../../utils/resolve-choose-abilities.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
-import { FortuneMetadata } from '../prosperity/types.ts';
 import { getPlayerStartingFrom } from '@shared/get-player-position-utils.ts';
 import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 
@@ -843,13 +842,15 @@ const expansion: CardExpansionModule = {
       loggerService.debug(`[fortune effect] gaining 1 buy`);
       await args.actionService.run('gainBuy', { count: 1 });
 
-      const thisCard = args.cardLibrary.getCard<FortuneMetadata>(args.cardId);
-      if (!thisCard.metadata.doubled[args.playerId]) {
+      const thisCard = args.cardLibrary.getCard(args.cardId);
+      if (!args.match.fortuneDoubledThisTurn[args.playerId]) {
         loggerService.debug(`[fortune effect] doubling treasure`);
         await args.actionService.run('gainTreasure', {
           count: args.match.playerTreasure,
         });
-        thisCard.metadata.doubled[args.playerId] = true;
+        args.match.fortuneDoubledThisTurn[args.playerId] = true;
+      } else {
+        loggerService.debug(`[fortune effect] already doubled this turn, skipping`);
       }
 
       args.reactionManager.registerReactionTemplate(thisCard, 'endTurn', {
@@ -863,9 +864,9 @@ const expansion: CardExpansionModule = {
           if (fortuneCards.length > 0) return false;
           return conditionArgs.trigger.args.playerId === args.playerId;
         },
-        triggeredEffectFn: async () => {
+        triggeredEffectFn: async triggeredArgs => {
           loggerService.debug(`[fortune endTurn trigger] running`);
-          thisCard.metadata.doubled[args.playerId] = false;
+          triggeredArgs.match.fortuneDoubledThisTurn[args.playerId] = false;
         },
       });
     },

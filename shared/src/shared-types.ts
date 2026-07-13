@@ -208,6 +208,12 @@ export interface Match {
   debt: Record<PlayerId, number>;
   // Tracks pending skipped turns by player (used by effects like Lich).
   skippedTurns: Record<PlayerId, number>;
+  // Per-player-per-turn flag for Empires' Fortune ("double your $ if you
+  // haven't yet this turn") — shared across all 5 Fortune copies, since
+  // per-card metadata can't track state that must be visible to other
+  // instances of the same pile. Reset to false by Fortune's own endTurn
+  // reaction.
+  fortuneDoubledThisTurn: Record<PlayerId, boolean>;
   config: ComputedMatchConfiguration,
   currentPlayerTurnIndex: number;
   events: Event[];
