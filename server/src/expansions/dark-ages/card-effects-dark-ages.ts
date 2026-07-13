@@ -834,18 +834,17 @@ const cardEffects: CardExpansionModule = {
       });
 
       if (!selectedCardId) {
-        loggerService.debug(`[forager effect] no card selected`);
-        return;
+        loggerService.debug(`[forager effect] no card selected, skipping trash`);
+      } else {
+        const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+
+        loggerService.debug(`[forager effect] trashing card ${selectedCard}`);
+
+        await cardEffectArgs.actionService.run('trashCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedCard.id,
+        });
       }
-
-      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
-
-      loggerService.debug(`[forager effect] trashing card ${selectedCard}`);
-
-      await cardEffectArgs.actionService.run('trashCard', {
-        playerId: cardEffectArgs.playerId,
-        cardId: selectedCard.id,
-      });
 
       const trash = cardEffectArgs.cardSourceController.getSource('trash');
       const uniqueTreasuresInTrash = new Set(
