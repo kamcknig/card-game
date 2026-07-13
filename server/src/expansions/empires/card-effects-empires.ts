@@ -1416,7 +1416,7 @@ const expansion: CardExpansionModule = {
 
       const { cost: revealedCost } = args.cardPriceController.applyRules(revealedCard, { playerId: args.playerId });
 
-      const qualifiesForDraw = compareCardCosts(revealedCost, { treasure: 5 }) >= 0;
+      const qualifiesForDraw = (revealedCost.treasure ?? 0) >= 5;
       if (!qualifiesForDraw) {
         loggerService.debug(`[patrician effect] revealed ${revealedCard.cardKey} costs less than $5`);
         return;
