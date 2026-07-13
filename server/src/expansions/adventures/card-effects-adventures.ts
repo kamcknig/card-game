@@ -1770,7 +1770,12 @@ const expansion: CardExpansionModule = {
 
       const attacksInPlay = cardEffectArgs.findCardService
         .getCardsInPlay()
-        .filter(card => card.owner === cardEffectArgs.playerId && card.type.includes('ATTACK'));
+        .filter(
+          card =>
+            card.owner === cardEffectArgs.playerId &&
+            card.type.includes('ATTACK') &&
+            card.id !== cardEffectArgs.cardId,
+        );
 
       if (attacksInPlay.length > 0) {
         loggerService.debug(`[soldier effect] ${attacksInPlay.length} attacks in play, gaining that much treasure`);
