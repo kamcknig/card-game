@@ -2000,7 +2000,7 @@ const expansion: CardExpansionModule = {
             t =>
               allowedTokens.includes(tokens[t].tokenId) &&
               tokens[t].ownerId === triggeredEffectArgs.trigger.args.playerId &&
-              tokens[t].location.type === 'playerAvailable',
+              (tokens[t].location.type === 'playerAvailable' || tokens[t].location.type === 'supplyPile'),
           );
 
           const tokenChoice = (await triggeredEffectArgs.actionService.run('userPrompt', {
