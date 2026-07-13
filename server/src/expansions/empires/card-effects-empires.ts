@@ -991,12 +991,11 @@ const expansion: CardExpansionModule = {
           return;
         }
 
-        loggerService.debug(`[gladiator effect] gaining gladiator`);
+        loggerService.debug(`[gladiator effect] trashing gladiator from supply`);
 
-        await args.actionService.run('gainCard', {
+        await args.actionService.run('trashCard', {
           playerId: args.playerId,
           cardId: gladiators[0].id,
-          to: { location: 'playerDiscard' },
         });
       };
 
