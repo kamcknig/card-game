@@ -18,6 +18,7 @@ type CardDetailArg =
       detailImagePath: string;
       kingdom?: string;
       cardId?: CardId;
+      cardKey?: string;
       expansionName?: string;
       pileMembers?: { cardKey: string; cardName: string; cost: CardCost }[];
     };
@@ -52,7 +53,7 @@ export async function displayCardDetail(arg: CardDetailArg) {
         ...findLinkedSiblings(pileKey, primary.cardId),
         ...findTravellerLineSiblings(primary.cardId),
       ]
-    : resolveCatalogPileSiblings(arg);
+    : [...resolveCatalogPileSiblings(arg), ...resolveCatalogTravellerLineSiblings(arg)];
 
   const extras: CardDetailDialogEntry[] = [];
   if (pileKey) {
@@ -142,6 +143,25 @@ function findTravellerLineSiblings(excludeCardId?: CardId): CardDetailDialogEntr
   return matches
     .sort((a, b) => compareCardCosts(a.cost, b.cost))
     .map((card) => ({ cardId: card.id, detailImagePath: card.detailImagePath }));
+}
+
+// Catalog-context counterpart to findTravellerLineSiblings: the
+// lobby/match-configuration screens have no live cardStore entry, so
+// sibling detail images are derived the same way resolveCatalogPileSiblings
+// derives them (expansionName + cardKey), using the static TRAVELLER_LINES
+// table instead of server-supplied pileMembers.
+function resolveCatalogTravellerLineSiblings(arg: CardDetailArg): CardDetailDialogEntry[] {
+  if (typeof arg === 'number' || !arg.cardKey || !arg.expansionName) {
+    return [];
+  }
+  const line = TRAVELLER_LINES[arg.cardKey];
+  if (!line) return [];
+
+  return line
+    .filter((cardKey) => cardKey !== arg.cardKey)
+    .map((cardKey) => ({
+      detailImagePath: `/assets/card-images/${arg.expansionName}/${cardKey}-detail.jpg`,
+    }));
 }
 
 // Finds "caused by" siblings in both directions:

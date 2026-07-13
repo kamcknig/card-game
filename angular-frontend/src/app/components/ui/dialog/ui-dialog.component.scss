@@ -99,8 +99,18 @@
 
 .ui-dialog-body {
   flex: 1;
-  overflow-y: auto;
   padding: var(--theme-space-lg) var(--theme-space-xl);
+}
+
+// Only skinned dialogs get a scrolling body — they have a fixed panel size
+// (max-width/max-height above) that projected content can legitimately
+// overflow. skin="none" (card-detail-dialog) has no such fixed size and
+// manages its own overflow directly on the content it projects; giving
+// .ui-dialog-body its own overflow region there nests two independent
+// scrollbars around content that's already internally scrollable.
+.ui-dialog-panel.skin-light .ui-dialog-body,
+.ui-dialog-panel.skin-dark .ui-dialog-body {
+  overflow-y: auto;
 }
 
 .ui-dialog-footer {
