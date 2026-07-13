@@ -121,10 +121,15 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
           // Consume the -1 Card token once when a draw is attempted.
           trigger.args.count = Math.max(0, trigger.args.count - 1);
-          // Carry the draw source into the token consumption log.
+          // Return the -1 Card token to the player's available area after
+          // consumption — it's a permanent physical token (Raid can place it
+          // on top of a deck again later), so it must not be destroyed.
           await actionService.run(
-            'removeToken',
-            { tokenInstanceId: tokenEntry[0] },
+            'moveToken',
+            {
+              tokenInstanceId: tokenEntry[0],
+              location: { type: 'playerAvailable', playerId: player.id },
+            },
             {
               source: trigger.args.source,
             },
