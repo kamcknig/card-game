@@ -597,10 +597,15 @@ const expansion: CardExpansionModule = {
 
       while (hand.length < 6) {
         loggerService.debug('[cursed-village effect] drawing 1 card to reach 6 in hand');
-        await cardEffectArgs.actionService.run('drawCard', {
+        const drawnCardId = await cardEffectArgs.actionService.run('drawCard', {
           playerId: cardEffectArgs.playerId,
           count: 1,
         });
+
+        if (drawnCardId === null) {
+          loggerService.debug('[cursed-village effect] no cards left to draw, stopping');
+          break;
+        }
 
         hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
         loggerService.debug(`[cursed-village effect] hand now has ${hand.length} card(s)`);
