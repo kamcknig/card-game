@@ -568,6 +568,7 @@ export type CardEffectFunctionMap = Partial<Record<CardKey, CardEffectFunction>>
 
 export interface CardScoringFnContext extends AppContext {
   ownerId: number;
+  cardId: CardId;
 }
 
 export type ExpansionConfiguratorContext = InitializeExpansionContext & {

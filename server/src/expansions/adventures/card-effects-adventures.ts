@@ -593,16 +593,16 @@ const expansion: CardExpansionModule = {
   'distant-lands': {
     registerScoringFunction: () => args => {
       const loggerService = args.loggerService;
-      const distantLandCards = args.cardSourceController
-        .getSource('tavern', args.ownerId)
-        .map(args.cardLibrary.getCard)
-        .filter(card => card.cardKey === 'distant-lands');
+      // Score only this specific instance — calculateScores invokes this fn
+      // once per owned copy, so counting every copy on the mat here would be
+      // quadratic in copy count.
+      const isOnTavernMat = args.cardSourceController.getSource('tavern', args.ownerId).includes(args.cardId);
 
       loggerService.debug(
-        `[distant-lands scoring function] number of distant lands on tavern mat ${distantLandCards.length} for player ${args.ownerId}`,
+        `[distant-lands scoring function] card ${args.cardId} on tavern mat: ${isOnTavernMat} for player ${args.ownerId}`,
       );
 
-      return distantLandCards.length * 4;
+      return isOnTavernMat ? 4 : 0;
     },
     registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
