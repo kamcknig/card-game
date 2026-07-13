@@ -1350,7 +1350,7 @@ const effectMap: CardExpansionModule = {
 
       await cardEffectArgs.actionService.run('gainBuy', { count: 2 });
 
-      cardEffectArgs.reactionManager.registerReactionTemplate(event, 'cardGained', {
+      const cardGainedReactionId = cardEffectArgs.reactionManager.registerReactionTemplate(event, 'cardGained', {
         playerId: cardEffectArgs.playerId,
         once: false,
         allowMultipleInstances: false,
@@ -1379,7 +1379,7 @@ const effectMap: CardExpansionModule = {
         compulsory: false,
         condition: async () => true,
         triggeredEffectFn: async triggeredArgs => {
-          triggeredArgs.reactionManager.unregisterTrigger(`travelling-fair:${cardEffectArgs.cardId}:cardGained`);
+          triggeredArgs.reactionManager.unregisterTrigger(cardGainedReactionId);
         },
       });
     },
