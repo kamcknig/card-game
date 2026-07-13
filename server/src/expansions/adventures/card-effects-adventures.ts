@@ -1239,22 +1239,31 @@ const expansion: CardExpansionModule = {
           cardId: revealedCard.id,
           to: { location: 'playerHand' },
         });
-      } else if (revealedCard.type.some(t => ['ACTION', 'VICTORY'].includes(t))) {
-        loggerService.debug(`[magpie effect] action or victory revealed, gaining magpie`);
+      } else {
+        loggerService.debug(`[magpie effect] non-treasure revealed, returning it to the top of the deck`);
 
-        const gainedMagpieId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
-          playerId: cardEffectArgs.playerId,
-          pileKey: 'magpie',
-          from: 'kingdomSupply',
-          to: { location: 'playerDiscard' },
-          logTag: 'magpie effect',
+        await cardEffectArgs.actionService.run('moveCard', {
+          toPlayerId: cardEffectArgs.playerId,
+          cardId: revealedCard.id,
+          to: { location: 'playerDeck' },
         });
-        if (!gainedMagpieId) {
-          loggerService.debug(`[magpie effect] no magpie cards in supply`);
-          return;
-        }
 
-        loggerService.debug(`[magpie effect] gained magpie ${gainedMagpieId}`);
+        if (revealedCard.type.some(t => ['ACTION', 'VICTORY'].includes(t))) {
+          loggerService.debug(`[magpie effect] action or victory revealed, gaining magpie`);
+
+          const gainedMagpieId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+            playerId: cardEffectArgs.playerId,
+            pileKey: 'magpie',
+            from: 'kingdomSupply',
+            to: { location: 'playerDiscard' },
+            logTag: 'magpie effect',
+          });
+          if (!gainedMagpieId) {
+            loggerService.debug(`[magpie effect] no magpie cards in supply`);
+          } else {
+            loggerService.debug(`[magpie effect] gained magpie ${gainedMagpieId}`);
+          }
+        }
       }
     },
   },
