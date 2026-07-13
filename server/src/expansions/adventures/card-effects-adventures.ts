@@ -466,7 +466,7 @@ const expansion: CardExpansionModule = {
           playerId: cardEffectArgs.playerId,
           once: false,
           compulsory: true,
-          allowMultipleInstances: false,
+          allowMultipleInstances: true,
           condition: async conditionArgs => {
             const playedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
             if (!playedCard.type.includes('ACTION')) return false;
