@@ -1597,10 +1597,16 @@ const cardEffects: CardExpansionModule = {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.debug(`[pillage effect] trashing pillage`);
 
-      await cardEffectArgs.actionService.run('trashCard', {
+      const trashed = await cardEffectArgs.actionService.run('trashCard', {
         playerId: cardEffectArgs.playerId,
         cardId: cardEffectArgs.cardId,
+        expectedFrom: { location: 'playArea', playerId: cardEffectArgs.playerId },
       });
+
+      if (!trashed) {
+        loggerService.debug(`[pillage effect] trash failed (lose track), skipping Spoils gain and attack`);
+        return;
+      }
 
       const spoilsCards = cardEffectArgs.findCardService.findCards({
         all: [{ location: 'nonSupplyCards' }, { kingdom: 'spoils' }],
