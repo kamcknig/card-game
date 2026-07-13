@@ -1,6 +1,7 @@
 import { CardEffectFunctionContext, CardExpansionModule } from '@server-types/index.ts';
-import { CardId, CardKey, CardLocation, PlayerId } from 'shared/types/index.ts';
+import { CardId, CardKey, CardLocation, CostSpec, PlayerId } from 'shared/types/index.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
+import { validateCostSpec } from '@shared/validate-cost-spec.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
@@ -1144,11 +1145,12 @@ const expansion: CardExpansionModule = {
         topCardByPile.set(card.kingdom, card);
       }
 
-      const maxCost = { treasure: 5 };
+      const maxCost: CostSpec = { kind: 'upTo', amount: { treasure: 5 }, playerId: args.playerId };
       const eligibleCards = Array.from(topCardByPile.values()).filter(card => {
         if (!card.type.includes('ACTION')) return false;
         if (card.type.includes('COMMAND') || card.type.includes('DURATION')) return false;
-        return compareCardCosts(card.cost, maxCost) <= 0;
+        const { cost } = args.cardPriceController.applyRules(card, { playerId: args.playerId });
+        return validateCostSpec(maxCost, cost);
       });
 
       if (!eligibleCards.length) {
