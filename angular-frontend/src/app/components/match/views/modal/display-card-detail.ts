@@ -47,7 +47,11 @@ export async function displayCardDetail(arg: CardDetailArg) {
   // cardId (lobby/match-configuration catalog entries) fall back to the
   // catalog's own pileMembers list instead.
   const siblings = primary.cardId !== undefined && pileKey
-    ? [...findLivePileSiblings(pileKey, primary.cardId), ...findLinkedSiblings(pileKey, primary.cardId)]
+    ? [
+        ...findLivePileSiblings(pileKey, primary.cardId),
+        ...findLinkedSiblings(pileKey, primary.cardId),
+        ...findTravellerLineSiblings(primary.cardId),
+      ]
     : resolveCatalogPileSiblings(arg);
 
   const extras: CardDetailDialogEntry[] = [];
@@ -93,6 +97,45 @@ function findLivePileSiblings(pileKey: string, excludeCardId?: CardId): CardDeta
   const matches: Card[] = [];
   for (const card of Object.values(cardsById)) {
     if (card.kingdom !== pileKey || seenCardKeys.has(card.cardKey)) continue;
+    seenCardKeys.add(card.cardKey);
+    matches.push(card);
+  }
+  return matches
+    .sort((a, b) => compareCardCosts(a.cost, b.cost))
+    .map((card) => ({ cardId: card.id, detailImagePath: card.detailImagePath }));
+}
+
+// Adventures traveller lines: each of the two 5-card upgrade chains
+// (Page -> Treasure Hunter -> Warrior -> Hero -> Champion; Peasant ->
+// Soldier -> Fugitive -> Disciple -> Teacher) is static card-definition
+// data, not something derived from live pile/link relationships, so it's
+// hardcoded here rather than threaded through the server.
+const TRAVELLER_LINES: Record<string, string[]> = {
+  page: ['page', 'treasure-hunter', 'warrior', 'hero', 'champion'],
+  'treasure-hunter': ['page', 'treasure-hunter', 'warrior', 'hero', 'champion'],
+  warrior: ['page', 'treasure-hunter', 'warrior', 'hero', 'champion'],
+  hero: ['page', 'treasure-hunter', 'warrior', 'hero', 'champion'],
+  champion: ['page', 'treasure-hunter', 'warrior', 'hero', 'champion'],
+  peasant: ['peasant', 'soldier', 'fugitive', 'disciple', 'teacher'],
+  soldier: ['peasant', 'soldier', 'fugitive', 'disciple', 'teacher'],
+  fugitive: ['peasant', 'soldier', 'fugitive', 'disciple', 'teacher'],
+  disciple: ['peasant', 'soldier', 'fugitive', 'disciple', 'teacher'],
+  teacher: ['peasant', 'soldier', 'fugitive', 'disciple', 'teacher'],
+};
+
+// Finds one representative live Card per distinct cardKey in the primary
+// card's traveller line (if it belongs to one), excluding the primary's own
+// cardKey. Sorted by cost ascending, matching the other resolvers' order.
+function findTravellerLineSiblings(excludeCardId?: CardId): CardDetailDialogEntry[] {
+  const cardsById = cardStore.get();
+  const primaryCard = excludeCardId !== undefined ? cardsById[excludeCardId] : undefined;
+  const line = primaryCard ? TRAVELLER_LINES[primaryCard.cardKey] : undefined;
+  if (!primaryCard || !line) return [];
+
+  const seenCardKeys = new Set<string>([primaryCard.cardKey]);
+  const matches: Card[] = [];
+  for (const card of Object.values(cardsById)) {
+    if (!line.includes(card.cardKey) || seenCardKeys.has(card.cardKey)) continue;
     seenCardKeys.add(card.cardKey);
     matches.push(card);
   }
