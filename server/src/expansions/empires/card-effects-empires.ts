@@ -710,6 +710,12 @@ const expansion: CardExpansionModule = {
         await doSetAside();
         return;
       }
+
+      loggerService.debug(`[encampment effect] revealing ${selectedCardId}`);
+      await args.actionService.run('revealCard', {
+        playerId: args.playerId,
+        cardId: selectedCardId,
+      });
     },
   },
   enchantress: {
