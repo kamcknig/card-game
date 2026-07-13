@@ -203,32 +203,31 @@ const expansion: CardExpansionModule = {
       });
 
       if (!selectedCardIds.length) {
-        loggerService.debug(`[artificer effect] no cards selected`);
-        return;
-      }
+        loggerService.debug(`[artificer effect] no cards selected to discard`);
+      } else {
+        loggerService.debug(`[artificer effect] selected ${selectedCardIds.length} cards to discard`);
 
-      loggerService.debug(`[artificer effect] selected ${selectedCardIds.length} cards to discard`);
-
-      for (const selectedCardId of selectedCardIds) {
-        await cardEffectArgs.actionService.run('discardCard', {
-          playerId: cardEffectArgs.playerId,
-          cardId: selectedCardId,
-        });
+        for (const selectedCardId of selectedCardIds) {
+          await cardEffectArgs.actionService.run('discardCard', {
+            playerId: cardEffectArgs.playerId,
+            cardId: selectedCardId,
+          });
+        }
       }
 
       const cardsToSelect = cardEffectArgs.findCardService.findCards({
         all: [
           { location: ['basicSupply', 'kingdomSupply'] },
           {
-            kind: 'upTo',
+            kind: 'exact',
             playerId: cardEffectArgs.playerId,
-            amount: { treasure: selectedCardIds.length ?? 0 },
+            amount: { treasure: selectedCardIds.length },
           },
         ],
       });
 
       if (!cardsToSelect.length) {
-        loggerService.debug(`[artificer effect] no cards in supply costing ${selectedCardIds.length ?? 0} treasure`);
+        loggerService.debug(`[artificer effect] no cards in supply costing exactly ${selectedCardIds.length}`);
         return;
       }
 
