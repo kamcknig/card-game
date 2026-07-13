@@ -502,7 +502,7 @@ const expansion: CardExpansionModule = {
 
       const thisCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
-      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard, 'cardPlayed', {
+      cardEffectArgs.reactionManager.registerReactionTemplate(thisCard, 'afterCardPlayed', {
         playerId: cardEffectArgs.playerId,
         once: true,
         compulsory: false,
