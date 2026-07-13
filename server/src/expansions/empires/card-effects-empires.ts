@@ -820,21 +820,33 @@ const expansion: CardExpansionModule = {
   },
   fortune: {
     registerLifeCycleMethods: () => ({
-      onGained: async args => {
+      onGained: async (args, eventArgs) => {
         const loggerService = args.loggerService;
         loggerService.debug(`[fortune onGained] running`);
 
-        const gladiatorsInPlay = args.findCardService.getCardsInPlay().filter(card => card.cardKey === 'gladiator');
+        const gladiatorsInPlay = args.findCardService
+          .getCardsInPlay()
+          .filter(card => card.cardKey === 'gladiator' && card.owner === eventArgs.playerId);
 
         if (!gladiatorsInPlay.length) {
           loggerService.debug(`[fortune onGained] no gladiators in play`);
           return;
         }
 
-        loggerService.debug(`[fortune onGained] gaining ${gladiatorsInPlay.length} treasure`);
-        await args.actionService.run('gainTreasure', {
-          count: gladiatorsInPlay.length,
-        });
+        loggerService.debug(`[fortune onGained] gaining ${gladiatorsInPlay.length} gold`);
+        for (let i = 0; i < gladiatorsInPlay.length; i++) {
+          const gainedGoldId = await args.supplyGainService.gainTopSupplyCardForPileKey({
+            playerId: eventArgs.playerId,
+            pileKey: 'gold',
+            from: 'basicSupply',
+            to: { location: 'playerDiscard' },
+            logTag: 'fortune onGained',
+          });
+          if (!gainedGoldId) {
+            loggerService.debug(`[fortune onGained] no gold left in supply`);
+            break;
+          }
+        }
       },
     }),
     registerEffects: () => async args => {
