@@ -1,5 +1,5 @@
 import { CardEffectFunctionContext, CardExpansionModule } from '@server-types/index.ts';
-import { CardId, CardLikeId } from 'shared/types/index.ts';
+import { CardId, CardLikeId, PlayerId } from 'shared/types/index.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
@@ -73,6 +73,29 @@ const promptUniqueActionFromHand = async (
   }
 
   return selectedCardId;
+};
+
+// Distributes a single shared Hex to every target: one Hex is drawn for the
+// first target and its resolved id is reused for the rest, per the rule
+// "turn over just one Hex, and the other players all follow the
+// instructions on that same Hex." Skips remaining targets if no Hex was
+// available at all (empty Hex pile).
+const receiveSharedHex = async (
+  cardEffectArgs: Pick<CardEffectFunctionContext, 'actionService' | 'loggerService'>,
+  targetPlayerIds: PlayerId[],
+): Promise<void> => {
+  let hexId: CardLikeId | undefined;
+  for (const [index, targetPlayerId] of targetPlayerIds.entries()) {
+    if (index === 0) {
+      hexId = await cardEffectArgs.actionService.run('receiveHex', { playerId: targetPlayerId });
+      continue;
+    }
+    if (hexId === undefined) {
+      cardEffectArgs.loggerService.debug('[receiveSharedHex] no hex was drawn for the first target, skipping rest');
+      continue;
+    }
+    await cardEffectArgs.actionService.run('receiveHex', { playerId: targetPlayerId, hexId });
+  }
 };
 
 // Nocturne card effects module for non-supply cards and other mechanics.
@@ -1153,11 +1176,7 @@ const expansion: CardExpansionModule = {
         `[skulk effect] hex targets ${targetPlayerIds.map(id => getPlayerById(cardEffectArgs.match, id))}`,
       );
 
-      for (const targetPlayerId of targetPlayerIds) {
-        await cardEffectArgs.actionService.run('receiveHex', {
-          playerId: targetPlayerId,
-        });
-      }
+      await receiveSharedHex(cardEffectArgs, targetPlayerIds);
     },
   },
   tracker: {
@@ -1292,11 +1311,7 @@ const expansion: CardExpansionModule = {
         `[vampire effect] hex targets ${targetPlayerIds.map(id => getPlayerById(cardEffectArgs.match, id))}`,
       );
 
-      for (const targetPlayerId of targetPlayerIds) {
-        await cardEffectArgs.actionService.run('receiveHex', {
-          playerId: targetPlayerId,
-        });
-      }
+      await receiveSharedHex(cardEffectArgs, targetPlayerIds);
 
       // Gain a card costing up to $5 other than a Vampire.
       const eligibleCards = cardEffectArgs.findCardService
@@ -1400,11 +1415,7 @@ const expansion: CardExpansionModule = {
         `[werewolf effect] hex targets ${targetPlayerIds.map(id => getPlayerById(cardEffectArgs.match, id))}`,
       );
 
-      for (const targetPlayerId of targetPlayerIds) {
-        await cardEffectArgs.actionService.run('receiveHex', {
-          playerId: targetPlayerId,
-        });
-      }
+      await receiveSharedHex(cardEffectArgs, targetPlayerIds);
     },
   },
   tormentor: {
@@ -1446,11 +1457,7 @@ const expansion: CardExpansionModule = {
         `[tormentor effect] hex targets ${targetPlayerIds.map(id => getPlayerById(cardEffectArgs.match, id))}`,
       );
 
-      for (const targetPlayerId of targetPlayerIds) {
-        await cardEffectArgs.actionService.run('receiveHex', {
-          playerId: targetPlayerId,
-        });
-      }
+      await receiveSharedHex(cardEffectArgs, targetPlayerIds);
     },
   },
   'secret-cave': {
