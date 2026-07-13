@@ -7,6 +7,7 @@ import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getAttackTargets } from '../../utils/get-attack-targets.ts';
+import { getCurrentTurnHistoryIndex } from '../../utils/get-current-turn-history-index.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 import { resolveChooseAbilities } from '../../utils/resolve-choose-abilities.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
@@ -264,84 +265,98 @@ const expansion: CardExpansionModule = {
       // Register a one-time reaction for the next gained card this turn.
       loggerService.info(`[charm effect] registering next-gain reaction for player ${args.playerId}`);
       const charmCard = args.cardLibrary.getCard(args.cardId);
-      const reactionId = `charm:${args.cardId}:cardGained`;
+      // Unique per play-instance so replaying the same Charm copy this turn
+      // (e.g. via Crown) doesn't collide on the same auto-generated id —
+      // colliding ids would let the first reaction to fire unregister both.
+      const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: args.match }) ?? 0;
+      const playIndexThisTurn = (args.match.stats.playedCardsByTurn[turnHistoryIndex] ?? []).filter(
+        playedCardId => playedCardId === args.cardId,
+      ).length;
 
-      args.reactionManager.registerReactionTemplate({
-        id: reactionId,
-        listeningFor: 'cardGained',
-        playerId: args.playerId,
-        once: true,
-        compulsory: false,
-        allowMultipleInstances: true,
-        condition: conditionArgs => {
-          // Only trigger off the current player's gains.
-          return conditionArgs.trigger.args.playerId === args.playerId;
-        },
-        triggeredEffectFn: async triggeredArgs => {
-          const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
-          // Apply price rules to the gained card to determine the comparison cost.
-          const { cost: gainedCost } = triggeredArgs.cardPriceController.applyRules(gainedCard, {
-            playerId: args.playerId,
-          });
-
-          loggerService.debug(`[charm cardGained] gained ${gainedCard}, matching cost ${JSON.stringify(gainedCost)}`);
-
-          // Find supply cards with the exact same cost but a different name.
-          const matchingCards = triggeredArgs.findCardService
-            .findCards({
-              all: [
-                { location: ['basicSupply', 'kingdomSupply'] },
-                { playerId: args.playerId, kind: 'exact', amount: gainedCost },
-              ],
-            })
-            .filter(card => card.cardKey !== gainedCard.cardKey);
-
-          if (!matchingCards.length) {
-            loggerService.debug(`[charm cardGained] no differently named cards with same cost`);
-            return;
-          }
-
-          loggerService.debug(`[charm cardGained] prompting to gain one of ${matchingCards.length} cards`);
-          const selectedIds = await triggeredArgs.actionService.run('selectCard', {
-            playerId: args.playerId,
-            prompt: 'Gain a differently named card with the same cost',
-            restrict: matchingCards.map(card => card.id),
-            count: 1,
-            optional: true,
-          });
-
-          if (!selectedIds.length) {
-            loggerService.debug(`[charm cardGained] player chose not to gain a card`);
-            return;
-          }
-
-          const selectedCard = triggeredArgs.cardLibrary.getCard(selectedIds[0]);
-          loggerService.debug(`[charm cardGained] gaining ${selectedCard} to discard`);
-          await triggeredArgs.actionService.run(
-            'gainCard',
-            {
+      const cardGainedReactionId = args.reactionManager.registerReactionTemplate(
+        charmCard,
+        'cardGained',
+        {
+          playerId: args.playerId,
+          once: true,
+          compulsory: false,
+          allowMultipleInstances: true,
+          condition: conditionArgs => {
+            // Only trigger off the current player's gains.
+            return conditionArgs.trigger.args.playerId === args.playerId;
+          },
+          triggeredEffectFn: async triggeredArgs => {
+            const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
+            // Apply price rules to the gained card to determine the comparison cost.
+            const { cost: gainedCost } = triggeredArgs.cardPriceController.applyRules(gainedCard, {
               playerId: args.playerId,
-              cardId: selectedCard.id,
-              to: { location: 'playerDiscard' },
-            },
-            { source: args.cardId },
-          );
+            });
+
+            loggerService.debug(`[charm cardGained] gained ${gainedCard}, matching cost ${JSON.stringify(gainedCost)}`);
+
+            // Find supply cards with the exact same cost but a different name.
+            const matchingCards = triggeredArgs.findCardService
+              .findCards({
+                all: [
+                  { location: ['basicSupply', 'kingdomSupply'] },
+                  { playerId: args.playerId, kind: 'exact', amount: gainedCost },
+                ],
+              })
+              .filter(card => card.cardKey !== gainedCard.cardKey);
+
+            if (!matchingCards.length) {
+              loggerService.debug(`[charm cardGained] no differently named cards with same cost`);
+              return;
+            }
+
+            loggerService.debug(`[charm cardGained] prompting to gain one of ${matchingCards.length} cards`);
+            const selectedIds = await triggeredArgs.actionService.run('selectCard', {
+              playerId: args.playerId,
+              prompt: 'Gain a differently named card with the same cost',
+              restrict: matchingCards.map(card => card.id),
+              count: 1,
+              optional: true,
+            });
+
+            if (!selectedIds.length) {
+              loggerService.debug(`[charm cardGained] player chose not to gain a card`);
+              return;
+            }
+
+            const selectedCard = triggeredArgs.cardLibrary.getCard(selectedIds[0]);
+            loggerService.debug(`[charm cardGained] gaining ${selectedCard} to discard`);
+            await triggeredArgs.actionService.run(
+              'gainCard',
+              {
+                playerId: args.playerId,
+                cardId: selectedCard.id,
+                to: { location: 'playerDiscard' },
+              },
+              { source: args.cardId },
+            );
+          },
         },
-      });
+        { idSuffix: `${playIndexThisTurn}` },
+      );
 
       // Clean up the pending reaction at end of turn if it never triggers.
-      args.reactionManager.registerSystemTemplate(charmCard, 'endTurn', {
-        playerId: args.playerId,
-        once: true,
-        allowMultipleInstances: true,
-        compulsory: true,
-        autoResolve: true,
-        condition: conditionArgs => conditionArgs.trigger.args.playerId === args.playerId,
-        triggeredEffectFn: async triggeredArgs => {
-          loggerService.debug(`[charm endTurn] clearing pending next-gain reaction`);
-          triggeredArgs.reactionManager.unregisterTrigger(reactionId);
+      args.reactionManager.registerSystemTemplate(
+        charmCard,
+        'endTurn',
+        {
+          playerId: args.playerId,
+          once: true,
+          allowMultipleInstances: true,
+          compulsory: true,
+          autoResolve: true,
+          condition: conditionArgs => conditionArgs.trigger.args.playerId === args.playerId,
+          triggeredEffectFn: async triggeredArgs => {
+            loggerService.debug(`[charm endTurn] clearing pending next-gain reaction`);
+            triggeredArgs.reactionManager.unregisterTrigger(cardGainedReactionId);
+          },
         },
-      });
+        { idSuffix: `${playIndexThisTurn}` },
+      );
     },
   },
   catapult: {
