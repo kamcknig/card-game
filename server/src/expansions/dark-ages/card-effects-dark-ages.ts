@@ -29,7 +29,7 @@ const resolveKnightAttack = async (
 
     const trashCandidates = revealed.filter(card => {
       const { cost } = cardEffectArgs.cardPriceController.applyRules(card, { playerId: targetPlayerId });
-      return cost.treasure >= 3 && cost.treasure <= 6;
+      return cost.treasure >= 3 && cost.treasure <= 6 && !cost.potion && !cost.debt;
     });
 
     let cardToTrash: Card | undefined;
@@ -898,7 +898,7 @@ const cardEffects: CardExpansionModule = {
       if (result.action === 1) {
         const trashCards = cardEffectArgs.findCardService.findCards({ all: [{ location: 'trash' }] }).filter(card => {
           const cost = cardEffectArgs.cardPriceController.applyRules(card, { playerId: cardEffectArgs.playerId });
-          return cost.cost.treasure >= 3 && cost.cost.treasure <= 6;
+          return cost.cost.treasure >= 3 && cost.cost.treasure <= 6 && !cost.cost.potion && !cost.cost.debt;
         });
 
         if (!trashCards.length) {
