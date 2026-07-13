@@ -305,7 +305,10 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
   if (usesInheritanceToken) {
     registrar('onGameStartSetup', async args => {
-      // Inheritance supplies an Estate token per player and registers Estate play handling.
+      // Inheritance supplies an Estate token per player; Estate-replay
+      // handling is registered turn-scoped by the event effect itself
+      // (registerCardPlayedReaction in event-effects-adventures.ts),
+      // matching the card text's "(During your turns, ...)" restriction.
       for (const player of args.match.players) {
         const alreadyOwned = Object.values(args.match.tokens ?? {}).some(
           token => token.ownerId === player.id && token.tokenId === adventuresTokenIds.estate,
@@ -317,41 +320,6 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
             location: { type: 'playerAvailable', playerId: player.id },
           });
         }
-
-        args.reactionManager.registerReactionTemplate({
-          id: `adventures-estate-token:0:cardPlayed:${player.id}`,
-          listeningFor: 'cardPlayed',
-          playerId: player.id,
-          once: false,
-          compulsory: true,
-          allowMultipleInstances: true,
-          system: true,
-          condition: async ({ trigger, match, cardLibrary }) => {
-            if (trigger.args.playerId !== player.id) return false;
-            const playedCard = cardLibrary.getCard(trigger.args.cardId);
-            if (playedCard.cardKey !== 'estate') return false;
-            return Object.values(match.tokens ?? {}).some(
-              token =>
-                token.tokenId === adventuresTokenIds.estate &&
-                token.ownerId === player.id &&
-                token.location.type === 'card',
-            );
-          },
-          triggeredEffectFn: async ({ match, actionService }) => {
-            const estateToken = Object.values(match.tokens ?? {}).find(
-              token =>
-                token.tokenId === adventuresTokenIds.estate &&
-                token.ownerId === player.id &&
-                token.location.type === 'card',
-            );
-            if (!estateToken || estateToken.location.type !== 'card') return;
-            await actionService.run('playCard', {
-              playerId: player.id,
-              cardId: estateToken.location.cardId,
-              overrides: { actionCost: 0, moveCard: false },
-            });
-          },
-        });
       }
     });
   }
