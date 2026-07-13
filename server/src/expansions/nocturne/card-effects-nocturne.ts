@@ -518,7 +518,7 @@ const expansion: CardExpansionModule = {
           id: `crypt:${cryptCard.id}:startTurn`,
           listeningFor: 'startTurn',
           playerId: cardEffectArgs.playerId,
-          once: true,
+          once: false,
           compulsory: true,
           allowMultipleInstances: true,
           condition: ({ trigger }) =>
