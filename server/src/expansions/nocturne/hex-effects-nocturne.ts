@@ -405,16 +405,25 @@ const registerPoverty = (registerHexEffect: HexEffectRegistrar) => {
 const registerWar = (registerHexEffect: HexEffectRegistrar) => {
   registerHexEffect(
     'war',
-    async ({ loggerService, playerId, cardSourceController, cardLibrary, cardPriceController, actionService }) => {
-      const deck = cardSourceController.getSource('playerDeck', playerId);
-      if (!deck.length) {
-        loggerService.debug('[war hex] no cards in deck to reveal');
-        return;
-      }
+    async ({ loggerService, playerId, cardLibrary, cardPriceController, actionService }) => {
+      const setAsideCardIds: CardId[] = [];
 
-      while (deck.length > 0) {
-        const topCardId = deck[deck.length - 1];
-        const card = cardLibrary.getCard(topCardId);
+      while (true) {
+        // Reveals the top card of the deck, shuffling the discard back in
+        // automatically when the deck runs dry; returns undefined only when
+        // both deck and discard are exhausted.
+        const revealedCardId = await actionService.run('revealCard', {
+          playerId,
+          source: 'playerDeck',
+          moveToSetAside: true,
+        });
+
+        if (revealedCardId === undefined) {
+          loggerService.debug('[war hex] deck and discard exhausted, no eligible card found');
+          break;
+        }
+
+        const card = cardLibrary.getCard(revealedCardId);
         const cost = cardPriceController.applyRules(card, { playerId }).cost;
         const matchesCost =
           (cost.treasure === 3 || cost.treasure === 4) && (cost.potion ?? 0) === 0 && (cost.debt ?? 0) === 0;
@@ -423,19 +432,21 @@ const registerWar = (registerHexEffect: HexEffectRegistrar) => {
           loggerService.debug(`[war hex] trashing ${card}`);
           await actionService.run('trashCard', {
             playerId,
-            cardId: topCardId,
+            cardId: revealedCardId,
           });
-          return;
+          break;
         }
 
-        loggerService.debug(`[war hex] discarding ${card}`);
-        await actionService.run('discardCard', {
-          playerId,
-          cardId: topCardId,
-        });
+        setAsideCardIds.push(revealedCardId);
       }
 
-      loggerService.debug('[war hex] no eligible card found, discarded entire deck');
+      loggerService.debug(`[war hex] discarding ${setAsideCardIds.length} revealed card(s)`);
+      for (const cardId of setAsideCardIds) {
+        await actionService.run('discardCard', {
+          playerId,
+          cardId,
+        });
+      }
     },
   );
 };
