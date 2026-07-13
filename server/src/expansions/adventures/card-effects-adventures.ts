@@ -37,7 +37,7 @@ const addTravellerEffect = async (
   }
 
   const newCards = context.findCardService.findCards({
-    all: [{ location: ['basicSupply', 'kingdomSupply'] }, { cardKeys: travelTo }],
+    all: [{ location: 'nonSupplyCards' }, { cardKeys: travelTo }],
   });
 
   if (!newCards.length) {
@@ -61,11 +61,15 @@ const addTravellerEffect = async (
     return;
   }
 
-  context.loggerService.debug(`[${card.cardKey} onDiscarded effect] moving ${card} back to supply`);
+  // Page/Peasant themselves live in the kingdom supply; every upgrade tier
+  // above them (kingdomSelectable: false) lives in its own non-supply pile.
+  const returnLocation = card.kingdomSelectable === false ? 'nonSupplyCards' : 'kingdomSupply';
+
+  context.loggerService.debug(`[${card.cardKey} onDiscarded effect] moving ${card} back to ${returnLocation}`);
 
   await context.actionService.run('moveCard', {
     cardId: card.id,
-    to: { location: 'kingdomSupply' },
+    to: { location: returnLocation },
   });
 
   context.loggerService.debug(`[${card.cardKey} onDiscarded effect] moving ${newCard} to discard pile`);

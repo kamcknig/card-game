@@ -43,7 +43,8 @@
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "TRAVELLER"]
+    "type": ["ACTION", "TRAVELLER"],
+    "kingdomSelectable": false
   },
   "distant-lands": {
     "cost": {
@@ -69,7 +70,8 @@
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION", "TRAVELLER"]
+    "type": ["ACTION", "TRAVELLER"],
+    "kingdomSelectable": false
   },
   "gear": {
     "cost": {
@@ -187,7 +189,8 @@
     },
     "type": ["ACTION", "ATTACK", "TRAVELLER"],
     "abilityText": "+2\n+$1 per other Attack you have in play. Each other player with 4 or more cards in hand discards a card.\nWhen you discard this from play, you may exchange it for a Fugitive.\n(This is not in the Supply.)",
-    "targetScheme": "ALL_OTHER"
+    "targetScheme": "ALL_OTHER",
+    "kingdomSelectable": false
   },
   "storyteller": {
     "cost": {
@@ -207,7 +210,8 @@
     "cost": {
       "treasure": 6
     },
-    "type": ["ACTION", "RESERVE"]
+    "type": ["ACTION", "RESERVE"],
+    "kingdomSelectable": false
   },
   "transmogrify": {
     "cost": {

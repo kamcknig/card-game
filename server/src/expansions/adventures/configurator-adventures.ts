@@ -1,5 +1,6 @@
 import { ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/index.ts';
 import { configureReserve } from './configure-reserve.ts';
+import { configureTravellers } from './configure-travellers.ts';
 import { registerAdventuresTokenDefinitions } from './token-definitions-adventures.ts';
 import { registerAdventuresTokenTriggers } from './token-triggers-adventures.ts';
 import { ComputedMatchConfiguration, TokenId } from 'shared/types/index.ts';
@@ -8,6 +9,7 @@ import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 
 const configurator: ExpansionConfiguratorFactory = () => async args => {
   configureReserve(args);
+  await configureTravellers(args);
   registerAdventuresTokenDefinitions(args.expansionRegistration.registerTokenDefinition);
   registerAdventuresTokenTriggers(args.expansionRegistration.registerTokenCardPlayedHandler);
 
