@@ -692,7 +692,7 @@ const expansion: CardExpansionModule = {
           const { cost } = conditionArgs.cardPriceController.applyRules(cardGained, {
             playerId: cardEffectArgs.playerId,
           });
-          return !(cost.treasure <= 6 && (!cost.potion || cost.potion <= 0));
+          return cost.treasure <= 6 && (!cost.potion || cost.potion <= 0);
         },
         triggeredEffectFn: async triggeredArgs => {
           loggerService.debug(`[duplicate cardGained] calling ${thisCard} to play area`);
