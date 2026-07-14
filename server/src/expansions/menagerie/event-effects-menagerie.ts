@@ -106,12 +106,10 @@ const effectMap: CardExpansionModule = {
         {} as Record<CardKey, CardId[]>,
       );
 
-      const selectableNameCardIds = Object.values(cardIdsByKey)
-        .filter(cardIds => cardIds.length > 1)
-        .map(cardIds => cardIds[0]);
+      const selectableNameCardIds = Object.values(cardIdsByKey).map(cardIds => cardIds[0]);
 
       if (!selectableNameCardIds.length) {
-        loggerService.debug('[banish effect] no duplicated card names in hand');
+        loggerService.debug('[banish effect] no cards in hand to Exile');
         return;
       }
 
