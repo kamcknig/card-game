@@ -1140,6 +1140,11 @@ const expansion: CardExpansionModule = {
 
       loggerService.debug(`[research effect] set aside ${setAsideCardIds.length} card(s)`);
 
+      if (!setAsideCardIds.length) {
+        loggerService.debug('[research effect] nothing set aside, skipping next-turn duration effect');
+        return;
+      }
+
       // Keep Research through cleanup and return set-aside cards to hand next turn.
       registerStartTurnEffect(
         cardEffectArgs,
