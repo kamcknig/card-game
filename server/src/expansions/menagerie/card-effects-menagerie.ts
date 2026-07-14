@@ -1610,8 +1610,11 @@ const expansion: CardExpansionModule = {
           once: false,
           compulsory: false,
           allowMultipleInstances: true,
-          condition: ({ cardSourceController }) => {
-            // Sheepdog must still be in hand to be reactable.
+          condition: ({ trigger, cardSourceController }) => {
+            // Sheepdog only reacts to gains by its owner and only while this copy remains in hand.
+            if (trigger.args.playerId !== playerId) {
+              return false;
+            }
             try {
               const source = cardSourceController.findCardSource(cardId);
               return source.sourceKey === 'playerHand' && source.playerId === playerId;
