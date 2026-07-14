@@ -1208,6 +1208,7 @@ const effectMap: CardExpansionModule = {
           await triggeredArgs.actionService.run('playCard', {
             playerId: cardEffectArgs.playerId,
             cardId: topCardId,
+            overrides: { actionCost: 0 },
           });
         },
       });
