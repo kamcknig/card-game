@@ -322,7 +322,8 @@ const configurator: ExpansionConfiguratorFactory = () => {
     // Menagerie Exile mat is needed when selected Kingdom cards or Events use Exile.
     const requiresExileMat =
       args.config.kingdomSupply.some(supply => supply.cards.some(card => card.mat === 'exile')) ||
-      args.config.events.some(event => exileMatEvents.has(event.cardKey));
+      args.config.events.some(event => exileMatEvents.has(event.cardKey)) ||
+      args.config.ways.some(way => ['way-of-the-camel', 'way-of-the-worm'].includes(way.cardKey));
 
     if (!requiresExileMat) {
       configureWayOfTheMouse(args);
