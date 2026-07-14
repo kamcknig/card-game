@@ -263,10 +263,6 @@ const effectMap: CardExpansionModule = {
 
         for (const card of allCards) {
           const unsub = cardEffectArgs.cardPriceController.registerRule(card, (_targetCard, context) => {
-            if (context.playerId !== cardEffectArgs.playerId) {
-              return { restricted: false, cost: { treasure: 0 } };
-            }
-
             const currentPlayer = context.match.players[context.match.currentPlayerTurnIndex];
             if (currentPlayer?.id !== cardEffectArgs.playerId) {
               return { restricted: false, cost: { treasure: 0 } };
@@ -328,6 +324,21 @@ const effectMap: CardExpansionModule = {
           clearRules();
         },
       });
+
+      // Buying Canal mid-turn should apply the discount immediately for the rest of that turn.
+      if (!isCurrentTurnPlayer(cardEffectArgs.match, cardEffectArgs.playerId)) {
+        return;
+      }
+
+      if (!isProjectOwned(cardEffectArgs.match, cardEffectArgs.playerId, project)) {
+        loggerService.debug(
+          `[canal project] player ${cardEffectArgs.playerId} does not own cube yet for immediate apply`,
+        );
+        return;
+      }
+
+      loggerService.debug(`[canal project] applying immediate cost reduction for player ${cardEffectArgs.playerId}`);
+      registerRules();
     },
   },
   capitalism: {
