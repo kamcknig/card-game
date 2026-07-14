@@ -1,4 +1,4 @@
-import { Card, CardId } from 'shared/types/index.ts';
+import { Card, CardId, PROMPT_DECLINE_ACTION } from 'shared/types/index.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
@@ -100,7 +100,14 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      if (availableArtifacts.length === 1) {
+      // Taking an artifact is mandatory for the base "take the Lantern or
+      // Horn" clause (whether one or both are available). It is only
+      // optional in the narrower case where the player already has the
+      // Lantern and Horn is the sole remaining option ("...you may take
+      // the Horn").
+      const takeIsOptional = hasLantern;
+
+      if (availableArtifacts.length === 1 && !takeIsOptional) {
         const selectedArtifact = availableArtifacts[0];
         loggerService.debug(`[border-guard effect] gaining artifact ${selectedArtifact.artifactId}`);
         await cardEffectArgs.actionService.run('gainArtifact', {
@@ -110,18 +117,26 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      // Prompt the player to take an artifact or decline when multiple are available.
+      // Prompt the player to take an artifact. Only the optional single-Horn
+      // case (see takeIsOptional above) gets a decline button; the two-option
+      // case is a forced choice between the Lantern and Horn.
       const actionButtons = [
         ...availableArtifacts.map((artifact, index) => ({
           label: artifact.label,
           action: index + 1,
         })),
+        ...(takeIsOptional ? [{ label: 'KEEP CURRENT', action: PROMPT_DECLINE_ACTION, role: 'cancel' as const }] : []),
       ];
       const result = (await cardEffectArgs.actionService.run('userPrompt', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Take an Artifact?',
         actionButtons,
       })) as { action: number };
+
+      if (takeIsOptional && result.action === PROMPT_DECLINE_ACTION) {
+        loggerService.debug('[border-guard effect] player declined to take the Horn');
+        return;
+      }
 
       const selectedArtifact = availableArtifacts[result.action - 1];
       if (!selectedArtifact) {
