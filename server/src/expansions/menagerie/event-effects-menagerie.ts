@@ -622,7 +622,7 @@ const effectMap: CardExpansionModule = {
         {
           playerId: cardEffectArgs.playerId,
           once: false,
-          allowMultipleInstances: false,
+          allowMultipleInstances: true,
           compulsory: true,
           condition: async conditionArgs => {
             if (conditionArgs.trigger.args.playerId === cardEffectArgs.playerId) {
