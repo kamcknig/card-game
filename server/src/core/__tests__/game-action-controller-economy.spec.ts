@@ -51,7 +51,11 @@ const makeMatch = (overrides: Partial<Match> = {}): Match =>
       cardsGained: {},
     },
     config: { basicSupply: [], kingdomSupply: [] },
-    players: [],
+    // exchangeCoffer/spendVillager require the caller to be the current
+    // turn's player; default the fixture to PLAYER_ID's own turn so tests
+    // that don't care about turn-ownership don't need to set this up.
+    currentPlayerTurnIndex: 0,
+    players: [{ id: PLAYER_ID }],
     ...overrides,
   }) as unknown as Match;
 
