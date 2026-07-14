@@ -2021,11 +2021,13 @@ const expansion: CardExpansionModule = {
   },
   horse: {
     registerEffects: () => async cardEffectArgs => {
-      // Horse draws 2 cards and then returns itself to the Horse pile.
+      // Horse draws 2 cards, gains 1 action, and then returns itself to the Horse pile.
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 2,
       });
+
+      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
       await cardEffectArgs.actionService.run('moveCard', {
         cardId: cardEffectArgs.cardId,
