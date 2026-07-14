@@ -710,7 +710,9 @@ const expansion: CardExpansionModule = {
       onLeavePlay: async ({ reactionManager, cardLibrary }, { cardId }) => {
         const gatekeeperCard = cardLibrary.getCard(cardId);
         // Ensure the attack reaction is cleaned if Gatekeeper leaves play early.
-        reactionManager.unregisterTrigger(`${gatekeeperCard.cardName}:${cardId}:cardGained`);
+        // Must match registerSystemTemplate's actual generated id exactly
+        // (cardKey, not cardName, plus the ":system" suffix).
+        reactionManager.unregisterTrigger(`${gatekeeperCard.cardKey}:${cardId}:cardGained:system`);
       },
     }),
     registerEffects: () => async cardEffectArgs => {
