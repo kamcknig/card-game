@@ -2478,6 +2478,10 @@ export class GameActionController implements GameActionDefinitionMap {
 
   // Converts Coffers tokens into spendable treasure for the current turn.
   async exchangeCoffer(args: { playerId: PlayerId; count: number }, context?: GameActionContext) {
+    if (getCurrentPlayer(this.match).id !== args.playerId) {
+      this.loggerService.warn(`[exchangeCoffer action] player ${args.playerId} cannot exchange coffers off-turn`);
+      return;
+    }
     this.match.coffers[args.playerId] ??= 0;
     const available = this.match.coffers[args.playerId];
     // Clamp to a non-negative integer no larger than the player's coffers —
@@ -2498,6 +2502,10 @@ export class GameActionController implements GameActionDefinitionMap {
   // Spends Villagers to gain actions during the Action phase.
   async spendVillager(args: { playerId: PlayerId; count: number }, context?: GameActionContext) {
     this.loggerService.log(`[spendVillager action] player ${args.playerId} spending ${args.count} villagers`);
+    if (getCurrentPlayer(this.match).id !== args.playerId) {
+      this.loggerService.warn(`[spendVillager action] player ${args.playerId} cannot spend villagers off-turn`);
+      return;
+    }
     const currentPhase = getTurnPhase(this.match.turnPhaseIndex);
     // Villagers can only be spent during the Action phase.
     if (currentPhase !== 'action') {
