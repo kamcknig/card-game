@@ -1100,7 +1100,7 @@ const expansion: CardExpansionModule = {
         {
           playerId: cardEffectArgs.playerId,
           once: true,
-          compulsory: false,
+          compulsory: true,
           allowMultipleInstances: true,
           condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
           triggeredEffectFn: async triggeredArgs => {
