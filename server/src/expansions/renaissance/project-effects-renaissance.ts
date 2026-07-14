@@ -1012,6 +1012,10 @@ const effectMap: CardExpansionModule = {
             return false;
           }
 
+          if (getCurrentPlayer(conditionArgs.match).id !== cardEffectArgs.playerId) {
+            return false;
+          }
+
           const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
           if (!owned) {
             return false;
