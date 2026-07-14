@@ -622,9 +622,6 @@ const expansion: CardExpansionModule = {
       loggerService.debug(`[inventor effect] applying -$1 cost reduction to ${allCards.length} card(s) this turn`);
       const ruleUnsubs = allCards.map(card =>
         cardEffectArgs.cardPriceController.registerRule(card, (_targetCard, context) => {
-          if (context.playerId !== cardEffectArgs.playerId) {
-            return { restricted: false, cost: { treasure: 0 } };
-          }
           if (getCurrentPlayer(context.match).id !== cardEffectArgs.playerId) {
             return { restricted: false, cost: { treasure: 0 } };
           }
