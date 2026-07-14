@@ -438,20 +438,32 @@ export class MatchPlayerAreaComponent {
     return this._matchUsesVillagers() || this.resourceState().villagers > 0;
   });
 
+  // Whether it is currently the player's own turn (any phase) — Coffers
+  // can be exchanged at any point during the owner's own turn (2022
+  // errata widened this from "start of Buy phase only"), while Villagers
+  // are further restricted to the owner's own Action phase specifically.
+  private readonly _isOwnTurn = computed(() => {
+    const selfPlayerId = this._selfPlayerId();
+    if (selfPlayerId === undefined) {
+      return false;
+    }
+    return this._currentPlayerTurnId() === selfPlayerId;
+  });
+
   // Whether it is currently the player's own action phase — the only time
   // Villagers are spendable (for +1 Action each). Separate from
   // villagerControlsVisible so the icon stays visible outside the action
   // phase while the spend control itself stays disabled.
   private readonly _isOwnActionPhase = computed(() => {
-    const selfPlayerId = this._selfPlayerId();
-    if (selfPlayerId === undefined) {
-      return false;
-    }
-    return this._currentPlayerTurnId() === selfPlayerId && this._turnPhase() === 'action';
+    return this._isOwnTurn() && this._turnPhase() === 'action';
   });
 
   readonly canSpendVillagers = computed(() => {
     return this._isOwnActionPhase() && this.resourceState().villagers > 0;
+  });
+
+  readonly canExchangeCoffers = computed(() => {
+    return this._isOwnTurn() && this.resourceState().coffers > 0;
   });
 
   readonly availableCubeTokens = computed(() => {
