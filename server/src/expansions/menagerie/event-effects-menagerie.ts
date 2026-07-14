@@ -891,7 +891,10 @@ const effectMap: CardExpansionModule = {
       event.metadata.menagerie.usedByPlayerId[cardEffectArgs.playerId] = true;
       loggerService.debug(`[seize-the-day effect] marking usage for player ${cardEffectArgs.playerId}`);
 
-      const lockRule: CardPriceRule = () => ({ restricted: true, cost: { treasure: 0 } });
+      const lockRule: CardPriceRule = (_card, context) => ({
+        restricted: context.playerId === cardEffectArgs.playerId,
+        cost: { treasure: 0 },
+      });
       cardEffectArgs.cardPriceController.registerRule(event, lockRule);
 
       await cardEffectArgs.actionService.run('queueExtraTurn', {
