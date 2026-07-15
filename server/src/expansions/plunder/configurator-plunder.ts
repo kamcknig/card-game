@@ -344,7 +344,7 @@ const registerFatedTraitEvents = (registrar: GameEventRegistrar, config: Compute
               content: {
                 type: 'select',
                 cardIds: fatedCardIds,
-                selectCount: fatedCardIds.length,
+                selectCount: { kind: 'upTo', count: fatedCardIds.length },
               },
             });
             const selectedTopCardIds =
@@ -373,7 +373,7 @@ const registerFatedTraitEvents = (registrar: GameEventRegistrar, config: Compute
                       content: {
                         type: 'select',
                         cardIds: remainingFatedCardIds,
-                        selectCount: remainingFatedCardIds.length,
+                        selectCount: { kind: 'upTo', count: remainingFatedCardIds.length },
                       },
                     })
                   )?.result?.filter(cardId => remainingFatedCardIds.includes(cardId)) ?? [])
