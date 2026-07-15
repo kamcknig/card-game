@@ -1664,14 +1664,7 @@ const cardEffects: CardExpansionModule = {
           return;
         }
 
-        let sourceInfo: { sourceKey: string; playerId?: number } | null = null;
-        try {
-          sourceInfo = cardEffectArgs.cardSourceController.findCardSource(eventArgs.cardId);
-        } catch {
-          sourceInfo = null;
-        }
-
-        if (!sourceInfo || sourceInfo.sourceKey !== 'playerDiscard' || sourceInfo.playerId !== playerId) {
+        if (!isCardStillAtGainedLocation(cardEffectArgs.cardSourceController, eventArgs.cardId, eventArgs.gainedLocation)) {
           return;
         }
 

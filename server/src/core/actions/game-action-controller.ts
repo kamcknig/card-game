@@ -1923,6 +1923,7 @@ export class GameActionController implements GameActionDefinitionMap {
         cardId,
         bought: context?.bought ?? false,
         gainContext: context?.lifecycleContext?.onGained,
+        gainedLocation: trigger.args.gainedLocation,
       });
     } else {
       this.loggerService.debug('[gainCard action] lifecycle onGained event suppressed');

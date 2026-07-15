@@ -977,6 +977,9 @@ export interface CardLifecycleEventArgMap {
     cardId: CardId;
     bought: boolean;
     gainContext?: OnGainedLifecycleContext;
+    // Where the card landed; mirrors the cardGained reaction trigger's own
+    // gainedLocation field. Undefined for multi-location moves (rare).
+    gainedLocation?: { location: CardLocation; playerId?: PlayerId };
   };
   onTrashed: {
     playerId: PlayerId;
