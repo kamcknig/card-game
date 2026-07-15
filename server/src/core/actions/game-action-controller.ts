@@ -4232,8 +4232,8 @@ export class GameActionController implements GameActionDefinitionMap {
       return;
     }
 
-    if (cardIds.length <= 1 && cardLikeIds.length <= 1) {
-      // Ignore non-shuffles where there are not enough elements.
+    if (cardIds.length < 1 && cardLikeIds.length < 1) {
+      // Nothing to shuffle or fire shuffle reactions for.
       return;
     }
 
