@@ -368,7 +368,12 @@ const expansion: CardExpansionModule = {
           const revealedCost = cardEffectArgs.cardPriceController.applyRules(revealedCard, {
             playerId: targetPlayerId,
           }).cost;
-          return revealedCost.treasure >= 3 && revealedCost.treasure <= 6;
+          return (
+            revealedCost.treasure >= 3 &&
+            revealedCost.treasure <= 6 &&
+            (revealedCost.potion ?? 0) === 0 &&
+            (revealedCost.debt ?? 0) === 0
+          );
         });
 
         let exileCardId: CardId | undefined;
