@@ -133,7 +133,13 @@ export type MatchStats = {
   /**
    * Keys are the card's ID that was played, and values are CardStats objects.
    */
-  playedCards: Record<CardId, CardStats>;
+  playedCards: Record<CardId, CardStats & {
+    // Where the card was played from, captured immediately before playCard
+    // moves it to playArea. Undefined if the prior source couldn't be
+    // resolved (defensive; should not happen in normal play).
+    sourceLocation?: CardLocation;
+    sourcePlayerId?: PlayerId;
+  }>;
   playedCardsByTurn: Record<number, CardId[] | undefined>;
 
   trashedCards: Record<CardId, CardStats>;

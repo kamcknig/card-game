@@ -4130,6 +4130,18 @@ export class GameActionController implements GameActionDefinitionMap {
         : `way:${selectedWay.cardKey}`
       : 'normal';
 
+    // Capture the card's location immediately before it moves to playArea so
+    // effects can later distinguish hand plays from replays/discard-plays/etc.
+    let sourceLocation: CardLocation | undefined;
+    let sourcePlayerId: PlayerId | undefined;
+    try {
+      const priorSource = this.cardSourceController.findCardSource(cardId);
+      sourceLocation = priorSource.sourceKey;
+      sourcePlayerId = priorSource.playerId;
+    } catch {
+      this.loggerService.debug(`[playCard action] could not resolve prior source for ${card}`);
+    }
+
     if (args.overrides?.moveCard === undefined || args.overrides.moveCard) {
       await this.moveCard({
         cardId: cardId,
@@ -4151,6 +4163,8 @@ export class GameActionController implements GameActionDefinitionMap {
       turnNumber: this.match.turnNumber,
       turnHistoryIndex: this.getCurrentTurnHistoryIndex(),
       playerId: playerId,
+      sourceLocation,
+      sourcePlayerId,
     };
 
     this.loggerService.info(`[playCard action] ${getPlayerById(this.match, playerId)} played card ${card}`);

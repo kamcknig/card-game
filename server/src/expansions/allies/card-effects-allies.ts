@@ -3050,8 +3050,12 @@ const cardEffects: CardExpansionModule = {
               return { canPlay: true };
             }
 
-            const playedCardsThisTurn = triggeredArgs.match.stats.playedCardsByTurn[extraTurnHistoryIndex] ?? [];
-            if (playedCardsThisTurn.length < 3) {
+            const playedCardIdsThisTurn = triggeredArgs.match.stats.playedCardsByTurn[extraTurnHistoryIndex] ?? [];
+            const handPlaysThisTurn = playedCardIdsThisTurn.filter(playedCardId => {
+              const playedStats = triggeredArgs.match.stats.playedCards[playedCardId];
+              return playedStats?.sourceLocation === 'playerHand' && playedStats?.sourcePlayerId === playerId;
+            });
+            if (handPlaysThisTurn.length < 3) {
               return { canPlay: true };
             }
 
