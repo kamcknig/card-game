@@ -1453,7 +1453,7 @@ const cardEffects: CardExpansionModule = {
           compulsory: true,
           allowMultipleInstances: true,
           listeningFor: 'cardGained',
-          condition: () => true,
+          condition: ({ trigger }) => !!trigger.args.emptiedSupplyPileKey,
           triggeredEffectFn: resolveOnSupplyPileEmptied,
         },
         {
@@ -1469,7 +1469,7 @@ const cardEffects: CardExpansionModule = {
           compulsory: true,
           allowMultipleInstances: true,
           listeningFor: 'cardTrashed',
-          condition: () => true,
+          condition: ({ trigger }) => !!trigger.args.emptiedSupplyPileKey,
           triggeredEffectFn: resolveOnSupplyPileEmptied,
         },
         {
