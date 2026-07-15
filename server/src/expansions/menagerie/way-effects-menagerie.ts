@@ -254,7 +254,6 @@ const expansion: CardExpansionModule = {
           ],
         },
         count: 1,
-        optional: true,
       });
       const selectedCardId = selectedCardIds[0];
 
