@@ -1404,6 +1404,11 @@ const registerOrderOfAstrologers = (args: AlliesGameContext, ally: Ally): void =
           });
         }
 
+        // The cards above are already placed on top of the deck directly;
+        // exclude them from the shuffle packet so shuffleDeck's post-shuffle
+        // merge (deck.unshift(...packet)) doesn't reinsert them a second time.
+        triggeredArgs.trigger.args.cardIds = availableCards.filter(cardId => !orderedCardIds.includes(cardId));
+
         triggeredArgs.loggerService.debug(
           `[order-of-astrologers ally] spent ${orderedCardIds.length} Favor to put ${orderedCardIds.length} card(s) on top`,
         );
