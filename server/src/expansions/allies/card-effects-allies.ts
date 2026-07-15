@@ -2605,17 +2605,28 @@ const cardEffects: CardExpansionModule = {
       const lookedAtCardIds: CardId[] = [];
 
       // Use set-aside as a stable holding zone while trash/reorder choices
-      // resolve; revealTopDeckCards shuffles the discard in automatically
-      // whenever the deck runs dry mid-reveal.
+      // resolve. "Look at" is private information, so cards move straight
+      // from deck to set-aside without the public revealCard action (mirrors
+      // Miller's look-at pattern), shuffling the discard in automatically
+      // whenever the deck runs dry mid-look.
       for (let i = 0; i < 5; i++) {
-        const revealed = await revealTopDeckCards(cardEffectArgs, playerId, 1);
-        const card = revealed[0];
-        if (!card) {
-          break;
+        let deck = cardEffectArgs.cardSourceController.getSource('playerDeck', playerId);
+        if (deck.length < 1) {
+          const discard = cardEffectArgs.cardSourceController.getSource('playerDiscard', playerId);
+          if (discard.length < 1) {
+            break;
+          }
+          await cardEffectArgs.actionService.run('shuffleDeck', { playerId });
+          deck = cardEffectArgs.cardSourceController.getSource('playerDeck', playerId);
+          if (deck.length < 1) {
+            break;
+          }
         }
-        lookedAtCardIds.push(card.id);
+
+        const cardId = deck.slice(-1)[0];
+        lookedAtCardIds.push(cardId);
         await cardEffectArgs.actionService.run('moveCard', {
-          cardId: card.id,
+          cardId,
           toPlayerId: playerId,
           to: { location: 'set-aside' },
         });
