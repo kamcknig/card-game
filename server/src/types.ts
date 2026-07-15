@@ -351,6 +351,9 @@ export interface GameActionDefinitionMap {
       // Optional way id to resolve alternate Action play behavior.
       // undefined => resolve via prompt, null => explicit normal play.
       wayId?: CardLikeId | null;
+      // Way cardKeys to exclude from the per-play Way choice (e.g. a Way
+      // replaying a set-aside card must not offer itself again).
+      excludeWayKeys?: CardKey[];
       overrides?: GameActionOverrides;
     },
     context?: GameActionContext,

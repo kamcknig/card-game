@@ -3938,6 +3938,7 @@ export class GameActionController implements GameActionDefinitionMap {
     playerId: PlayerId;
     card: Card;
     requestedWayId?: CardLikeId | null;
+    excludeWayKeys?: CardKey[];
   }): Promise<CardLikeId | null> {
     const queuedWayId =
       args.requestedWayId === undefined
@@ -3949,7 +3950,8 @@ export class GameActionController implements GameActionDefinitionMap {
       return null;
     }
 
-    const activeWays = this.match.ways ?? [];
+    const excludeWayKeys = args.excludeWayKeys ?? [];
+    const activeWays = (this.match.ways ?? []).filter(way => !excludeWayKeys.includes(way.cardKey));
     if (activeWays.length < 1) {
       return null;
     }
@@ -4101,6 +4103,8 @@ export class GameActionController implements GameActionDefinitionMap {
       // undefined => resolve via queued prompt choice or a per-play prompt,
       // null => explicit normal play, cardLikeId => explicit way play.
       wayId?: CardLikeId | null;
+      // Way cardKeys to exclude from the per-play Way choice.
+      excludeWayKeys?: CardKey[];
       overrides?: GameActionOverrides;
     },
     context?: GameActionContext,
@@ -4113,6 +4117,7 @@ export class GameActionController implements GameActionDefinitionMap {
       playerId,
       card,
       requestedWayId: args.wayId,
+      excludeWayKeys: args.excludeWayKeys,
     });
     const selectedWay = resolvedWayId === null ? undefined : findWayInMatch(this.match, resolvedWayId);
     if (resolvedWayId !== null && !selectedWay) {

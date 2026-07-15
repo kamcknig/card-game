@@ -443,12 +443,14 @@ const expansion: CardExpansionModule = {
         );
       }
 
-      // Play the set-aside card without moving it and force the normal path (cannot recurse into Way of the Mouse).
+      // Play the set-aside card without moving it. Way of the Mouse itself
+      // cannot be reselected (no recursion), but a different active Way is
+      // still a legal choice for this replay.
       loggerService.info(`[way-of-the-mouse effect] playing set-aside card ${setAsideCard}`);
       await cardEffectArgs.actionService.run('playCard', {
         playerId: cardEffectArgs.playerId,
         cardId: setAsideCardId,
-        wayId: null,
+        excludeWayKeys: ['way-of-the-mouse'],
         overrides: {
           actionCost: 0,
           moveCard: false,
