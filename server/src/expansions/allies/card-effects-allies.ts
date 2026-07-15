@@ -1750,10 +1750,9 @@ const cardEffects: CardExpansionModule = {
         const hand = cardEffectArgs.cardSourceController.getSource('playerHand', playerId);
         const selectedDiscardIds = await cardEffectArgs.actionService.run('selectCard', {
           playerId,
-          prompt: 'Choose up to 2 cards to discard',
+          prompt: 'Discard 2 cards',
           restrict: hand,
-          count: { kind: 'upTo', count: 2 },
-          optional: true,
+          count: { kind: 'exact', count: Math.min(2, hand.length) },
         });
         for (const selectedDiscardId of selectedDiscardIds) {
           await cardEffectArgs.actionService.run('discardCard', {
