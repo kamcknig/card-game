@@ -1318,7 +1318,14 @@ const cardEffects: CardExpansionModule = {
             `[quartermaster duration] player ${playerId} chose ${choseTakeFromQuartermaster ? 'take from quartermaster' : 'gain up to $4'}`,
           );
 
-          if (choseTakeFromQuartermaster && setAside.length) {
+          if (choseTakeFromQuartermaster) {
+            if (!setAside.length) {
+              loggerService.debug(
+                '[quartermaster duration] chose take from quartermaster but nothing is set aside; no-op',
+              );
+              return;
+            }
+
             const selectedSetAsideId =
               setAside.length === 1
                 ? setAside[0]
