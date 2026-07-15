@@ -173,23 +173,31 @@ const cardEffects: CardExpansionModule = {
   abundance: {
     registerEffects: () => async cardEffectArgs => {
       const abundanceCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      cardEffectArgs.registerDurationEffect(abundanceCard, {
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        listeningFor: 'cardGained',
-        condition: ({ trigger }) => {
-          if (trigger.args.playerId !== cardEffectArgs.playerId) {
-            return false;
-          }
-          const gainedCard = cardEffectArgs.cardLibrary.getCard(trigger.args.cardId);
-          return gainedCard.type.includes('ACTION');
+      let hasPendingActionGainEffect = true;
+      cardEffectArgs.registerDurationEffect(
+        abundanceCard,
+        {
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          listeningFor: 'cardGained',
+          condition: ({ trigger }) => {
+            if (trigger.args.playerId !== cardEffectArgs.playerId) {
+              return false;
+            }
+            const gainedCard = cardEffectArgs.cardLibrary.getCard(trigger.args.cardId);
+            return gainedCard.type.includes('ACTION');
+          },
+          triggeredEffectFn: async triggeredArgs => {
+            hasPendingActionGainEffect = false;
+            await gainTreasureAndBuy({ actionService: triggeredArgs.actionService, treasure: 3, buy: 1 });
+          },
         },
-        triggeredEffectFn: async triggeredArgs => {
-          await gainTreasureAndBuy({ actionService: triggeredArgs.actionService, treasure: 3, buy: 1 });
+        {
+          hasActiveEffects: () => hasPendingActionGainEffect,
         },
-      });
+      );
     },
   },
   'buried-treasure': {
