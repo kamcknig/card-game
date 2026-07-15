@@ -1473,15 +1473,29 @@ const registerOrderOfMasons = (args: AlliesGameContext, ally: Ally): void => {
         }
 
         for (const selectedCardId of selectedCardIds) {
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: selectedCardId,
-            toPlayerId: playerId,
-            to: { location: 'playerDiscard' },
-          });
+          let sourceInfo: { sourceKey: string; playerId?: PlayerId } | null = null;
+          try {
+            sourceInfo = triggeredArgs.cardSourceController.findCardSource(selectedCardId);
+          } catch {
+            sourceInfo = null;
+          }
+          const alreadyInPlayerDiscard = sourceInfo?.sourceKey === 'playerDiscard' && sourceInfo.playerId === playerId;
+          if (!alreadyInPlayerDiscard) {
+            await triggeredArgs.actionService.run('moveCard', {
+              cardId: selectedCardId,
+              toPlayerId: playerId,
+              to: { location: 'playerDiscard' },
+            });
+          }
         }
 
+        // The cards above stay in discard; exclude them from the shuffle
+        // packet so shuffleDeck's post-shuffle merge doesn't sweep them into
+        // the deck as if the ally had never fired.
+        triggeredArgs.trigger.args.cardIds = availableCards.filter(cardId => !selectedCardIds.includes(cardId));
+
         triggeredArgs.loggerService.debug(
-          `[order-of-masons ally] spent ${favorToSpend} Favor: moved ${selectedCardIds.length} card(s) to discard`,
+          `[order-of-masons ally] spent ${favorToSpend} Favor: kept ${selectedCardIds.length} card(s) in discard`,
         );
       },
     });
