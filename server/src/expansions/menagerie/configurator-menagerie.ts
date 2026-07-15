@@ -470,14 +470,13 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
             playerId: context.playerId,
           });
 
-          // Adjust Wayfarer by the delta from its printed cost to the tracked gained-card cost.
+          // Wayfarer's cost overrides every other cost-changing effect on it
+          // (rather than composing with them) — it simply equals the last
+          // other card gained this turn's own current effective cost.
           return {
             restricted: false,
-            cost: {
-              treasure: lastGainedCardCost.treasure - (wayfarerCard.cost.treasure ?? 0),
-              potion: (lastGainedCardCost.potion ?? 0) - (wayfarerCard.cost.potion ?? 0),
-              debt: (lastGainedCardCost.debt ?? 0) - (wayfarerCard.cost.debt ?? 0),
-            },
+            cost: { treasure: 0 },
+            overrideCost: lastGainedCardCost,
           };
         });
       }
