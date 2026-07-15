@@ -734,9 +734,9 @@ const effectMap: CardExpansionModule = {
       const playerId = cardEffectArgs.playerId;
       const launchRestrictionRule: CardPriceRule = (card, context) => {
         if (card.id !== event.id || context.playerId !== playerId) {
-          return { restricted: false, cost: card.cost };
+          return { restricted: false, cost: { treasure: 0 } };
         }
-        return { restricted: true, cost: card.cost };
+        return { restricted: true, cost: { treasure: 0 } };
       };
       const launchRestrictionUnsub = cardEffectArgs.cardPriceController.registerRule(event, launchRestrictionRule);
 
