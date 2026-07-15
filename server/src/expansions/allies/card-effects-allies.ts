@@ -1621,7 +1621,7 @@ const cardEffects: CardExpansionModule = {
                 playerId: targetPlayerId,
                 kind: 'upTo',
                 amount: {
-                  treasure: Math.max((trashedCardCost.treasure ?? 0) - 1, 0),
+                  treasure: trashedCardCost.treasure ?? 0,
                   potion: trashedCardCost.potion ?? 0,
                   debt: trashedCardCost.debt ?? 0,
                 },
