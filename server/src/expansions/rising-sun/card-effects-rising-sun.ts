@@ -1,5 +1,4 @@
 import { CardEffectFunctionContext, CardExpansionModule } from '@server-types/index.ts';
-import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { BaseCardMetadata, Card, CardCost, CardId, CardKey, PlayerId } from 'shared/types/index.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
@@ -56,6 +55,15 @@ const getEffectiveCostForPlayer = (
 // Returns true when a card has only treasure cost and that cost is at most the requested amount.
 const isTreasureOnlyCostAtMost = (cost: CardCost, maxTreasure: number): boolean => {
   return cost.treasure <= maxTreasure && (cost.potion ?? 0) === 0 && (cost.debt ?? 0) === 0;
+};
+
+// Returns true when cost is <= maxCost on each cost axis (mirrors event-effects-rising-sun.ts's own copy).
+const isCostAtMost = (cost: CardCost, maxCost: CardCost): boolean => {
+  return (
+    cost.treasure <= maxCost.treasure &&
+    (cost.potion ?? 0) <= (maxCost.potion ?? 0) &&
+    (cost.debt ?? 0) <= (maxCost.debt ?? 0)
+  );
 };
 
 // Returns how many times a specific card id has been played this turn.
@@ -1288,12 +1296,11 @@ const cards: CardExpansionModule = {
       });
 
       // "Up to $2 more" preserves potion/debt ceilings and increases coin by two.
-      const gainableCards = getTopSupplyCards(cardEffectArgs).filter(
-        candidateCard =>
-          compareCardCosts(
-            getEffectiveCostForPlayer(cardEffectArgs.cardPriceController, cardEffectArgs.playerId, candidateCard),
-            maxGainCost,
-          ) <= 0,
+      const gainableCards = getTopSupplyCards(cardEffectArgs).filter(candidateCard =>
+        isCostAtMost(
+          getEffectiveCostForPlayer(cardEffectArgs.cardPriceController, cardEffectArgs.playerId, candidateCard),
+          maxGainCost,
+        ),
       );
       if (gainableCards.length < 1) {
         loggerService.debug('[tanuki effect] no top-of-pile card available within +$2 cost limit');
