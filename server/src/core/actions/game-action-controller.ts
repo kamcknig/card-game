@@ -4301,6 +4301,20 @@ export class GameActionController implements GameActionDefinitionMap {
     }
   }
 
+  // "When shuffling Shadow cards, put them on the bottom" (Rising Sun rules).
+  // Mutates cardIds in place: already-shuffled SHADOW-typed cards move to the
+  // front of the array (bottom of the deck), each partition keeping its
+  // shuffled relative order.
+  private sinkShadowCardsToBottom(cardIds: CardId[]): void {
+    const shadowCardIds = cardIds.filter(cardId => this.cardLibrary.getCard(cardId).type.includes('SHADOW'));
+    if (!shadowCardIds.length) {
+      return;
+    }
+    const nonShadowCardIds = cardIds.filter(cardId => !this.cardLibrary.getCard(cardId).type.includes('SHADOW'));
+    cardIds.length = 0;
+    cardIds.push(...shadowCardIds, ...nonShadowCardIds);
+  }
+
   // Helper method to shuffle a player's deck
   async shuffleDeck(
     args: { playerId: PlayerId; includeDiscard?: boolean },
@@ -4319,6 +4333,7 @@ export class GameActionController implements GameActionDefinitionMap {
       // Shuffle a copy so reactions can remove cards from the shuffled subset without erasing discard state.
       const discardCardsToShuffle = [...discard];
       await this.shuffle({ playerId, cardIds: discardCardsToShuffle }, context);
+      this.sinkShadowCardsToBottom(discardCardsToShuffle);
 
       for (const shuffledCardId of discardCardsToShuffle) {
         const discardIndex = discard.indexOf(shuffledCardId);
@@ -4329,6 +4344,7 @@ export class GameActionController implements GameActionDefinitionMap {
       deck.unshift(...discardCardsToShuffle);
     } else {
       await this.shuffle({ playerId, cardIds: deck }, context);
+      this.sinkShadowCardsToBottom(deck);
     }
 
     // Deck cards must always be face-down after shuffling.
