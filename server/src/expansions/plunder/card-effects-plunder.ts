@@ -698,44 +698,51 @@ const cardEffects: CardExpansionModule = {
         getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext),
       );
 
-      if (affectedTargetPlayerIds.size < 1) {
-        cardEffectArgs.loggerService.debug('[frigate effect] no affected targets; Frigate will discard this turn');
-        return;
+      // Only the attack listener needs targets; the Duration's "until the
+      // start of your next turn" window is unconditional and must still
+      // open even when every opponent is immune (or there are none).
+      let onActionTriggerId: string | undefined;
+      if (affectedTargetPlayerIds.size > 0) {
+        onActionTriggerId = cardEffectArgs.reactionManager.registerReactionTemplate(
+          frigateCard,
+          'afterCardPlayed',
+          {
+            playerId: cardEffectArgs.playerId,
+            once: false,
+            compulsory: true,
+            allowMultipleInstances: true,
+            condition: ({ trigger, cardLibrary }) => {
+              if (!affectedTargetPlayerIds.has(trigger.args.playerId)) {
+                return false;
+              }
+              const playedCard = cardLibrary.getCard(trigger.args.cardId);
+              return playedCard.type.includes('ACTION');
+            },
+            triggeredEffectFn: async triggeredArgs => {
+              await discardDownTo(triggeredArgs, {
+                playerId: triggeredArgs.trigger.args.playerId,
+                targetHandSize: 4,
+                prompt: 'Discard down to 4 cards in hand (Frigate)',
+                logTag: 'frigate effect',
+              });
+            },
+          },
+        );
+      } else {
+        cardEffectArgs.loggerService.debug(
+          '[frigate effect] no affected targets; skipping attack listener but keeping the duration window open',
+        );
       }
 
       let attackWindowOpen = true;
-      const onActionTriggerId = cardEffectArgs.reactionManager.registerReactionTemplate(
-        frigateCard,
-        'afterCardPlayed',
-        {
-          playerId: cardEffectArgs.playerId,
-          once: false,
-          compulsory: true,
-          allowMultipleInstances: true,
-          condition: ({ trigger, cardLibrary }) => {
-            if (!affectedTargetPlayerIds.has(trigger.args.playerId)) {
-              return false;
-            }
-            const playedCard = cardLibrary.getCard(trigger.args.cardId);
-            return playedCard.type.includes('ACTION');
-          },
-          triggeredEffectFn: async triggeredArgs => {
-            await discardDownTo(triggeredArgs, {
-              playerId: triggeredArgs.trigger.args.playerId,
-              targetHandSize: 4,
-              prompt: 'Discard down to 4 cards in hand (Frigate)',
-              logTag: 'frigate effect',
-            });
-          },
-        },
-      );
-
       registerStartTurnEffect(
         cardEffectArgs,
         frigateCard,
         async triggeredArgs => {
           attackWindowOpen = false;
-          triggeredArgs.reactionManager.unregisterTrigger(onActionTriggerId);
+          if (onActionTriggerId) {
+            triggeredArgs.reactionManager.unregisterTrigger(onActionTriggerId);
+          }
         },
         {
           // Stay in the duration zone only while the attack window is open,
