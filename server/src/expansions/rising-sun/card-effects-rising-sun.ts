@@ -478,7 +478,6 @@ const cards: CardExpansionModule = {
             await triggeredArgs.actionService.run('playCard', {
               playerId: cardEffectArgs.playerId,
               cardId: replayedCard.id,
-              wayId: triggeredArgs.trigger.args.wayId ?? null,
               overrides: {
                 actionCost: 0,
                 moveCard: false,
