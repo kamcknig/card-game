@@ -1039,21 +1039,51 @@ const registerFlourishingTradeReactions = (args: RisingSunGameEventContext, prop
         }
         return getTurnPhase(trigger.args.phaseIndex) === 'buy';
       },
-      triggeredEffectFn: async ({ match, actionService, loggerService }) => {
-        const actionsToConvert = Math.max(0, match.playerActions);
-        if (actionsToConvert < 1) {
+      triggeredEffectFn: async ({ match, actionService, promptService, loggerService }) => {
+        const availableActions = Math.max(0, match.playerActions);
+        if (availableActions < 1) {
           loggerService.debug(
             `[rising-sun prophecy:flourishing-trade] player ${playerId} entered buy phase with no actions to convert`,
           );
           return;
         }
 
+        // Ask individually per remaining Action play (not a single bulk
+        // prompt), so a player who declines because they're about to buy
+        // Continue/Villa keeps those actions for the return trip to the
+        // Action phase. This reaction is not once:true, so it fires again
+        // on every later re-entry to the Buy phase with actions still unused.
+        let convertedCount = 0;
+        for (let index = 0; index < availableActions; index++) {
+          const shouldConvert = await promptService.confirm(
+            {
+              playerId,
+              prompt: 'Convert an unused Action play into a Buy?',
+              actionButtons: [
+                { label: 'NO', action: 1 },
+                { label: 'YES', action: 2 },
+              ],
+            },
+            2,
+          );
+          if (shouldConvert) {
+            convertedCount++;
+          }
+        }
+
+        if (convertedCount < 1) {
+          loggerService.debug(
+            `[rising-sun prophecy:flourishing-trade] player ${playerId} declined to convert any action plays`,
+          );
+          return;
+        }
+
         loggerService.info(
-          `[rising-sun prophecy:flourishing-trade] player ${playerId} entered buy phase; converting ${actionsToConvert} action(s) into buy(s)`,
+          `[rising-sun prophecy:flourishing-trade] player ${playerId} converted ${convertedCount} action(s) into buy(s)`,
         );
         await actionService.run('convertActionsToBuys', {
           playerId,
-          count: actionsToConvert,
+          count: convertedCount,
         });
       },
     });
