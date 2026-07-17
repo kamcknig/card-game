@@ -1118,14 +1118,20 @@ const cardEffects: CardExpansionModule = {
 
           const turnHistoryIndex = conditionArgs.match.stats.turns.length - 1;
           const turnStatsIndex = turnHistoryIndex;
-          const cardIdsGained = conditionArgs.match.stats.cardsGainedByTurn[turnStatsIndex] ?? [];
 
-          const cardIdsGainedDuringBuyPhase = cardIdsGained.filter(cardId => {
-            const stats = conditionArgs.match.stats.cardsGained[cardId];
-            return stats.playerId === cardEffectArgs.playerId && stats.turnPhase === 'buy';
+          // The exchange is blocked only by an actual purchase this turn —
+          // gaining a card any other way (e.g. another card's on-play gain
+          // effect firing during the Buy phase) does not stop it. See the
+          // ruling at wiki.dominionstrategy.com/index.php/Hermit: "It does
+          // not matter whether or not you gained cards other ways, only
+          // whether or not you bought a card."
+          const cardIdsBought = conditionArgs.match.stats.cardsBoughtByTurn[turnStatsIndex] ?? [];
+          const boughtByThisPlayer = cardIdsBought.some(cardId => {
+            const stats = conditionArgs.match.stats.cardsBought[cardId];
+            return stats.playerId === cardEffectArgs.playerId;
           });
 
-          if (cardIdsGainedDuringBuyPhase.length > 0) return false;
+          if (boughtByThisPlayer) return false;
 
           return true;
         },
