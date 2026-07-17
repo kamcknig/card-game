@@ -8,6 +8,10 @@ import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { findEventInMatch } from '@shared/find-card-like-in-match.ts';
+import {
+  buildGainedLocationExpectedFrom,
+  isCardStillAtGainedLocation,
+} from '../../utils/is-card-still-at-gained-location.ts';
 
 const effectMap: CardExpansionModule = {
   alms: {
@@ -1425,12 +1429,22 @@ const effectMap: CardExpansionModule = {
         triggeredEffectFn: async triggeredArgs => {
           const card = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
 
+          // Lose Track guard: if the gained card is no longer where it was
+          // gained (already moved or covered up), there is nothing left to
+          // top-deck.
+          const gainedLocation = triggeredArgs.trigger.args.gainedLocation;
+          if (!isCardStillAtGainedLocation(triggeredArgs.cardSourceController, card.id, gainedLocation)) {
+            loggerService.debug('[travelling-fair cardGained effect] lost track of gained card; skipping');
+            return;
+          }
+
           loggerService.debug(`[travelling-fair cardGained effect] putting ${card} on deck`);
 
           await triggeredArgs.actionService.run('moveCard', {
             toPlayerId: cardEffectArgs.playerId,
             cardId: card.id,
             to: { location: 'playerDeck' },
+            expectedFrom: buildGainedLocationExpectedFrom(gainedLocation),
           });
         },
       });

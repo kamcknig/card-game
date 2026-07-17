@@ -20,6 +20,7 @@ import { getPlayerStartingFrom } from '@shared/get-player-position-utils.ts';
 import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
 import { registerStartTurnEffect } from '../../utils/register-start-turn-effect.ts';
+import { isCardStillAtGainedLocation } from '../../utils/is-card-still-at-gained-location.ts';
 
 type ArchiveEffectContext = Pick<CardEffectFunctionContext, 'actionService' | 'cardLibrary' | 'cardSourceController'>;
 
@@ -1902,12 +1903,20 @@ const expansion: CardExpansionModule = {
 
         const villaCard = args.cardLibrary.getCard(eventArgs.cardId);
 
-        loggerService.info(`[villa onGained] moving ${villaCard} to hand for player ${eventArgs.playerId}`);
-        await args.actionService.run('moveCard', {
-          cardId: eventArgs.cardId,
-          toPlayerId: eventArgs.playerId,
-          to: { location: 'playerHand' },
-        });
+        // Lose Track guard: only move Villa to hand if it is still at its
+        // gained location (not already moved or covered up by a later
+        // arrival). Per the official ruling, the +1 Action and the return
+        // to the Action phase below happen regardless.
+        if (isCardStillAtGainedLocation(args.cardSourceController, eventArgs.cardId, eventArgs.gainedLocation)) {
+          loggerService.info(`[villa onGained] moving ${villaCard} to hand for player ${eventArgs.playerId}`);
+          await args.actionService.run('moveCard', {
+            cardId: eventArgs.cardId,
+            toPlayerId: eventArgs.playerId,
+            to: { location: 'playerHand' },
+          });
+        } else {
+          loggerService.debug(`[villa onGained] lost track of Villa; hand move skipped`);
+        }
 
         const currentPlayerId = getCurrentPlayer(args.match).id;
         if (currentPlayerId !== eventArgs.playerId) {

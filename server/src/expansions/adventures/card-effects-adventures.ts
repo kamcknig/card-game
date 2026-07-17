@@ -2315,9 +2315,15 @@ const expansion: CardExpansionModule = {
           if ((cost.treasure === 3 || cost.treasure === 4) && !cost.potion) {
             loggerService.debug(`[warrior effect] card costs 3 or 4, trashing ${cardToDiscard}`);
 
+            // Lose Track guard: discardCard just ran the target's discard
+            // reactions and onDiscarded lifecycle, so the card may have
+            // already moved (e.g. Village Green playing itself) or been
+            // covered (e.g. Tunnel gaining a Gold on top). Only trash it if
+            // it is still uncovered on top of the discard.
             await cardEffectArgs.actionService.run('trashCard', {
               playerId: targetPlayerId,
               cardId: cardToDiscard.id,
+              expectedFrom: { location: 'playerDiscard', playerId: targetPlayerId, requireTop: true },
             });
           }
         }
