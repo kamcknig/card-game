@@ -868,11 +868,16 @@ const cardEffects: CardExpansionModule = {
         const loggerService = args.loggerService;
         loggerService.debug(`[fortress onTrashed effect] putting fortress back in hand`);
 
+        // Lose Track guard: cardTrashed reactions run before onTrashed, so a
+        // reaction may have already moved Fortress out of the trash. No
+        // playerId (shared zone) and no requireTop (covering does not apply
+        // to the trash).
         await args.actionService.run('moveCard', {
           cardId: eventArgs.cardId,
           toPlayerId: eventArgs.playerId,
           to: { location: 'playerHand' },
           updateOwner: true,
+          expectedFrom: { location: 'trash' },
         });
       },
     }),
@@ -1138,10 +1143,23 @@ const cardEffects: CardExpansionModule = {
 
           loggerService.debug(`[hermit endTurnPhase effect] moving ${hermitCard} to supply`);
 
-          await cardEffectArgs.actionService.run('moveCard', {
+          // Lose Track guard: this is an exchange (return Hermit, gain
+          // Madman) triggered at end of Buy phase, not tied to Hermit's own
+          // play resolution — something else may have moved Hermit out of
+          // play in the meantime (e.g. Procession trashing it). If Hermit is
+          // no longer in play, the exchange does not happen at all: no
+          // return, no Madman.
+          const returned = await cardEffectArgs.actionService.run('moveCard', {
             cardId: hermitCard.id,
             to: { location: 'kingdomSupply' },
+            expectedFrom: { location: 'playArea' },
           });
+
+          if (!returned) {
+            loggerService.debug(`[hermit endTurnPhase effect] lost track of Hermit (not in play); no Madman`);
+            return;
+          }
+
           const card = madmanCards.slice(-1)[0];
 
           loggerService.debug(`[hermit endTurnPhase effect] gaining ${card}`);
@@ -1346,9 +1364,16 @@ const cardEffects: CardExpansionModule = {
 
       loggerService.debug(`[madman effect] moving ${thisCard} back to non supply`);
 
+      // Lose Track guard: without expectedFrom, moveCard returns truthy
+      // whenever the card is found in ANY zone, making the `if (result)`
+      // draw gate below inert — a Throne-Room'd Madman would "return" from
+      // nonSupplyCards on its second resolution and draw again. Requiring
+      // playArea activates the guard: the second resolution finds Madman
+      // already moved and skips the draw.
       const result = await cardEffectArgs.actionService.run('moveCard', {
         cardId: thisCard.id,
         to: { location: 'nonSupplyCards' },
+        expectedFrom: { location: 'playArea' },
       });
 
       if (result) {

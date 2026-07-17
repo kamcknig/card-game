@@ -784,10 +784,16 @@ const expansion: CardExpansionModule = {
             playerId: eventArgs.playerId,
           });
 
+          // Lose Track guard: the reveal above can trigger reveal-reactive
+          // effects that move a not-yet-processed selection out of the
+          // discard between loop iterations. No requireTop — Inn selects
+          // from anywhere in the discard, so covering does not invalidate
+          // the selection, only leaving the discard entirely does.
           await args.actionService.run('moveCard', {
             cardId: cardId,
             toPlayerId: eventArgs.playerId,
             to: { location: 'playerDeck' },
+            expectedFrom: { location: 'playerDiscard', playerId: eventArgs.playerId },
           });
         }
 
@@ -1067,10 +1073,20 @@ const expansion: CardExpansionModule = {
 
             loggerService.debug(`[scheme triggered effect] moving ${card} to deck`);
 
+            // Lose Track guard: by the time this reaction fires, discardCard
+            // has already discarded the card, so an earlier-firing reaction
+            // in the same pass (e.g. a second Scheme topdecking it, or
+            // Tunnel gaining a Gold on top of it) may have moved or covered
+            // it before this one runs.
             await triggeredEffectArgs.actionService.run('moveCard', {
               cardId: triggeredEffectArgs.trigger.args.cardId,
               toPlayerId: cardEffectArgs.playerId,
               to: { location: 'playerDeck' },
+              expectedFrom: {
+                location: 'playerDiscard',
+                playerId: cardEffectArgs.playerId,
+                requireTop: true,
+              },
             });
           },
         });
