@@ -10,6 +10,7 @@ import { LogManager } from '../log-manager.ts';
 import { CardInstanceFactoryService } from '../card-instance-factory-service.ts';
 import { CardPriceRulesController } from '../card-price-rules-controller.ts';
 import { ExpansionCardMetadataRegistryService } from '../expansion-card-metadata-registry-service.ts';
+import { ExpansionCatalogService } from '../expansion-catalog-service.ts';
 import { RngService } from '../rng-service.ts';
 import { PromptServiceStub } from '../../testing/prompt-service-stub.ts';
 import { createTestLogger } from '../../testing/create-test-logger.ts';
@@ -54,6 +55,7 @@ const makeReactionManager = () => {
     {} as unknown as CardInstanceFactoryService,
     actionService,
     promptService,
+    {} as unknown as ExpansionCatalogService,
   );
 
   const reactionManager = new ReactionManager(

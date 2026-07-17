@@ -929,6 +929,11 @@ export type GameLifecycleCallbackContext = AppContext & {
   cardId: CardId;
   actionService: ActionService;
   cardInstanceFactoryService: CardInstanceFactoryService;
+  // Root expansion catalog + raw (uninstantiated) card library. Exposed so game-event
+  // handlers that reshape the kingdom mid-game (Divine Wind) can compute candidate piles
+  // and synthesize expansion-configurator contexts at runtime.
+  expansionCatalog: ExpansionDataLibrary;
+  rawCardLibrary: Record<CardKey, CardNoId>;
 };
 
 export type GameLifecycleCallback = (

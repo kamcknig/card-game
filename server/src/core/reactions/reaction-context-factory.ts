@@ -20,6 +20,7 @@ import { RngService } from '../rng-service.ts';
 import { LoggerService } from '../logger-service.ts';
 import type { ReactionManager } from './reaction-manager.ts';
 import { wrapActionServiceWithSource } from '../../utils/wrap-action-service-with-source.ts';
+import { ExpansionCatalogService } from '../expansion-catalog-service.ts';
 
 // Centralized builder for reaction/lifecycle callback contexts.
 export class ReactionContextFactory {
@@ -36,6 +37,12 @@ export class ReactionContextFactory {
     private readonly cardInstanceFactoryService: CardInstanceFactoryService,
     private readonly actionService: ActionService,
     private readonly promptService: PromptService,
+    // Root singleton (registered as `expansionCatalogService` in register-root-services.ts;
+    // Awilix CLASSIC resolves it by parameter name). Only game lifecycle contexts read from
+    // it (see createGameLifecycleContext) — needed by runtime kingdom-reshaping code
+    // (Rising Sun's Divine Wind) to compute candidate piles and synthesize configurator
+    // contexts.
+    private readonly expansionCatalogService: ExpansionCatalogService,
   ) {}
 
   // Common fields shared by every context this factory builds. Field differences between
@@ -80,6 +87,9 @@ export class ReactionContextFactory {
       // Only game lifecycle callbacks (e.g. onCardGained) currently need to mint new card
       // instances; other context shapes intentionally omit this.
       cardInstanceFactoryService: this.cardInstanceFactoryService,
+      // Root expansion catalog + raw card library — see GameLifecycleCallbackContext for why.
+      expansionCatalog: this.expansionCatalogService.getExpansionLibrary(),
+      rawCardLibrary: this.expansionCatalogService.getRawCardLibrary(),
     };
   }
 
