@@ -11,8 +11,15 @@ import {
   Prophecy,
   Supply,
 } from 'shared/types/index.ts';
-import { ExpansionConfiguratorContext, ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/index.ts';
+import {
+  ExpansionConfiguratorContext,
+  ExpansionConfiguratorFactory,
+  ExpansionRegistrationFacade,
+  GameEventRegistrar,
+  MatchBaseConfiguration,
+} from '@server-types/index.ts';
 import { uniqueByProp } from '../../core/match-configurator.ts';
+import { rerunExpansionConfiguratorsMidGame } from '../../utils/rerun-expansion-configurators-mid-game.ts';
 import { baseV2TokenIds } from '../base-v2/token-ids-base-v2.ts';
 import { getConfiguredCardPileLocation } from '../../utils/get-configured-card-pile-location.ts';
 import { getConfiguredSupplyPileKeys } from '../../utils/get-configured-supply-pile-keys.ts';
@@ -53,6 +60,13 @@ const RAPID_EXPANSION_PROPHECY_KEY: CardKey = 'rapid-expansion';
 const SICKNESS_PROPHECY_KEY: CardKey = 'sickness';
 const RIVERBOAT_CARD_KEY: CardKey = 'riverboat';
 const RIVERBOAT_RUNTIME_SET_ASIDE_PREFIX = 'riverboat-set-aside:';
+const DIVINE_WIND_PROPHECY_KEY: CardKey = 'divine-wind';
+// Ruins sits in kingdomSupply but is not a "Kingdom card pile" for Divine Wind (official FAQ), so
+// it is never removed by the swap.
+const RUINS_PILE_KEY = 'ruins';
+// Holds cards from piles Divine Wind removed from the game. Never rendered; instances survive so
+// owned copies keep scoring/trait/Obelisk behavior per the official FAQ.
+const REMOVED_FROM_GAME_ZONE = 'removedFromGame';
 
 // Returns true when at least one selected kingdoms pile contains an Omen card.
 const hasOmenInKingdom = (config: ComputedMatchConfiguration): boolean => {
@@ -1616,6 +1630,290 @@ const registerSicknessReactions = (args: RisingSunGameEventContext, prophecy: Pr
   }
 };
 
+// Per-card game-start setup dispatch for the piles Divine Wind deals mid-game. Keyed by pile key
+// (getCardPileKey), matching the runtime new-pile pool. Populated in Divine Wind Phases 5-6 (per-card
+// setup extraction); intentionally empty for now so the swap can invoke it uniformly without
+// branching — adding a dealt pile's setup is then the only change needed.
+const DIVINE_WIND_PILE_SETUP_DISPATCH: Record<CardKey, (args: RisingSunGameEventContext) => Promise<void> | void> = {};
+
+// Builds a no-op ExpansionRegistrationFacade for the mid-game configurator rerun.
+//
+// The game-event context (RisingSunGameEventContext) does not expose the match's real
+// ExpansionRegistrationFacade — it is constructed in MatchController.initializeInternal and handed
+// only to the configurator factory at match start, not threaded onto runtime contexts. A no-op
+// facade is safe here: every effect/token registration an expansion configurator performs is
+// unconditional (registered in full at match start via its own once-per-instance flags and persisted
+// in the GameActionController/TokenRegistry maps for the match lifetime — verified for nocturne
+// boon/hex/state). Re-invoking them for the same expansion is therefore redundant. The only
+// kingdom-conditional config-time effect registration (Charlatan's Curse retype) is handled instead
+// by the per-card setup dispatch above (Divine Wind Phases 5-6).
+const buildNoopExpansionRegistration = (
+  loggerService: RisingSunGameEventContext['loggerService'],
+): ExpansionRegistrationFacade => {
+  const suppress = (registrar: string) => () => {
+    loggerService.debug(`[rising-sun prophecy:divine-wind] suppressed ${registrar} during mid-game configurator rerun`);
+  };
+  return {
+    registerCardEffect: suppress('registerCardEffect'),
+    registerBoonEffect: suppress('registerBoonEffect'),
+    registerHexEffect: suppress('registerHexEffect'),
+    registerStateEffect: suppress('registerStateEffect'),
+    registerArtifactEffect: suppress('registerArtifactEffect'),
+    registerProjectEffect: suppress('registerProjectEffect'),
+    registerTokenDefinition: suppress('registerTokenDefinition'),
+    registerTokenCardPlayedHandler: suppress('registerTokenCardPlayedHandler'),
+  };
+};
+
+// Instantiates config supply entries that have no runtime instances yet, mirroring
+// MatchSetupService.createKingdom / createNonSupplyCards / createBaseSupply (match-setup-service.ts).
+// A supply entry is considered already-instantiated when a card whose `kingdom` equals the entry's
+// `name` exists in the target source. Returns the number of piles minted. Used to project the
+// post-rerun config diff (10 new piles + any extra/companion/potion piles the rerun added) into the
+// live card sources without re-minting piles that already exist (e.g. surviving Ruins).
+const instantiateNewConfigPiles = (args: {
+  ctx: RisingSunGameEventContext;
+  supplies: Supply[];
+  sourceKey: 'kingdomSupply' | 'nonSupplyCards' | 'basicSupply';
+}): number => {
+  const { ctx, supplies, sourceKey } = args;
+  const source = ctx.cardSourceController.getSource(sourceKey);
+  // Pile names already instantiated in this source, keyed by the instance's kingdom field.
+  const existingPileNames = new Set(source.map(cardId => ctx.cardLibrary.getCard(cardId).kingdom));
+  let mintedPileCount = 0;
+
+  for (const supply of supplies) {
+    if (existingPileNames.has(supply.name)) {
+      continue;
+    }
+
+    ctx.loggerService.info(
+      `[rising-sun prophecy:divine-wind] instantiating ${supply.cards.length} card(s) for new ${sourceKey} pile '${supply.name}'`,
+    );
+    for (const card of supply.cards) {
+      const instance = ctx.cardInstanceFactoryService.createCard(card.cardKey, { ...card, kingdom: supply.name });
+      ctx.cardLibrary.addCard(instance);
+      source.push(instance.id);
+    }
+    existingPileNames.add(supply.name);
+    mintedPileCount++;
+  }
+
+  return mintedPileCount;
+};
+
+// Resolves Divine Wind: removes every non-Ruins Kingdom pile from the Supply and sets up 10 new
+// random piles (with their full setup), per dominion-docs/expansion-docs/rising-sun/prophecy/
+// divine-wind.md. Runs inside the removeSunToken action context so clients receive one consolidated
+// patch rather than an intermediate empty-kingdom state.
+const resolveDivineWindKingdomSwap = async (args: RisingSunGameEventContext): Promise<void> => {
+  const {
+    match,
+    cardLibrary,
+    cardSourceController,
+    actionService,
+    loggerService,
+    rngService,
+    expansionCatalog,
+    rawCardLibrary,
+    cardInstanceFactoryService,
+  } = args;
+
+  loggerService.info('[rising-sun prophecy:divine-wind] resolving kingdom swap');
+
+  // 1. Every pile key ever instantiated is off-limits for the new deal (FAQ: piles already used
+  //    this game can't be among the 10 — covers the original kingdom, Banes, Ferryman piles,
+  //    Riverboat/Mouse set-asides, and heirlooms in one check).
+  const usedPileKeys = new Set(cardLibrary.getAllCardsAsArray().map(card => getCardPileKey(card)));
+  loggerService.debug(
+    `[rising-sun prophecy:divine-wind] ${usedPileKeys.size} used pile key(s) excluded from the new deal`,
+  );
+
+  // Pile names (config supply `.name`) being removed from the Supply — everything except Ruins.
+  const removedPileNames = new Set(
+    match.config.kingdomSupply.filter(supply => supply.name !== RUINS_PILE_KEY).map(supply => supply.name),
+  );
+
+  // 2. Clear tokens sitting on removed piles (FAQ: tokens on removed piles are gone; player-owned
+  //    Adventures tokens return to their owner rather than being destroyed).
+  const removedPileTokens = Object.values(match.tokens ?? {}).filter(
+    token => token.location.type === 'supplyPile' && removedPileNames.has(token.location.cardKey),
+  );
+  for (const token of removedPileTokens) {
+    const pileName = token.location.type === 'supplyPile' ? token.location.cardKey : 'unknown';
+    if (token.ownerId !== undefined) {
+      loggerService.info(
+        `[rising-sun prophecy:divine-wind] returning player-owned token ${token.id} (on ${pileName}) to owner ${token.ownerId}`,
+      );
+      await actionService.run('moveToken', {
+        tokenInstanceId: token.id,
+        location: { type: 'playerAvailable', playerId: token.ownerId },
+      });
+    } else {
+      loggerService.info(`[rising-sun prophecy:divine-wind] removing pile token ${token.id} on removed pile ${pileName}`);
+      await actionService.run('removeToken', { tokenInstanceId: token.id });
+    }
+  }
+
+  // 3. Remove the piles. Snapshot the source first since moveCard mutates it during iteration.
+  const kingdomSourceSnapshot = [...cardSourceController.getSource('kingdomSupply')];
+  const removedCardIds = kingdomSourceSnapshot.filter(
+    cardId => getCardPileKey(cardLibrary.getCard(cardId)) !== RUINS_PILE_KEY,
+  );
+  loggerService.info(
+    `[rising-sun prophecy:divine-wind] removing ${removedCardIds.length} card(s) across ${removedPileNames.size} pile(s) from the Supply`,
+  );
+  for (const cardId of removedCardIds) {
+    // moveCard (not removeCardFromGame) keeps instances in the library so owned copies retain
+    // scoring/trait/Obelisk behavior per the FAQ. Uses no gain event, so Search does not trigger.
+    await actionService.run('moveCard', { cardId, to: { location: REMOVED_FROM_GAME_ZONE } });
+  }
+  // Rewrite config so game-end counting, returns, and exchanges see only the surviving piles.
+  match.config.kingdomSupply = match.config.kingdomSupply.filter(supply => supply.name === RUINS_PILE_KEY);
+
+  // 4. Pick up to 10 new piles from the match's expansions, excluding every used pile key.
+  const selectedExpansions = match.config.expansions
+    .map(expansion => expansionCatalog[expansion.name])
+    .filter((expansion): expansion is NonNullable<typeof expansion> => !!expansion);
+  const pool = getAvailableKingdomRandomizerGroups({
+    expansions: selectedExpansions,
+    bannedPileKeys: match.config.bannedKingdoms.map(card => getCardPileKey(card)),
+    excludedPileKeys: [...usedPileKeys],
+  });
+  const dealCount = Math.min(MatchBaseConfiguration.numberOfKingdomPiles, pool.length);
+  if (pool.length < MatchBaseConfiguration.numberOfKingdomPiles) {
+    loggerService.warn(
+      `[rising-sun prophecy:divine-wind] only ${pool.length} candidate pile(s) available; dealing ${dealCount}`,
+    );
+  }
+
+  // Draw `dealCount` distinct groups by index-splice against the seeded RNG (deterministic).
+  const drawableGroups = [...pool];
+  const dealtPileKeys: CardKey[] = [];
+  for (let index = 0; index < dealCount; index++) {
+    const [group] = drawableGroups.splice(rngService.nextIndex(drawableGroups.length), 1);
+    dealtPileKeys.push(group.pileKey);
+
+    // Install config entries mirroring selectKingdomSupply (match-configurator.ts:399-405): a
+    // single-card group fills a full pile; a multi-card group (split piles, Knights, Castles) is
+    // installed as-is and the configurator rerun applies canonical order / counts. Clone the raw
+    // catalog cards so the rerun cannot mutate shared expansion data.
+    if (group.cards.length === 1) {
+      const card = structuredClone(group.cards[0]);
+      match.config.kingdomSupply.push({
+        name: card.kingdom,
+        cards: new Array(getDefaultKingdomSupplySize(card, match.config)).fill(card),
+      });
+    } else {
+      const cards = group.cards.map(card => structuredClone(card));
+      match.config.kingdomSupply.push({ name: cards[0].kingdom, cards });
+    }
+  }
+  loggerService.info(
+    `[rising-sun prophecy:divine-wind] dealt ${dealtPileKeys.length} new pile(s): ${dealtPileKeys.join(', ')}`,
+  );
+
+  // 5. Re-run every expansion configurator against the post-swap config so each expansion performs
+  //    its own setup for the newly dealt piles (extra/companion piles, mats, Potion, split ordering,
+  //    boon/hex/ally/artifact seeding). See buildNoopExpansionRegistration for the registration
+  //    side-effect policy.
+  await rerunExpansionConfiguratorsMidGame({
+    match,
+    expansionCatalog,
+    rawCardLibrary,
+    cardSourceController,
+    cardInstanceFactoryService,
+    rngService,
+    loggerService,
+    expansionRegistration: buildNoopExpansionRegistration(loggerService),
+  });
+
+  // A fresh alchemy configurator instance re-adds a 'potion' basicSupply entry during the rerun even
+  // when one already exists (its guard is a per-instance flag). De-duplicate by name so downstream
+  // config consumers (pile-key lookups, game-end counting) never see a doubled potion pile.
+  match.config.basicSupply = uniqueByProp(match.config.basicSupply, 'name');
+
+  // 6. Diff-instantiate the post-rerun config into the live card sources (mirrors MatchSetupService).
+  const mintedKingdomPiles = instantiateNewConfigPiles({
+    ctx: args,
+    supplies: match.config.kingdomSupply,
+    sourceKey: 'kingdomSupply',
+  });
+  const mintedNonSupplyPiles = instantiateNewConfigPiles({
+    ctx: args,
+    supplies: match.config.nonSupply ?? [],
+    sourceKey: 'nonSupplyCards',
+  });
+  const mintedBasicPiles = instantiateNewConfigPiles({
+    ctx: args,
+    supplies: match.config.basicSupply,
+    sourceKey: 'basicSupply',
+  });
+  loggerService.info(
+    `[rising-sun prophecy:divine-wind] instantiated ${mintedKingdomPiles} kingdom, ${mintedNonSupplyPiles} non-supply, ${mintedBasicPiles} basic pile(s) from the config diff`,
+  );
+
+  // 7. Per-card game-start setup for the dealt piles. The dispatch table is empty until Divine Wind
+  //    Phases 5-6 land; the loop is in place so adding an entry there is the only change needed.
+  for (const pileKey of dealtPileKeys) {
+    const setupFn = DIVINE_WIND_PILE_SETUP_DISPATCH[pileKey];
+    if (!setupFn) {
+      continue;
+    }
+    loggerService.info(`[rising-sun prophecy:divine-wind] running per-card game-start setup for dealt pile '${pileKey}'`);
+    await setupFn(args);
+  }
+
+  loggerService.info('[rising-sun prophecy:divine-wind] kingdom swap complete');
+};
+
+// Registers Divine Wind: when the last Sun is removed, remove all Kingdom piles from the Supply and
+// set up 10 new random piles (dominion-docs/expansion-docs/rising-sun/prophecy/divine-wind.md).
+const registerDivineWindReactions = (args: RisingSunGameEventContext, prophecy: Prophecy): void => {
+  // The removed-from-game zone must exist before any moveCard references it; guarded so a reloaded
+  // match (zone already present in state) does not double-register and throw.
+  if (!args.cardSourceController.hasSource(REMOVED_FROM_GAME_ZONE)) {
+    args.cardSourceController.registerZone(REMOVED_FROM_GAME_ZONE, []);
+    args.loggerService.debug('[rising-sun prophecy:divine-wind] registered removedFromGame zone');
+  }
+
+  args.reactionManager.registerGlobalSystemTemplate(
+    prophecy,
+    'tokenChanged',
+    {
+      compulsory: true,
+      autoResolve: true,
+      allowMultipleInstances: false,
+      condition: ({ trigger, match }) => {
+        if (trigger.args.tokenId !== risingSunTokenIds.sun) {
+          return false;
+        }
+        if (trigger.args.locationBefore.type !== 'cardLike') {
+          return false;
+        }
+        if (trigger.args.locationBefore.cardLikeId !== prophecy.id) {
+          return false;
+        }
+        if (prophecy.cardKey !== DIVINE_WIND_PROPHECY_KEY) {
+          return false;
+        }
+        // Only trigger on the token change that activated the prophecy.
+        return isProphecyActive(match, DIVINE_WIND_PROPHECY_KEY);
+      },
+      triggeredEffectFn: async ({ loggerService }) => {
+        // No "already active at registration" fallback (unlike Enlightenment): the swap's results are
+        // persisted match state, so a reloaded post-activation match must not re-run it. The swap
+        // uses the registration closure's `args` (game-event context) because it carries
+        // cardInstanceFactoryService / expansionCatalog / rawCardLibrary, which the triggered-effect
+        // context does not.
+        loggerService.info('[rising-sun prophecy:divine-wind] final Sun removed; replacing the kingdom');
+        await resolveDivineWindKingdomSwap(args);
+      },
+    },
+    { idSuffix: 'divine-wind:token-activation' },
+  );
+};
+
 // Registers runtime behavior for the selected prophecy at game start.
 const registerSelectedProphecyReactions = (args: RisingSunGameEventContext): void => {
   const prophecy = getRuntimeProphecy(args.match);
@@ -1635,6 +1933,9 @@ const registerSelectedProphecyReactions = (args: RisingSunGameEventContext): voi
       break;
     case BUREAUCRACY_PROPHECY_KEY:
       registerBureaucracyReactions(args, prophecy);
+      break;
+    case DIVINE_WIND_PROPHECY_KEY:
+      registerDivineWindReactions(args, prophecy);
       break;
     case ENLIGHTENMENT_PROPHECY_KEY:
       registerEnlightenmentReactions(args, prophecy);
