@@ -424,6 +424,48 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainAction', { count: 2 });
     },
   },
+  'farming-village': {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.debug(`[farming village effect] gaining 2 actions`);
+      await cardEffectArgs.actionService.run('gainAction', { count: 2 });
+
+      const cardsToDiscard: CardId[] = [];
+
+      // Reveal cards one at a time, set aside, stopping at the first
+      // Treasure or Action card; revealTopDeckCards shuffles the discard
+      // in automatically whenever the deck runs dry mid-reveal.
+      while (true) {
+        const revealed = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, 1, { setAside: true });
+        const card = revealed[0];
+
+        if (!card) {
+          loggerService.debug(`[farming village effect] no cards left to reveal`);
+          break;
+        }
+
+        loggerService.debug(`[farming village effect] revealed ${card}`);
+
+        if (card.type.includes('ACTION') || card.type.includes('TREASURE')) {
+          loggerService.debug(`[farming village effect] moving ${card} to hand`);
+          await cardEffectArgs.actionService.run('moveCard', {
+            cardId: card.id,
+            toPlayerId: cardEffectArgs.playerId,
+            to: { location: 'playerHand' },
+          });
+          break;
+        }
+
+        cardsToDiscard.push(card.id);
+      }
+
+      loggerService.debug(`[farming village effect] discarding ${cardsToDiscard.length} cards`);
+
+      for (const cardId of cardsToDiscard) {
+        await cardEffectArgs.actionService.run('discardCard', { cardId, playerId: cardEffectArgs.playerId });
+      }
+    },
+  },
   farrier: {
     registerLifeCycleMethods: () => ({
       onGained: async (cardEffectArgs, eventArgs) => {
@@ -561,6 +603,54 @@ const expansion: CardExpansionModule = {
       }
     },
   },
+  'fortune-teller': {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.debug(`[fortune teller effect] gaining 2 treasure`);
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
+
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
+
+      for (const targetPlayerId of targetPlayerIds) {
+        const cardsToDiscard: CardId[] = [];
+
+        // Reveal cards one at a time, set aside, stopping at the first
+        // Victory or Curse card; revealTopDeckCards shuffles the discard
+        // in automatically whenever the deck runs dry mid-reveal.
+        while (true) {
+          const revealed = await revealTopDeckCards(cardEffectArgs, targetPlayerId, 1, { setAside: true });
+          const card = revealed[0];
+
+          if (!card) {
+            loggerService.debug(`[fortune teller effect] player ${targetPlayerId} out of cards to reveal`);
+            break;
+          }
+
+          loggerService.debug(`[fortune teller effect] player ${targetPlayerId} revealed ${card}`);
+
+          if (card.type.includes('VICTORY') || card.type.includes('CURSE')) {
+            loggerService.debug(`[fortune teller effect] putting ${card} back on top of deck`);
+            await cardEffectArgs.actionService.run('moveCard', {
+              cardId: card.id,
+              toPlayerId: targetPlayerId,
+              to: { location: 'playerDeck' },
+            });
+            break;
+          }
+
+          cardsToDiscard.push(card.id);
+        }
+
+        loggerService.debug(
+          `[fortune teller effect] player ${targetPlayerId} discarding ${cardsToDiscard.length} cards`,
+        );
+
+        for (const cardId of cardsToDiscard) {
+          await cardEffectArgs.actionService.run('discardCard', { cardId, playerId: targetPlayerId });
+        }
+      }
+    },
+  },
   hamlet: {
     registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
@@ -609,6 +699,28 @@ const expansion: CardExpansionModule = {
         }
       } else {
         loggerService.debug(`[hamlet effect] no cards in hand, not prompting to discard for buy`);
+      }
+    },
+  },
+  harvest: {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+
+      // Reveal the top 4 cards, set aside — shuffling the discard back in
+      // automatically if the deck runs dry mid-reveal.
+      const revealed = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, 4, { setAside: true });
+
+      const distinctNames = new Set(revealed.map(card => card.cardName)).size;
+      loggerService.debug(`[harvest effect] revealed ${revealed.length} cards, ${distinctNames} distinct names`);
+
+      if (distinctNames > 0) {
+        await cardEffectArgs.actionService.run('gainTreasure', { count: distinctNames });
+      }
+
+      loggerService.debug(`[harvest effect] discarding ${revealed.length} cards`);
+
+      for (const card of revealed) {
+        await cardEffectArgs.actionService.run('discardCard', { cardId: card.id, playerId: cardEffectArgs.playerId });
       }
     },
   },
