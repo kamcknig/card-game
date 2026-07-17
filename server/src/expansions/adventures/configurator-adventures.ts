@@ -1,6 +1,7 @@
 import { ExpansionConfiguratorFactory, GameEventRegistrar, GameLifecycleCallbackContext } from '@server-types/index.ts';
 import { configureReserve } from './configure-reserve.ts';
 import { configureTravellers } from './configure-travellers.ts';
+import { configurePortPile } from './configure-port-pile.ts';
 import { registerAdventuresTokenDefinitions } from './token-definitions-adventures.ts';
 import { registerAdventuresTokenTriggers } from './token-triggers-adventures.ts';
 import { ComputedMatchConfiguration, TokenId } from 'shared/types/index.ts';
@@ -10,6 +11,7 @@ import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 const configurator: ExpansionConfiguratorFactory = () => async args => {
   configureReserve(args);
   await configureTravellers(args);
+  configurePortPile(args);
   registerAdventuresTokenDefinitions(args.expansionRegistration.registerTokenDefinition);
   registerAdventuresTokenTriggers(args.expansionRegistration.registerTokenCardPlayedHandler);
 
@@ -92,8 +94,8 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   const usesFerryToken = config.events.some(event => event.cardKey === 'ferry');
   // Determine whether Lost Arts is in the event lineup and needs the +1 Action token.
   const usesLostArtsToken = config.events.some(event => event.cardKey === 'lost-arts');
-  // Determine whether Raid is in the event lineup and needs the -1 Card token.
-  const usesRaidToken = config.events.some(event => event.cardKey === 'raid');
+  // Determine whether Raid or Borrow is in the event lineup and needs the -1 Card token.
+  const usesMinusCardToken = config.events.some(event => event.cardKey === 'raid' || event.cardKey === 'borrow');
   // Determine whether Seaway is in the event lineup and needs the +1 Buy token.
   const usesSeawayToken = config.events.some(event => event.cardKey === 'seaway');
   // Determine whether Training is in the event lineup and needs the +$1 token.
@@ -240,9 +242,9 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
       }
     });
   }
-  if (usesRaidToken) {
+  if (usesMinusCardToken) {
     registrar('onGameStartSetup', async args => {
-      // Raid supplies a -1 Card token per player when the event is selected.
+      // Raid / Borrow supply a -1 Card token per player when either event is selected.
       for (const player of args.match.players) {
         const alreadyOwned = Object.values(args.match.tokens ?? {}).some(
           token => token.ownerId === player.id && token.tokenId === adventuresTokenIds.minusCard,

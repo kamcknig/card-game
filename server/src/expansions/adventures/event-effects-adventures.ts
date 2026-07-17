@@ -193,6 +193,69 @@ const effectMap: CardExpansionModule = {
       }
     },
   },
+  borrow: {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      if (!event) {
+        loggerService.warn(`[borrow effect] event not found`);
+        return;
+      }
+
+      // Enforce 'once per turn' by restricting this event for the current player until end of turn.
+      const priceUnsub = cardEffectArgs.cardPriceController.registerRule(event, (card, context) => {
+        if (context.playerId === cardEffectArgs.playerId) {
+          return { restricted: true, cost: card.cost };
+        }
+        return { restricted: false, cost: card.cost };
+      });
+      cardEffectArgs.reactionManager.registerSystemTemplate(event, 'endTurn', {
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: async () => true,
+        triggeredEffectFn: async () => {
+          priceUnsub();
+        },
+      });
+
+      // +1 Buy happens unconditionally, even when the -1 Card token is already on the deck.
+      loggerService.debug(`[borrow effect] gaining 1 buy`);
+      await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
+
+      const tokenEntry = Object.entries(cardEffectArgs.match.tokens ?? {}).find(
+        ([_tokenInstanceId, token]) =>
+          token.tokenId === adventuresTokenIds.minusCard && token.ownerId === cardEffectArgs.playerId,
+      );
+
+      if (!tokenEntry) {
+        loggerService.warn(`[borrow effect] no -1 Card token for player`);
+        return;
+      }
+
+      const [tokenInstanceId, token] = tokenEntry;
+
+      // The token already sitting on the player's deck means no +$1 (and it stays put).
+      if (token.location.type === 'playerDeck' && token.location.playerId === cardEffectArgs.playerId) {
+        loggerService.debug(`[borrow effect] -1 Card token already on deck, no +$1`);
+        return;
+      }
+
+      loggerService.debug(`[borrow effect] putting -1 Card token on deck and gaining +$1`);
+
+      await cardEffectArgs.actionService.run(
+        'moveToken',
+        {
+          tokenInstanceId,
+          location: { type: 'playerDeck', playerId: cardEffectArgs.playerId },
+        },
+        { source: event.id },
+      );
+
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
+    },
+  },
   expedition: {
     registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
