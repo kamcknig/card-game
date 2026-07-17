@@ -1,6 +1,7 @@
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { findWayInMatch } from '@shared/find-card-like-in-match.ts';
 import {
+  AllyNoId,
   BaseCardMetadata,
   Card,
   CardNoId,
@@ -19,7 +20,16 @@ import {
   MatchBaseConfiguration,
 } from '@server-types/index.ts';
 import { uniqueByProp } from '../../core/match-configurator.ts';
+import {
+  instantiateAllies,
+  instantiateArtifacts,
+  instantiateBoons,
+  instantiateHexes,
+  instantiateStates,
+} from '../../core/match-setup-service.ts';
 import { rerunExpansionConfiguratorsMidGame } from '../../utils/rerun-expansion-configurators-mid-game.ts';
+import { registerActiveAllyEffects, skippedAllyImplementations } from '../allies/ally-effects-allies.ts';
+import { alliesTokenIds } from '../allies/token-ids-allies.ts';
 import { baseV2TokenIds } from '../base-v2/token-ids-base-v2.ts';
 import { getConfiguredCardPileLocation } from '../../utils/get-configured-card-pile-location.ts';
 import { getConfiguredSupplyPileKeys } from '../../utils/get-configured-supply-pile-keys.ts';
@@ -67,6 +77,15 @@ const RUINS_PILE_KEY = 'ruins';
 // Holds cards from piles Divine Wind removed from the game. Never rendered; instances survive so
 // owned copies keep scoring/trait/Obelisk behavior per the official FAQ.
 const REMOVED_FROM_GAME_ZONE = 'removedFromGame';
+// Importer (Allies) raises the starting Favor count from 1 to 5 — mirrors configurator-allies.
+const IMPORTER_PILE_KEY = 'importer';
+// Plateau Shepherds is a score-only ally whose scoring decorator is registered into
+// MatchController._expansionScoringFns at match start and is not reachable from a runtime game-event
+// context. Divine Wind therefore cannot introduce it mid-game (documented gap) and re-picks a
+// different supported ally if the reconfiguration selects it.
+const PLATEAU_SHEPHERDS_ALLY_KEY: CardKey = 'plateau-shepherds';
+// Ally implementations with known-missing engine support, excluded from the Divine Wind ally re-pick.
+const skippedAllyKeys = new Set(skippedAllyImplementations.map(entry => entry.cardKey));
 
 // Returns true when at least one selected kingdoms pile contains an Omen card.
 const hasOmenInKingdom = (config: ComputedMatchConfiguration): boolean => {
@@ -1702,6 +1721,126 @@ const instantiateNewConfigPiles = (args: {
   return mintedPileCount;
 };
 
+// Pre-swap presence of each landscape/ally deck. Captured before Divine Wind removes the kingdom so
+// the diff instantiation only seeds landscapes the reconfiguration newly introduced (never re-seeding
+// or resetting decks that already existed — e.g. an existing boon deck must keep its runtime state).
+type DivineWindLandscapeSnapshot = {
+  hadBoons: boolean;
+  hadHexes: boolean;
+  hadStates: boolean;
+  hadArtifacts: boolean;
+  hadAlly: boolean;
+};
+
+// Captures which landscape/ally decks exist before the swap.
+const captureDivineWindLandscapeSnapshot = (match: Match): DivineWindLandscapeSnapshot => ({
+  hadBoons: match.boons.cards.length > 0,
+  hadHexes: match.hexes.cards.length > 0,
+  hadStates: match.states.cards.length > 0,
+  hadArtifacts: match.artifacts.cards.length > 0,
+  hadAlly: (match.allies?.length ?? 0) > 0,
+});
+
+// Picks a replacement ally (deterministic, seeded RNG) from the configured expansions' ally catalogs,
+// excluding a key plus any unsupported implementations. Mirrors the random-ally selection in
+// configurator-allies. Used only to substitute an unsupported mid-game plateau-shepherds pick.
+const pickDivineWindReplacementAlly = (args: RisingSunGameEventContext, excludeKey: CardKey): AllyNoId | undefined => {
+  const { match, expansionCatalog, rngService } = args;
+  const candidates = match.config.expansions.flatMap(expansion =>
+    Object.values(expansionCatalog[expansion.name]?.allies ?? {}),
+  );
+  const uniqueCandidates = uniqueByProp(candidates, 'cardKey').filter(
+    ally => ally.cardKey !== excludeKey && !skippedAllyKeys.has(ally.cardKey),
+  );
+  if (uniqueCandidates.length < 1) {
+    return undefined;
+  }
+  // structuredClone so mutating config.allies never reaches shared catalog data.
+  return structuredClone(uniqueCandidates[rngService.nextIndex(uniqueCandidates.length)]);
+};
+
+// Instantiates the ally the reconfiguration selected when a Liaison was dealt into a previously
+// ally-less game: substitutes plateau-shepherds (unsupported mid-game), creates the ally landscape,
+// seeds starting Favor tokens (FAQ: a Liaison arriving with no prior ally gets Favors as at setup —
+// mirrors configurator-allies registerGameEvents), then registers the ally's active reactions.
+const instantiateDivineWindAlly = async (args: RisingSunGameEventContext): Promise<void> => {
+  const { match, cardInstanceFactoryService, loggerService, actionService } = args;
+  const config = match.config;
+
+  if (config.allies?.[0]?.cardKey === PLATEAU_SHEPHERDS_ALLY_KEY) {
+    const replacement = pickDivineWindReplacementAlly(args, PLATEAU_SHEPHERDS_ALLY_KEY);
+    if (replacement) {
+      loggerService.info(
+        `[rising-sun prophecy:divine-wind] substituting ally ${replacement.cardKey} for unsupported mid-game plateau-shepherds`,
+      );
+      config.allies = [replacement];
+    } else {
+      loggerService.warn(
+        '[rising-sun prophecy:divine-wind] no replacement ally available; plateau-shepherds scoring will not apply mid-game',
+      );
+    }
+  }
+
+  // Create the ally landscape from config into match state.
+  instantiateAllies(match, cardInstanceFactoryService, config, loggerService);
+
+  // Seed starting Favors. Importer raises the count to 5, otherwise 1 — mirrors configurator-allies.
+  const hasImporter = config.kingdomSupply.some(supply =>
+    supply.cards.some(card => getCardPileKey(card) === IMPORTER_PILE_KEY),
+  );
+  const startingFavors = hasImporter ? 5 : 1;
+  loggerService.info(
+    `[rising-sun prophecy:divine-wind] seeding ${startingFavors} starting Favor token(s) per player for newly dealt Liaison`,
+  );
+  for (const player of match.players) {
+    for (let index = 0; index < startingFavors; index++) {
+      await actionService.run('placeToken', {
+        tokenId: alliesTokenIds.favor,
+        ownerId: player.id,
+        location: { type: 'player', playerId: player.id },
+      });
+    }
+  }
+
+  // Register the ally's active reactions now that the ally and Favors exist in match state.
+  registerActiveAllyEffects(args, config);
+};
+
+// Instantiates the landscape/ally decks the reconfiguration newly seeded into config during the
+// Divine Wind swap (Fate boons, Doom hexes/states, renaissance artifacts, and an ally for a newly
+// dealt Liaison). Only decks that were empty before the swap are instantiated, so existing runtime
+// deck state is never reset. Boon/hex/state/artifact *effect* maps are registered unconditionally at
+// match start by their source expansions' configurators (nocturne / renaissance), so instances alone
+// are needed here; a landscape can only appear now if its source expansion was configured at start.
+const instantiateDivineWindLandscapeDiffs = async (
+  args: RisingSunGameEventContext,
+  before: DivineWindLandscapeSnapshot,
+): Promise<void> => {
+  const { match, cardInstanceFactoryService, loggerService } = args;
+  const config = match.config;
+
+  if (!before.hadBoons && (config.boons?.length ?? 0) > 0) {
+    loggerService.info('[rising-sun prophecy:divine-wind] instantiating boon deck for newly dealt Fate pile(s)');
+    instantiateBoons(match, cardInstanceFactoryService, config, loggerService);
+  }
+  if (!before.hadHexes && (config.hexes?.length ?? 0) > 0) {
+    loggerService.info('[rising-sun prophecy:divine-wind] instantiating hex deck for newly dealt Doom pile(s)');
+    instantiateHexes(match, cardInstanceFactoryService, config, loggerService);
+  }
+  if (!before.hadStates && (config.states?.length ?? 0) > 0) {
+    loggerService.info('[rising-sun prophecy:divine-wind] instantiating states for newly dealt pile(s)');
+    instantiateStates(match, cardInstanceFactoryService, config, loggerService);
+  }
+  if (!before.hadArtifacts && (config.artifacts?.length ?? 0) > 0) {
+    loggerService.info('[rising-sun prophecy:divine-wind] instantiating artifacts for newly dealt pile(s)');
+    instantiateArtifacts(match, cardInstanceFactoryService, config, loggerService);
+  }
+  if (!before.hadAlly && (config.allies?.length ?? 0) > 0) {
+    loggerService.info('[rising-sun prophecy:divine-wind] instantiating ally for newly dealt Liaison');
+    await instantiateDivineWindAlly(args);
+  }
+};
+
 // Resolves Divine Wind: removes every non-Ruins Kingdom pile from the Supply and sets up 10 new
 // random piles (with their full setup), per dominion-docs/expansion-docs/rising-sun/prophecy/
 // divine-wind.md. Runs inside the removeSunToken action context so clients receive one consolidated
@@ -1720,6 +1859,10 @@ const resolveDivineWindKingdomSwap = async (args: RisingSunGameEventContext): Pr
   } = args;
 
   loggerService.info('[rising-sun prophecy:divine-wind] resolving kingdom swap');
+
+  // Snapshot which landscape/ally decks exist before the swap so the post-rerun diff instantiation
+  // only seeds what the reconfiguration newly introduces (never resetting an existing deck's state).
+  const landscapeSnapshotBefore = captureDivineWindLandscapeSnapshot(match);
 
   // 1. Every pile key ever instantiated is off-limits for the new deal (FAQ: piles already used
   //    this game can't be among the 10 — covers the original kingdom, Banes, Ferryman piles,
@@ -1852,6 +1995,10 @@ const resolveDivineWindKingdomSwap = async (args: RisingSunGameEventContext): Pr
   loggerService.info(
     `[rising-sun prophecy:divine-wind] instantiated ${mintedKingdomPiles} kingdom, ${mintedNonSupplyPiles} non-supply, ${mintedBasicPiles} basic pile(s) from the config diff`,
   );
+
+  // 6b. Instantiate the landscape/ally decks the reconfiguration newly seeded (boons, hexes, states,
+  //     artifacts, ally + Favors + ally effects). Only decks empty before the swap are instantiated.
+  await instantiateDivineWindLandscapeDiffs(args, landscapeSnapshotBefore);
 
   // 7. Per-card game-start setup for the dealt piles. The dispatch table is empty until Divine Wind
   //    Phases 5-6 land; the loop is in place so adding an entry there is the only change needed.
