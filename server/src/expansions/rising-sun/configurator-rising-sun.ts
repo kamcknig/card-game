@@ -31,6 +31,20 @@ import { rerunExpansionConfiguratorsMidGame } from '../../utils/rerun-expansion-
 import { registerActiveAllyEffects, skippedAllyImplementations } from '../allies/ally-effects-allies.ts';
 import { alliesTokenIds } from '../allies/token-ids-allies.ts';
 import { baseV2TokenIds } from '../base-v2/token-ids-base-v2.ts';
+// Per-card game-start setup functions extracted from their own expansions' configurators so Divine
+// Wind can run each dealt pile's Setup mid-game (Divine Wind Phase 5). Each keeps its original
+// game-start call site behavior identical; see each expansion's configurator for details.
+import { setupCharlatanCurses, setupPeddlerPriceRules } from '../prosperity/configurator-prosperity.ts';
+import {
+  registerFootpadGainReaction,
+  setupBakerCoffers,
+} from '../cornucopia-and-guilds/configurator-cornucopia-and-guilds.ts';
+import {
+  setupDestrierCostRules,
+  setupFishermanCostRules,
+  setupWayfarerCostRules,
+} from '../menagerie/configurator-menagerie.ts';
+import { setupShamanTrashGain } from '../plunder/configurator-plunder.ts';
 import { getConfiguredCardPileLocation } from '../../utils/get-configured-card-pile-location.ts';
 import { getConfiguredSupplyPileKeys } from '../../utils/get-configured-supply-pile-keys.ts';
 import { getAvailableKingdomRandomizerGroups } from '../../utils/get-available-kingdom-randomizer-groups.ts';
@@ -1650,10 +1664,30 @@ const registerSicknessReactions = (args: RisingSunGameEventContext, prophecy: Pr
 };
 
 // Per-card game-start setup dispatch for the piles Divine Wind deals mid-game. Keyed by pile key
-// (getCardPileKey), matching the runtime new-pile pool. Populated in Divine Wind Phases 5-6 (per-card
-// setup extraction); intentionally empty for now so the swap can invoke it uniformly without
-// branching — adding a dealt pile's setup is then the only change needed.
-const DIVINE_WIND_PILE_SETUP_DISPATCH: Record<CardKey, (args: RisingSunGameEventContext) => Promise<void> | void> = {};
+// (getCardPileKey), matching the runtime new-pile pool. Each entry runs the pile's game-start Setup
+// against the live match once the pile has been instantiated (swap step 7). The dealt pile's cards
+// already exist in kingdomSupply at that point, so each setup function resolves its cards from the
+// live sources exactly as it would at game start.
+//
+// Group A (Divine Wind Phase 5): rules & reactions. Most entries are the extracted setup functions
+// invoked directly with the game-event context; Footpad registers an onCardGained game event instead,
+// so it is dispatched through a runtime registrar shim over reactionManager.registerGameEvent (the
+// same handler list match-controller's game-event registrar targets at game start).
+const DIVINE_WIND_PILE_SETUP_DISPATCH: Record<CardKey, (args: RisingSunGameEventContext) => Promise<void> | void> = {
+  // prosperity
+  peddler: setupPeddlerPriceRules,
+  charlatan: setupCharlatanCurses,
+  // cornucopia-and-guilds
+  footpad: args =>
+    registerFootpadGainReaction((event, handler) => args.reactionManager.registerGameEvent(event, handler)),
+  baker: setupBakerCoffers,
+  // menagerie
+  fisherman: setupFishermanCostRules,
+  destrier: setupDestrierCostRules,
+  wayfarer: setupWayfarerCostRules,
+  // plunder
+  shaman: setupShamanTrashGain,
+};
 
 // Builds a no-op ExpansionRegistrationFacade for the mid-game configurator rerun.
 //

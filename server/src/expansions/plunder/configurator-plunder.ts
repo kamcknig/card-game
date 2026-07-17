@@ -1,4 +1,9 @@
-import { ExpansionConfiguratorContext, ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/index.ts';
+import {
+  ExpansionConfiguratorContext,
+  ExpansionConfiguratorFactory,
+  GameEventRegistrar,
+  GameLifecycleCallbackContext,
+} from '@server-types/index.ts';
 import { CardId, CardKey, ComputedMatchConfiguration, PlayerId, Trait } from 'shared/types/index.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
@@ -1385,6 +1390,64 @@ const registerTirelessTraitEvents = (registrar: GameEventRegistrar, config: Comp
   });
 };
 
+// Registers Shaman's per-player start-of-turn "gain from trash up to $6" reactions. Extracted from
+// the onGameStartSetup handler so it can also run when Shaman is dealt mid-game by Rising Sun's
+// Divine Wind (this is the "in games using this" added-pile direction: dealing Shaman makes the game
+// "using Shaman"). Resolves the Shaman card from kingdomSupply, so it works at either call site.
+export const setupShamanTrashGain = (args: Omit<GameLifecycleCallbackContext, 'cardId'>): void => {
+  const shamanCardInMatch = args.findCardService
+    .findCards({ all: [{ location: 'kingdomSupply' }] })
+    .find(card => card.cardKey === SHAMAN_CARD_KEY);
+  if (!shamanCardInMatch) {
+    return;
+  }
+
+  for (const player of args.match.players) {
+    args.reactionManager.registerSystemTemplate(
+      shamanCardInMatch,
+      'startTurn',
+      {
+        playerId: player.id,
+        once: false,
+        compulsory: true,
+        allowMultipleInstances: false,
+        condition: ({ trigger }) => trigger.args.playerId === player.id,
+        triggeredEffectFn: async triggeredArgs => {
+          const gainableFromTrash = triggeredArgs.findCardService
+            .findCards({ all: [{ location: 'trash' }] })
+            .filter(card => {
+              const cost = triggeredArgs.cardPriceController.applyRules(card, { playerId: player.id }).cost;
+              return (cost.treasure ?? 0) <= 6 && !cost.debt && !cost.potion;
+            });
+
+          if (!gainableFromTrash.length) {
+            return;
+          }
+
+          const selectedCardId = await triggeredArgs.actionService.run('selectSingleCard', {
+            playerId: player.id,
+            prompt: 'Gain a card from the trash costing up to $6 (Shaman)',
+            restrict: gainableFromTrash.map(card => card.id),
+            count: 1,
+          });
+          if (!selectedCardId) {
+            return;
+          }
+
+          await triggeredArgs.actionService.run('gainCard', {
+            playerId: player.id,
+            cardId: selectedCardId,
+            to: { location: 'playerDiscard' },
+          });
+        },
+      },
+      {
+        idSuffix: `shaman:startTurn:${player.id}`,
+      },
+    );
+  }
+};
+
 // Registers Shaman's global setup rule: each player's start turn gains from trash up to $6.
 const registerShamanEvents = (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => {
   const hasShamanPile = config.kingdomSupply.some(supply =>
@@ -1395,57 +1458,7 @@ const registerShamanEvents = (registrar: GameEventRegistrar, config: ComputedMat
   }
 
   registrar('onGameStartSetup', async args => {
-    const shamanCardInMatch = args.findCardService
-      .findCards({ all: [{ location: 'kingdomSupply' }] })
-      .find(card => card.cardKey === SHAMAN_CARD_KEY);
-    if (!shamanCardInMatch) {
-      return;
-    }
-
-    for (const player of args.match.players) {
-      args.reactionManager.registerSystemTemplate(
-        shamanCardInMatch,
-        'startTurn',
-        {
-          playerId: player.id,
-          once: false,
-          compulsory: true,
-          allowMultipleInstances: false,
-          condition: ({ trigger }) => trigger.args.playerId === player.id,
-          triggeredEffectFn: async triggeredArgs => {
-            const gainableFromTrash = triggeredArgs.findCardService
-              .findCards({ all: [{ location: 'trash' }] })
-              .filter(card => {
-                const cost = triggeredArgs.cardPriceController.applyRules(card, { playerId: player.id }).cost;
-                return (cost.treasure ?? 0) <= 6 && !cost.debt && !cost.potion;
-              });
-
-            if (!gainableFromTrash.length) {
-              return;
-            }
-
-            const selectedCardId = await triggeredArgs.actionService.run('selectSingleCard', {
-              playerId: player.id,
-              prompt: 'Gain a card from the trash costing up to $6 (Shaman)',
-              restrict: gainableFromTrash.map(card => card.id),
-              count: 1,
-            });
-            if (!selectedCardId) {
-              return;
-            }
-
-            await triggeredArgs.actionService.run('gainCard', {
-              playerId: player.id,
-              cardId: selectedCardId,
-              to: { location: 'playerDiscard' },
-            });
-          },
-        },
-        {
-          idSuffix: `shaman:startTurn:${player.id}`,
-        },
-      );
-    }
+    setupShamanTrashGain(args);
   });
 };
 

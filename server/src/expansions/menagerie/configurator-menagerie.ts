@@ -1,5 +1,10 @@
 import { BaseCardMetadata, CardNoId, ComputedMatchConfiguration, Supply, WayNoId } from 'shared/types/index.ts';
-import { ExpansionConfiguratorContext, ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/index.ts';
+import {
+  ExpansionConfiguratorContext,
+  ExpansionConfiguratorFactory,
+  GameEventRegistrar,
+  GameLifecycleCallbackContext,
+} from '@server-types/index.ts';
 import { addMatToMatchConfig } from '../../utils/add-mat-to-match-config.ts';
 import { getAvailableKingdomRandomizerGroups } from '../../utils/get-available-kingdom-randomizer-groups.ts';
 import { getDefaultKingdomSupplySize } from '../../utils/get-default-kingdom-supply-size.ts';
@@ -358,6 +363,124 @@ const configurator: ExpansionConfiguratorFactory = () => {
 
 export default configurator;
 
+// Registers Fisherman's dynamic cost rule (costs $3 less on your turn while your discard is empty).
+// Extracted so it can also run when Fisherman is dealt mid-game by Rising Sun's Divine Wind — it
+// resolves Fisherman piles from kingdomSupply, so it works whether the pile was present at game
+// start or dealt later.
+export const setupFishermanCostRules = (args: Omit<GameLifecycleCallbackContext, 'cardId'>): void => {
+  args.loggerService.info('[menagerie configurator] registering Fisherman cost rules');
+  const fishermanCards = args.findCardService.findCards({
+    all: [{ location: 'kingdomSupply' }, { cardKeys: 'fisherman' }],
+  });
+
+  for (const fishermanCard of fishermanCards) {
+    args.cardPriceController.registerRule(fishermanCard, (_card, context) => {
+      const currentTurnPlayer = context.match.players[context.match.currentPlayerTurnIndex];
+      if (!currentTurnPlayer || currentTurnPlayer.id !== context.playerId) {
+        return { restricted: false, cost: { treasure: 0 } };
+      }
+
+      const discardPile = args.cardSourceController.getSource('playerDiscard', context.playerId);
+      if (discardPile.length > 0) {
+        return { restricted: false, cost: { treasure: 0 } };
+      }
+
+      return { restricted: false, cost: { treasure: -3 } };
+    });
+  }
+};
+
+// Registers Destrier's dynamic cost rule (costs $1 less per card you have gained this turn).
+// Extracted for the same mid-game Divine Wind deal reason as setupFishermanCostRules.
+export const setupDestrierCostRules = (args: Omit<GameLifecycleCallbackContext, 'cardId'>): void => {
+  args.loggerService.info('[menagerie configurator] registering Destrier cost rules');
+  const destrierCards = args.findCardService.findCards({
+    all: [{ location: 'kingdomSupply' }, { cardKeys: 'destrier' }],
+  });
+
+  for (const destrierCard of destrierCards) {
+    args.cardPriceController.registerRule(destrierCard, (_card, context) => {
+      const currentTurnPlayer = context.match.players[context.match.currentPlayerTurnIndex];
+      if (!currentTurnPlayer || currentTurnPlayer.id !== context.playerId) {
+        return { restricted: false, cost: { treasure: 0 } };
+      }
+
+      const currentTurnHistoryIndex = context.match.stats.turns.length - 1;
+      if (currentTurnHistoryIndex < 0) {
+        return { restricted: false, cost: { treasure: 0 } };
+      }
+
+      const gainedCardIds = context.match.stats.cardsGainedByTurn[currentTurnHistoryIndex] ?? [];
+      const gainedCardCount = gainedCardIds.filter(gainedCardId => {
+        const gainStats = context.match.stats.cardsGained[gainedCardId];
+        return gainStats?.turnHistoryIndex === currentTurnHistoryIndex && gainStats.playerId === context.playerId;
+      }).length;
+
+      if (gainedCardCount < 1) {
+        return { restricted: false, cost: { treasure: 0 } };
+      }
+
+      return { restricted: false, cost: { treasure: -gainedCardCount } };
+    });
+  }
+};
+
+// Registers Wayfarer's dynamic cost rule (costs the same as the last other card gained this turn).
+// Extracted for the same mid-game Divine Wind deal reason as setupFishermanCostRules.
+export const setupWayfarerCostRules = (args: Omit<GameLifecycleCallbackContext, 'cardId'>): void => {
+  args.loggerService.info('[menagerie configurator] registering Wayfarer cost rules');
+  const wayfarerCards = args.findCardService.findCards({
+    all: [{ location: 'kingdomSupply' }, { cardKeys: 'wayfarer' }],
+  });
+
+  for (const wayfarerCard of wayfarerCards) {
+    args.cardPriceController.registerRule(wayfarerCard, (_card, context) => {
+      const currentTurnHistoryIndex = context.match.stats.turns.length - 1;
+      if (currentTurnHistoryIndex < 0) {
+        return { restricted: false, cost: { treasure: 0 } };
+      }
+
+      const gainedCardIds = context.match.stats.cardsGainedByTurn[currentTurnHistoryIndex] ?? [];
+      let lastOtherGainedCardId: number | undefined;
+
+      // Scan backward to find the last non-Wayfarer card gained this turn.
+      for (let gainIndex = gainedCardIds.length - 1; gainIndex >= 0; gainIndex--) {
+        const gainedCardId = gainedCardIds[gainIndex];
+        const gainStats = context.match.stats.cardsGained[gainedCardId];
+        if (gainStats?.turnHistoryIndex !== currentTurnHistoryIndex) {
+          continue;
+        }
+
+        const gainedCard = args.cardLibrary.getCard(gainedCardId);
+        if (gainedCard.cardKey === 'wayfarer') {
+          continue;
+        }
+
+        lastOtherGainedCardId = gainedCardId;
+        break;
+      }
+
+      if (lastOtherGainedCardId === undefined) {
+        return { restricted: false, cost: { treasure: 0 } };
+      }
+
+      const lastOtherGainedCard = args.cardLibrary.getCard(lastOtherGainedCardId);
+      const { cost: lastGainedCardCost } = args.cardPriceController.applyRules(lastOtherGainedCard, {
+        playerId: context.playerId,
+      });
+
+      // Wayfarer's cost overrides every other cost-changing effect on it
+      // (rather than composing with them) — it simply equals the last
+      // other card gained this turn's own current effective cost.
+      return {
+        restricted: false,
+        cost: { treasure: 0 },
+        overrideCost: lastGainedCardCost,
+      };
+    });
+  }
+};
+
 // Registers Menagerie game-start hooks that provide dynamic cost rules.
 export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (
   registrar,
@@ -373,113 +496,15 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
   registrar('onGameStartSetup', async args => {
     if (hasFisherman) {
-      args.loggerService.info('[menagerie configurator] registering Fisherman cost rules');
-      const fishermanCards = args.findCardService.findCards({
-        all: [{ location: 'kingdomSupply' }, { cardKeys: 'fisherman' }],
-      });
-
-      for (const fishermanCard of fishermanCards) {
-        args.cardPriceController.registerRule(fishermanCard, (_card, context) => {
-          const currentTurnPlayer = context.match.players[context.match.currentPlayerTurnIndex];
-          if (!currentTurnPlayer || currentTurnPlayer.id !== context.playerId) {
-            return { restricted: false, cost: { treasure: 0 } };
-          }
-
-          const discardPile = args.cardSourceController.getSource('playerDiscard', context.playerId);
-          if (discardPile.length > 0) {
-            return { restricted: false, cost: { treasure: 0 } };
-          }
-
-          return { restricted: false, cost: { treasure: -3 } };
-        });
-      }
+      setupFishermanCostRules(args);
     }
 
     if (hasDestrier) {
-      args.loggerService.info('[menagerie configurator] registering Destrier cost rules');
-      const destrierCards = args.findCardService.findCards({
-        all: [{ location: 'kingdomSupply' }, { cardKeys: 'destrier' }],
-      });
-
-      for (const destrierCard of destrierCards) {
-        args.cardPriceController.registerRule(destrierCard, (_card, context) => {
-          const currentTurnPlayer = context.match.players[context.match.currentPlayerTurnIndex];
-          if (!currentTurnPlayer || currentTurnPlayer.id !== context.playerId) {
-            return { restricted: false, cost: { treasure: 0 } };
-          }
-
-          const currentTurnHistoryIndex = context.match.stats.turns.length - 1;
-          if (currentTurnHistoryIndex < 0) {
-            return { restricted: false, cost: { treasure: 0 } };
-          }
-
-          const gainedCardIds = context.match.stats.cardsGainedByTurn[currentTurnHistoryIndex] ?? [];
-          const gainedCardCount = gainedCardIds.filter(gainedCardId => {
-            const gainStats = context.match.stats.cardsGained[gainedCardId];
-            return gainStats?.turnHistoryIndex === currentTurnHistoryIndex && gainStats.playerId === context.playerId;
-          }).length;
-
-          if (gainedCardCount < 1) {
-            return { restricted: false, cost: { treasure: 0 } };
-          }
-
-          return { restricted: false, cost: { treasure: -gainedCardCount } };
-        });
-      }
+      setupDestrierCostRules(args);
     }
 
     if (hasWayfarer) {
-      args.loggerService.info('[menagerie configurator] registering Wayfarer cost rules');
-      const wayfarerCards = args.findCardService.findCards({
-        all: [{ location: 'kingdomSupply' }, { cardKeys: 'wayfarer' }],
-      });
-
-      for (const wayfarerCard of wayfarerCards) {
-        args.cardPriceController.registerRule(wayfarerCard, (_card, context) => {
-          const currentTurnHistoryIndex = context.match.stats.turns.length - 1;
-          if (currentTurnHistoryIndex < 0) {
-            return { restricted: false, cost: { treasure: 0 } };
-          }
-
-          const gainedCardIds = context.match.stats.cardsGainedByTurn[currentTurnHistoryIndex] ?? [];
-          let lastOtherGainedCardId: number | undefined;
-
-          // Scan backward to find the last non-Wayfarer card gained this turn.
-          for (let gainIndex = gainedCardIds.length - 1; gainIndex >= 0; gainIndex--) {
-            const gainedCardId = gainedCardIds[gainIndex];
-            const gainStats = context.match.stats.cardsGained[gainedCardId];
-            if (gainStats?.turnHistoryIndex !== currentTurnHistoryIndex) {
-              continue;
-            }
-
-            const gainedCard = args.cardLibrary.getCard(gainedCardId);
-            if (gainedCard.cardKey === 'wayfarer') {
-              continue;
-            }
-
-            lastOtherGainedCardId = gainedCardId;
-            break;
-          }
-
-          if (lastOtherGainedCardId === undefined) {
-            return { restricted: false, cost: { treasure: 0 } };
-          }
-
-          const lastOtherGainedCard = args.cardLibrary.getCard(lastOtherGainedCardId);
-          const { cost: lastGainedCardCost } = args.cardPriceController.applyRules(lastOtherGainedCard, {
-            playerId: context.playerId,
-          });
-
-          // Wayfarer's cost overrides every other cost-changing effect on it
-          // (rather than composing with them) — it simply equals the last
-          // other card gained this turn's own current effective cost.
-          return {
-            restricted: false,
-            cost: { treasure: 0 },
-            overrideCost: lastGainedCardCost,
-          };
-        });
-      }
+      setupWayfarerCostRules(args);
     }
   });
 };
