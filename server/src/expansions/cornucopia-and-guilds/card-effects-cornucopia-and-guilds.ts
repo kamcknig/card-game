@@ -5,7 +5,9 @@ import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getAttackTargets } from '../../utils/get-attack-targets.ts';
+import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
+import { discardDownTo } from '../../utils/discard-down-to.ts';
 
 const expansion: CardExpansionModule = {
   advisor: {
@@ -57,6 +59,27 @@ const expansion: CardExpansionModule = {
           toPlayerId: cardEffectArgs.playerId,
           to: { location: 'playerHand' },
         });
+      }
+    },
+  },
+  'bag-of-gold': {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.debug(`[bag of gold effect] gaining 1 action`);
+      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
+
+      loggerService.debug(`[bag of gold effect] gaining gold onto deck`);
+
+      const gainedGoldId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+        playerId: cardEffectArgs.playerId,
+        pileKey: 'gold',
+        from: 'basicSupply',
+        to: { location: 'playerDeck' },
+        logTag: 'bag-of-gold effect',
+      });
+
+      if (!gainedGoldId) {
+        loggerService.debug(`[bag of gold effect] no gold cards in supply`);
       }
     },
   },
@@ -350,6 +373,19 @@ const expansion: CardExpansionModule = {
       if (!gainedGoldId) {
         loggerService.debug(`[demesne effect] no gold cards in supply`);
       }
+    },
+  },
+  diadem: {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      // "+$1 per unused Action you have" reads the scalar action count
+      // directly off the match (cf. rising-sun's Divine Wind availability
+      // check), not the number of Action cards in hand/play.
+      const unusedActions = Math.max(0, cardEffectArgs.match.playerActions);
+      loggerService.debug(
+        `[diadem effect] gaining ${2 + unusedActions} treasure (2 base + ${unusedActions} unused action(s))`,
+      );
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 2 + unusedActions });
     },
   },
   doctor: {
@@ -670,6 +706,60 @@ const expansion: CardExpansionModule = {
         cardId: selectedCardId,
         playerId: cardEffectArgs.playerId,
       });
+    },
+  },
+  followers: {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.debug(`[followers effect] drawing 2 cards`);
+      await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
+
+      loggerService.debug(`[followers effect] gaining an estate`);
+
+      const gainedEstateId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+        playerId: cardEffectArgs.playerId,
+        pileKey: 'estate',
+        from: 'basicSupply',
+        to: { location: 'playerDiscard' },
+        logTag: 'followers effect',
+      });
+
+      if (!gainedEstateId) {
+        loggerService.debug(`[followers effect] no estate cards in supply`);
+      }
+
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
+
+      for (const targetPlayerId of targetPlayerIds) {
+        loggerService.debug(`[followers effect] player ${targetPlayerId} gaining a curse`);
+
+        const gainedCurseId = await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
+          playerId: targetPlayerId,
+          pileKey: 'curse',
+          from: 'basicSupply',
+          to: { location: 'playerDiscard' },
+          logTag: 'followers effect',
+        });
+
+        if (!gainedCurseId) {
+          loggerService.debug(`[followers effect] no curse cards in supply`);
+        }
+
+        await discardDownTo(
+          {
+            cardSourceController: cardEffectArgs.cardSourceController,
+            actionService: cardEffectArgs.actionService,
+            cardLibrary: cardEffectArgs.cardLibrary,
+            loggerService: cardEffectArgs.loggerService,
+          },
+          {
+            playerId: targetPlayerId,
+            targetHandSize: 3,
+            prompt: 'Discard down to 3 cards',
+            logTag: 'followers effect',
+          },
+        );
+      }
     },
   },
   footpad: {
@@ -1644,6 +1734,56 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainCoffer', { playerId: cardEffectArgs.playerId, count: 1 });
     },
   },
+  princess: {
+    // Same additive cost-delta price-rule shape as Renown ($2 discount
+    // instead of Renown's -2 discount to Actions — mechanically identical,
+    // applied to every card in the library, torn down at end of turn).
+    registerEffects: () => {
+      const unsubsByCardId: Record<CardId, (() => void)[]> = {};
+
+      return async cardEffectArgs => {
+        const loggerService = cardEffectArgs.loggerService;
+        loggerService.debug(`[princess effect] gaining 1 buy`);
+        await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
+
+        const rule: CardPriceRule = () => ({
+          restricted: false,
+          cost: { treasure: -2, potion: 0 },
+        });
+
+        const cardId = cardEffectArgs.cardId;
+        const alreadyActiveThisTurn = (unsubsByCardId[cardId]?.length ?? 0) > 0;
+
+        const allCards = cardEffectArgs.cardLibrary.getAllCardsAsArray();
+        unsubsByCardId[cardId] ??= [];
+        for (const card of allCards) {
+          unsubsByCardId[cardId].push(cardEffectArgs.cardPriceController.registerRule(card, rule));
+        }
+
+        if (alreadyActiveThisTurn) {
+          loggerService.debug(
+            `[princess effect] card ${cardId} already active this turn, skipping cleanup registration`,
+          );
+          return;
+        }
+
+        cardEffectArgs.reactionManager.registerReactionTemplate({
+          id: `princess:${cardId}:endTurn`,
+          listeningFor: 'endTurn',
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          allowMultipleInstances: true,
+          compulsory: true,
+          condition: () => true,
+          triggeredEffectFn: async () => {
+            loggerService.debug(`[princess triggered effect] removing price rule`);
+            unsubsByCardId[cardId].forEach(unsub => unsub());
+            delete unsubsByCardId[cardId];
+          },
+        });
+      };
+    },
+  },
   remake: {
     registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
@@ -2087,6 +2227,180 @@ const expansion: CardExpansionModule = {
         cardId: chosenId,
         to: { location: 'playerDeck' },
       });
+    },
+  },
+  tournament: {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.debug(`[tournament effect] gaining 1 action`);
+      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
+
+      // "Each player may reveal a Province from their hand" applies to
+      // every player, including the active player, not just opponents —
+      // whoever reveals discards it and gains a Prize or Duchy onto their
+      // own deck. Only the +1 Card/+$1 bonus is gated on "if no-one else
+      // does". Resolve in turn order starting with the active player
+      // (Dominion's general rule for simultaneous multi-player effects
+      // where a limited resource, here the Prize pile, could run out) —
+      // same ALL-target ordering idiom as Masquerade.
+      const orderedPlayerIds = findOrderedTargets({
+        match: cardEffectArgs.match,
+        appliesTo: 'ALL',
+        startingPlayerId: cardEffectArgs.playerId,
+      });
+
+      let anyOtherPlayerRevealed = false;
+
+      for (const targetPlayerId of orderedPlayerIds) {
+        const provinceId = cardEffectArgs.cardSourceController
+          .getSource('playerHand', targetPlayerId)
+          .find(cardId => cardEffectArgs.cardLibrary.getCard(cardId).cardKey === 'province');
+
+        if (!provinceId) {
+          loggerService.debug(`[tournament effect] player ${targetPlayerId} has no province in hand`);
+          continue;
+        }
+
+        const reveal = (await cardEffectArgs.actionService.run('userPrompt', {
+          prompt: 'Reveal a Province to gain a Prize or a Duchy?',
+          playerId: targetPlayerId,
+          actionButtons: [
+            { label: 'NO', action: 1, role: 'cancel' },
+            { label: 'REVEAL', action: 2 },
+          ],
+        })) as { action: number; result: number[] };
+
+        if (reveal.action !== 2) {
+          loggerService.debug(`[tournament effect] player ${targetPlayerId} chose not to reveal`);
+          continue;
+        }
+
+        if (targetPlayerId !== cardEffectArgs.playerId) {
+          anyOtherPlayerRevealed = true;
+        }
+
+        loggerService.debug(`[tournament effect] player ${targetPlayerId} revealing and discarding province`);
+        await cardEffectArgs.actionService.run('revealCard', { cardId: provinceId, playerId: targetPlayerId });
+        await cardEffectArgs.actionService.run('discardCard', { cardId: provinceId, playerId: targetPlayerId });
+
+        // Gain any remaining Prize from the Prize pile, or a Duchy, onto
+        // the revealer's deck. Re-queried per revealer so an earlier
+        // revealer taking a Prize is reflected for the next one.
+        const prizeCards = cardEffectArgs.findCardService.findCards({
+          all: [{ location: 'nonSupplyCards' }, { cardType: 'PRIZE' }],
+        });
+        const duchyCard = cardEffectArgs.findCardService.findTopSupplyCardForPileKey({
+          pileKey: 'duchy',
+          from: 'basicSupply',
+        });
+
+        const gainOptionIds = [...prizeCards.map(card => card.id), ...(duchyCard ? [duchyCard.id] : [])];
+
+        if (!gainOptionIds.length) {
+          loggerService.debug(`[tournament effect] no prizes or duchies remain to gain`);
+          continue;
+        }
+
+        const chosenId = await cardEffectArgs.actionService.run('selectSingleCard', {
+          playerId: targetPlayerId,
+          prompt: 'Gain a Prize or a Duchy onto your deck',
+          restrict: gainOptionIds,
+          count: 1,
+        });
+
+        if (!chosenId) {
+          loggerService.warn(`[tournament effect] player ${targetPlayerId} did not select a gain option`);
+          continue;
+        }
+
+        const gainedCard = cardEffectArgs.cardLibrary.getCard(chosenId);
+
+        loggerService.debug(`[tournament effect] player ${targetPlayerId} gaining ${gainedCard} onto deck`);
+
+        await cardEffectArgs.actionService.run('gainCard', {
+          playerId: targetPlayerId,
+          cardId: chosenId,
+          to: { location: 'playerDeck' },
+        });
+      }
+
+      if (!anyOtherPlayerRevealed) {
+        loggerService.debug(`[tournament effect] no other player revealed a province; +1 card, +$1`);
+        await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
+        await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
+      }
+    },
+  },
+  'trusty-steed': {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      // Courser's exact "choose two different options" shape, plus a 4th
+      // option that gains 4 Silvers and moves the whole deck to discard.
+      const actions = [
+        { label: '+2 Cards', action: 1 },
+        { label: '+2 Actions', action: 2 },
+        { label: '+$2', action: 3 },
+        { label: 'Gain 4 Silvers; deck to discard', action: 4 },
+      ];
+
+      for (let i = 0; i < 2; i++) {
+        const result = (await cardEffectArgs.actionService.run('userPrompt', {
+          prompt: 'Choose one',
+          playerId: cardEffectArgs.playerId,
+          actionButtons: actions,
+        })) as { action: number; result: number[] };
+
+        const idx = actions.findIndex(action => action.action === result.action);
+        if (idx !== -1) {
+          actions.splice(idx, 1);
+        }
+
+        switch (result.action) {
+          case 1:
+            loggerService.debug(`[trusty steed effect] drawing 2 cards`);
+            await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId, count: 2 });
+            break;
+          case 2:
+            loggerService.debug(`[trusty steed effect] gaining 2 actions`);
+            await cardEffectArgs.actionService.run('gainAction', { count: 2 });
+            break;
+          case 3:
+            loggerService.debug(`[trusty steed effect] gaining 2 treasure`);
+            await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
+            break;
+          case 4: {
+            const silverCardIds = cardEffectArgs.findCardService.findCards({
+              all: [{ location: 'basicSupply' }, { cardKeys: 'silver' }],
+            });
+
+            const numToGain = Math.min(4, silverCardIds.length);
+            loggerService.debug(`[trusty steed effect] gaining ${numToGain} silver(s)`);
+
+            for (let j = 0; j < numToGain; j++) {
+              await cardEffectArgs.actionService.run('gainCard', {
+                playerId: cardEffectArgs.playerId,
+                cardId: silverCardIds.slice(-(j + 1))[0].id,
+                to: { location: 'playerDiscard' },
+              });
+            }
+
+            // "Put your deck into your discard pile" — snapshot the source
+            // first since moveCard mutates it as we iterate.
+            const deck = [...cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId)];
+            loggerService.debug(`[trusty steed effect] moving ${deck.length} deck card(s) to discard`);
+
+            for (const cardId of deck) {
+              await cardEffectArgs.actionService.run('moveCard', {
+                cardId,
+                toPlayerId: cardEffectArgs.playerId,
+                to: { location: 'playerDiscard' },
+              });
+            }
+
+            break;
+          }
+        }
+      }
     },
   },
   'young-witch': {
