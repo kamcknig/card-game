@@ -4,12 +4,14 @@ import { configureFerryman } from './configure-ferryman.ts';
 import { ComputedMatchConfiguration } from 'shared/types/index.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { configureJoust } from './configure-joust.ts';
+import { configureTournament } from './configure-tournament.ts';
 
 export const configurator: ExpansionConfiguratorFactory = () => {
   return async args => {
     configureYoungWitch(args);
     configureFerryman(args);
     await configureJoust(args);
+    await configureTournament(args);
     return args.config;
   };
 };

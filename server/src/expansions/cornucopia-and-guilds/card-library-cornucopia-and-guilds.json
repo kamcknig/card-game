@@ -6,6 +6,15 @@
     "type": ["ACTION"],
     "abilityText": "+1 Action\nReveal the top 3 cards of your deck. The player to your left chooses one of them. Discard that card and put the rest into your hand."
   },
+  "bag-of-gold": {
+    "cardName": "Bag of Gold",
+    "cost": {
+      "treasure": 0
+    },
+    "type": ["ACTION", "PRIZE"],
+    "kingdomSelectable": false,
+    "abilityText": "+1 Action\nGain a Gold onto your deck.\n(This is not in the Supply.)"
+  },
   "baker": {
     "cost": {
       "treasure": 5
@@ -62,6 +71,22 @@
     "abilityText": "+2 Actions\n+2 Buys\nGain a Gold.\n----\nWorth 1VP per Gold you have.\n(This is not in the Supply.)",
     "victoryPoints": 0
   },
+  "diadem": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": ["TREASURE", "PRIZE"],
+    "kingdomSelectable": false,
+    "abilityText": "$2\n+$1 per unused Action you have (Action, not Action card).\n(This is not in the Supply.)"
+  },
+  "doctor": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION"],
+    "tags": ["overpay"],
+    "abilityText": "Name a card. Reveal the top 3 cards of your deck. Trash the matches. Put the rest back in any order.\n----\nOverpay: Per $1 overpaid, look at the top card of your deck; trash it, discard it, or put it back."
+  },
   "fairgrounds": {
     "cost": {
       "treasure": 6
@@ -76,6 +101,13 @@
     },
     "type": ["ACTION"],
     "abilityText": "+1 Card\n+2 Actions\n----\nWhen you gain this, you may set aside an Action or Treasure from your hand, and play it at the start of your next turn."
+  },
+  "farming-village": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"],
+    "abilityText": "+2 Actions\nReveal cards from your deck until you reveal a Treasure or Action card. Put that card into your hand and discard the rest."
   },
   "farrier": {
     "cost": {
@@ -92,6 +124,15 @@
     "type": ["ACTION"],
     "abilityText": "+2 Cards\n+1 Action\nDiscard a card.\n----\nSetup: Choose an unused Kingdom card pile costing $3$3 or $4$4. Gain one when you gain a Ferryman."
   },
+  "followers": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": ["ACTION", "ATTACK", "PRIZE"],
+    "kingdomSelectable": false,
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+2 Cards\nGain an Estate. Each other player gains a Curse and discards down to 3 cards in hand.\n(This is not in the Supply.)"
+  },
   "footpad": {
     "cost": {
       "treasure": 5
@@ -101,12 +142,27 @@
     "abilityText": "+2 Coffers\nEach other player discards down to 3 cards in hand.\n----\nIn games using this, when you gain a card in an Action phase, +1 Card.",
     "tags": ["coffers"]
   },
+  "fortune-teller": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION", "ATTACK"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+$2\nEach other player reveals cards from the top of their deck until they reveal a Victory card or a Curse. They put it on top and discard the rest."
+  },
   "hamlet": {
     "cost": {
       "treasure": 2
     },
     "type": ["ACTION"],
     "abilityText": "+1 Card\n+1 Action\nYou may discard a card for +1 Action. You may discard a card for +1 Buy."
+  },
+  "harvest": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"],
+    "abilityText": "Reveal the top 4 cards of your deck, then discard them. +$1 per differently named card revealed."
   },
   "herald": {
     "cost": {
@@ -123,6 +179,13 @@
     },
     "type": ["TREASURE"],
     "abilityText": "Gain a card costing up to $1 per differently named card you have in play (counting this). If it's a Victory card, trash this."
+  },
+  "horse-traders": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "REACTION"],
+    "abilityText": "+1 Buy\n+$3\nDiscard 2 cards.\n----\nWhen another player plays an Attack card, you may first set this aside from your hand. If you do, then at the start of your next turn, +1 Card and return this to your hand."
   },
   "housecarl": {
     "cost": {
@@ -178,6 +241,14 @@
     "type": ["ACTION"],
     "abilityText": "+1 Card\n+1 Action\n+$1\nYou may set aside a Province from your hand to gain any Reward to your hand. Discard the Province in Clean-up."
   },
+  "masterpiece": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["TREASURE"],
+    "tags": ["overpay"],
+    "abilityText": "$1\n----\nOverpay: Gain a Silver per $1 overpaid."
+  },
   "menagerie": {
     "cost": {
       "treasure": 3
@@ -200,6 +271,14 @@
     "type": ["ACTION"],
     "tags": ["coffers"],
     "abilityText": "+1 Card\n+2 Actions\nYou may discard a Treasure for +1 Coffers."
+  },
+  "princess": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": ["ACTION", "PRIZE"],
+    "kingdomSelectable": false,
+    "abilityText": "+1 Buy\nThis turn, cards cost $2 less.\n(This is not in the Supply.)"
   },
   "remake": {
     "cost": {
@@ -238,6 +317,29 @@
     "type": ["ACTION"],
     "tags": ["overpay"],
     "abilityText": "Trash a card from your hand. Gain 2 cards each costing less than it.\n----\nOverpay: Gain 2 Action cards each costing the amount overpaid."
+  },
+  "taxman": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "ATTACK"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "You may trash a Treasure from your hand. Each other player with 5 or more cards in hand discards a copy of it (or reveals they can't). Gain a Treasure onto your deck costing up to $3 more than it."
+  },
+  "tournament": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"],
+    "abilityText": "+1 Action\nEach player may reveal a Province from their hand. If you do, discard it and gain any Prize (from the Prize pile) or a Duchy, onto your deck. If no-one else does, +1 Card and +$1."
+  },
+  "trusty-steed": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": ["ACTION", "PRIZE"],
+    "kingdomSelectable": false,
+    "abilityText": "Choose two different options: +2 Cards; +2 Actions; +$2; or gain 4 Silvers and put your deck into your discard pile.\n(This is not in the Supply.)"
   },
   "young-witch": {
     "cost": {
