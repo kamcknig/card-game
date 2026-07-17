@@ -352,6 +352,117 @@ const expansion: CardExpansionModule = {
       }
     },
   },
+  doctor: {
+    registerLifeCycleMethods: () => ({
+      onGained: async (cardEffectArgs, eventArgs) => {
+        const loggerService = cardEffectArgs.loggerService;
+
+        if (!eventArgs.bought) {
+          loggerService.debug(`[doctor onGained] ${eventArgs.cardId} was not bought, skipping`);
+          return;
+        }
+
+        const boughtStats = cardEffectArgs.match.stats.cardsBought[eventArgs.cardId];
+        const overpaid = boughtStats.paid - boughtStats.cost;
+
+        if (overpaid <= 0) {
+          loggerService.debug(`[doctor onGained] no overpay cost spent for ${eventArgs.cardId}`);
+          return;
+        }
+
+        loggerService.debug(
+          `[doctor onGained] player ${eventArgs.playerId} overpaid ${overpaid}, looking at top card ${overpaid} time(s)`,
+        );
+
+        for (let i = 0; i < overpaid; i++) {
+          // Reveal the top card one at a time, set aside — shuffling the
+          // discard back in automatically if the deck runs dry mid-reveal.
+          const revealed = await revealTopDeckCards(cardEffectArgs, eventArgs.playerId, 1, { setAside: true });
+          const card = revealed[0];
+
+          if (!card) {
+            loggerService.debug(`[doctor onGained] no cards left to look at`);
+            break;
+          }
+
+          const choice = (await cardEffectArgs.actionService.run('userPrompt', {
+            prompt: `Top card: ${card.cardName}`,
+            playerId: eventArgs.playerId,
+            actionButtons: [
+              { label: 'TRASH', action: 1 },
+              { label: 'DISCARD', action: 2 },
+              { label: 'PUT BACK', action: 3 },
+            ],
+          })) as { action: number; result: number[] };
+
+          if (choice.action === 1) {
+            loggerService.debug(`[doctor onGained] player ${eventArgs.playerId} trashing ${card}`);
+            await cardEffectArgs.actionService.run('trashCard', { playerId: eventArgs.playerId, cardId: card.id });
+          } else if (choice.action === 2) {
+            loggerService.debug(`[doctor onGained] player ${eventArgs.playerId} discarding ${card}`);
+            await cardEffectArgs.actionService.run('discardCard', { playerId: eventArgs.playerId, cardId: card.id });
+          } else {
+            loggerService.debug(`[doctor onGained] player ${eventArgs.playerId} putting ${card} back on top of deck`);
+            await cardEffectArgs.actionService.run('moveCard', {
+              cardId: card.id,
+              toPlayerId: eventArgs.playerId,
+              to: { location: 'playerDeck' },
+            });
+          }
+        }
+      },
+    }),
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+
+      const named = (await cardEffectArgs.actionService.run('userPrompt', {
+        prompt: 'Name a card',
+        playerId: cardEffectArgs.playerId,
+        content: { type: 'name-card' },
+      })) as { action: number; result: CardKey };
+
+      loggerService.debug(`[doctor effect] player ${cardEffectArgs.playerId} named ${named.result}`);
+
+      // Reveal the top 3 cards, set aside — shuffling the discard back in
+      // automatically if the deck runs dry mid-reveal.
+      const revealed = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, 3, { setAside: true });
+      const matches = revealed.filter(card => card.cardKey === named.result);
+      const rest = revealed.filter(card => card.cardKey !== named.result);
+
+      loggerService.debug(
+        `[doctor effect] trashing ${matches.length} matching card(s), putting ${rest.length} back`,
+      );
+
+      for (const card of matches) {
+        await cardEffectArgs.actionService.run('trashCard', { playerId: cardEffectArgs.playerId, cardId: card.id });
+      }
+
+      if (rest.length === 0) {
+        loggerService.debug(`[doctor effect] no cards left to put back`);
+        return;
+      }
+
+      const ordered =
+        rest.length === 1
+          ? rest.map(card => card.id)
+          : ((await cardEffectArgs.actionService.run('userPrompt', {
+              prompt: 'Put back on top of your deck in any order',
+              playerId: cardEffectArgs.playerId,
+              actionButtons: [{ label: 'DONE', action: 1 }],
+              content: { type: 'rearrange', cardIds: rest.map(card => card.id) },
+            })) as { action: number; result: CardId[] }).result;
+
+      loggerService.debug(`[doctor effect] putting ${ordered.length} card(s) back on top of deck`);
+
+      for (const cardId of ordered) {
+        await cardEffectArgs.actionService.run('moveCard', {
+          cardId,
+          toPlayerId: cardEffectArgs.playerId,
+          to: { location: 'playerDeck' },
+        });
+      }
+    },
+  },
   fairgrounds: {
     registerScoringFunction: () => args => {
       const cards = args.cardLibrary.getAllCardsAsArray().filter(card => card.owner === args.ownerId);
@@ -1262,6 +1373,49 @@ const expansion: CardExpansionModule = {
         cardId: selectedRewardId,
         to: { location: 'playerHand' },
       });
+    },
+  },
+  masterpiece: {
+    registerLifeCycleMethods: () => ({
+      onGained: async (cardEffectArgs, eventArgs) => {
+        const loggerService = cardEffectArgs.loggerService;
+
+        if (!eventArgs.bought) {
+          loggerService.debug(`[masterpiece onGained] ${eventArgs.cardId} was not bought, skipping`);
+          return;
+        }
+
+        const boughtStats = cardEffectArgs.match.stats.cardsBought[eventArgs.cardId];
+        const overpaid = boughtStats.paid - boughtStats.cost;
+
+        if (overpaid <= 0) {
+          loggerService.debug(`[masterpiece onGained] no overpay cost spent for ${eventArgs.cardId}`);
+          return;
+        }
+
+        const silverCardIds = cardEffectArgs.findCardService.findCards({
+          all: [{ location: 'basicSupply' }, { cardKeys: 'silver' }],
+        });
+
+        const numToGain = Math.min(overpaid, silverCardIds.length);
+
+        loggerService.debug(
+          `[masterpiece onGained] player ${eventArgs.playerId} overpaid ${overpaid}, gaining ${numToGain} silver(s)`,
+        );
+
+        for (let i = 0; i < numToGain; i++) {
+          await cardEffectArgs.actionService.run('gainCard', {
+            playerId: eventArgs.playerId,
+            cardId: silverCardIds.slice(-(i + 1))[0].id,
+            to: { location: 'playerDiscard' },
+          });
+        }
+      },
+    }),
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.debug(`[masterpiece effect] gaining 1 treasure`);
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
     },
   },
   menagerie: {
