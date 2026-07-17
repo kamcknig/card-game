@@ -978,6 +978,113 @@ const expansion: CardExpansionModule = {
       }
     },
   },
+  'horse-traders': {
+    registerLifeCycleMethods: () => ({
+      // Tear down the pending "another player plays an Attack" reaction the
+      // moment this card leaves the hand it was registered against — whether
+      // that's because it was set aside (the reaction fired) or it was
+      // played/discarded/trashed by some other means. The startTurn return
+      // reaction (registered inside the triggeredEffectFn below) uses a
+      // separate id, so unregistering this one never touches it.
+      onLeaveHand: async (args, eventArgs) => {
+        const loggerService = args.loggerService;
+        loggerService.debug(`[horse traders onLeaveHand] unregistering cardPlayed reaction for ${eventArgs.cardId}`);
+        args.reactionManager.unregisterTrigger(`horse-traders:${eventArgs.cardId}:cardPlayed`);
+      },
+      onEnterHand: async (args, eventArgs) => {
+        const loggerService = args.loggerService;
+        loggerService.debug(`[horse traders onEnterHand] registering cardPlayed reaction for ${eventArgs.cardId}`);
+
+        args.reactionManager.registerReactionTemplate({
+          id: `horse-traders:${eventArgs.cardId}:cardPlayed`,
+          playerId: eventArgs.playerId,
+          listeningFor: 'cardPlayed',
+          once: false,
+          allowMultipleInstances: true,
+          compulsory: false,
+          condition: conditionArgs => {
+            if (conditionArgs.trigger.args.playerId === eventArgs.playerId) return false;
+            return conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId).type.includes('ATTACK');
+          },
+          triggeredEffectFn: async triggeredArgs => {
+            const result = (await triggeredArgs.actionService.run('userPrompt', {
+              prompt: 'Set aside Horse Traders?',
+              playerId: eventArgs.playerId,
+              actionButtons: [
+                { label: 'NO', action: 1 },
+                { label: 'SET ASIDE', action: 2 },
+              ],
+            })) as { action: number; result: number[] };
+
+            if (result.action !== 2) {
+              loggerService.debug(`[horse traders triggered effect] player ${eventArgs.playerId} declined to set aside`);
+              return;
+            }
+
+            loggerService.debug(`[horse traders triggered effect] setting aside ${eventArgs.cardId}`);
+
+            const setAside = await triggeredArgs.actionService.run('moveCard', {
+              cardId: eventArgs.cardId,
+              toPlayerId: eventArgs.playerId,
+              to: { location: 'set-aside' },
+              expectedFrom: { location: 'playerHand', playerId: eventArgs.playerId },
+            });
+
+            if (!setAside) {
+              loggerService.debug(
+                `[horse traders triggered effect] lose track — ${eventArgs.cardId} was not in hand, aborting set aside`,
+              );
+              return;
+            }
+
+            triggeredArgs.reactionManager.registerReactionTemplate({
+              id: `horse-traders:${eventArgs.cardId}:startTurn`,
+              listeningFor: 'startTurn',
+              playerId: eventArgs.playerId,
+              once: true,
+              compulsory: true,
+              allowMultipleInstances: true,
+              condition: conditionArgs => conditionArgs.trigger.args.playerId === eventArgs.playerId,
+              triggeredEffectFn: async startArgs => {
+                loggerService.debug(
+                  `[horse traders triggered effect] returning ${eventArgs.cardId} to hand and drawing a card`,
+                );
+                await startArgs.actionService.run('drawCard', { playerId: eventArgs.playerId });
+                await startArgs.actionService.run('moveCard', {
+                  cardId: eventArgs.cardId,
+                  toPlayerId: eventArgs.playerId,
+                  to: { location: 'playerHand' },
+                  expectedFrom: { location: 'set-aside', playerId: eventArgs.playerId },
+                });
+              },
+            });
+          },
+        });
+      },
+    }),
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      loggerService.debug(`[horse traders effect] gaining 1 buy, and 3 treasure`);
+      await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 3 });
+
+      const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
+      const count = Math.min(2, hand.length);
+
+      loggerService.debug(`[horse traders effect] discarding ${count} cards`);
+
+      const toDiscard = await cardEffectArgs.actionService.run('selectCard', {
+        prompt: 'Discard 2 cards',
+        playerId: cardEffectArgs.playerId,
+        restrict: hand,
+        count,
+      });
+
+      for (const cardId of toDiscard) {
+        await cardEffectArgs.actionService.run('discardCard', { cardId, playerId: cardEffectArgs.playerId });
+      }
+    },
+  },
   housecarl: {
     registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
@@ -1888,6 +1995,98 @@ const expansion: CardExpansionModule = {
           to: { location: 'playerDiscard' },
         });
       }
+    },
+  },
+  taxman: {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+
+      const treasureId = await cardEffectArgs.actionService.run('selectSingleCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Trash a Treasure',
+        optional: true,
+        count: 1,
+        restrict: {
+          all: [{ location: 'playerHand', playerId: cardEffectArgs.playerId }, { cardType: 'TREASURE' }],
+        },
+      });
+
+      if (!treasureId) {
+        loggerService.debug(`[taxman effect] no treasure trashed`);
+        return;
+      }
+
+      const trashed = cardEffectArgs.cardLibrary.getCard(treasureId);
+
+      loggerService.debug(`[taxman effect] player ${cardEffectArgs.playerId} trashing ${trashed}`);
+
+      await cardEffectArgs.actionService.run('trashCard', { playerId: cardEffectArgs.playerId, cardId: treasureId });
+
+      // Each other player with 5+ cards in hand discards a copy of the
+      // trashed Treasure (or reveals their hand if they can't).
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
+
+      for (const targetPlayerId of targetPlayerIds) {
+        const hand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
+
+        if (hand.length < 5) {
+          loggerService.debug(`[taxman effect] player ${targetPlayerId} has fewer than 5 cards, skipping`);
+          continue;
+        }
+
+        const copyId = hand.find(cardId => cardEffectArgs.cardLibrary.getCard(cardId).cardKey === trashed.cardKey);
+
+        if (copyId) {
+          loggerService.debug(`[taxman effect] player ${targetPlayerId} discarding a copy of ${trashed.cardName}`);
+          await cardEffectArgs.actionService.run('discardCard', { cardId: copyId, playerId: targetPlayerId });
+          continue;
+        }
+
+        loggerService.debug(`[taxman effect] player ${targetPlayerId} has no copy of ${trashed.cardName}, revealing hand`);
+        for (const cardId of hand) {
+          await cardEffectArgs.actionService.run('revealCard', { cardId, playerId: targetPlayerId });
+        }
+      }
+
+      // Gain a Treasure onto the deck costing up to $3 more than the
+      // trashed one. `amount` omits potion/debt so they default to 0,
+      // which naturally excludes Potion- or Debt-costed Treasures from a
+      // plain "$X more" range.
+      const maxTreasure = (trashed.cost.treasure ?? 0) + 3;
+      const gainable = cardEffectArgs.findCardService.findCards({
+        all: [
+          { location: ['basicSupply', 'kingdomSupply'] },
+          { cardType: 'TREASURE' },
+          { playerId: cardEffectArgs.playerId, kind: 'upTo', amount: { treasure: maxTreasure } },
+        ],
+      });
+
+      if (!gainable.length) {
+        loggerService.debug(`[taxman effect] no gainable treasure costing up to ${maxTreasure}`);
+        return;
+      }
+
+      const chosenId = await cardEffectArgs.actionService.run('selectSingleCard', {
+        playerId: cardEffectArgs.playerId,
+        prompt: 'Gain a Treasure onto your deck',
+        count: 1,
+        restrict: gainable.map(card => card.id),
+      });
+
+      if (!chosenId) {
+        loggerService.warn(`[taxman effect] no treasure selected`);
+        return;
+      }
+
+      const gainedCard = cardEffectArgs.cardLibrary.getCard(chosenId);
+
+      loggerService.debug(`[taxman effect] player ${cardEffectArgs.playerId} gaining ${gainedCard} onto deck`);
+
+      await cardEffectArgs.actionService.run('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: chosenId,
+        to: { location: 'playerDeck' },
+      });
     },
   },
   'young-witch': {
