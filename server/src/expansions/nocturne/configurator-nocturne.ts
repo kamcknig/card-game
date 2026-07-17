@@ -1,6 +1,7 @@
 import {
   ExpansionConfiguratorFactory,
   GameEventRegistrar,
+  GameLifecycleCallbackContext,
   PlayerScoreDecoratorRegistrar,
 } from '@server-types/index.ts';
 import { uniqueByProp } from '../../core/match-configurator.ts';
@@ -220,6 +221,206 @@ export const registerScoringFunctions = (registrar: PlayerScoreDecoratorRegistra
       match.scores[playerId] = (match.scores[playerId] ?? 0) - 2;
     }
   });
+};
+
+// Sets aside the top 3 Boons (as many as available) for Druid. Extracted from the game-start handler
+// so it can also run when Druid is dealt mid-game by Rising Sun's Divine Wind (the FAQ names Druid's
+// set-aside explicitly). Idempotent: returns immediately when Boons are already set aside.
+export const setupDruidBoons = async (args: Omit<GameLifecycleCallbackContext, 'cardId'>): Promise<void> => {
+  if (!args.match.boons) {
+    args.loggerService.warn('[nocturne onGameStart] no boons configured for Druid');
+    return;
+  }
+
+  args.match.boons.setAside ??= [];
+
+  if (args.match.boons.setAside.length > 0) {
+    return;
+  }
+
+  const availableBoons = args.match.boons.deck.length;
+  if (availableBoons < 1) {
+    args.loggerService.warn('[nocturne onGameStart] boon deck empty, cannot set aside for Druid');
+    return;
+  }
+
+  const setAsideCount = Math.min(3, availableBoons);
+  for (let index = 0; index < setAsideCount; index++) {
+    const boonId = args.match.boons.deck.pop();
+    if (boonId === undefined) {
+      args.loggerService.warn('[nocturne onGameStart] boon draw failed while setting aside for Druid');
+      break;
+    }
+    args.match.boons.setAside.push(boonId);
+  }
+};
+
+// Mints the three Zombies into the trash for Necromancer. Extracted from the game-start handler so it
+// can also run when Necromancer is dealt mid-game by Divine Wind. Idempotent: skips any Zombie that
+// is already in the trash so a repeated dispatch does not double-mint.
+export const setupNecromancerZombies = async (args: Omit<GameLifecycleCallbackContext, 'cardId'>): Promise<void> => {
+  // Create and place the three Zombies into the trash pile.
+  const zombieKeys = ['zombie-apprentice', 'zombie-mason', 'zombie-spy'] as const;
+  const trash = args.cardSourceController.getSource('trash');
+  for (const zombieKey of zombieKeys) {
+    // Skip Zombies already present so a mid-game re-dispatch does not duplicate them.
+    const alreadyInTrash = trash.some(cardId => args.cardLibrary.getCard(cardId).cardKey === zombieKey);
+    if (alreadyInTrash) {
+      args.loggerService.debug(`[nocturne onGameStart] ${zombieKey} already in trash, skipping`);
+      continue;
+    }
+    const zombieCard = args.cardInstanceFactoryService.createCard(zombieKey, { partOfSupply: false });
+    args.cardLibrary.addCard(zombieCard);
+    await args.actionService.run('moveCard', {
+      cardId: zombieCard.id,
+      to: { location: 'trash' },
+    });
+    args.loggerService.debug(`[nocturne onGameStart] moved ${zombieCard} to trash`);
+  }
+};
+
+// Ensures the Lost in the Woods state instance exists for Fool. The configurator re-run seeds
+// config.states with 'lost-in-the-woods' at match start (and, for Divine Wind, mid-game); at match
+// start MatchSetupService instantiates it. This helper covers the Divine Wind edge case where states
+// already existed before the swap (so the landscape-diff instantiation is skipped): it appends the
+// state instance only when the config declares it and no instance yet exists. Idempotent.
+export const setupLostInTheWoodsState = (args: Omit<GameLifecycleCallbackContext, 'cardId'>): void => {
+  const config = args.match.config;
+  const stateDef = (config.states ?? []).find(state => state.cardKey === 'lost-in-the-woods');
+  if (!stateDef) {
+    // The re-run did not seed the state (no Fool in the resulting config); nothing to instantiate.
+    args.loggerService.debug('[nocturne onGameStart] Lost in the Woods not configured, skipping');
+    return;
+  }
+
+  args.match.states ??= { cards: [], byPlayer: {} };
+  const alreadyInstantiated = args.match.states.cards.some(state => state.cardKey === 'lost-in-the-woods');
+  if (alreadyInstantiated) {
+    args.loggerService.debug('[nocturne onGameStart] Lost in the Woods state already instantiated, skipping');
+    return;
+  }
+
+  args.loggerService.info('[nocturne onGameStart] instantiating Lost in the Woods state for Fool');
+  args.match.states.cards.push(args.cardInstanceFactoryService.createState(stateDef));
+};
+
+// Registers each player's Changeling exchange reaction. Extracted from the game-start handler so it
+// can also run when Changeling is dealt mid-game by Rising Sun's Divine Wind. Idempotent through the
+// reaction manager's id-keyed templates (re-registering the same id is a no-op replacement).
+export const setupChangelingExchange = async (args: Omit<GameLifecycleCallbackContext, 'cardId'>): Promise<void> => {
+  for (const player of args.match.players) {
+    // Listen for qualifying gains so the player can exchange for Changeling.
+    args.reactionManager.registerReactionTemplate({
+      id: `changeling:exchange:${player.id}`,
+      listeningFor: 'cardGained',
+      playerId: player.id,
+      once: false,
+      compulsory: false,
+      allowMultipleInstances: true,
+      system: true,
+      condition: async conditionArgs => {
+        if (conditionArgs.trigger.args.playerId !== player.id) {
+          return false;
+        }
+
+        const gainedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+        // Exchange is allowed when the gained card can be returned to a configured pile.
+        const returnLocation = getConfiguredCardPileLocation(conditionArgs.match, gainedCard);
+        if (!returnLocation) {
+          args.loggerService.debug('[changeling exchange condition] gained card has no configured pile in match');
+          return false;
+        }
+
+        // Changeling exchange only applies to comparable treasure-cost cards costing at least $3.
+        const { cost } = conditionArgs.cardPriceController.applyRules(gainedCard, {
+          playerId: player.id,
+        });
+
+        const costComparison = compareCardCosts(cost, { treasure: 3 });
+        if (costComparison < 0 || (cost.treasure ?? 0) < 3) {
+          args.loggerService.debug('[changeling exchange condition] gained card costs less than $3');
+          return false;
+        }
+
+        // Ensure there is at least one Changeling in the supply pile.
+        const changelingCards = conditionArgs.findCardService.findCards({
+          all: [{ location: 'kingdomSupply' }, { cardKeys: 'changeling' }],
+        });
+
+        if (!changelingCards.length) {
+          args.loggerService.debug('[changeling exchange condition] no changelings in supply');
+          return false;
+        }
+
+        args.loggerService.debug(
+          `[changeling exchange condition] ${gainedCard} eligible for exchange via ${returnLocation.location}`,
+        );
+        return changelingCards.length > 0;
+      },
+      triggeredEffectFn: async triggeredArgs => {
+        const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
+
+        // Offer the exchange decision to the gaining player.
+        const shouldExchange = await triggeredArgs.promptService.confirm(
+          {
+            playerId: player.id,
+            prompt: `Exchange ${gainedCard.cardName} for Changeling?`,
+            actionButtons: [
+              { label: 'CANCEL', action: 1 },
+              { label: 'EXCHANGE', action: 2 },
+            ],
+          },
+          2,
+        );
+
+        if (!shouldExchange) {
+          args.loggerService.debug('[changeling exchange] player declined exchange');
+          return;
+        }
+
+        // Confirm the gained card still exists in a source before moving it.
+        try {
+          triggeredArgs.cardSourceController.findCardSource(gainedCard.id);
+        } catch (error) {
+          args.loggerService.warn('[changeling exchange] gained card source not found, skipping exchange');
+          return;
+        }
+
+        // Return the gained card to the top of its configured pile.
+        const returnSucceeded = await returnCardToConfiguredPileTop({
+          actionService: triggeredArgs.actionService,
+          loggerService: triggeredArgs.loggerService,
+          match: triggeredArgs.match,
+          card: gainedCard,
+          logTag: 'changeling exchange',
+        });
+        if (!returnSucceeded) {
+          args.loggerService.warn(
+            '[changeling exchange] gained card has no configured pile in match, skipping exchange',
+          );
+          return;
+        }
+
+        // Move the top Changeling to the player's discard (exchange is not a gain).
+        const changelingCards = triggeredArgs.findCardService.findCards({
+          all: [{ location: 'kingdomSupply' }, { cardKeys: 'changeling' }],
+        });
+
+        if (!changelingCards.length) {
+          args.loggerService.warn('[changeling exchange] no changelings available to exchange');
+          return;
+        }
+
+        const changelingCard = changelingCards.slice(-1)[0];
+        args.loggerService.debug(`[changeling exchange] moving ${changelingCard} to discard`);
+        await triggeredArgs.actionService.run('moveCard', {
+          cardId: changelingCard.id,
+          toPlayerId: player.id,
+          to: { location: 'playerDiscard' },
+        });
+      },
+    });
+  }
 };
 
 // Registers the Cemetery heirloom swap at game start when present in the kingdoms.
@@ -549,48 +750,13 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
   if (hasDruid) {
     registrar('onGameStartSetup', async args => {
-      if (!args.match.boons) {
-        args.loggerService.warn('[nocturne onGameStart] no boons configured for Druid');
-        return;
-      }
-
-      args.match.boons.setAside ??= [];
-
-      if (args.match.boons.setAside.length > 0) {
-        return;
-      }
-
-      const availableBoons = args.match.boons.deck.length;
-      if (availableBoons < 1) {
-        args.loggerService.warn('[nocturne onGameStart] boon deck empty, cannot set aside for Druid');
-        return;
-      }
-
-      const setAsideCount = Math.min(3, availableBoons);
-      for (let index = 0; index < setAsideCount; index++) {
-        const boonId = args.match.boons.deck.pop();
-        if (boonId === undefined) {
-          args.loggerService.warn('[nocturne onGameStart] boon draw failed while setting aside for Druid');
-          break;
-        }
-        args.match.boons.setAside.push(boonId);
-      }
+      await setupDruidBoons(args);
     });
   }
 
   if (hasNecromancer) {
     registrar('onGameStartSetup', async args => {
-      // Create and place the three Zombies into the trash pile.
-      const zombieKeys = ['zombie-apprentice', 'zombie-mason', 'zombie-spy'] as const;
-      for (const zombieKey of zombieKeys) {
-        const zombieCard = args.cardInstanceFactoryService.createCard(zombieKey, { partOfSupply: false });
-        args.cardLibrary.addCard(zombieCard);
-        await args.actionService.run('moveCard', {
-          cardId: zombieCard.id,
-          to: { location: 'trash' },
-        });
-        args.loggerService.debug(`[nocturne onGameStart] moved ${zombieCard} to trash`);
-      }
+      await setupNecromancerZombies(args);
     });
   }
 
@@ -604,118 +770,6 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   }
 
   registrar('onGameStartSetup', async args => {
-    for (const player of args.match.players) {
-      // Listen for qualifying gains so the player can exchange for Changeling.
-      args.reactionManager.registerReactionTemplate({
-        id: `changeling:exchange:${player.id}`,
-        listeningFor: 'cardGained',
-        playerId: player.id,
-        once: false,
-        compulsory: false,
-        allowMultipleInstances: true,
-        system: true,
-        condition: async conditionArgs => {
-          if (conditionArgs.trigger.args.playerId !== player.id) {
-            return false;
-          }
-
-          const gainedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
-          // Exchange is allowed when the gained card can be returned to a configured pile.
-          const returnLocation = getConfiguredCardPileLocation(conditionArgs.match, gainedCard);
-          if (!returnLocation) {
-            args.loggerService.debug('[changeling exchange condition] gained card has no configured pile in match');
-            return false;
-          }
-
-          // Changeling exchange only applies to comparable treasure-cost cards costing at least $3.
-          const { cost } = conditionArgs.cardPriceController.applyRules(gainedCard, {
-            playerId: player.id,
-          });
-
-          const costComparison = compareCardCosts(cost, { treasure: 3 });
-          if (costComparison < 0 || (cost.treasure ?? 0) < 3) {
-            args.loggerService.debug('[changeling exchange condition] gained card costs less than $3');
-            return false;
-          }
-
-          // Ensure there is at least one Changeling in the supply pile.
-          const changelingCards = conditionArgs.findCardService.findCards({
-            all: [{ location: 'kingdomSupply' }, { cardKeys: 'changeling' }],
-          });
-
-          if (!changelingCards.length) {
-            args.loggerService.debug('[changeling exchange condition] no changelings in supply');
-            return false;
-          }
-
-          args.loggerService.debug(
-            `[changeling exchange condition] ${gainedCard} eligible for exchange via ${returnLocation.location}`,
-          );
-          return changelingCards.length > 0;
-        },
-        triggeredEffectFn: async triggeredArgs => {
-          const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
-
-          // Offer the exchange decision to the gaining player.
-          const shouldExchange = await triggeredArgs.promptService.confirm(
-            {
-              playerId: player.id,
-              prompt: `Exchange ${gainedCard.cardName} for Changeling?`,
-              actionButtons: [
-                { label: 'CANCEL', action: 1 },
-                { label: 'EXCHANGE', action: 2 },
-              ],
-            },
-            2,
-          );
-
-          if (!shouldExchange) {
-            args.loggerService.debug('[changeling exchange] player declined exchange');
-            return;
-          }
-
-          // Confirm the gained card still exists in a source before moving it.
-          try {
-            triggeredArgs.cardSourceController.findCardSource(gainedCard.id);
-          } catch (error) {
-            args.loggerService.warn('[changeling exchange] gained card source not found, skipping exchange');
-            return;
-          }
-
-          // Return the gained card to the top of its configured pile.
-          const returnSucceeded = await returnCardToConfiguredPileTop({
-            actionService: triggeredArgs.actionService,
-            loggerService: triggeredArgs.loggerService,
-            match: triggeredArgs.match,
-            card: gainedCard,
-            logTag: 'changeling exchange',
-          });
-          if (!returnSucceeded) {
-            args.loggerService.warn(
-              '[changeling exchange] gained card has no configured pile in match, skipping exchange',
-            );
-            return;
-          }
-
-          // Move the top Changeling to the player's discard (exchange is not a gain).
-          const changelingCards = triggeredArgs.findCardService.findCards({
-            all: [{ location: 'kingdomSupply' }, { cardKeys: 'changeling' }],
-          });
-
-          if (!changelingCards.length) {
-            args.loggerService.warn('[changeling exchange] no changelings available to exchange');
-            return;
-          }
-
-          const changelingCard = changelingCards.slice(-1)[0];
-          args.loggerService.debug(`[changeling exchange] moving ${changelingCard} to discard`);
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: changelingCard.id,
-            toPlayerId: player.id,
-            to: { location: 'playerDiscard' },
-          });
-        },
-      });
-    }
+    await setupChangelingExchange(args);
   });
 };

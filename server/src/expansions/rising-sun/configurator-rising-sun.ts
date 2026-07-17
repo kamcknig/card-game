@@ -45,6 +45,17 @@ import {
   setupWayfarerCostRules,
 } from '../menagerie/configurator-menagerie.ts';
 import { setupShamanTrashGain } from '../plunder/configurator-plunder.ts';
+import {
+  setupJourneyTokens,
+  setupMinusCoinTokens,
+  setupTeacherTokens,
+} from '../adventures/configurator-adventures.ts';
+import {
+  setupChangelingExchange,
+  setupDruidBoons,
+  setupLostInTheWoodsState,
+  setupNecromancerZombies,
+} from '../nocturne/configurator-nocturne.ts';
 import { getConfiguredCardPileLocation } from '../../utils/get-configured-card-pile-location.ts';
 import { getConfiguredSupplyPileKeys } from '../../utils/get-configured-supply-pile-keys.ts';
 import { getAvailableKingdomRandomizerGroups } from '../../utils/get-available-kingdom-randomizer-groups.ts';
@@ -1663,6 +1674,84 @@ const registerSicknessReactions = (args: RisingSunGameEventContext, prophecy: Pr
   }
 };
 
+// Moves Riverboat's runtime set-aside card into the shared set-aside zone and stamps it immovable.
+// Extracted from the game-start handler so it also runs when Riverboat is dealt mid-game by Divine
+// Wind: the configurator re-run selects Riverboat's set-aside card into a runtime non-supply pile,
+// and this then performs the game-start move-to-set-aside + immovable stamping. Idempotent: once the
+// card is in set-aside the top-non-supply lookup returns nothing and the already-initialized branch
+// re-stamps the same (idempotent) metadata.
+const setupRiverboatSetAside = async (args: RisingSunGameEventContext): Promise<void> => {
+  const riverboatCard = args.findCardService.findCards({
+    all: [{ location: 'kingdomSupply' }, { cardKeys: RIVERBOAT_CARD_KEY }],
+  })[0];
+
+  if (!riverboatCard) {
+    args.loggerService.warn('[rising-sun onGameStart] Riverboat configured but no runtime Riverboat card found');
+    return;
+  }
+
+  const riverboatMetadata = (riverboatCard.metadata as RiverboatCardMetadata | undefined)?.risingSun?.riverboat;
+  const runtimeSetAsidePileKey = riverboatMetadata?.runtimeSetAsidePileKey;
+  if (!runtimeSetAsidePileKey) {
+    args.loggerService.warn('[rising-sun onGameStart] Riverboat metadata missing runtime set-aside pile key');
+    return;
+  }
+
+  const runtimeSetAsideCard = args.findCardService.findTopNonSupplyCardForPileName({
+    pileName: runtimeSetAsidePileKey,
+  });
+
+  if (runtimeSetAsideCard) {
+    args.loggerService.info(
+      `[rising-sun onGameStart] moving Riverboat set-aside card ${runtimeSetAsideCard.cardKey} to shared set-aside`,
+    );
+    await args.actionService.run('moveCard', {
+      cardId: runtimeSetAsideCard.id,
+      to: { location: 'set-aside' },
+      setAsideSource: {
+        sourceKind: 'card',
+        sourceCardId: riverboatCard.id,
+        sourceCardKey: riverboatCard.cardKey,
+        sourceLabel: riverboatCard.cardName,
+      },
+    });
+
+    // Riverboat set-aside card must stay set aside even when played.
+    const movedSetAsideCard = args.cardLibrary.getCard(runtimeSetAsideCard.id);
+    const movedMetadata = (movedSetAsideCard.metadata as RiverboatCardMetadata | undefined) ?? {};
+    movedMetadata.base ??= {};
+    movedMetadata.base.immovable = true;
+    movedMetadata.risingSun ??= {};
+    movedMetadata.risingSun.riverboat ??= {};
+    movedMetadata.risingSun.riverboat.runtimeSetAsideCard = true;
+    movedMetadata.risingSun.riverboat.runtimeSetAsidePileKey = runtimeSetAsidePileKey;
+    movedSetAsideCard.metadata = movedMetadata;
+    return;
+  }
+
+  const existingSetAsideCard = args.cardSourceController
+    .getSource('set-aside')
+    .map(cardId => args.cardLibrary.getCard(cardId))
+    .find(card => card.kingdom === runtimeSetAsidePileKey);
+
+  if (!existingSetAsideCard) {
+    args.loggerService.warn(
+      `[rising-sun onGameStart] no runtime Riverboat set-aside card found for pile ${runtimeSetAsidePileKey}`,
+    );
+    return;
+  }
+
+  const existingMetadata = (existingSetAsideCard.metadata as RiverboatCardMetadata | undefined) ?? {};
+  existingMetadata.base ??= {};
+  existingMetadata.base.immovable = true;
+  existingMetadata.risingSun ??= {};
+  existingMetadata.risingSun.riverboat ??= {};
+  existingMetadata.risingSun.riverboat.runtimeSetAsideCard = true;
+  existingMetadata.risingSun.riverboat.runtimeSetAsidePileKey = runtimeSetAsidePileKey;
+  existingSetAsideCard.metadata = existingMetadata;
+  args.loggerService.debug('[rising-sun onGameStart] Riverboat set-aside card already initialized');
+};
+
 // Per-card game-start setup dispatch for the piles Divine Wind deals mid-game. Keyed by pile key
 // (getCardPileKey), matching the runtime new-pile pool. Each entry runs the pile's game-start Setup
 // against the live match once the pile has been instantiated (swap step 7). The dealt pile's cards
@@ -1687,6 +1776,23 @@ const DIVINE_WIND_PILE_SETUP_DISPATCH: Record<CardKey, (args: RisingSunGameEvent
   wayfarer: setupWayfarerCostRules,
   // plunder
   shaman: setupShamanTrashGain,
+  // Group B (Divine Wind Phase 6): tokens, states, one-shots.
+  // adventures — Journey token (Giant / Ranger), -$1 token (Bridge Troll), Teacher's vanilla bonus
+  // tokens (dispatched off the Peasant Traveller line that upgrades into Teacher).
+  giant: setupJourneyTokens,
+  ranger: setupJourneyTokens,
+  'bridge-troll': setupMinusCoinTokens,
+  peasant: setupTeacherTokens,
+  // nocturne — Druid boon set-aside, Fool's Lost in the Woods state, Necromancer Zombies, Changeling
+  // exchange reactions. Heirloom handlers are deliberately not dispatched (FAQ: no heirlooms for new
+  // piles).
+  druid: setupDruidBoons,
+  fool: setupLostInTheWoodsState,
+  necromancer: setupNecromancerZombies,
+  changeling: setupChangelingExchange,
+  // rising-sun — Riverboat set-aside move + immovable stamping (the re-run selects its set-aside card
+  // into a runtime non-supply pile; this then performs the game-start set-aside).
+  riverboat: setupRiverboatSetAside,
 };
 
 // Builds a no-op ExpansionRegistrationFacade for the mid-game configurator rerun.
@@ -2254,71 +2360,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
   registrar('onGameStartSetup', async args => {
     if (hasRiverboat) {
-      const riverboatCard = args.findCardService.findCards({
-        all: [{ location: 'kingdomSupply' }, { cardKeys: RIVERBOAT_CARD_KEY }],
-      })[0];
-
-      if (!riverboatCard) {
-        args.loggerService.warn('[rising-sun onGameStart] Riverboat configured but no runtime Riverboat card found');
-      } else {
-        const riverboatMetadata = (riverboatCard.metadata as RiverboatCardMetadata | undefined)?.risingSun?.riverboat;
-        const runtimeSetAsidePileKey = riverboatMetadata?.runtimeSetAsidePileKey;
-        if (!runtimeSetAsidePileKey) {
-          args.loggerService.warn('[rising-sun onGameStart] Riverboat metadata missing runtime set-aside pile key');
-        } else {
-          const runtimeSetAsideCard = args.findCardService.findTopNonSupplyCardForPileName({
-            pileName: runtimeSetAsidePileKey,
-          });
-
-          if (runtimeSetAsideCard) {
-            args.loggerService.info(
-              `[rising-sun onGameStart] moving Riverboat set-aside card ${runtimeSetAsideCard.cardKey} to shared set-aside`,
-            );
-            await args.actionService.run('moveCard', {
-              cardId: runtimeSetAsideCard.id,
-              to: { location: 'set-aside' },
-              setAsideSource: {
-                sourceKind: 'card',
-                sourceCardId: riverboatCard.id,
-                sourceCardKey: riverboatCard.cardKey,
-                sourceLabel: riverboatCard.cardName,
-              },
-            });
-
-            // Riverboat set-aside card must stay set aside even when played.
-            const movedSetAsideCard = args.cardLibrary.getCard(runtimeSetAsideCard.id);
-            const movedMetadata = (movedSetAsideCard.metadata as RiverboatCardMetadata | undefined) ?? {};
-            movedMetadata.base ??= {};
-            movedMetadata.base.immovable = true;
-            movedMetadata.risingSun ??= {};
-            movedMetadata.risingSun.riverboat ??= {};
-            movedMetadata.risingSun.riverboat.runtimeSetAsideCard = true;
-            movedMetadata.risingSun.riverboat.runtimeSetAsidePileKey = runtimeSetAsidePileKey;
-            movedSetAsideCard.metadata = movedMetadata;
-          } else {
-            const existingSetAsideCard = args.cardSourceController
-              .getSource('set-aside')
-              .map(cardId => args.cardLibrary.getCard(cardId))
-              .find(card => card.kingdom === runtimeSetAsidePileKey);
-
-            if (!existingSetAsideCard) {
-              args.loggerService.warn(
-                `[rising-sun onGameStart] no runtime Riverboat set-aside card found for pile ${runtimeSetAsidePileKey}`,
-              );
-            } else {
-              const existingMetadata = (existingSetAsideCard.metadata as RiverboatCardMetadata | undefined) ?? {};
-              existingMetadata.base ??= {};
-              existingMetadata.base.immovable = true;
-              existingMetadata.risingSun ??= {};
-              existingMetadata.risingSun.riverboat ??= {};
-              existingMetadata.risingSun.riverboat.runtimeSetAsideCard = true;
-              existingMetadata.risingSun.riverboat.runtimeSetAsidePileKey = runtimeSetAsidePileKey;
-              existingSetAsideCard.metadata = existingMetadata;
-              args.loggerService.debug('[rising-sun onGameStart] Riverboat set-aside card already initialized');
-            }
-          }
-        }
-      }
+      await setupRiverboatSetAside(args);
     }
 
     if (!hasOmen) {

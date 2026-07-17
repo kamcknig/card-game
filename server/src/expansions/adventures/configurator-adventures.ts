@@ -1,4 +1,4 @@
-import { ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/index.ts';
+import { ExpansionConfiguratorFactory, GameEventRegistrar, GameLifecycleCallbackContext } from '@server-types/index.ts';
 import { configureReserve } from './configure-reserve.ts';
 import { configureTravellers } from './configure-travellers.ts';
 import { registerAdventuresTokenDefinitions } from './token-definitions-adventures.ts';
@@ -14,6 +14,71 @@ const configurator: ExpansionConfiguratorFactory = () => async args => {
   registerAdventuresTokenTriggers(args.expansionRegistration.registerTokenCardPlayedHandler);
 
   return args.config;
+};
+
+// Places the face-up Journey token in each player's area. Extracted from the game-start handler so
+// it can also run when Giant or Ranger is dealt mid-game by Rising Sun's Divine Wind. Idempotent:
+// skips any player who already owns a Journey token (safe on reload and on repeated dispatch).
+export const setupJourneyTokens = async (args: Omit<GameLifecycleCallbackContext, 'cardId'>): Promise<void> => {
+  for (const player of args.match.players) {
+    // Avoid duplicating Journey tokens when reloading saved state or re-dispatching.
+    const alreadyOwned = Object.values(args.match.tokens ?? {}).some(
+      token => token.ownerId === player.id && token.tokenId === adventuresTokenIds.journey,
+    );
+    if (alreadyOwned) continue;
+    // Place the Journey token in the player's area, face up to start.
+    await args.actionService.run('placeToken', {
+      tokenId: adventuresTokenIds.journey,
+      ownerId: player.id,
+      location: { type: 'player', playerId: player.id },
+      facing: 'faceUp',
+    });
+  }
+};
+
+// Places a -$1 token in each player's available area. Extracted from the Bridge Troll / Ball
+// game-start handler so it can also run when Bridge Troll is dealt mid-game (Divine Wind).
+// Idempotent: skips any player who already owns a -$1 token.
+export const setupMinusCoinTokens = async (args: Omit<GameLifecycleCallbackContext, 'cardId'>): Promise<void> => {
+  for (const player of args.match.players) {
+    const alreadyOwned = Object.values(args.match.tokens ?? {}).some(
+      token => token.ownerId === player.id && token.tokenId === adventuresTokenIds.minusCoin,
+    );
+    if (alreadyOwned) continue;
+    await args.actionService.run('placeToken', {
+      tokenId: adventuresTokenIds.minusCoin,
+      ownerId: player.id,
+      location: { type: 'playerAvailable', playerId: player.id },
+    });
+  }
+};
+
+// Grants each player one of every vanilla bonus token (Teacher's setup). Extracted from the
+// game-start handler so it can also run when the Peasant Traveller line (which upgrades into
+// Teacher) is dealt mid-game (Divine Wind). Idempotent: skips tokens a player already owns.
+export const setupTeacherTokens = async (args: Omit<GameLifecycleCallbackContext, 'cardId'>): Promise<void> => {
+  const tokenIds: TokenId[] = [
+    adventuresTokenIds.plusAction,
+    adventuresTokenIds.plusBuy,
+    adventuresTokenIds.plusCard,
+    adventuresTokenIds.plusCoin,
+  ];
+
+  for (const player of args.match.players) {
+    for (const tokenId of tokenIds) {
+      // Avoid duplicating tokens when a saved state already contains them.
+      const alreadyOwned = Object.values(args.match.tokens ?? {}).some(
+        token => token.ownerId === player.id && token.tokenId === tokenId,
+      );
+      if (alreadyOwned) continue;
+      // Place unassigned tokens in the player's area until they are moved to a supply pile.
+      await args.actionService.run('placeToken', {
+        tokenId,
+        ownerId: player.id,
+        location: { type: 'playerAvailable', playerId: player.id },
+      });
+    }
+  }
 };
 
 export const registerGameEvents: (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => void = (
@@ -141,20 +206,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   // Place Journey tokens face up for each player when needed.
   if (usesJourneyToken) {
     registrar('onGameStartSetup', async args => {
-      for (const player of args.match.players) {
-        // Avoid duplicating Journey tokens when reloading saved state.
-        const alreadyOwned = Object.values(args.match.tokens ?? {}).some(
-          token => token.ownerId === player.id && token.tokenId === adventuresTokenIds.journey,
-        );
-        if (alreadyOwned) continue;
-        // Place the Journey token in the player's area, face up to start.
-        await args.actionService.run('placeToken', {
-          tokenId: adventuresTokenIds.journey,
-          ownerId: player.id,
-          location: { type: 'player', playerId: player.id },
-          facing: 'faceUp',
-        });
-      }
+      await setupJourneyTokens(args);
     });
   }
   if (usesFerryToken) {
@@ -331,17 +383,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
   if (usesMinusCoinToken) {
     registrar('onGameStartSetup', async args => {
       // Bridge Troll / Ball supply a -$1 token per player at game start.
-      for (const player of args.match.players) {
-        const alreadyOwned = Object.values(args.match.tokens ?? {}).some(
-          token => token.ownerId === player.id && token.tokenId === adventuresTokenIds.minusCoin,
-        );
-        if (alreadyOwned) continue;
-        await args.actionService.run('placeToken', {
-          tokenId: adventuresTokenIds.minusCoin,
-          ownerId: player.id,
-          location: { type: 'playerAvailable', playerId: player.id },
-        });
-      }
+      await setupMinusCoinTokens(args);
     });
   }
   // Only grant the vanilla bonus tokens when Teacher is in the kingdoms.
@@ -351,28 +393,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
   registrar('onGameStartSetup', async args => {
     // Teacher grants one of each vanilla bonus token to every player.
-    const tokenIds: TokenId[] = [
-      adventuresTokenIds.plusAction,
-      adventuresTokenIds.plusBuy,
-      adventuresTokenIds.plusCard,
-      adventuresTokenIds.plusCoin,
-    ];
-
-    for (const player of args.match.players) {
-      for (const tokenId of tokenIds) {
-        // Avoid duplicating tokens when a saved state already contains them.
-        const alreadyOwned = Object.values(args.match.tokens ?? {}).some(
-          token => token.ownerId === player.id && token.tokenId === tokenId,
-        );
-        if (alreadyOwned) continue;
-        // Place unassigned tokens in the player's area until they are moved to a supply pile.
-        await args.actionService.run('placeToken', {
-          tokenId,
-          ownerId: player.id,
-          location: { type: 'playerAvailable', playerId: player.id },
-        });
-      }
-    }
+    await setupTeacherTokens(args);
   });
 };
 
