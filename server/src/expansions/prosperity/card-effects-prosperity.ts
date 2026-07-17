@@ -6,6 +6,10 @@ import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getPlayerStartingFrom } from '@shared/get-player-position-utils.ts';
 import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
+import {
+  buildGainedLocationExpectedFrom,
+  isCardStillAtGainedLocation,
+} from '../../utils/is-card-still-at-gained-location.ts';
 
 const expansion: CardExpansionModule = {
   anvil: {
@@ -1094,6 +1098,17 @@ const expansion: CardExpansionModule = {
           },
           triggeredEffectFn: async triggerEffectArgs => {
             const card = triggerEffectArgs.cardLibrary.getCard(triggerEffectArgs.trigger.args.cardId);
+
+            // Lose Track guard: if the gained card is no longer where it was
+            // gained (already moved or covered up), there is nothing left to
+            // trash or top-deck — skip the reveal/prompt entirely rather than
+            // asking the player to make a dead choice.
+            const gainedLocation = triggerEffectArgs.trigger.args.gainedLocation;
+            if (!isCardStillAtGainedLocation(triggerEffectArgs.cardSourceController, card.id, gainedLocation)) {
+              loggerService.debug('[watchtower triggered effect] lost track of gained card; skipping');
+              return;
+            }
+
             await triggerEffectArgs.actionService.run('revealCard', {
               cardId: eventArgs.cardId,
               playerId: eventArgs.playerId,
@@ -1108,11 +1123,14 @@ const expansion: CardExpansionModule = {
               ],
             })) as { action: number; result: number[] };
 
+            const expectedFrom = buildGainedLocationExpectedFrom(gainedLocation);
+
             if (result.action === 1) {
               loggerService.debug(`[watchtower triggered effect] player chose to trash ${card}`);
               await triggerEffectArgs.actionService.run('trashCard', {
                 playerId: eventArgs.playerId,
                 cardId: card.id,
+                expectedFrom,
               });
             } else {
               loggerService.debug(`[watchtower triggered effect] player chose to top-deck ${card}`);
@@ -1120,6 +1138,7 @@ const expansion: CardExpansionModule = {
                 cardId: card.id,
                 toPlayerId: eventArgs.playerId,
                 to: { location: 'playerDeck' },
+                expectedFrom,
               });
             }
           },

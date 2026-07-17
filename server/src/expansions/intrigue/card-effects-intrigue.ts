@@ -1064,15 +1064,33 @@ const expansionModule: CardExpansionModule = {
         }
         card = cardLibrary.getCard(cardId);
 
-        const location = card.type.some(t => ['ACTION', 'TREASURE'].includes(t)) ? 'playerDeck' : 'playerDiscard';
+        const isActionOrTreasure = card.type.some(t => ['ACTION', 'TREASURE'].includes(t));
 
-        loggerService.debug(`[REPLACE EFFECT] gaining ${cardLibrary.getCard(cardId)} to ${location}...`);
+        loggerService.debug(`[REPLACE EFFECT] gaining ${cardLibrary.getCard(cardId)} to playerDiscard...`);
 
+        // Always gain to the discard first — this is the card's true gained
+        // location and is what on-gain reactions should see reported.
         await actionService.run('gainCard', {
           playerId,
           cardId,
-          to: { location },
+          to: { location: 'playerDiscard' },
         });
+
+        // "If the gained card is an Action or Treasure, put it onto your
+        // deck" is a second move after the gain, so the Lose Track rule
+        // applies: a reaction that trashed/moved/covered the gained card
+        // makes this topdeck fail. The Curse rider below still happens
+        // regardless of whether the topdeck succeeds.
+        if (isActionOrTreasure) {
+          loggerService.debug(`[REPLACE EFFECT] putting gained card onto deck...`);
+
+          await actionService.run('moveCard', {
+            cardId,
+            toPlayerId: playerId,
+            to: { location: 'playerDeck' },
+            expectedFrom: { location: 'playerDiscard', playerId, requireTop: true },
+          });
+        }
 
         if (card.type.includes('VICTORY')) {
           loggerService.debug(`[REPLACE EFFECT] card is a victory card`);

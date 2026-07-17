@@ -1270,6 +1270,29 @@ const expansionModule: CardExpansionModule = {
           return;
         }
 
+        // Lose Track guard: discardCard runs discard reactions and the
+        // onDiscarded lifecycle before returning, so the card may already have
+        // moved (e.g. Village Green playing itself from the discard) or been
+        // covered (e.g. Tunnel gaining a Gold on top). If it is no longer the
+        // top of this player's discard, Vassal has lost track of it and may
+        // not play it. playCard accepts no expectedFrom and the prompt below
+        // blocks all other effects, so this pre-check cannot be invalidated
+        // before the play happens.
+        let discardedSource: ReturnType<typeof args.cardSourceController.findCardSource> | undefined;
+        try {
+          discardedSource = args.cardSourceController.findCardSource(card.id);
+        } catch {
+          discardedSource = undefined;
+        }
+        const stillTopOfDiscard = discardedSource !== undefined &&
+          discardedSource.sourceKey === 'playerDiscard' &&
+          discardedSource.playerId === playerId &&
+          discardedSource.index === discardedSource.source.length - 1;
+        if (!stillTopOfDiscard) {
+          loggerService.debug('[VASSAL EFFECT] lost track of discarded card; skipping play option');
+          return;
+        }
+
         loggerService.debug(`[VASSAL EFFECT] prompting user to play card or not...`);
 
         const confirmAction = await args.promptService.requestAction({
