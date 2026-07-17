@@ -127,15 +127,6 @@ ferryman
 
 ## cards yet to implement
 
-### empires
-
-- enchantress - need to replace a cards effects instead of just adding to them
-  like we currently can.
-
-### rising sun
-
-- divine-wind (prophecy)
-
 ### alchemy
 
 - possession
