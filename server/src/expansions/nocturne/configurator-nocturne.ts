@@ -18,6 +18,7 @@ import { configureBat } from './configure-bat.ts';
 import { registerNocturneHexEffects } from './hex-effects-nocturne.ts';
 import { getConfiguredCardPileLocation } from '../../utils/get-configured-card-pile-location.ts';
 import { returnCardToConfiguredPileTop } from '../../utils/return-card-to-configured-pile-top.ts';
+import { isCardStillAtGainedLocation } from '../../utils/is-card-still-at-gained-location.ts';
 
 // Seeds boons when Fate cards are present in the selected kingdoms.
 const configurator: ExpansionConfiguratorFactory = () => {
@@ -352,6 +353,20 @@ export const setupChangelingExchange = async (args: Omit<GameLifecycleCallbackCo
           return false;
         }
 
+        // Lose Track guard: don't prompt for an exchange of a card that has
+        // already left its gained location (moved, or covered up in an ordered
+        // pile) before this condition is evaluated.
+        if (
+          !isCardStillAtGainedLocation(
+            conditionArgs.cardSourceController,
+            gainedCard.id,
+            conditionArgs.trigger.args.gainedLocation,
+          )
+        ) {
+          args.loggerService.debug('[changeling exchange condition] lost track of gained card; skipping');
+          return false;
+        }
+
         args.loggerService.debug(
           `[changeling exchange condition] ${gainedCard} eligible for exchange via ${returnLocation.location}`,
         );
@@ -378,11 +393,20 @@ export const setupChangelingExchange = async (args: Omit<GameLifecycleCallbackCo
           return;
         }
 
-        // Confirm the gained card still exists in a source before moving it.
-        try {
-          triggeredArgs.cardSourceController.findCardSource(gainedCard.id);
-        } catch (error) {
-          args.loggerService.warn('[changeling exchange] gained card source not found, skipping exchange');
+        // Lose Track guard: a bare existence check only proves the gained card is
+        // somewhere; it must still be at its gained location (uncovered, for
+        // ordered piles) or the exchange has lost track of it. Note:
+        // returnCardToConfiguredPileTop itself does not thread expectedFrom
+        // through its move (threading the helper further is deferred), so this
+        // up-front check is what gates the exchange.
+        if (
+          !isCardStillAtGainedLocation(
+            triggeredArgs.cardSourceController,
+            gainedCard.id,
+            triggeredArgs.trigger.args.gainedLocation,
+          )
+        ) {
+          args.loggerService.warn('[changeling exchange] lost track of gained card; skipping exchange');
           return;
         }
 

@@ -1,17 +1,57 @@
 {
+  "advisor": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"],
+    "abilityText": "+1 Action\nReveal the top 3 cards of your deck. The player to your left chooses one of them. Discard that card and put the rest into your hand."
+  },
+  "baker": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"],
+    "tags": ["coffers"],
+    "abilityText": "+1 Card\n+1 Action\n+1 Coffers\n----\nSetup: Each player gets +1 Coffers."
+  },
+  "butcher": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"],
+    "tags": ["coffers"],
+    "abilityText": "+2 Coffers\nYou may trash a card from your hand, to gain a card, costing up to $1$1 more than it per Coffers you spend."
+  },
+  "candlestick-maker": {
+    "cost": {
+      "treasure": 2
+    },
+    "type": ["ACTION"],
+    "tags": ["coffers"],
+    "abilityText": "+1 Action\n+1 Buy\n+1 Coffers"
+  },
+  "carnival": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"],
+    "abilityText": "Reveal the top 4 cards of your deck. Put one of each differently named card into your hand and discard the rest."
+  },
   "coronet": {
     "cost": {
       "treasure": 0
     },
     "type": ["ACTION", "TREASURE", "REWARD"],
-    "kingdomSelectable": false
+    "kingdomSelectable": false,
+    "abilityText": "You may play a non-Reward Action from your hand twice.\nYou may play a non-Reward Treasure from your hand twice.\n(This is not in the Supply.)"
   },
   "courser": {
     "cost": {
       "treasure": 0
     },
     "type": ["ACTION", "REWARD"],
-    "kingdomSelectable": false
+    "kingdomSelectable": false,
+    "abilityText": "Choose two different options: +2 Cards; +2 Actions; +$2; gain 4 Silvers.\n(This is not in the Supply.)"
   },
   "demesne": {
     "cost": {
@@ -19,63 +59,8 @@
     },
     "type": ["ACTION", "VICTORY", "REWARD"],
     "kingdomSelectable": false,
-    "abilityText": "+2 Actions\n+2 Buys\nGain a Gold.\nWorth 1VP per Gold you have.\n(This is not in the Supply.)",
+    "abilityText": "+2 Actions\n+2 Buys\nGain a Gold.\n----\nWorth 1VP per Gold you have.\n(This is not in the Supply.)",
     "victoryPoints": 0
-  },
-  "housecarl": {
-    "cost": {
-      "treasure": 0
-    },
-    "type": ["ACTION", "REWARD"],
-    "kingdomSelectable": false
-  },
-  "huge-turnip": {
-    "cost": {
-      "treasure": 0
-    },
-    "type": ["TREASURE", "REWARD"],
-    "kingdomSelectable": false,
-    "tags": ["coffers"]
-  },
-  "renown": {
-    "cost": {
-      "treasure": 0
-    },
-    "type": ["ACTION", "REWARD"],
-    "kingdomSelectable": false
-  },
-  "advisor": {
-    "cost": {
-      "treasure": 4
-    },
-    "type": ["ACTION"]
-  },
-  "baker": {
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION"],
-    "tags": ["coffers"]
-  },
-  "butcher": {
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION"],
-    "tags": ["coffers"]
-  },
-  "candlestick-maker": {
-    "cost": {
-      "treasure": 2
-    },
-    "type": ["ACTION"],
-    "tags": ["coffers"]
-  },
-  "carnival": {
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION"]
   },
   "fairgrounds": {
     "cost": {
@@ -89,20 +74,23 @@
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+2 Actions\n----\nWhen you gain this, you may set aside an Action or Treasure from your hand, and play it at the start of your next turn."
   },
   "farrier": {
     "cost": {
       "treasure": 2
     },
     "type": ["ACTION"],
-    "tags": ["overpay"]
+    "tags": ["overpay"],
+    "abilityText": "+1 Card\n+1 Action\n+1 Buy\n----\nOverpay: +1 Card at the end of this turn per $1$1 overpaid."
   },
   "ferryman": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+2 Cards\n+1 Action\nDiscard a card.\n----\nSetup: Choose an unused Kingdom card pile costing $3$3 or $4$4. Gain one when you gain a Ferryman."
   },
   "footpad": {
     "cost": {
@@ -110,41 +98,63 @@
     },
     "type": ["ACTION", "ATTACK"],
     "targetScheme": "ALL_OTHER",
-    "abilityText": "+2 Coffers\nEach other player discards down to 3 cards in hand.\nIn games using this, when you gain a card in an Action phase, +1 Card.",
+    "abilityText": "+2 Coffers\nEach other player discards down to 3 cards in hand.\n----\nIn games using this, when you gain a card in an Action phase, +1 Card.",
     "tags": ["coffers"]
   },
   "hamlet": {
     "cost": {
       "treasure": 2
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+1 Action\nYou may discard a card for +1 Action. You may discard a card for +1 Buy."
   },
   "herald": {
     "cost": {
       "treasure": 4
     },
     "type": ["ACTION"],
-    "tags": ["overpay"]
+    "tags": ["overpay"],
+    "abilityText": "+1 Card\n+1 Action\nReveal the top card of your deck. If it's an Action, play it.\n----\nOverpay: Per $1 overpaid, put any card from your discard pile onto your deck."
   },
   "horn-of-plenty": {
     "cardName": "Horn of Plenty",
     "cost": {
       "treasure": 5
     },
-    "type": ["TREASURE"]
+    "type": ["TREASURE"],
+    "abilityText": "Gain a card costing up to $1 per differently named card you have in play (counting this). If it's a Victory card, trash this."
+  },
+  "housecarl": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": ["ACTION", "REWARD"],
+    "kingdomSelectable": false,
+    "abilityText": "+1 Card per differently named Action card you have in play.\n(This is not in the Supply.)"
+  },
+  "huge-turnip": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": ["TREASURE", "REWARD"],
+    "kingdomSelectable": false,
+    "tags": ["coffers"],
+    "abilityText": "+2 Coffers\n+$1 per Coffers you have.\n(This is not in the Supply.)"
   },
   "hunting-party": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+1 Action\nReveal your hand. Reveal cards from your deck until you reveal a card that isn't a copy of one in your hand. Put it into your hand and discard the rest."
   },
   "infirmary": {
     "cost": {
       "treasure": 3
     },
     "type": ["ACTION"],
-    "tags": ["overpay"]
+    "tags": ["overpay"],
+    "abilityText": "+1 Card\nYou may trash a card from your hand.\n----\nOverpay: Play this once per $1 overpaid."
   },
   "jester": {
     "cost": {
@@ -158,45 +168,60 @@
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "Name a card. Reveal cards from your deck until you reveal 3 cards without that name. Put those cards into your hand and discard the rest."
   },
   "joust": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+1 Action\n+$1\nYou may set aside a Province from your hand to gain any Reward to your hand. Discard the Province in Clean-up."
   },
   "menagerie": {
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Action\nReveal your hand. If the revealed cards all have different names, +3 Cards. Otherwise, +1 Card."
   },
   "merchant-guild": {
     "cost": {
       "treasure": 5
     },
     "type": ["ACTION"],
-    "tags": ["coffers"]
+    "tags": ["coffers"],
+    "abilityText": "+1 Buy\n+$1\nAt the end of your Buy phase this turn, +1 Coffers per card you gained in it."
   },
   "plaza": {
     "cost": {
       "treasure": 4
     },
     "type": ["ACTION"],
-    "tags": ["coffers"]
+    "tags": ["coffers"],
+    "abilityText": "+1 Card\n+2 Actions\nYou may discard a Treasure for +1 Coffers."
   },
   "remake": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "Do this twice: Trash a card from your hand, then gain a card costing exactly $1 more than it."
+  },
+  "renown": {
+    "cost": {
+      "treasure": 0
+    },
+    "type": ["ACTION", "REWARD"],
+    "kingdomSelectable": false,
+    "abilityText": "+1 Buy\nThis turn, cards cost $2$2 less.\n(This is not in the Supply.)"
   },
   "shop": {
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+$1\nYou may play an Action card from your hand that you don't have a copy of in play."
   },
   "soothsayer": {
     "cost": {
@@ -211,7 +236,8 @@
       "treasure": 2
     },
     "type": ["ACTION"],
-    "tags": ["overpay"]
+    "tags": ["overpay"],
+    "abilityText": "Trash a card from your hand. Gain 2 cards each costing less than it.\n----\nOverpay: Gain 2 Action cards each costing the amount overpaid."
   },
   "young-witch": {
     "cost": {
@@ -219,6 +245,6 @@
     },
     "type": ["ACTION", "ATTACK"],
     "targetScheme": "ALL_OTHER",
-    "abilityText": "+2 Cards\nDiscard 2 cards. Each other player gains a Curse unless they reveal a Bane from their hand.\nSetup: Add an extra Kingdom card pile costing $2 or $3 to the Supply. Its cards are Banes."
+    "abilityText": "+2 Cards\nDiscard 2 cards. Each other player gains a Curse unless they reveal a Bane from their hand.\n----\nSetup: Add an extra Kingdom card pile costing $2$2 or $3$3 to the Supply. Its cards are Banes."
   }
 }

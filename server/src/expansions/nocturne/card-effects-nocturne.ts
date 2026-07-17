@@ -11,6 +11,10 @@ import { findBoonInMatch } from '@shared/find-card-like-in-match.ts';
 import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 import { registerStartTurnEffect } from '../../utils/register-start-turn-effect.ts';
+import {
+  buildGainedLocationExpectedFrom,
+  isCardStillAtGainedLocation,
+} from '../../utils/is-card-still-at-gained-location.ts';
 
 // Prompts a player to choose an Action from hand not already represented in play.
 const promptUniqueActionFromHand = async (
@@ -1206,6 +1210,15 @@ const expansion: CardExpansionModule = {
         triggeredEffectFn: async triggeredArgs => {
           const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
 
+          // Lose Track guard: skip the prompt entirely if the gained card already
+          // left its gained location (moved, or covered up in an ordered pile) by
+          // the time this reaction fires.
+          const gainedLocation = triggeredArgs.trigger.args.gainedLocation;
+          if (!isCardStillAtGainedLocation(triggeredArgs.cardSourceController, gainedCard.id, gainedLocation)) {
+            loggerService.debug('[tracker effect] lost track of gained card; skipping topdeck offer');
+            return;
+          }
+
           const shouldTopdeck = await triggeredArgs.promptService.confirm(
             {
               playerId: cardEffectArgs.playerId,
@@ -1228,6 +1241,7 @@ const expansion: CardExpansionModule = {
             cardId: gainedCard.id,
             toPlayerId: cardEffectArgs.playerId,
             to: { location: 'playerDeck' },
+            expectedFrom: buildGainedLocationExpectedFrom(gainedLocation),
           });
         },
       });
@@ -2285,14 +2299,27 @@ const expansion: CardExpansionModule = {
         }
 
         // Set the card aside on the owner's mat.
+        // Lose Track guard: onDiscarded fires after all discard reactions/lifecycle
+        // have run, so a live Scheme reaction may already have topdecked this card,
+        // or a co-fired reaction may have covered it in the discard. Require it to
+        // still be on top of the discard before setting it aside.
         loggerService.debug(`[faithful-hound onDiscarded] setting aside ${faithfulHound}`);
-        await args.actionService.run('moveCard', {
+        const setAsideResult = await args.actionService.run('moveCard', {
           cardId: eventArgs.cardId,
           toPlayerId: eventArgs.playerId,
           to: { location: 'set-aside' },
+          expectedFrom: { location: 'playerDiscard', playerId: eventArgs.playerId, requireTop: true },
         });
 
-        // Return it to hand at the end of the current turn.
+        if (!setAsideResult) {
+          loggerService.debug('[faithful-hound onDiscarded] lost track of card; not setting aside');
+          return;
+        }
+
+        // Return it to hand at the end of the current turn. Only register this
+        // reaction when the set-aside move above actually succeeded — otherwise a
+        // lost-track Hound would get snatched to hand at end of turn from wherever
+        // it actually ended up.
         const discardTurnHistoryIndex = args.match.stats.turns.length - 1;
         args.reactionManager.registerReactionTemplate(faithfulHound, 'endTurn', {
           playerId: eventArgs.playerId,
@@ -2302,10 +2329,14 @@ const expansion: CardExpansionModule = {
           condition: conditionArgs => conditionArgs.match.stats.turns.length - 1 === discardTurnHistoryIndex,
           triggeredEffectFn: async triggeredArgs => {
             loggerService.debug(`[faithful-hound endTurn] moving ${faithfulHound} to hand`);
+            // Lose Track guard (defensive): set-aside has no covering semantics
+            // (no requireTop), but the card could conceivably have been moved out
+            // of set-aside by some other effect between now and the discard.
             await triggeredArgs.actionService.run('moveCard', {
               cardId: eventArgs.cardId,
               toPlayerId: eventArgs.playerId,
               to: { location: 'playerHand' },
+              expectedFrom: { location: 'set-aside', playerId: eventArgs.playerId },
             });
           },
         });
