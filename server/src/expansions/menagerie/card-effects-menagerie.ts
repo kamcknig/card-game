@@ -10,6 +10,7 @@ import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 import { registerStartTurnEffect } from '../../utils/register-start-turn-effect.ts';
+import { isCardStillAtGainedLocation } from '../../utils/is-card-still-at-gained-location.ts';
 
 const expansion: CardExpansionModule = {
   'animal-fair': {
@@ -762,22 +763,11 @@ const expansion: CardExpansionModule = {
             return;
           }
 
-          // Stop-moving check: the card can only be exiled if it has not moved since being gained.
+          // Stop-moving check: the card can only be exiled if it has not moved (or been covered) since being gained.
           const gainedLocation = triggeredArgs.trigger.args.gainedLocation;
-          if (gainedLocation) {
-            try {
-              const currentSource = triggeredArgs.cardSourceController.findCardSource(gainedCard.id);
-              if (
-                currentSource.sourceKey !== gainedLocation.location ||
-                currentSource.playerId !== gainedLocation.playerId
-              ) {
-                loggerService.debug(`[gatekeeper effect] gained card ${gainedCard} moved since gain, skipping exile`);
-                return;
-              }
-            } catch {
-              loggerService.debug(`[gatekeeper effect] gained card ${gainedCard} source not found, skipping exile`);
-              return;
-            }
+          if (!isCardStillAtGainedLocation(triggeredArgs.cardSourceController, gainedCard.id, gainedLocation)) {
+            loggerService.debug(`[gatekeeper effect] gained card ${gainedCard} moved since gain, skipping exile`);
+            return;
           }
 
           let exileCards: CardId[] = [];
@@ -1737,18 +1727,9 @@ const expansion: CardExpansionModule = {
               return;
             }
 
-            // Stop-moving/lose-track guard: only move if the gained card is still where it was gained to.
-            try {
-              const currentSource = triggeredArgs.cardSourceController.findCardSource(gainedCard.id);
-              if (
-                currentSource.sourceKey !== gainedLocation.location ||
-                currentSource.playerId !== gainedLocation.playerId
-              ) {
-                loggerService.debug('[sleigh reaction] gained card moved since gain, skipping move');
-                return;
-              }
-            } catch {
-              loggerService.debug('[sleigh reaction] gained card source no longer exists, skipping move');
+            // Stop-moving/lose-track guard: only move if the gained card is still where it was gained to (uncovered).
+            if (!isCardStillAtGainedLocation(triggeredArgs.cardSourceController, gainedCard.id, gainedLocation)) {
+              loggerService.debug('[sleigh reaction] gained card moved since gain, skipping move');
               return;
             }
 
