@@ -7,9 +7,16 @@
   font-size: 1.2rem;
 }
 
-// Sound section card. Constrained width matches the security panel forms.
+// Sound section card. Full pane width; the volume controls inside keep
+// their own constrained width so the slider doesn't stretch absurdly.
+// Border token matches the profile sidebar nav-button card
+// (`profile.component.scss` .nav-button uses --theme-border-action) so the
+// settings card chrome is consistent with the sidebar.
 .sound-section {
-  max-width: 420px;
+  width: 100%;
+  border: 1px solid var(--theme-border-action);
+  border-radius: var(--theme-radius-md);
+  padding: var(--theme-space-md);
 
   h3 {
     margin: 0 0 var(--theme-space-md);
@@ -19,9 +26,11 @@
 }
 
 // Volume row gap is slightly tighter than the default form-field gap so the
-// muted note sits close under the controls.
+// muted note sits close under the controls. Width cap keeps the slider at
+// the pre-full-width-card size now that .sound-section spans the pane.
 .volume-field {
   gap: var(--theme-space-sm);
+  max-width: 420px;
 }
 
 // Slider + numeric text input share a row.
