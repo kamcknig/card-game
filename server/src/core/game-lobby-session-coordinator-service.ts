@@ -765,6 +765,21 @@ export class GameLobbySessionCoordinatorService {
         );
         state.socketMap.get(playerId)?.emit('searchWayResponse', ways);
       },
+      onSearchTraits: (playerId, searchTerm) => {
+        state.socketMap
+          .get(playerId)
+          ?.emit('searchTraitResponse', this.expansionSearchService.searchTraits(searchTerm));
+      },
+      onSearchAllies: (playerId, searchTerm) => {
+        state.socketMap
+          .get(playerId)
+          ?.emit('searchAllyResponse', this.expansionSearchService.searchAllies(searchTerm));
+      },
+      onSearchProphecies: (playerId, searchTerm) => {
+        state.socketMap
+          .get(playerId)
+          ?.emit('searchProphecyResponse', this.expansionSearchService.searchProphecies(searchTerm));
+      },
     });
   }
 

@@ -7,6 +7,7 @@ export type {
   MatchConfigurationSaveNameCheckResult,
   MatchConfigurationSaveResult,
   SavedMatchConfigurationEntry,
+  SearchCatalogKind,
   SelectableSearchCatalog,
   ServerEmitEvents,
   ServerListenEvents,

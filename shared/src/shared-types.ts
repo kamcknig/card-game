@@ -503,6 +503,9 @@ export type SelectableSearchCatalog = {
   prophecies: ProphecyNoId[];
 };
 
+// Discriminates which SelectableSearchCatalog bucket a search request targets.
+export type SearchCatalogKind = keyof SelectableSearchCatalog;
+
 // Represents one persisted match-configuration save file visible to clients.
 export type SavedMatchConfigurationEntry = {
   key: string;
@@ -627,6 +630,12 @@ export type ServerEmitEvents = {
   searchProjectResponse: (projectData: ProjectNoId[]) => void;
   // Sends way search results to the client.
   searchWayResponse: (wayData: WayNoId[]) => void;
+  // Sends trait search results to the client.
+  searchTraitResponse: (traitData: TraitNoId[]) => void;
+  // Sends ally search results to the client.
+  searchAllyResponse: (allyData: AllyNoId[]) => void;
+  // Sends prophecy search results to the client.
+  searchProphecyResponse: (prophecyData: ProphecyNoId[]) => void;
   selectCard: (signalId: string, selectCardArgs: SelectActionCardArgs & { selectableCardIds: CardId[] }) => void;
   setPlayerList: (players: Player[]) => void;
   // Sends the full ordered log history for clients to replace their local
@@ -732,6 +741,12 @@ export interface ServerListenEvents {
   searchProjects: (playerId: PlayerId, searchStr: string) => void;
   // Requests way search results from the server.
   searchWays: (playerId: PlayerId, searchStr: string) => void;
+  // Requests trait search results from the server.
+  searchTraits: (playerId: PlayerId, searchStr: string) => void;
+  // Requests ally search results from the server.
+  searchAllies: (playerId: PlayerId, searchStr: string) => void;
+  // Requests prophecy search results from the server.
+  searchProphecies: (playerId: PlayerId, searchStr: string) => void;
   updatePlayerName: (playerId: PlayerId, name: string) => void;
   userInputReceived: (signalId: string, input: unknown) => void;
 }
