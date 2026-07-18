@@ -20,12 +20,11 @@
 .name-card-result {
   @include tile.tile-base;
   background: transparent;
-  transition: transform 120ms ease, border-color 120ms ease;
+  transition: border-color 120ms ease;
 }
 
 .name-card-result:hover {
   @include tile.tile-hover;
-  transform: translateY(-6px);
 }
 
 .name-card-result.selected {
