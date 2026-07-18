@@ -97,16 +97,24 @@ export class UserAccountAuthProvider implements AuthProvider {
     }
 
     // DANGER: local-dev auth bypass. When AUTH_DEV_BYPASS=true, accept any
-    // non-empty username/password without touching the user store, password
-    // hashes, lockout counters, or Supabase. Downstream identity (admin flag,
-    // email) is resolved by the DevBypassUserStore decorator. Guarded so the
-    // provider behaves identically to production when the flag is off. This
-    // must never be enabled in a shared or production environment.
+    // non-empty username/password without password verification, lockout
+    // counters, or Supabase. Downstream identity (admin flag, email) is
+    // resolved by the DevBypassUserStore decorator. Guarded so the provider
+    // behaves identically to production when the flag is off. This must
+    // never be enabled in a shared or production environment.
     if (this.serverConfigService.isAuthDevBypassEnabled()) {
       this.loggerService.warn(
         `[auth:user] DEV BYPASS active — accepting '${username}' without password verification (AUTH_DEV_BYPASS)`,
       );
-      return { ok: true, username };
+      // Resolve to the canonical username, mirroring the production paths
+      // below which return user.username, never the typed identifier. The
+      // decorator handles the full resolution: real username match, real
+      // email match (sign-in-by-email), or a synthesized dev identity —
+      // so the session and login response always carry a canonical
+      // username, not a raw email address. The ?? fallback is defensive:
+      // under the bypass the decorator always returns a record.
+      const resolved = await this.userStore.getByUsername(username);
+      return { ok: true, username: resolved?.username ?? username };
     }
 
     const user = await this.resolveUser(username);
@@ -150,12 +158,12 @@ export class UserAccountAuthProvider implements AuthProvider {
    * disallows '@' at registration time), falling back to an email lookup
    * when the identifier looks like an email.
    *
-   * `DevBypassUserStore.getByEmail` is explicitly a pass-through (not
-   * synthesized), so an email-shaped bypass login that doesn't match a real
-   * record still falls through to the synthetic-username bypass path via
-   * `getByUsername` — this method is not reached in dev-bypass mode since
-   * {@link authenticate} short-circuits before it, but the ordering keeps
-   * behavior consistent if that ever changes.
+   * This method is not reached in dev-bypass mode — {@link authenticate}
+   * short-circuits before it and resolves the identifier through
+   * `DevBypassUserStore.getByUsername`, which performs the same
+   * username-then-email resolution against the real store before
+   * synthesizing a dev identity. The ordering here matches that decorator
+   * so both paths resolve identifiers identically.
    *
    * @param identifier  The raw sign-in field value — may be a username or an email.
    */
