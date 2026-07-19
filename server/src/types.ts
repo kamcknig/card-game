@@ -227,6 +227,13 @@ export interface GameActionDefinitionMap {
   gainTreasure: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   // Spends treasure from the current player's pool (cannot go below zero).
   spendTreasure: (args: { count: number }, context?: GameActionContext) => Promise<void>;
+  // Sets the current player's treasure pool to an exact value (clamped to
+  // >= 0) WITHOUT gain/spend semantics: no treasureGain trigger fires and
+  // no player-visible log entry is written. For effects that adjust coins
+  // rather than gain or pay them (e.g. Poor House / Souk "-$1 per X, you
+  // can't go below $0"). True gains must use gainTreasure (reactions like
+  // the -$1 token hook its trigger); "pay" effects must use spendTreasure.
+  setTreasure: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   gainVictoryToken: (args: { playerId: PlayerId; count: number }, context?: GameActionContext) => Promise<void>;
   // adds a turn to the extra turn queue
   queueExtraTurn: (args: { turn: ExtraTurn }) => Promise<void>;

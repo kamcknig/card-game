@@ -3831,6 +3831,28 @@ export class GameActionController implements GameActionDefinitionMap {
     );
   }
 
+  // Sets the current player's treasure pool to an exact value (>= 0).
+  // Deliberately fires NO treasureGain trigger and writes NO player-visible
+  // log entry: this is the primitive for "adjust without gaining/spending"
+  // effects, and every registered treasureGain reaction applies to gains
+  // only. See the GameActionDefinitionMap entry for usage guidance.
+  async setTreasure(args: { count: number }, _context?: GameActionContext) {
+    const currentPlayer = getCurrentPlayer(this.match);
+    const target = Math.max(0, args.count);
+
+    if (target === this.match.playerTreasure) {
+      this.loggerService.debug(
+        `[setTreasure action] player ${currentPlayer.id} treasure already ${target}; no change`,
+      );
+      return;
+    }
+
+    this.loggerService.info(
+      `[setTreasure action] player ${currentPlayer.id} treasure ${this.match.playerTreasure} -> ${target}`,
+    );
+    this.match.playerTreasure = target;
+  }
+
   // Single, focused implementation of drawCard
   async drawCard(
     args: { playerId: PlayerId; count?: number; suppressReactions?: boolean },
