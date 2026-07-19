@@ -166,8 +166,11 @@ function resolveCatalogTravellerLineSiblings(arg: CardDetailArg): CardDetailDial
 
 // Finds "caused by" siblings in both directions:
 // - If the primary card is a TRIGGER (its own linkedPileKey is set),
-//   include a representative of the target pile it causes to exist (e.g.
-//   Young Witch -> its chosen Bane card).
+//   include one representative per distinct cardKey in the target pile it
+//   causes to exist — usually a single card (Young Witch -> its chosen
+//   Bane card), but the target pile can hold several distinct types (Joust
+//   -> all six Reward types; Looter -> all five Ruins types), so every
+//   distinct cardKey there is included, sorted by cost ascending.
 // - If the primary card belongs to a TARGET pile, include every TRIGGER
 //   currently in the kingdom whose linkedPileKey points at this pile
 //   (naturally covers many:1 — e.g. every Looter present when viewing
@@ -178,14 +181,17 @@ function findLinkedSiblings(pileKey: string, excludeCardId?: CardId): CardDetail
   const seenCardKeys = new Set<string>(primaryCard ? [primaryCard.cardKey] : []);
   const entries: CardDetailDialogEntry[] = [];
 
-  // Forward: I am a trigger — show my target (single representative card).
+  // Forward: I am a trigger — show every distinct card type in my target pile.
   if (primaryCard?.linkedPileKey) {
+    const targets: Card[] = [];
     for (const card of Object.values(cardsById)) {
       if (card.kingdom !== primaryCard.linkedPileKey || seenCardKeys.has(card.cardKey)) continue;
       seenCardKeys.add(card.cardKey);
-      entries.push({ cardId: card.id, detailImagePath: card.detailImagePath });
-      break;
+      targets.push(card);
     }
+    targets
+      .sort((a, b) => compareCardCosts(a.cost, b.cost))
+      .forEach((card) => entries.push({ cardId: card.id, detailImagePath: card.detailImagePath }));
   }
 
   // Reverse: I belong to a target pile — show every trigger pointing at me.
