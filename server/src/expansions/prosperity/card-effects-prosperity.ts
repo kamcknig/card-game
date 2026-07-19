@@ -6,6 +6,7 @@ import { CardPriceRule } from '../../core/card-price-rules-controller.ts';
 import { getPlayerStartingFrom } from '@shared/get-player-position-utils.ts';
 import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
+import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import {
   buildGainedLocationExpectedFrom,
   isCardStillAtGainedLocation,
@@ -1040,15 +1041,33 @@ const expansion: CardExpansionModule = {
         cardsNamedByTurn[turnStatsIndex] ??= [];
         cardsNamedByTurn[turnStatsIndex].push(cardKey);
 
-        const cardIds = cardEffectArgs.findCardService
+        const matchingCards = cardEffectArgs.findCardService
           .findCards({
             all: [
               { location: ['basicSupply', 'kingdomSupply'] },
               { kind: 'upTo', amount: { treasure: 5 }, playerId: cardEffectArgs.playerId },
             ],
           })
-          .filter(card => !cardsNamedByTurn[turnStatsIndex].includes(card.cardKey))
-          .map(card => card.id);
+          .filter(card => !cardsNamedByTurn[turnStatsIndex].includes(card.cardKey));
+
+        // findCards above returns every remaining copy in each qualifying
+        // pile — collapse to one candidate per pile (its current top card)
+        // so the player picks a pile, not an individual copy. selectCard's
+        // own pile-collapse only runs for CardFilterExpr restricts; passing
+        // a pre-resolved CardId[] (needed here for the named-card exclusion)
+        // bypasses it, so it must be done here instead.
+        const seenPileKeys = new Set<CardKey>();
+        const cardIds: CardId[] = [];
+        for (const card of matchingCards) {
+          const pileKey = getCardPileKey(card);
+          if (seenPileKeys.has(pileKey)) continue;
+          seenPileKeys.add(pileKey);
+          const topCard = cardEffectArgs.findCardService.findTopSupplyCardForPileKey({
+            pileKey,
+            from: ['basicSupply', 'kingdomSupply'],
+          });
+          if (topCard) cardIds.push(topCard.id);
+        }
 
         if (!cardIds.length) {
           loggerService.debug(`[war-chest effect] no cards found`);
