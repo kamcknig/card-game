@@ -38,7 +38,24 @@
   align-items: center;
 
   .player-score-wrapper {
-    display: contents;
+    // Real box spanning the full row so it can carry the winner border;
+    // subgrid keeps every row's cells on the shared column tracks. All rows
+    // share identical border/padding metrics (transparent by default) so
+    // the winner's visible border doesn't shift its cells relative to
+    // non-winner rows.
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+    align-items: center;
+    border: 2px solid transparent;
+    border-radius: var(--theme-radius-lg);
+    padding: var(--theme-space-sm) var(--theme-space-md);
+
+    &.winner {
+      // Dedicated winner token — themed for dark and light
+      // (app-theme.scss:51 light #b89340, :174 dark #e6c54a).
+      border-color: var(--theme-color-winner);
+    }
 
     div.hr-rule {
       display: flex;

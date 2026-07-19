@@ -81,6 +81,23 @@ export class GameSummaryComponent {
     }));
   });
 
+  /**
+   * Per-row winner flags for the ranking list. The server pre-sorts
+   * playerSummary (score desc, then fewer turns, then seat order), so row 0
+   * is always a winner; later rows share the win only when they tie row 0
+   * on BOTH score and turns taken (Dominion's tie rule).
+   */
+  readonly winnerFlags = computed<boolean[]>(() => {
+    const summaries = this.playerSummaries();
+    if (summaries.length === 0) {
+      return [];
+    }
+    const first = summaries[0];
+    return summaries.map((summary, index) =>
+      index === 0
+      || (summary.score === first.score && summary.turnsTaken === first.turnsTaken));
+  });
+
   // Reactive owner and self tracking — initialValue seeds from current store state so
   // isOwner() is correct on the first synchronous render without waiting for Angular's
   // scheduler to flush the first nanostore emission.
