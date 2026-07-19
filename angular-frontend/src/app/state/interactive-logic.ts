@@ -4,6 +4,7 @@ import {
   promptInteractionLockStore,
   promptWaySelectableCardsOverrideStore,
 } from './interactive-state';
+import { waitingOnPlayerIdStore } from './match-ui-overlay-state';
 import { computed } from 'nanostores';
 import { matchStore } from './match-state';
 import { selfPlayerIdStore } from './player-state';
@@ -17,10 +18,26 @@ export const serverSelectableCardsStore = computed([matchStore, selfPlayerIdStor
 });
 
 
-// Final store that components should subscribe to
+// Final store that components should subscribe to. The server-provided
+// normal-turn selectable set (hand actions/treasures, buyable pile tops) is
+// suppressed while this client is waiting on a DIFFERENT player's prompt
+// response (e.g. War Chest naming a card) — otherwise the acting player's
+// board stays highlighted/clickable as though it were still their move. A
+// client override always takes priority: it only exists while THIS client
+// is the one being prompted, and the server never broadcasts
+// waitingForPlayer to the prompted player themselves, so the two states
+// never overlap.
 export const selectableCardStore = computed(
-  [clientSelectableCardsOverrideStore, serverSelectableCardsStore],
-  (clientOverride, serverCards) => clientOverride ?? serverCards
+  [clientSelectableCardsOverrideStore, serverSelectableCardsStore, waitingOnPlayerIdStore, selfPlayerIdStore],
+  (clientOverride, serverCards, waitingOnPlayerId, selfPlayerId) => {
+    if (clientOverride !== null) {
+      return clientOverride;
+    }
+    if (waitingOnPlayerId !== null && waitingOnPlayerId !== selfPlayerId) {
+      return [];
+    }
+    return serverCards;
+  }
 );
 
 // Cards that can currently be played as a Way from the active player's hand.
