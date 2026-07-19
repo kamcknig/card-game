@@ -2000,8 +2000,9 @@ export class GameActionController implements GameActionDefinitionMap {
     this.loggerService.debug(`[exileCard action] ${card} moved to exile for player ${args.playerId}`);
   }
 
-  // Shared socket round-trip for userPrompt/selectCard: registers the signal id with
-  // PromptAbortRegistry (so an approved undo can abort an in-flight prompt), fans out
+  // Shared socket round-trip for userPrompt/selectCard: registers a full pending-prompt
+  // handle with PromptAbortRegistry (so an approved undo can abort an in-flight prompt,
+  // and a reconnect can replay it onto the player's new socket), fans out
   // waitingForPlayer/doneWaitingForPlayer to other players when the target isn't the
   // current player, emits the request, and resolves via `parseResponse` once a matching
   // `userInputReceived` signal arrives. Listener cleanup (`socket.off`) happens on receipt.
@@ -2023,14 +2024,14 @@ export class GameActionController implements GameActionDefinitionMap {
     }
 
     return new Promise<TResult>((resolve, reject) => {
-      // Register so PromptAbortRegistry can abort this prompt if a vote
-      // approves an undo while we're waiting for input.
-      const unregister = this.promptAbortRegistry.register(signalId, reject);
+      // The socket currently holding the userInputReceived listener.
+      // reattach() swaps this when the player reconnects on a new socket.
+      let boundSocket = socket;
 
       const onInput = (incomingSignalId: string, response: unknown) => {
         if (incomingSignalId !== signalId) return;
 
-        socket.off('userInputReceived', onInput);
+        boundSocket.off('userInputReceived', onInput);
         unregister();
 
         if (playerId !== currentPlayerId) {
@@ -2044,15 +2045,35 @@ export class GameActionController implements GameActionDefinitionMap {
         resolve(parseResponse(response));
       };
 
-      socket.on('userInputReceived', onInput);
       // socket.emit's overloads key off a literal event name; narrow explicitly per branch
       // rather than casting the payload/emit function, since emitPayload's shape is verified
       // by each caller (userPrompt/selectCard) to match the event it requests.
-      if (emitEvent === 'userPrompt') {
-        socket.emit('userPrompt', signalId, emitPayload as UserPromptActionArgs);
-      } else {
-        socket.emit('selectCard', signalId, emitPayload as SelectActionCardArgs & { selectableCardIds: CardId[] });
-      }
+      const emitPrompt = (target: AppSocket) => {
+        if (emitEvent === 'userPrompt') {
+          target.emit('userPrompt', signalId, emitPayload as UserPromptActionArgs);
+        } else {
+          target.emit('selectCard', signalId, emitPayload as SelectActionCardArgs & { selectableCardIds: CardId[] });
+        }
+      };
+
+      // Register the full handle so an approved undo can abort this prompt
+      // and a reconnect can replay it onto the player's new socket.
+      const unregister = this.promptAbortRegistry.register({
+        signalId,
+        playerId,
+        reject,
+        detach: () => boundSocket.off('userInputReceived', onInput),
+        reattach: (newSocket: AppSocket) => {
+          // Off on the old (possibly dead, possibly same) socket is harmless.
+          boundSocket.off('userInputReceived', onInput);
+          boundSocket = newSocket;
+          boundSocket.on('userInputReceived', onInput);
+          emitPrompt(boundSocket);
+        },
+      });
+
+      boundSocket.on('userInputReceived', onInput);
+      emitPrompt(boundSocket);
     });
   }
 
@@ -3282,6 +3303,21 @@ export class GameActionController implements GameActionDefinitionMap {
     const hasDisconnectedHuman = match.players.some(player => !player.connected && !player.isComputer);
     if (hasDisconnectedHuman) {
       this.loggerService.debug('[checkForRemainingPlayerActions action] human disconnected, pausing flow');
+      return;
+    }
+
+    // An action is suspended awaiting prompt input from a seated player —
+    // re-entrant callers (reconnect, resign, vote-removal, lobby resume)
+    // must not auto-advance phases underneath it; the suspended action
+    // resumes when the prompt answer arrives. Prompts whose player is no
+    // longer in the match (voted out / resigned mid-prompt) can never
+    // resolve (pre-existing) and must not wedge the match, so they don't
+    // block.
+    const hasSeatedPendingPrompt = this.promptAbortRegistry
+      .getPendingEntries()
+      .some(entry => match.players.some(player => player.id === entry.playerId));
+    if (hasSeatedPendingPrompt) {
+      this.loggerService.debug('[checkForRemainingPlayerActions action] prompt in flight, skipping auto-advance');
       return;
     }
 

@@ -239,6 +239,7 @@ export class GameLobbySessionCoordinatorService {
       this.onPlayerEnteredMatch(state, {
         playerId,
         socketId: socket.id,
+        socket,
         callbacks,
       });
     };
@@ -535,10 +536,11 @@ export class GameLobbySessionCoordinatorService {
     args: {
       playerId: PlayerId;
       socketId: string;
+      socket: AppSocket;
       callbacks: GameLobbyCallbacks;
     },
   ): void {
-    const { playerId, socketId, callbacks } = args;
+    const { playerId, socketId, socket, callbacks } = args;
 
     if (!state.matchStarted) {
       this.loggerService.debug(`[game] enteredMatch ignored from ${playerId}; match not started`);
@@ -571,8 +573,18 @@ export class GameLobbySessionCoordinatorService {
     this.io.in(state.roomName).emit('playerConnected', player);
     this.broadcastRemovalVoteState(state);
 
+    // leftMatch ran the full disconnect path, which removed this player
+    // from the match socketMap — without re-adding them here they would
+    // never receive another patch (and no pending prompt could replay).
+    // playerReconnected restores the socketMap entry, rebinds gameplay
+    // listeners, resends full state, and re-arms the clientReady handshake
+    // that replays pending prompts once the scene has rebound its
+    // listeners.
+    state.matchController?.playerReconnected(playerId, socket);
+
     // Resume the action engine if every human is now connected. Mirrors the
-    // resume branch in addPlayer (line 145-148).
+    // resume branch in addPlayer (line 145-148). Phase 2's auto-advance
+    // guard makes this safe even while a prompt is suspended mid-match.
     const hasDisconnectedHuman = this.playerSessionService.hasDisconnectedHumanPlayers(state.players);
     if (!hasDisconnectedHuman) {
       void state.matchController?.runGameAction('checkForRemainingPlayerActions');

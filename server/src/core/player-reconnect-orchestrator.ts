@@ -11,6 +11,7 @@ import { MatchSocketBindings } from './match-socket-bindings.ts';
 import { TokenRegistryService } from './tokens/token-registry-service.ts';
 import { LoggerService } from './logger-service.ts';
 import { MatchUndoVoteService } from './undo/match-undo-vote-service.ts';
+import { PromptAbortRegistry } from './undo/prompt-abort-registry.ts';
 
 /**
  * Owns reconnect-time socket hydration and gameplay socket binding behavior.
@@ -30,6 +31,7 @@ export class PlayerReconnectOrchestrator {
     private readonly tokenRegistryService: TokenRegistryService,
     private readonly loggerService: LoggerService,
     private readonly undoVoteService: MatchUndoVoteService,
+    private readonly promptAbortRegistry: PromptAbortRegistry,
   ) {}
 
   /**
@@ -84,7 +86,29 @@ export class PlayerReconnectOrchestrator {
       socket.emit('matchStarted');
       socket.off('clientReady', onClientReady);
 
-      if (getCurrentPlayer(this.match).id === playerId) {
+      // The scene has just bound its userPrompt/selectCard listeners
+      // (MatchScene binds before emitting clientReady) — replay any prompt
+      // the server is still awaiting from this player so the suspended
+      // action resumes instead of dangling on the dead socket's listener.
+      const replayedPrompt = this.promptAbortRegistry.reattachForPlayer(playerId, socket);
+      if (replayedPrompt) {
+        this.loggerService.info(`[match] replayed pending prompt(s) to reconnected player ${playerId}`);
+      }
+
+      // Restore the waiting overlay when the server is waiting on someone
+      // else. Mirrors promptViaSocket's fan-out rule: the overlay is only
+      // shown for prompts targeting a non-current player, and never to the
+      // prompted player themselves.
+      const currentPlayerId = getCurrentPlayer(this.match).id;
+      for (const pending of this.promptAbortRegistry.getPendingEntries()) {
+        if (pending.playerId !== playerId && pending.playerId !== currentPlayerId) {
+          socket.emit('waitingForPlayer', pending.playerId);
+        }
+      }
+
+      // With a prompt replayed, the suspended action owns the turn flow —
+      // running the auto-advance check would be re-entrant on top of it.
+      if (!replayedPrompt && currentPlayerId === playerId) {
         await this.actionService.run('checkForRemainingPlayerActions');
       }
     };
@@ -93,6 +117,11 @@ export class PlayerReconnectOrchestrator {
 
     // Ensure gameplay socket handlers are active immediately on reconnect,
     // using the known playerId so per-player undo events are attributed correctly.
+    // Same-socket re-entry (back-button return): the match-start gameplay
+    // handlers may still be bound on this socket, and bindGameplaySocketHandlers
+    // stacks rather than replaces — unbind first so nextPhase and friends
+    // cannot double-fire. No-op for a genuinely new socket.
+    this.unbindGameplaySocketListeners(socket);
     this.bindGameplaySocketListeners(socket, playerId);
     this.interactivityController.playerAdded(socket);
 
