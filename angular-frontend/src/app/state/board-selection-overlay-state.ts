@@ -14,6 +14,9 @@ export type BoardSelectionOverlayState = {
   // 'card' — select-card (gain) prompts write top-card ids to
   // selectedCardStore.
   selectionKind: 'pile' | 'card';
+  // Hard cap on simultaneous selections from the prompt's count spec —
+  // board clicks beyond this are ignored until something is deselected.
+  maxSelectable: number;
 };
 
 export type BoardSelectionOverlayAction = {
@@ -28,6 +31,7 @@ export const boardSelectionOverlayStore = map<BoardSelectionOverlayState>({
   submitEnabled: false,
   singleSelection: false,
   selectionKind: 'pile',
+  maxSelectable: 1,
 });
 
 export const boardSelectionOverlayActionStore = atom<BoardSelectionOverlayAction | null>(null);

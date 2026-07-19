@@ -10,7 +10,7 @@ import {
   selectedCardStore,
   selectedPileStore
 } from '../../../../state/interactive-state';
-import {resolveCountSpec} from 'shared/resolve-count-spec';
+import {resolveCountSpec, resolveMaxSelectable} from 'shared/resolve-count-spec';
 import {validateCountSpec} from 'shared/validate-count-spec';
 import {currentPlayerTurnIdStore, turnNumberStore, turnPhaseStore} from '../../../../state/turn-state';
 import {SocketService} from '../../../../core/socket-service/socket.service';
@@ -439,6 +439,7 @@ export class MatchScene {
         submitEnabled: false,
         singleSelection: false,
         selectionKind: 'pile',
+        maxSelectable: 1,
       });
       boardSelectionOverlayActionStore.set(null);
       selectedCardStore.set([]);
@@ -490,6 +491,8 @@ export class MatchScene {
       submitEnabled: false,
       singleSelection: isSingleSelection,
       selectionKind: 'card',
+      // Hard cap from the count spec — board clicks beyond it are ignored.
+      maxSelectable: resolveMaxSelectable(selectCount),
     });
     boardSelectionOverlayActionStore.set(null);
 
@@ -551,6 +554,7 @@ export class MatchScene {
         submitEnabled: false,
         singleSelection: false,
         selectionKind: 'pile',
+        maxSelectable: 1,
       });
       boardSelectionOverlayActionStore.set(null);
       selectedPileStore.set([]);
@@ -592,6 +596,8 @@ export class MatchScene {
       submitEnabled: false,
       singleSelection: isSingleSelection,
       selectionKind: 'pile',
+      // Hard cap from the count spec — board clicks beyond it are ignored.
+      maxSelectable: resolveMaxSelectable(selectCount),
     });
     boardSelectionOverlayActionStore.set(null);
 

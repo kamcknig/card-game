@@ -3,6 +3,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
 import { CardKey, UserPromptKinds } from 'shared/types';
 import { validateCountSpec } from 'shared/validate-count-spec';
+import { resolveMaxSelectable } from 'shared/resolve-count-spec';
 import { selectedPileStore } from '../../../state/interactive-state';
 import { createSelectionEmitter } from './selection-emitter';
 
@@ -74,6 +75,11 @@ export class PromptSelectPileContentComponent {
     if (existingIndex >= 0) {
       selected.splice(existingIndex, 1);
     } else {
+      // The count spec's maximum is a hard cap — ignore clicks that would
+      // exceed it; the player must deselect a pile before picking another.
+      if (selected.length >= resolveMaxSelectable(this.content().selectCount)) {
+        return;
+      }
       selected.push(pileName);
     }
     selectedPileStore.set(selected);
