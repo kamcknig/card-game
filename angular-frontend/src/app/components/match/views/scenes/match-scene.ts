@@ -249,7 +249,18 @@ export class MatchScene {
     if (currentPlayerTurnIdStore.get() !== this._selfId) {
       await this._soundService.play('./assets/sounds/your-turn.mp3', 0.3);
     }
-    if (waitForInput && args.content?.type === 'select-pile') {
+
+    if (!waitForInput) {
+      // Display-only prompt (boon/hex reveal, card showcase): routed to the
+      // coordinator's parallel display slot — no interaction lock, no
+      // reply. The floating promise resolves when the player closes the
+      // dialog (or a newer display prompt replaces it); no response is ever
+      // emitted for display prompts.
+      void this.openPromptUi(args).catch(() => undefined);
+      return;
+    }
+
+    if (args.content?.type === 'select-pile') {
       await this.doSelectPiles(signalId, args);
       return;
     }
@@ -259,9 +270,7 @@ export class MatchScene {
     promptInteractionLockStore.set(true);
     try {
       const result = await this.openPromptUi(args);
-      if (waitForInput) {
-        this._socketService.emit('userInputReceived', signalId, result);
-      }
+      this._socketService.emit('userInputReceived', signalId, result);
     } finally {
       this._selecting = false;
       promptInteractionLockStore.set(false);
