@@ -522,16 +522,25 @@ export class Game {
     this.onGameStateChanged?.();
   };
 
-  // Registers the socket handler for disconnected-player removal votes.
+  // Registers the socket handlers for disconnected-player removal votes.
   private registerRemovalVoteHandler = (socket: AppSocket, playerId: PlayerId): void => {
     socket.on('removeDisconnectedPlayer', (targetPlayerId: PlayerId) => {
       this.onRemoveDisconnectedPlayerVote(playerId, targetPlayerId);
+    });
+    socket.on('retractRemoveDisconnectedPlayer', (targetPlayerId: PlayerId) => {
+      this.onRetractRemovalVote(playerId, targetPlayerId);
     });
   };
 
   // Handles a connected human player's vote to remove a disconnected player.
   private onRemoveDisconnectedPlayerVote = (voterId: PlayerId, targetPlayerId: PlayerId): void => {
     this.gameLobbySessionCoordinatorService.onRemoveDisconnectedPlayerVote(this.runtimeState, voterId, targetPlayerId);
+    this.onGameStateChanged?.();
+  };
+
+  // Handles a voter withdrawing a removal vote for a disconnected player.
+  private onRetractRemovalVote = (voterId: PlayerId, targetPlayerId: PlayerId): void => {
+    this.gameLobbySessionCoordinatorService.onRetractRemovalVote(this.runtimeState, voterId, targetPlayerId);
     this.onGameStateChanged?.();
   };
 }

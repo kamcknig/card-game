@@ -6,6 +6,8 @@ export type {
   MatchConfigurationLoadResult,
   MatchConfigurationSaveNameCheckResult,
   MatchConfigurationSaveResult,
+  PlayerRemovedFromMatchPayload,
+  RemovalVoteStateEntry,
   SavedMatchConfigurationEntry,
   SearchCatalogKind,
   SelectableSearchCatalog,

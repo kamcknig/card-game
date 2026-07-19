@@ -543,6 +543,22 @@ export type MatchConfigurationDeleteResult = {
   message?: string;
 };
 
+// One target's removal-vote tally, broadcast whenever vote state changes.
+export type RemovalVoteStateEntry = {
+  targetPlayerId: PlayerId;
+  // Players who currently have an active vote to remove the target.
+  voterIds: PlayerId[];
+};
+
+// Announces that a player permanently left an active match (voted out or
+// resigned). Carries the name because setPlayerList broadcasts erase the
+// player from client state before this can be resolved locally.
+export type PlayerRemovedFromMatchPayload = {
+  playerId: PlayerId;
+  playerName: string;
+  reason: 'voted' | 'resigned';
+};
+
 export type ServerEmitEvents = {
   addLogEntry: (logEntry: LogEntry[]) => void;
   // Sent to a freshly-authenticated client immediately after the socket
@@ -581,6 +597,12 @@ export type ServerEmitEvents = {
   playAllTreasureComplete: () => void;
   playerConnected: (player: Player) => void;
   playerDisconnected: (player: Player) => void;
+  // Full removal-vote snapshot; sent to the room on every vote change and
+  // to a reconnecting socket so Kick/Undo-kick state survives reloads.
+  removalVoteState: (entries: RemovalVoteStateEntry[]) => void;
+  // A player was permanently removed from the active match (voted out or
+  // resigned); clients show them as "(removed)" in the disconnect dialog.
+  playerRemovedFromMatch: (payload: PlayerRemovedFromMatchPayload) => void;
   playerNameUpdated: (playerId: PlayerId, name: string) => void;
   playerReady: (playerId: PlayerId, ready: boolean) => void;
   // Full game-lobby snapshot sent on connect and on explicit request.
@@ -712,6 +734,8 @@ export interface ServerListenEvents {
   editMatch: () => void;
   // Vote to remove a disconnected human player and resume the match.
   removeDisconnectedPlayer: (playerId: PlayerId) => void;
+  // Retracts this player's earlier vote to remove a disconnected player.
+  retractRemoveDisconnectedPlayer: (playerId: PlayerId) => void;
   // Originator clicks the undo button; server starts a vote round.
   undoRequested: () => void;
   // Originator clicks Cancel on their waiting dialog.
