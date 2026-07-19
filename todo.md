@@ -1,20 +1,18 @@
 # Randoms
 
+---
+
+need a VP breakdown per person on ohw each point was received
+
+---
+
 add stats tracking
 cards played on board not for current player - such as black cat - have some indication of who they belong to
 in active duration cards modal - show which player owns which cards
 
 ---
 
-voting on players leaving
- - when one player leaves pressing the button to kick them gives no visual feedback (button doesn't disable, dialog doesn't disappear)
- - if two or more players leave at the same time, it show splayers name in the dialog but same as above, no visual indication
-
----
-
-- add email registration via supabase
-  - add password reset
-  - email change after registration
+add password reset
 
 ---
 
@@ -30,11 +28,6 @@ similar to how ways do it in the condensed view.
 
 ---
 
-when player leaves game and modal opens to ask to remove player,
-also allow option to simply leave game.
-
----
-
 - player disconnection
   - work on the use-case when a player disconnects while waiting on input for
     that player - when they reconnected they
@@ -43,16 +36,6 @@ also allow option to simply leave game.
 ---
 
 enter should submit forms such as match save dialog
-
-esc should close modals that don't require user interaction
-
----
-
-logs show this - [object Object]
-
-server-1    | [05-02 18:38:58.278]─[DEBUG] [ctx scope=match gameId=game-mooooki8-45e97d79 matchScopeId=1] [object Object] can select 1 cards
-
----
 
 # Lower priority
 

@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   inject,
   signal,
 } from '@angular/core';
@@ -10,13 +11,14 @@ import { combineLatest, map, of, switchMap } from 'rxjs';
 import { PlayerId } from 'shared/types';
 import { UiDialogComponent } from '../../ui/dialog/ui-dialog.component';
 import { ConfirmDialogComponent } from '../../ui/confirm-dialog/confirm-dialog.component';
-import { playerStore } from '../../../state/player-state';
-import { disconnectedHumanIdsStore } from '../../../state/game-state';
+import { playerStore, selfPlayerIdStore } from '../../../state/player-state';
+import { disconnectedHumanIdsStore, removalVoteStateStore, removedMatchPlayersStore } from '../../../state/game-state';
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { gamePausedStore } from '../../../state/game-logic';
 import { waitingOnPlayerIdStore } from '../../../state/match-ui-overlay-state';
 import { undoCompletedSignalStore, undoInFlightStore } from '../../../state/undo-state';
 import { UndoVoteCoordinatorService } from '../../../core/undo/undo-vote-coordinator.service';
+import { buildDisconnectDialogRows, DisconnectDialogRow } from './disconnect-dialog-rows';
 
 @Component({
   selector: 'app-match-hud',
@@ -45,8 +47,6 @@ export class MatchHudComponent {
   // Controls visibility of the originator's undo-waiting dialog.
   readonly undoWaitingVisible = signal(false);
 
-  private _disconnectedHumanIds: PlayerId[] = [];
-
   constructor() {
     // Auto-close the undo waiting dialog when the server resolves the vote
     // for any outcome (approved, denied, cancelled, etc.).
@@ -55,6 +55,17 @@ export class MatchHudComponent {
     ).subscribe(payload => {
       if (!payload) return;
       this.undoWaitingVisible.set(false);
+    });
+
+    // When the last disconnected player reconnects or is removed the
+    // dialog closes; clear the voted/removed record so the next
+    // disconnect starts fresh.
+    this._nanoService.useStore(disconnectedHumanIdsStore).pipe(
+      takeUntilDestroyed(),
+    ).subscribe(ids => {
+      if (ids.length) return;
+      removedMatchPlayersStore.set([]);
+      removalVoteStateStore.set([]);
     });
   }
 
@@ -71,6 +82,31 @@ export class MatchHudComponent {
   readonly disconnectedHumans = toSignal(this._createDisconnectedHumansStream(), {
     initialValue: [] as { id: PlayerId; name: string }[],
   });
+
+  // Viewer identity for deriving per-row vote state.
+  private readonly _selfPlayerId = toSignal(this._nanoService.useStore(selfPlayerIdStore), {
+    initialValue: selfPlayerIdStore.get(),
+  });
+
+  // Server-authoritative vote snapshot and permanently removed players.
+  private readonly _removalVoteState = toSignal(this._nanoService.useStore(removalVoteStateStore), {
+    initialValue: removalVoteStateStore.get(),
+  });
+  private readonly _removedPlayers = toSignal(this._nanoService.useStore(removedMatchPlayersStore), {
+    initialValue: removedMatchPlayersStore.get(),
+  });
+
+  // Dialog rows: active disconnected players (votable) then removed ones.
+  readonly disconnectDialogRows = computed(() => buildDisconnectDialogRows({
+    disconnected: this.disconnectedHumans(),
+    removed: this._removedPlayers(),
+    voteState: this._removalVoteState(),
+    selfPlayerId: this._selfPlayerId(),
+  }));
+
+  // Dialog visibility: open while any ACTIVE disconnected player remains.
+  // Removed-only rows close the dialog (all resolved — play resumes).
+  readonly disconnectDialogVisible = computed(() => this.disconnectedHumans().length > 0);
 
   /**
    * Opens the resign confirmation dialog.
@@ -112,18 +148,20 @@ export class MatchHudComponent {
     this._socketService.emit('undoCancelled');
   }
 
-  // Removes the oldest disconnected human player.
-  onRemoveDisconnectedPlayer(): void {
-    const targetId = this._disconnectedHumanIds[0];
-    if (!targetId) return;
-    this._socketService.emit('removeDisconnectedPlayer', targetId);
+  // Toggles this viewer's kick vote for one disconnected player.
+  onToggleKickVote(row: DisconnectDialogRow): void {
+    if (row.removed) return;
+    if (row.votedBySelf) {
+      this._socketService.emit('retractRemoveDisconnectedPlayer', row.playerId);
+      return;
+    }
+    this._socketService.emit('removeDisconnectedPlayer', row.playerId);
   }
 
   // Builds disconnected human-player banner data.
   private _createDisconnectedHumansStream() {
     return this._nanoService.useStore(disconnectedHumanIdsStore).pipe(
       switchMap((ids) => {
-        this._disconnectedHumanIds = [...ids];
         if (!ids.length) return of([]);
         return combineLatest(ids.map((id) => this._nanoService.useStore(playerStore(id))));
       }),

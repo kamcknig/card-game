@@ -25,17 +25,33 @@
   margin-bottom: var(--theme-space-sm);
 }
 
-.disconnect-names {
+.disconnect-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--theme-space-sm);
   margin-bottom: var(--theme-space-md);
+  min-width: 280px;
+}
+
+.disconnect-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--theme-space-md);
+
+  // Voted-out/resigned rows: no button, muted "<name> (removed)" text.
+  &.is-removed {
+    color: var(--theme-text-secondary);
+    opacity: 0.6;
+  }
 }
 
 .disconnect-name {
   font-size: 14px;
-  margin-top: var(--theme-space-xs);
 }
 
-// Visual identity for the Remove-player button comes from `.btn .btn-danger`
-// in styles.scss. No local rule needed.
+// Visual identity for the Kick/Undo kick and Resign buttons comes from
+// `.btn`, `.btn-danger`, `.btn-secondary` in styles.scss. No local rule needed.
 
 .undo-waiting-title {
   font-weight: 700;
