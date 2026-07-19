@@ -1155,7 +1155,9 @@ const effectMap: CardExpansionModule = {
           });
 
           loggerService.debug('[pageant project] paying $1 and granting +1 Coffer');
-          await triggeredArgs.actionService.run('gainTreasure', { count: -1 });
+          // "Pay $1" — a pay, so spendTreasure (gainTreasure clamps negative
+          // counts to 0, which made this a free Coffer before).
+          await triggeredArgs.actionService.run('spendTreasure', { count: 1 });
           await triggeredArgs.actionService.run('gainCoffer', {
             playerId: cardEffectArgs.playerId,
             count: 1,

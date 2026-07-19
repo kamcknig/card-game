@@ -1724,8 +1724,14 @@ const cardEffects: CardExpansionModule = {
         .map(cardEffectArgs.cardLibrary.getCard)
         .filter(card => card.type.includes('TREASURE'));
 
-      loggerService.debug(`[poor-house effect] losing ${treasureCardsInHand.length} treasure`);
-      await cardEffectArgs.actionService.run('spendTreasure', { count: treasureCardsInHand.length });
+      // "-$1 per Treasure card in your hand. (You can't go below $0.)" —
+      // an adjustment, not a pay: set the pool to the floored target so the
+      // clamp lives here, where the rules text says it.
+      const target = Math.max(0, cardEffectArgs.match.playerTreasure - treasureCardsInHand.length);
+      loggerService.debug(
+        `[poor-house effect] ${treasureCardsInHand.length} treasure(s) in hand; setting treasure to ${target}`,
+      );
+      await cardEffectArgs.actionService.run('setTreasure', { count: target });
     },
   },
   procession: {

@@ -1880,13 +1880,10 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      await cardEffectArgs.actionService.run(
-        'gainTreasure',
-        {
-          count: -playerTreasure,
-        },
-        { loggingContext: { suppress: true } },
-      );
+      // "Pay all of your $" — a pay, so spendTreasure. The previous
+      // gainTreasure({count: -playerTreasure}) was clamped to 0 by the
+      // treasureGain pipeline, so the pool was never emptied.
+      await cardEffectArgs.actionService.run('spendTreasure', { count: playerTreasure });
 
       loggerService.debug(`[storyteller effect] drawing ${playerTreasure} cards`);
 

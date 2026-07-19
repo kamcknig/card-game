@@ -1008,6 +1008,10 @@ const expansion: CardExpansionModule = {
       const thisCard = args.cardLibrary.getCard(args.cardId);
       if (!args.match.fortuneDoubledThisTurn[args.playerId]) {
         loggerService.debug(`[fortune effect] doubling treasure`);
+        // "Double your $" is deliberately a gainTreasure of the current
+        // pool, NOT setTreasure(current * 2): official rulings treat the
+        // doubling as a treasure gain, so treasureGain reactions (e.g. the
+        // Adventures -$1 token) must apply to it.
         await args.actionService.run('gainTreasure', {
           count: args.match.playerTreasure,
         });

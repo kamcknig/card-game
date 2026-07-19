@@ -1144,9 +1144,13 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainTreasure', { count: 7 });
 
       const handSize = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId).length;
-      const numToLose = Math.min(cardEffectArgs.match.playerTreasure, handSize);
-      loggerService.debug(`[souk effect] losing ${numToLose} treasure`);
-      await cardEffectArgs.actionService.run('spendTreasure', { count: handSize });
+      // "-$1 per card in your hand (you can't go below $0)" — an
+      // adjustment, not a pay: set the pool to the floored target. This
+      // also fixes the old mismatch where the logged loss (numToLose) and
+      // the spent amount (handSize) came from different computations.
+      const target = Math.max(0, cardEffectArgs.match.playerTreasure - handSize);
+      loggerService.debug(`[souk effect] ${handSize} card(s) in hand; setting treasure to ${target}`);
+      await cardEffectArgs.actionService.run('setTreasure', { count: target });
     },
   },
   'spice-merchant': {
