@@ -15,6 +15,7 @@ import {
 } from '../../state/game-state';
 import { SocketService } from '../../core/socket-service/socket.service';
 import { SceneBannerComponent } from '../scene-banner/scene-banner.component';
+import { displayCardDetail } from '../match/views/modal/display-card-detail';
 
 @Component({
   selector: 'app-game-summary',
@@ -156,6 +157,21 @@ export class GameSummaryComponent {
       if (selfId === undefined || this.isSelfReady()) return;
       this._socketService.emit('playerReady', selfId, true);
     });
+  }
+
+  /**
+   * Right-click on a deck strip opens the global card detail dialog for that
+   * card. Passing ONLY the detail image path (no cardId/kingdom/cardKey/
+   * expansionName/pileMembers) deliberately suppresses every sibling
+   * resolver in displayCardDetail — the summary view shows just the card
+   * itself, with no split-pile/traveller/linked-pile sibling column.
+   */
+  onCardContextMenu(event: MouseEvent, card: Card | undefined): void {
+    event.preventDefault();
+    if (!card?.detailImagePath) {
+      return;
+    }
+    void displayCardDetail({ detailImagePath: card.detailImagePath });
   }
 
   /**

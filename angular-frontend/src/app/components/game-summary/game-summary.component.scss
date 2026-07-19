@@ -124,18 +124,31 @@
   }
 
   .card-summary {
+    // Uniform strip width — previously the img's natural size leaked through
+    // and every strip was a different width.
+    width: 190px;
+
     .card-image {
       position: relative;
-      height: 30px;
+      height: 36px;
       overflow: hidden;
+
+      img {
+        // Full card scan anchored to its own top: the visible slice is the
+        // card's outer border + name band in the card's color. Scaling to
+        // the strip width keeps the slice proportional for every card.
+        display: block;
+        width: 100%;
+        height: auto;
+      }
     }
 
     .count {
       text-align: center;
-      width: 30px;
-      height: 30px;
+      width: 36px;
+      height: 36px;
       font-size: 0.85rem;
-      line-height: 30px;
+      line-height: 36px;
       position: absolute;
       top: 0;
       left: 0;
