@@ -355,6 +355,8 @@ const expansion: CardExpansionModule = {
         from: supplyLocation,
         to: { location: 'playerDiscard' },
         logTag: 'changeling effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: cardEffectArgs.cardId,
       });
     },
   },
@@ -798,6 +800,8 @@ const expansion: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'idol effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: cardEffectArgs.cardId,
         });
 
         if (!gainedCurseId) {
@@ -817,6 +821,8 @@ const expansion: CardExpansionModule = {
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
         logTag: 'leprechaun effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: cardEffectArgs.cardId,
       });
 
       if (!gainedGoldId) {
@@ -1167,6 +1173,8 @@ const expansion: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'skulk onGained',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: eventArgs.cardId,
         });
 
         if (!gainedGoldId) {
@@ -2055,6 +2063,8 @@ const expansion: CardExpansionModule = {
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
         logTag: 'devils-workshop effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: cardEffectArgs.cardId,
       });
 
       if (!gainedGoldId) {
@@ -2195,6 +2205,14 @@ const expansion: CardExpansionModule = {
 
       if (lostInTheWoods) {
         loggerService.debug('[fool effect] taking Lost in the Woods');
+        // gainState has no dedicated log entry and is not a source-aware action; note the state
+        // change explicitly so it's visible and attributed to Fool.
+        cardEffectArgs.logManager.addLogEntry({
+          type: 'cardEffect',
+          playerId: cardEffectArgs.playerId,
+          cardId: cardEffectArgs.cardId,
+          effectText: 'Takes the Lost in the Woods state',
+        });
         await cardEffectArgs.actionService.run('gainState', {
           playerId: cardEffectArgs.playerId,
           stateId: lostInTheWoods.id,
@@ -2362,6 +2380,8 @@ const expansion: CardExpansionModule = {
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
         logTag: 'lucky-coin effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: cardEffectArgs.cardId,
       });
 
       if (!gainedSilverId) {
@@ -2561,6 +2581,8 @@ const expansion: CardExpansionModule = {
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
         logTag: 'cursed-gold effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: cardEffectArgs.cardId,
       });
 
       if (!gainedCurseId) {

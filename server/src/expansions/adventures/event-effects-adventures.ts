@@ -721,6 +721,8 @@ const effectMap: CardExpansionModule = {
           pileKey: getCardPileKey(selectedCard),
           to: { location: 'playerDiscard' },
           logTag: 'pilgrimage effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: { kind: 'cardLike', id: cardEffectArgs.cardId },
         });
       }
     },
@@ -983,6 +985,8 @@ const effectMap: CardExpansionModule = {
           to: { location: 'playerDiscard' },
           from: 'basicSupply',
           logTag: 'quest effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: { kind: 'cardLike', id: cardEffectArgs.cardId },
         });
       }
     },
@@ -1007,6 +1011,8 @@ const effectMap: CardExpansionModule = {
             to: { location: 'playerDiscard' },
             from: 'basicSupply',
             logTag: 'raid effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: { kind: 'cardLike', id: cardEffectArgs.cardId },
           });
           if (gainedSilverCardId === undefined) {
             break;
@@ -1336,6 +1342,8 @@ const effectMap: CardExpansionModule = {
           to: { location: 'playerDiscard' },
           from: 'basicSupply',
           logTag: 'trade effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: { kind: 'cardLike', id: cardEffectArgs.cardId },
         });
 
         if (gainedSilverCardId === undefined) {

@@ -175,6 +175,8 @@ const expansion: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'charlatan effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: effectArgs.cardId,
         });
 
         if (!gainedCurseId) {
@@ -533,6 +535,8 @@ const expansion: CardExpansionModule = {
             from: 'basicSupply',
             to: { location: 'playerDiscard' },
             logTag: 'hoard triggered effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: effectArgs.cardId,
           });
 
           if (!gainedGoldId) {
@@ -721,6 +725,8 @@ const expansion: CardExpansionModule = {
         from: selectedCard.isBasic ? 'basicSupply' : 'kingdomSupply',
         to: { location: 'playerDiscard' },
         logTag: 'mint effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: effectArgs.cardId,
       });
 
       if (!gainedCardId) {

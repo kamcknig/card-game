@@ -81,6 +81,8 @@ const expansionModule: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'baron effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: args.cardId,
         });
       },
   },
@@ -252,6 +254,8 @@ const expansionModule: CardExpansionModule = {
                   from: 'basicSupply',
                   to: { location: 'playerDiscard' },
                   logTag: 'courtier effect',
+                  // supplyGainService's own actionService bypasses the effect's auto-injected source.
+                  source: args.cardId,
                 });
 
                 if (!gainedGoldId) {
@@ -1105,6 +1109,8 @@ const expansionModule: CardExpansionModule = {
               from: 'basicSupply',
               to: { location: 'playerDiscard' },
               logTag: 'replace effect',
+              // supplyGainService's own actionService bypasses the effect's auto-injected source.
+              source: args.cardId,
             });
 
             if (!gainedCurseId) {
@@ -1415,6 +1421,8 @@ const expansionModule: CardExpansionModule = {
             from: 'basicSupply',
             to: { location: 'playerHand' },
             logTag: 'torturer effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: args.cardId,
           });
 
           if (!gainedCurseId) {
@@ -1464,6 +1472,8 @@ const expansionModule: CardExpansionModule = {
             from: 'basicSupply',
             to: { location: 'playerHand' },
             logTag: 'trading post effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: args.cardId,
           });
 
           if (!gainedSilverId) {

@@ -578,6 +578,8 @@ const expansion: CardExpansionModule = {
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
         logTag: 'hideout effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: cardEffectArgs.cardId,
       });
       if (!gainedCurseId) {
         loggerService.debug('[hideout effect] no Curse cards in supply');
@@ -859,6 +861,8 @@ const expansion: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'old-witch effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: cardEffectArgs.cardId,
         });
         if (gainedCurseId) {
           const curseCard = cardEffectArgs.cardLibrary.getCard(gainedCurseId);

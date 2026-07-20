@@ -240,6 +240,8 @@ const registerCursedTraitEvents = (registrar: GameEventRegistrar, config: Comput
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
         logTag: 'plunder cursed trait gain curse',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: eventArgs.cardId,
       });
       if (!gainedCurse) {
         args.loggerService.debug('[plunder cursed trait] no Curse remained to gain');
@@ -282,6 +284,8 @@ const registerFawningTraitEvents = (registrar: GameEventRegistrar, config: Compu
         pileKey: fawningTrait.pileKey,
         to: { location: 'playerDiscard' },
         logTag: 'plunder fawning trait gain card',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: eventArgs.cardId,
       });
       if (!gainedFawningCard) {
         args.loggerService.debug(`[plunder fawning trait] no cards remained in pile '${fawningTrait.pileKey}' to gain`);
@@ -480,6 +484,8 @@ const registerFriendlyTraitEvents = (registrar: GameEventRegistrar, config: Comp
               pileKey: selectedFriendlyPileKey,
               to: { location: 'playerDiscard' },
               logTag: 'plunder friendly trait gain card',
+              // supplyGainService's own actionService bypasses the effect's auto-injected source.
+              source: selectedFriendlyCardId,
             });
             if (!gainedFriendlyCard) {
               triggeredArgs.loggerService.debug(
@@ -1075,6 +1081,8 @@ const registerRichTraitEvents = (registrar: GameEventRegistrar, config: Computed
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
         logTag: 'plunder rich trait gain silver',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: eventArgs.cardId,
       });
       if (!gainedSilver) {
         args.loggerService.debug('[plunder rich trait] no Silver remained to gain');

@@ -106,6 +106,8 @@ const expansionModule: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'bandit effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: args.cardId,
         });
 
         if (!gainedGoldId) {
@@ -221,6 +223,8 @@ const expansionModule: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDeck' },
           logTag: 'bureaucrat effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: args.cardId,
         });
 
         if (!gainedSilverId) {
@@ -1351,6 +1355,8 @@ const expansionModule: CardExpansionModule = {
             from: 'basicSupply',
             to: { location: 'playerDiscard' },
             logTag: 'witch effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: args.cardId,
           });
 
           if (!gainedCurseId) {

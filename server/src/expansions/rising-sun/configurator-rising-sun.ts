@@ -1295,6 +1295,8 @@ const registerBureaucracyReactions = (args: RisingSunGameEventContext, prophecy:
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'rising-sun prophecy:bureaucracy',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: { kind: 'cardLike', id: prophecy.id },
         });
 
         if (!gainedCopperId) {
@@ -1634,6 +1636,8 @@ const registerSicknessReactions = (args: RisingSunGameEventContext, prophecy: Pr
             from: 'basicSupply',
             to: { location: 'playerDeck' },
             logTag: 'rising-sun prophecy:sickness',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: { kind: 'cardLike', id: prophecy.id },
           });
 
           if (!gainedCurseId) {

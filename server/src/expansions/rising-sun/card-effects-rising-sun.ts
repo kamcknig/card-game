@@ -128,6 +128,8 @@ const gainCurseForOtherPlayers = async (cardEffectArgs: CardEffectFunctionContex
       from: 'basicSupply',
       to: { location: 'playerDiscard' },
       logTag,
+      // supplyGainService's own actionService bypasses the effect's auto-injected source.
+      source: cardEffectArgs.cardId,
     });
     if (!gainedCurseId) {
       cardEffectArgs.loggerService.debug(`[${logTag}] no Curse remained to gain`);
@@ -572,6 +574,8 @@ const cards: CardExpansionModule = {
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
         logTag: 'gold-mine effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: cardEffectArgs.cardId,
       });
       if (!gainedGoldId) {
         loggerService.debug('[gold-mine effect] Gold was unavailable when trying to gain');
@@ -641,6 +645,8 @@ const cards: CardExpansionModule = {
                 from: 'basicSupply',
                 to: { location: 'playerDiscard' },
                 logTag: 'kitsune effect',
+                // supplyGainService's own actionService bypasses the effect's auto-injected source.
+                source: cardEffectArgs.cardId,
               });
               if (!gainedSilverId) {
                 loggerService.debug('[kitsune effect] no Silver remained to gain');

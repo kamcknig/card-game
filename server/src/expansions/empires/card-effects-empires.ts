@@ -41,6 +41,7 @@ const gainTopSupplyCard = async (
     location: 'basicSupply' | 'kingdomSupply';
     to: { location: 'playerDiscard' | 'playerDeck' | 'playerHand' };
     logTag: string;
+    cardId: CardId;
   },
 ) => {
   await context.supplyGainService.gainTopSupplyCardForPileKey({
@@ -49,22 +50,26 @@ const gainTopSupplyCard = async (
     from: args.location,
     to: args.to,
     logTag: args.logTag,
+    // supplyGainService's own actionService bypasses the effect's auto-injected source.
+    source: args.cardId,
   });
 };
 
 // Gain the current top Castle card to the player's discard pile.
-const gainTopCastleCard = async (context: GainTopSupplyContext, playerId: PlayerId) => {
+const gainTopCastleCard = async (context: GainTopSupplyContext, playerId: PlayerId, cardId: CardId) => {
   await context.supplyGainService.gainTopSupplyCardForPileKey({
     playerId,
     pileKey: 'castles',
     from: 'kingdomSupply',
     to: { location: 'playerDiscard' },
     logTag: 'castle pile',
+    // supplyGainService's own actionService bypasses the effect's auto-injected source.
+    source: cardId,
   });
 };
 
 // Apply the shared Crumbling Castle bonus (+1 VP and gain a Silver).
-const resolveCrumblingCastleBonus = async (context: GainTopSupplyContext, playerId: PlayerId) => {
+const resolveCrumblingCastleBonus = async (context: GainTopSupplyContext, playerId: PlayerId, cardId: CardId) => {
   context.loggerService.debug(`[crumbling castle bonus] gaining 1 VP token`);
   await context.actionService.run('gainVictoryToken', {
     playerId,
@@ -76,13 +81,17 @@ const resolveCrumblingCastleBonus = async (context: GainTopSupplyContext, player
     location: 'basicSupply',
     to: { location: 'playerDiscard' },
     logTag: 'crumbling castle bonus',
+    cardId,
   });
 };
 
 // Resolve the Rocks on-gain/on-trash Silver bonus with buy-phase routing.
 const resolveRocksSilverGain = async (
-  context: Pick<CardEffectFunctionContext, 'match' | 'findCardService' | 'actionService' | 'loggerService'>,
-  args: { playerId: PlayerId; source: 'gained' | 'trashed' },
+  context: Pick<
+    CardEffectFunctionContext,
+    'match' | 'findCardService' | 'actionService' | 'loggerService' | 'supplyGainService'
+  >,
+  args: { playerId: PlayerId; source: 'gained' | 'trashed'; cardId: CardId },
 ) => {
   // Determine whether the gain happens during the player's buy phase.
   const currentPlayerId = getCurrentPlayer(context.match).id;
@@ -101,6 +110,7 @@ const resolveRocksSilverGain = async (
     location: 'basicSupply',
     to: toLocation,
     logTag: `rocks ${args.source}`,
+    cardId: args.cardId,
   });
 };
 
@@ -462,6 +472,8 @@ const expansion: CardExpansionModule = {
             from: 'basicSupply',
             to: { location: 'playerDiscard' },
             logTag: 'catapult effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: args.cardId,
           });
 
           if (!gainedCurseId) {
@@ -687,13 +699,13 @@ const expansion: CardExpansionModule = {
         const loggerService = args.loggerService;
         // Apply the Crumbling Castle bonus when gained.
         loggerService.debug(`[crumbling castle onGained] player ${eventArgs.playerId} gained Crumbling Castle`);
-        await resolveCrumblingCastleBonus(args, eventArgs.playerId);
+        await resolveCrumblingCastleBonus(args, eventArgs.playerId, eventArgs.cardId);
       },
       onTrashed: async (args, eventArgs) => {
         const loggerService = args.loggerService;
         // Apply the Crumbling Castle bonus when trashed.
         loggerService.debug(`[crumbling castle onTrashed] player ${eventArgs.playerId} trashed Crumbling Castle`);
-        await resolveCrumblingCastleBonus(args, eventArgs.playerId);
+        await resolveCrumblingCastleBonus(args, eventArgs.playerId, eventArgs.cardId);
       },
     }),
   },
@@ -992,6 +1004,8 @@ const expansion: CardExpansionModule = {
             from: 'basicSupply',
             to: { location: 'playerDiscard' },
             logTag: 'fortune onGained',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: eventArgs.cardId,
           });
           if (!gainedGoldId) {
             loggerService.debug(`[fortune onGained] no gold left in supply`);
@@ -1358,6 +1372,7 @@ const expansion: CardExpansionModule = {
         await resolveRocksSilverGain(args, {
           playerId: eventArgs.playerId,
           source: 'gained',
+          cardId: eventArgs.cardId,
         });
       },
       onTrashed: async (args, eventArgs) => {
@@ -1367,6 +1382,7 @@ const expansion: CardExpansionModule = {
         await resolveRocksSilverGain(args, {
           playerId: eventArgs.playerId,
           source: 'trashed',
+          cardId: eventArgs.cardId,
         });
       },
     }),
@@ -1389,6 +1405,7 @@ const expansion: CardExpansionModule = {
           location: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'haunted castle onGained',
+          cardId: eventArgs.cardId,
         });
 
         const targetPlayerIds = findOrderedTargets({
@@ -1863,6 +1880,8 @@ const expansion: CardExpansionModule = {
                 from: 'basicSupply',
                 to: { location: 'playerDiscard' },
                 logTag: 'wild hunt effect',
+                // supplyGainService's own actionService bypasses the effect's auto-injected source.
+                source: args.cardId,
               });
               if (!estateCardId) {
                 loggerService.debug('[wild hunt effect] no Estates left to gain, skipping VP tokens');
@@ -2117,7 +2136,7 @@ const expansion: CardExpansionModule = {
       }
 
       // Gain the current top Castle if a Castle was trashed.
-      await gainTopCastleCard(args, playerId);
+      await gainTopCastleCard(args, playerId, args.cardId);
     },
   },
   'sprawling-castle': {
@@ -2142,6 +2161,7 @@ const expansion: CardExpansionModule = {
             location: 'basicSupply',
             to: { location: 'playerDiscard' },
             logTag: 'sprawling castle onGained',
+            cardId: eventArgs.cardId,
           });
           return;
         }

@@ -155,6 +155,8 @@ const expansion: CardExpansionModule = {
             from: 'basicSupply',
             to: { location: 'playerDiscard' },
             logTag: 'amulet effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: cardEffectArgs.cardId,
           });
           if (!gainedSilverId) {
             loggerService.debug(`[amulet effect] no silver cards in supply`);
@@ -579,6 +581,8 @@ const expansion: CardExpansionModule = {
         from: ['basicSupply', 'kingdomSupply'],
         to: { location: 'playerDiscard' },
         logTag: 'disciple effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: cardEffectArgs.cardId,
       });
 
       if (!gainedCardId) {
@@ -712,6 +716,8 @@ const expansion: CardExpansionModule = {
             from: ['basicSupply', 'kingdomSupply'],
             to: { location: 'playerDiscard' },
             logTag: 'duplicate cardGained',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: cardEffectArgs.cardId,
           });
 
           if (!gainedCardId) {
@@ -873,6 +879,8 @@ const expansion: CardExpansionModule = {
             from: 'basicSupply',
             to: { location: 'playerDiscard' },
             logTag: 'giant effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: cardEffectArgs.cardId,
           });
           if (!gainedCurseId) {
             loggerService.debug(`[giant effect] no curse cards in supply`);
@@ -1253,6 +1261,8 @@ const expansion: CardExpansionModule = {
             from: 'kingdomSupply',
             to: { location: 'playerDiscard' },
             logTag: 'magpie effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: cardEffectArgs.cardId,
           });
           if (!gainedMagpieId) {
             loggerService.debug(`[magpie effect] no magpie cards in supply`);
@@ -1951,6 +1961,8 @@ const expansion: CardExpansionModule = {
               from: 'basicSupply',
               to: { location: 'playerDiscard' },
               logTag: 'swamp-hag cardGained effect',
+              // supplyGainService's own actionService bypasses the effect's auto-injected source.
+              source: thisCard.id,
             });
 
             if (!gainedCurseId) {
@@ -2232,6 +2244,8 @@ const expansion: CardExpansionModule = {
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
         logTag: 'treasure-trove effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: cardEffectArgs.cardId,
       });
       if (!gainedGoldId) {
         loggerService.debug(`[treasure-trove effect] no gold cards in supply`);
@@ -2245,6 +2259,8 @@ const expansion: CardExpansionModule = {
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
         logTag: 'treasure-trove effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: cardEffectArgs.cardId,
       });
       if (!gainedCopperId) {
         loggerService.debug(`[treasure-trove effect] no copper cards in supply`);

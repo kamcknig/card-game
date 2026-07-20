@@ -1698,6 +1698,8 @@ const cardEffects: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'siren effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: cardEffectArgs.cardId,
         });
       }
 
@@ -1896,6 +1898,8 @@ const cardEffects: CardExpansionModule = {
         pileKey,
         to: { location: 'playerDiscard' },
         logTag: 'tools effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: cardEffectArgs.cardId,
       });
     },
   },
@@ -1910,6 +1914,8 @@ const cardEffects: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'trickster effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: cardEffectArgs.cardId,
         });
       }
 

@@ -261,7 +261,8 @@ const registerEnvious = (registerStateEffect: StateEffectRegistrar) => {
                 return false;
               }
               const sourceId = conditionArgs.trigger.args.source;
-              if (!sourceId) {
+              // A tagged card-like source (boon/hex/event) is never Silver or Gold.
+              if (sourceId === undefined || typeof sourceId !== 'number') {
                 return false;
               }
               const sourceCard = conditionArgs.cardLibrary.getCard(sourceId);
@@ -269,7 +270,7 @@ const registerEnvious = (registerStateEffect: StateEffectRegistrar) => {
             },
             triggeredEffectFn: async triggeredArgs => {
               const sourceId = triggeredArgs.trigger.args.source;
-              if (!sourceId) {
+              if (sourceId === undefined || typeof sourceId !== 'number') {
                 return;
               }
               const sourceCard = cardLibrary.getCard(sourceId);

@@ -482,6 +482,8 @@ const expansion: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'transmute effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: args.cardId,
         });
       }
 
@@ -494,6 +496,8 @@ const expansion: CardExpansionModule = {
           from: 'kingdomSupply',
           to: { location: 'playerDiscard' },
           logTag: 'transmute effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: args.cardId,
         });
       }
 
@@ -506,6 +510,8 @@ const expansion: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'transmute effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: args.cardId,
         });
       }
     },

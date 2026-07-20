@@ -81,6 +81,8 @@ const effectMap: CardExpansionModule = {
           pileKey: gainPileKey,
           to: { location: 'playerDiscard' },
           logTag: 'alliance effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: { kind: 'cardLike', id: cardEffectArgs.cardId },
         });
       }
     },
@@ -398,6 +400,8 @@ const effectMap: CardExpansionModule = {
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
         logTag: 'desperation effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: { kind: 'cardLike', id: cardEffectArgs.cardId },
       });
 
       if (!gainedCurseId) {
@@ -418,6 +422,8 @@ const effectMap: CardExpansionModule = {
         pileKey: 'gold',
         to: { location: 'playerDiscard' },
         logTag: 'enclave effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: { kind: 'cardLike', id: cardEffectArgs.cardId },
       });
 
       const duchyCards = cardEffectArgs.findCardService.findCards({
@@ -833,6 +839,8 @@ const effectMap: CardExpansionModule = {
         from: 'basicSupply',
         to: { location: 'set-aside' },
         logTag: 'reap effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: { kind: 'cardLike', id: cardEffectArgs.cardId },
       });
 
       if (!gainedGoldId) {

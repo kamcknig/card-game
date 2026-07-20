@@ -477,6 +477,8 @@ const cardEffects: CardExpansionModule = {
             from: 'basicSupply',
             to: { location: 'playerDiscard' },
             logTag: 'count effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: cardEffectArgs.cardId,
           });
           if (!gainedCopperId) {
             loggerService.debug(`[count effect] no coppers in supply`);
@@ -522,6 +524,8 @@ const cardEffects: CardExpansionModule = {
             from: 'basicSupply',
             to: { location: 'playerDiscard' },
             logTag: 'count effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: cardEffectArgs.cardId,
           });
           if (!gainedDuchyId) {
             loggerService.debug(`[count effect] no duchies in supply`);
@@ -602,6 +606,8 @@ const cardEffects: CardExpansionModule = {
           from: 'kingdomSupply',
           to: { location: 'playerDiscard' },
           logTag: 'cultist effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: cardEffectArgs.cardId,
         });
 
         if (!gainedRuinsId) {
@@ -1261,6 +1267,8 @@ const cardEffects: CardExpansionModule = {
             from: 'basicSupply',
             to: { location: 'playerDiscard' },
             logTag: 'hunting-grounds onTrashed effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: eventArgs.cardId,
           });
         }
       },
@@ -1435,6 +1443,8 @@ const cardEffects: CardExpansionModule = {
           from: 'kingdomSupply',
           to: { location: 'playerDiscard' },
           logTag: 'marauder effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: cardEffectArgs.cardId,
         });
       }
     },
@@ -1473,6 +1483,8 @@ const cardEffects: CardExpansionModule = {
               from: 'basicSupply',
               to: { location: 'playerDiscard' },
               logTag: 'market-square cardTrashed effect',
+              // supplyGainService's own actionService bypasses the effect's auto-injected source.
+              source: eventArgs.cardId,
             });
 
             if (!gainedGoldId) {
@@ -1844,6 +1856,8 @@ const cardEffects: CardExpansionModule = {
         from: 'kingdomSupply',
         to: { location: 'playerDiscard' },
         logTag: 'rats effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: cardEffectArgs.cardId,
       });
 
       if (!gainedRatId) {
@@ -2225,6 +2239,8 @@ const cardEffects: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'sir-vander onTrashed effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: eventArgs.cardId,
         });
 
         if (!gainedGoldId) {
@@ -2309,6 +2325,8 @@ const cardEffects: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'squire effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: cardEffectArgs.cardId,
         });
 
         if (!gainedSilverId) {

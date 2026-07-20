@@ -434,6 +434,8 @@ const registerCircleOfWitches = (args: AlliesGameContext, ally: Ally): void => {
             pileKey: 'curse',
             to: { location: 'playerDiscard' },
             logTag: 'circle-of-witches ally',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: { kind: 'cardLike', id: ally.id },
           });
         }
 

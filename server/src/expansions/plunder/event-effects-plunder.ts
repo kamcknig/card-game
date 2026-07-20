@@ -373,6 +373,8 @@ const registerMirrorListener = (
             pileKey: gainedPileKey,
             to: { location: 'playerDiscard' },
             logTag: 'mirror effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: { kind: 'cardLike', id: event.id },
           });
 
           if (gainedCopyId === undefined) {
@@ -609,6 +611,8 @@ const effectMap: CardExpansionModule = {
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
         logTag: 'invasion effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: { kind: 'cardLike', id: cardEffectArgs.cardId },
       });
 
       // Invasion then gains an Action card onto deck.

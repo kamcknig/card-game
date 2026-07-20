@@ -231,6 +231,8 @@ const expansion: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'black-cat effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: cardEffectArgs.cardId,
         });
         if (!gainedCurseId) {
           loggerService.debug('[black-cat effect] no Curse remaining in supply');
@@ -941,6 +943,8 @@ const expansion: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'groom effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: cardEffectArgs.cardId,
         });
         if (!gainedSilverId) {
           loggerService.debug('[groom effect] no Silver cards remain to gain for Treasure bonus');
@@ -1140,6 +1144,8 @@ const expansion: CardExpansionModule = {
               from: ['basicSupply', 'kingdomSupply'],
               to: { location: 'playerDiscard' },
               logTag: 'kiln effect',
+              // supplyGainService's own actionService bypasses the effect's auto-injected source.
+              source: cardEffectArgs.cardId,
             });
           },
         },
@@ -1546,6 +1552,8 @@ const expansion: CardExpansionModule = {
             from: 'basicSupply',
             to: { location: 'playerDiscard' },
             logTag: 'scrap effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: cardEffectArgs.cardId,
           });
           if (!gainedSilverId) {
             loggerService.debug('[scrap effect] no Silver cards remain to gain');
@@ -2007,6 +2015,8 @@ const expansion: CardExpansionModule = {
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
         logTag: 'wayfarer effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: cardEffectArgs.cardId,
       });
     },
   },

@@ -267,6 +267,8 @@ const expansion: CardExpansionModule = {
               from: 'basicSupply',
               to: { location: 'playerDiscard' },
               logTag: 'cauldron triggered effect',
+              // supplyGainService's own actionService bypasses the effect's auto-injected source.
+              source: cardEffectArgs.cardId,
             });
 
             if (!gainedCurseId) {
@@ -537,6 +539,8 @@ const expansion: CardExpansionModule = {
               from: 'basicSupply',
               to: { location: 'playerDeck' },
               logTag: 'fools-gold triggered effect',
+              // supplyGainService's own actionService bypasses the effect's auto-injected source.
+              source: eventArgs.cardId,
             });
 
             if (!gainedGoldId) {
@@ -848,6 +852,8 @@ const expansion: CardExpansionModule = {
         pileKey: 'silver',
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: cardEffectArgs.cardId,
         logTag: 'jack-of-all-trades effect',
       });
 
@@ -1457,6 +1463,8 @@ const expansion: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'tunnel onDiscarded event',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: eventArgs.cardId,
         });
 
         if (!gainedGoldId) {
@@ -1677,6 +1685,8 @@ const expansion: CardExpansionModule = {
               from: 'basicSupply',
               to: { location: 'playerDiscard' },
               logTag: 'witchs-hut effect',
+              // supplyGainService's own actionService bypasses the effect's auto-injected source.
+              source: cardEffectArgs.cardId,
             });
 
             if (!gainedCurseId) {
