@@ -12,6 +12,7 @@ import {
   CardNoId,
   ComputedMatchConfiguration,
   ExtraTurn,
+  LogEntrySource,
   Match,
   PlayerId,
   SelectSingleCardPromptArgs,
@@ -161,7 +162,7 @@ export type ExpectedCardSource = {
 };
 
 export type GameActionContext = {
-  source?: CardId;
+  source?: LogEntrySource;
   loggingContext?: {
     suppress?: boolean;
   };
@@ -523,6 +524,11 @@ export type SupplyGainService = {
     to: CardLocationSpec;
     from?: ('basicSupply' | 'kingdomSupply') | ('basicSupply' | 'kingdomSupply')[];
     logTag?: string;
+    // Optional log-entry attribution for the resulting gainCard entry. The service's own
+    // actionService instance is a match-scoped singleton (not the per-effect wrapped one from
+    // createCardEffectContext), so callers that need "(Card/Boon/Hex Name)" attribution on the
+    // gain must pass it explicitly here.
+    source?: LogEntrySource;
   }) => Promise<CardId | undefined>;
   // Gains the current top card from a named non-supply pile.
   gainTopNonSupplyCardForPileName: (args: {
@@ -530,6 +536,10 @@ export type SupplyGainService = {
     pileName: string;
     to: CardLocationSpec;
     logTag?: string;
+    // See gainTopSupplyCardForPileKey's `source` doc: this service's actionService instance
+    // never auto-injects a source, so callers that need "(Card/Boon/Hex Name)" attribution on
+    // the gain must pass it explicitly here.
+    source?: LogEntrySource;
   }) => Promise<CardId | undefined>;
 };
 
@@ -714,32 +724,32 @@ export type TriggerEventTypeContext = {
     locationAfter: TokenLocation | null;
     countersBefore?: number | null;
     countersAfter?: number | null;
-    // Optional source card for token/log attribution.
-    source?: CardId;
+    // Optional source card/card-like for token/log attribution.
+    source?: LogEntrySource;
   };
   treasureGain: {
     playerId: PlayerId;
     count: number;
-    // Optional source card for token/log attribution.
-    source?: CardId;
+    // Optional source card/card-like for token/log attribution.
+    source?: LogEntrySource;
   };
   actionGain: {
     playerId: PlayerId;
     count: number;
-    // Optional source card for token/log attribution.
-    source?: CardId;
+    // Optional source card/card-like for token/log attribution.
+    source?: LogEntrySource;
   };
   drawHand: {
     playerId: PlayerId;
     count: number;
-    // Optional source card for token/log attribution.
-    source?: CardId;
+    // Optional source card/card-like for token/log attribution.
+    source?: LogEntrySource;
   };
   drawCards: {
     playerId: PlayerId;
     count: number;
-    // Optional source card for token/log attribution.
-    source?: CardId;
+    // Optional source card/card-like for token/log attribution.
+    source?: LogEntrySource;
   };
   cardTrashed: {
     cardId: CardId;
@@ -748,7 +758,7 @@ export type TriggerEventTypeContext = {
     // Present when this trash emptied a configured Supply pile (basic/kingdoms).
     emptiedSupplyPileKey?: CardKey;
     // Optional source landscape for trigger attribution.
-    source?: CardId;
+    source?: LogEntrySource;
   };
   cardPlayed: { playerId: PlayerId; cardId: CardId };
   // Triggered at the start of a player's turn
@@ -772,16 +782,16 @@ export type TriggerEventTypeContext = {
     playerId: PlayerId;
     cardIds?: CardId[];
     cardLikeIds?: CardLikeId[];
-    // Optional source card for token/log attribution.
-    source?: CardId;
+    // Optional source card/card-like for token/log attribution.
+    source?: LogEntrySource;
   };
   // Triggered after randomization so reactions can reshape the shuffled packet before merge.
   afterShuffle: {
     playerId: PlayerId;
     cardIds?: CardId[];
     cardLikeIds?: CardLikeId[];
-    // Optional source card for token/log attribution.
-    source?: CardId;
+    // Optional source card/card-like for token/log attribution.
+    source?: LogEntrySource;
   };
   // Triggered at the end of each player's turn
   endTurn: {

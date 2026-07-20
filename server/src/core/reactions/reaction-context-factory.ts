@@ -107,14 +107,20 @@ export class ReactionContextFactory {
     reaction: Reaction;
   }): TriggeredEffectContext<T> {
     const base = this.baseContext(args.reactionManager);
-    // Reactions registered from a card carry that card's id as sourceId; wrap
-    // the action service so source-aware actions attribute their log entries
-    // to it (e.g. a Duration card drawing on a later turn logs "(Wharf)").
-    // Only card sources are injectable: LogEntrySource is a CardId, and
-    // landscape sourceIds live in a different id namespace.
+    // Reactions registered from a card or card-like carry that source's id as
+    // sourceId; wrap the action service so source-aware actions attribute
+    // their log entries to it (e.g. a Duration card drawing on a later turn
+    // logs "(Wharf)", a boon's detached end-of-turn draw logs "(The River's
+    // Gift)"). Card-like sources (boon/hex/event/project/...) are tagged so
+    // the client resolves the name outside the card library.
     const actionService =
-      args.reaction.sourceType === 'card' && args.reaction.sourceId !== undefined
-        ? wrapActionServiceWithSource(base.actionService, args.reaction.sourceId)
+      args.reaction.sourceId !== undefined
+        ? wrapActionServiceWithSource(
+          base.actionService,
+          args.reaction.sourceType === 'card'
+            ? args.reaction.sourceId
+            : { kind: 'cardLike', id: args.reaction.sourceId },
+        )
         : base.actionService;
     return {
       ...base,

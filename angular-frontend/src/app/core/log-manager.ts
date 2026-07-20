@@ -119,6 +119,13 @@ export const logManager = {
           : `${logEntry.effectText} from ${cardLikeLink(logEntry.cardLikeId)}`;
         break;
       }
+      case 'cardEffect': {
+        // effectText is server-supplied prose — keep plain. Only the card name is clickable.
+        msg = selfId === playerId
+          ? `${logEntry.effectText} from ${cardLink(logEntry.cardId, cardsById)}`
+          : `${logEntry.effectText} from ${cardLink(logEntry.cardId, cardsById)}`;
+        break;
+      }
       // Token placement and consumption logs — token names are not card or
       // card-like references and therefore stay as plain text.
       case 'tokenPlaced': {
@@ -139,6 +146,12 @@ export const logManager = {
         msg = selfId === playerId
           ? `%Y% bought ${cardLikeLink(logEntry.cardLikeId)}`
           : `%P${player?.id}% bought ${cardLikeLink(logEntry.cardLikeId)}`;
+        break;
+      }
+      case 'receiveCardLike': {
+        msg = selfId === playerId
+          ? `%Y% receives ${cardLikeLink(logEntry.cardLikeId)}`
+          : `%P${player?.id}% receives ${cardLikeLink(logEntry.cardLikeId)}`;
         break;
       }
       case 'gainCard': {
@@ -211,18 +224,22 @@ export const logManager = {
 
     const depth = logEntry.depth ?? 0;
 
-    // Source attribution: render the source card as a clickable card-link in
-    // parentheses so players can open its detail view too. Skip it when the
-    // source is redundant — already named by the entry itself ("revealed
-    // Moat" sourced to Moat) or by the visual parent one indent level up
-    // (Smithy's draws under "played Smithy") — since indentation already
-    // conveys that causality.
-    const sourceKey = logEntry.source !== undefined ? `card:${logEntry.source}` : undefined;
+    // Source attribution: render the source card/card-like as a clickable
+    // link in parentheses so players can open its detail view too. Skip it
+    // when the source is redundant — already named by the entry itself
+    // ("revealed Moat" sourced to Moat) or by the visual parent one indent
+    // level up (Smithy's draws under "played Smithy") — since indentation
+    // already conveys that causality. Card-like sources (boon/hex/event/
+    // project) are tagged so they resolve outside the card library.
+    const source: LogEntrySource | undefined = logEntry.source;
+    const sourceKey = source === undefined
+      ? undefined
+      : typeof source === 'number' ? `card:${source}` : `cardLike:${source.id}`;
     const redundantSource =
       sourceKey !== undefined &&
       (sourceKey === subjectKeyFor(logEntry) || subjectByDepth[depth - 1] === sourceKey);
-    if (logEntry.source !== undefined && !redundantSource) {
-      msg = `${msg} (${cardLink(logEntry.source, cardsById)})`;
+    if (source !== undefined && !redundantSource) {
+      msg = `${msg} (${typeof source === 'number' ? cardLink(source, cardsById) : cardLikeLink(source.id)})`;
     }
 
     // Record this entry as the latest subject at its depth and drop stale
@@ -239,7 +256,7 @@ export const logManager = {
   }
 };
 
-const getSourceColor = (source: LogEntrySource, cardsById: Record<CardId, Card>) => {
+const getSourceColor = (source: CardId, cardsById: Record<CardId, Card>) => {
   const sourceCard = cardsById[source];
   return getSourceAccentColorForCard(sourceCard);
 }

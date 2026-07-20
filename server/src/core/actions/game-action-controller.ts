@@ -11,6 +11,7 @@ import {
   CardLocationSpec,
   CountSpec,
   ExtraTurn,
+  LogEntrySource,
   Match,
   PlayerId,
   SelectActionCardArgs,
@@ -577,7 +578,7 @@ export class GameActionController implements GameActionDefinitionMap {
     playerId: PlayerId;
     gainedCardId: CardId;
     gainedCardKey: CardKey;
-    source?: CardId;
+    source?: LogEntrySource;
   }) {
     const exileSource = this.getExileSource(args.playerId);
     if (!exileSource || exileSource.length === 0) {
@@ -900,6 +901,10 @@ export class GameActionController implements GameActionDefinitionMap {
     cardId: CardLikeId;
     playerId: PlayerId;
     reactionContext?: CardEffectFunctionContext['reactionContext'];
+    // Tags whether cardId is a real card (default) or a card-like (boon/hex/event/project) —
+    // card-like ids never exist in the card library, so the auto-injected log source must be
+    // tagged for the client to resolve it in the right namespace.
+    sourceKind?: 'card' | 'cardLike';
   }): CardEffectFunctionContext {
     // deno-lint-ignore prefer-const -- context is referenced inside a closure defined during its own initialization
     let context: CardEffectFunctionContext;
@@ -915,14 +920,19 @@ export class GameActionController implements GameActionDefinitionMap {
         return triggerIds;
       },
     });
-    // Auto-attribute source-aware actions to this effect's card so log
-    // entries can name their cause without per-card boilerplate.
-    context.actionService = wrapActionServiceWithSource(this.actionService, args.cardId as CardId);
+    // Auto-attribute source-aware actions to this effect's owner so log
+    // entries can name their cause without per-card boilerplate. Landscape
+    // effects (boon/hex/event/project) tag their id as card-like so the
+    // client resolves the name outside the card library.
+    const source: LogEntrySource = args.sourceKind === 'cardLike'
+      ? { kind: 'cardLike', id: args.cardId }
+      : (args.cardId as CardId);
+    context.actionService = wrapActionServiceWithSource(this.actionService, source);
     return context;
   }
 
   // Resolves action attribution source from context.
-  private resolveActionSource(context?: GameActionContext): CardId | undefined {
+  private resolveActionSource(context?: GameActionContext): LogEntrySource | undefined {
     return context?.source;
   }
 
@@ -2832,6 +2842,7 @@ export class GameActionController implements GameActionDefinitionMap {
       const context = this.createCardEffectContext({
         cardId: args.cardLikeId,
         playerId: args.playerId,
+        sourceKind: 'cardLike',
       });
 
       // Run the effect with standardized logging.
@@ -2952,6 +2963,16 @@ export class GameActionController implements GameActionDefinitionMap {
       }
     };
 
+    // Game-log record of the receipt; the boon/hex's effect entries nest one
+    // level under it via runEffectWithLogging's withIndent, so their
+    // auto-injected card-like source is suppressed as redundant while
+    // detached later entries (duration-style boons) keep the attribution.
+    this.logManager.addLogEntry({
+      type: 'receiveCardLike',
+      playerId: args.playerId,
+      cardLikeId: resolvedCardLikeId,
+    });
+
     // Show a non-blocking received-<kind> modal.
     const receivedPlayerName = getPlayerById(this.match, args.playerId)?.name ?? `Player ${args.playerId}`;
     await this.actionService.run('userPrompt', {
@@ -2971,6 +2992,7 @@ export class GameActionController implements GameActionDefinitionMap {
         const effectContext = this.createCardEffectContext({
           cardId: resolvedCardLikeId,
           playerId: args.playerId,
+          sourceKind: 'cardLike',
         });
 
         // Run the effect with standardized logging.

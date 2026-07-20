@@ -299,7 +299,10 @@ export type CardOverrides = Record<PlayerId, Record<CardId, Partial<Card>>>;
 
  ******************/
 
-export type LogEntrySource = CardId;
+// A log entry's cause: a match card instance, or a card-like (boon, hex,
+// event, project, ...) tagged so the client resolves it in the right
+// namespace — card-like ids never exist in the card library.
+export type LogEntrySource = CardId | { kind: 'cardLike'; id: CardLikeId };
 
 export type LogEntry =
   | { type: 'draw'; playerId: PlayerId; cardId: CardId; depth?: number; source?: LogEntrySource }
@@ -314,12 +317,17 @@ export type LogEntry =
   | { type: 'gainVictoryToken'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   // Logs a card-like effect (boon/hex/state/artifact/event/landmark).
   | { type: 'cardLikeEffect'; playerId: PlayerId; cardLikeId: CardLikeId; effectText: string; depth?: number; source?: LogEntrySource }
+  // Logs a real-card effect that has no dedicated action/log entry (e.g. a state change with no
+  // card-agnostic loggable equivalent). Mirrors cardLikeEffect but for a Card rather than a card-like.
+  | { type: 'cardEffect'; playerId: PlayerId; cardId: CardId; effectText: string; depth?: number; source?: LogEntrySource }
   | { type: 'tokenEffect'; playerId: PlayerId; cardId: CardId; tokenId: TokenId; effectText: string; depth?: number; source?: LogEntrySource }
   // Token placement and consumption logs.
   | { type: 'tokenPlaced'; playerId: PlayerId; tokenId: TokenId; depth?: number; source?: LogEntrySource }
   | { type: 'tokenConsumed'; playerId: PlayerId; tokenId: TokenId; depth?: number; source?: LogEntrySource }
   // Logs when a player buys a Project.
   | { type: 'buyProject'; playerId: PlayerId; cardLikeId: CardLikeId; depth?: number; source?: LogEntrySource }
+  // Logs when a player receives a boon/hex (or other card-like) from a landscape deck.
+  | { type: 'receiveCardLike'; playerId: PlayerId; cardLikeId: CardLikeId; depth?: number; source?: LogEntrySource }
   | { type: 'gainCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'cardPlayed'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'revealCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
