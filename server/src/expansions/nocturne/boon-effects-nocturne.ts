@@ -210,7 +210,7 @@ const registerForestsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 const registerMoonsGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect(
     'the-moons-gift',
-    async ({ loggerService, playerId, actionService, promptService, findCardService }) => {
+    async ({ loggerService, playerId, cardId, actionService, promptService, findCardService, logManager }) => {
       const discardCards = findCardService.findCards({ location: 'playerDiscard', playerId });
       if (discardCards.length < 1) {
         loggerService.info('[the-moons-gift boon] no cards in discard, skipping');
@@ -236,6 +236,14 @@ const registerMoonsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       }
 
       loggerService.debug(`[the-moons-gift boon] topdecking card ${selectedCardId}`);
+      // moveCard has no dedicated log entry; note the topdeck explicitly since it's a
+      // player-visible outcome with no card-agnostic loggable action equivalent.
+      logManager.addLogEntry({
+        type: 'cardLikeEffect',
+        playerId,
+        cardLikeId: cardId,
+        effectText: 'Puts a card from their discard onto their deck',
+      });
       await actionService.run('moveCard', {
         cardId: selectedCardId,
         toPlayerId: playerId,
@@ -247,13 +255,16 @@ const registerMoonsGift = (registerBoonEffect: BoonEffectRegistrar) => {
 
 // Registers The Mountain's Gift boon effect logic.
 const registerMountainsGift = (registerBoonEffect: BoonEffectRegistrar) => {
-  registerBoonEffect('the-mountains-gift', async ({ loggerService, playerId, supplyGainService }) => {
+  registerBoonEffect('the-mountains-gift', async ({ loggerService, playerId, cardId, supplyGainService }) => {
     const gainedSilverId = await supplyGainService.gainTopSupplyCardForPileKey({
       playerId: playerId,
       pileKey: 'silver',
       from: 'basicSupply',
       to: { location: 'playerDiscard' },
       logTag: 'the-mountains-gift boon',
+      // supplyGainService owns its own (unwrapped) actionService, so the gainCard entry's
+      // attribution must be passed explicitly rather than relying on the effect's auto-injected source.
+      source: { kind: 'cardLike', id: cardId },
     });
     if (!gainedSilverId) {
       loggerService.info('[the-mountains-gift boon] no silver cards in supply');
@@ -318,6 +329,7 @@ const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
     async ({
       loggerService,
       playerId,
+      cardId,
       actionService,
       promptService,
       cardLibrary,
@@ -328,7 +340,9 @@ const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
         playerId,
         prompt: 'Discard 3 cards to gain a Gold?',
         actionButtons: [
-          { label: `DON'T DISCARD`, action: 1 },
+          // Decline path — tagged role: 'cancel' per repo convention so the client treats it
+          // as dismissable (Escape/backdrop) rather than a required action.
+          { label: `DON'T DISCARD`, action: 1, role: 'cancel' },
           { label: 'DISCARD', action: 2 },
         ],
       });
@@ -365,6 +379,8 @@ const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
         logTag: 'the-skys-gift boon',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: { kind: 'cardLike', id: cardId },
       });
       if (!gainedGoldId) {
         loggerService.info('[the-skys-gift boon] no gold cards in supply');
@@ -380,7 +396,7 @@ const registerSkysGift = (registerBoonEffect: BoonEffectRegistrar) => {
 const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
   registerBoonEffect(
     'the-suns-gift',
-    async ({ loggerService, playerId, actionService, promptService, cardSourceController }) => {
+    async ({ loggerService, playerId, cardId, actionService, promptService, cardSourceController, logManager }) => {
       const deck = cardSourceController.getSource('playerDeck', playerId);
       const discard = cardSourceController.getSource('playerDiscard', playerId);
 
@@ -422,6 +438,14 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
       const cardsToRearrange = cardsToLookAt.filter(id => !cardsToDiscard.includes(id));
       if (cardsToRearrange.length < 2) {
         if (cardsToRearrange.length === 1) {
+          // moveCard has no dedicated log entry; note the topdeck since it's a
+          // player-visible outcome with no loggable action equivalent.
+          logManager.addLogEntry({
+            type: 'cardLikeEffect',
+            playerId,
+            cardLikeId: cardId,
+            effectText: 'Puts a card back on top of their deck',
+          });
           await actionService.run('moveCard', {
             cardId: cardsToRearrange[0],
             toPlayerId: playerId,
@@ -442,7 +466,20 @@ const registerSunsGift = (registerBoonEffect: BoonEffectRegistrar) => {
         },
       });
 
-      for (const cardId of result?.result ?? []) {
+      const rearrangedCardIds = result?.result ?? [];
+
+      if (rearrangedCardIds.length > 0) {
+        // No card-agnostic loggable action captures "put back in a chosen order"; note the
+        // count so opponents see the outcome without exposing the order.
+        logManager.addLogEntry({
+          type: 'cardLikeEffect',
+          playerId,
+          cardLikeId: cardId,
+          effectText: `Puts ${rearrangedCardIds.length} cards back on top of their deck in chosen order`,
+        });
+      }
+
+      for (const cardId of rearrangedCardIds) {
         await actionService.run('moveCard', {
           cardId: cardId,
           toPlayerId: playerId,

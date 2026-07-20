@@ -36,28 +36,47 @@ export const registerNocturneHexEffects = (registerHexEffect: HexEffectRegistrar
 const registerBadOmens = (registerHexEffect: HexEffectRegistrar) => {
   registerHexEffect(
     'bad-omens',
-    async ({ loggerService, playerId, cardSourceController, actionService, cardLibrary }) => {
+    async ({
+      loggerService,
+      playerId,
+      cardId: hexCardId,
+      cardSourceController,
+      actionService,
+      cardLibrary,
+      logManager,
+    }) => {
       const deck = cardSourceController.getSource('playerDeck', playerId);
       if (deck.length < 1) {
         loggerService.debug('[bad-omens hex] no cards in deck to move');
         return;
       }
 
-      loggerService.debug(`[bad-omens hex] moving ${deck.length} cards from deck to discard`);
-      while (deck.length > 0) {
-        const cardId = deck[deck.length - 1];
-        await actionService.run('moveCard', {
-          cardId,
-          toPlayerId: playerId,
-          to: { location: 'playerDiscard' },
-        });
-      }
+      // Process top-to-bottom (deck's array end is the top by codebase convention), matching
+      // the discard order of the previous per-card moveCard loop. discardCard accepts an array
+      // and emits a single grouped log entry instead of N unlogged raw moves.
+      const deckCardIds = [...deck].reverse();
+      loggerService.debug(`[bad-omens hex] discarding ${deckCardIds.length} card(s) from deck`);
+      await actionService.run('discardCard', {
+        playerId,
+        cardId: deckCardIds,
+      });
 
       const discard = cardSourceController.getSource('playerDiscard', playerId);
       const copperIds = discard.filter(cardId => cardLibrary.getCard(cardId).cardKey === 'copper');
 
       const coppersToTopdeck = copperIds.slice(-2);
       loggerService.debug(`[bad-omens hex] topdecking ${coppersToTopdeck.length} Copper card(s)`);
+      if (coppersToTopdeck.length > 0) {
+        // moveCard has no dedicated log entry; note the topdeck since it's a player-visible
+        // outcome (and directly affects the victim's next draws) with no loggable action equivalent.
+        const copperNoun = coppersToTopdeck.length > 1 ? 'Copper cards' : 'Copper card';
+        logManager.addLogEntry({
+          type: 'cardLikeEffect',
+          playerId,
+          cardLikeId: hexCardId,
+          effectText: `Puts ${coppersToTopdeck.length} ${copperNoun} onto their deck`,
+        });
+      }
       for (const cardId of coppersToTopdeck) {
         await actionService.run('moveCard', {
           cardId,
@@ -85,13 +104,21 @@ const registerBadOmens = (registerHexEffect: HexEffectRegistrar) => {
 
 // Registers Delusion hex effect logic.
 const registerDelusion = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('delusion', async ({ loggerService, playerId, match, actionService }) => {
+  registerHexEffect('delusion', async ({ loggerService, playerId, cardId, match, actionService, logManager }) => {
     if (playerHasState(match, playerId, 'deluded') || playerHasState(match, playerId, 'envious')) {
       loggerService.debug('[delusion hex] player already has Deluded or Envious');
       return;
     }
 
     loggerService.debug('[delusion hex] gaining Deluded state');
+    // gainState has no dedicated log entry and is not a source-aware action; note the state
+    // change explicitly so it's visible and attributed to the hex.
+    logManager.addLogEntry({
+      type: 'cardLikeEffect',
+      playerId,
+      cardLikeId: cardId,
+      effectText: 'Gains the Deluded state',
+    });
     await actionService.run('gainState', {
       playerId,
       stateKey: 'deluded',
@@ -101,13 +128,21 @@ const registerDelusion = (registerHexEffect: HexEffectRegistrar) => {
 
 // Registers Envy hex effect logic.
 const registerEnvy = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('envy', async ({ loggerService, playerId, match, actionService }) => {
+  registerHexEffect('envy', async ({ loggerService, playerId, cardId, match, actionService, logManager }) => {
     if (playerHasState(match, playerId, 'deluded') || playerHasState(match, playerId, 'envious')) {
       loggerService.debug('[envy hex] player already has Deluded or Envious');
       return;
     }
 
     loggerService.debug('[envy hex] gaining Envious state');
+    // gainState has no dedicated log entry and is not a source-aware action; note the state
+    // change explicitly so it's visible and attributed to the hex.
+    logManager.addLogEntry({
+      type: 'cardLikeEffect',
+      playerId,
+      cardLikeId: cardId,
+      effectText: 'Gains the Envious state',
+    });
     await actionService.run('gainState', {
       playerId,
       stateKey: 'envious',
@@ -203,13 +238,15 @@ const registerFear = (registerHexEffect: HexEffectRegistrar) => {
 
 // Registers Greed hex effect logic.
 const registerGreed = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('greed', async ({ loggerService, playerId, supplyGainService, cardLibrary }) => {
+  registerHexEffect('greed', async ({ loggerService, playerId, cardId, supplyGainService, cardLibrary }) => {
     const gainedCopperId = await supplyGainService.gainTopSupplyCardForPileKey({
       playerId,
       pileKey: 'copper',
       from: 'basicSupply',
       to: { location: 'playerDeck' },
       logTag: 'greed hex',
+      // supplyGainService's own actionService bypasses the effect's auto-injected source.
+      source: { kind: 'cardLike', id: cardId },
     });
     if (!gainedCopperId) {
       loggerService.debug('[greed hex] no Copper cards available to gain');
@@ -223,7 +260,7 @@ const registerGreed = (registerHexEffect: HexEffectRegistrar) => {
 const registerHaunting = (registerHexEffect: HexEffectRegistrar) => {
   registerHexEffect(
     'haunting',
-    async ({ loggerService, playerId, cardSourceController, actionService, cardLibrary }) => {
+    async ({ loggerService, playerId, cardId, cardSourceController, actionService, cardLibrary, logManager }) => {
       const hand = cardSourceController.getSource('playerHand', playerId);
       if (hand.length < 4) {
         loggerService.debug('[haunting hex] fewer than 4 cards in hand, skipping');
@@ -242,6 +279,14 @@ const registerHaunting = (registerHexEffect: HexEffectRegistrar) => {
       }
 
       loggerService.debug(`[haunting hex] topdecking ${cardLibrary.getCard(selectedId)}`);
+      // moveCard has no dedicated log entry; note the topdeck (without naming the private
+      // card choice) since it's a player-visible outcome with no loggable action equivalent.
+      logManager.addLogEntry({
+        type: 'cardLikeEffect',
+        playerId,
+        cardLikeId: cardId,
+        effectText: 'Puts a card from their hand onto their deck',
+      });
       await actionService.run('moveCard', {
         cardId: selectedId,
         toPlayerId: playerId,
@@ -258,6 +303,7 @@ const registerLocusts = (registerHexEffect: HexEffectRegistrar) => {
     async ({
       loggerService,
       playerId,
+      cardId,
       cardSourceController,
       cardLibrary,
       cardPriceController,
@@ -295,6 +341,8 @@ const registerLocusts = (registerHexEffect: HexEffectRegistrar) => {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'locusts hex',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: { kind: 'cardLike', id: cardId },
         });
         if (!gainedCurseId) {
           loggerService.debug('[locusts hex] no Curse cards available to gain');
@@ -343,7 +391,7 @@ const registerLocusts = (registerHexEffect: HexEffectRegistrar) => {
 
 // Registers Misery hex effect logic.
 const registerMisery = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('misery', async ({ loggerService, playerId, match, actionService }) => {
+  registerHexEffect('misery', async ({ loggerService, playerId, cardId, match, actionService, logManager }) => {
     const twiceMiserable = getPlayerStateByKey(match, playerId, 'twice-miserable');
     if (twiceMiserable) {
       loggerService.debug('[misery hex] player already twice miserable');
@@ -353,6 +401,14 @@ const registerMisery = (registerHexEffect: HexEffectRegistrar) => {
     const miserable = getPlayerStateByKey(match, playerId, 'miserable');
     if (!miserable) {
       loggerService.debug('[misery hex] gaining Miserable state');
+      // gainState has no dedicated log entry and is not a source-aware action; note the state
+      // change explicitly so it's visible and attributed to the hex.
+      logManager.addLogEntry({
+        type: 'cardLikeEffect',
+        playerId,
+        cardLikeId: cardId,
+        effectText: 'Gains the Miserable state',
+      });
       await actionService.run('gainState', {
         playerId,
         stateKey: 'miserable',
@@ -361,6 +417,12 @@ const registerMisery = (registerHexEffect: HexEffectRegistrar) => {
     }
 
     loggerService.debug('[misery hex] flipping to Twice Miserable');
+    logManager.addLogEntry({
+      type: 'cardLikeEffect',
+      playerId,
+      cardLikeId: cardId,
+      effectText: 'Flips from Miserable to Twice Miserable',
+    });
     await actionService.run('removeState', {
       playerId,
       stateId: miserable.id,
@@ -375,13 +437,15 @@ const registerMisery = (registerHexEffect: HexEffectRegistrar) => {
 
 // Registers Plague hex effect logic.
 const registerPlague = (registerHexEffect: HexEffectRegistrar) => {
-  registerHexEffect('plague', async ({ loggerService, playerId, supplyGainService, cardLibrary }) => {
+  registerHexEffect('plague', async ({ loggerService, playerId, cardId, supplyGainService, cardLibrary }) => {
     const gainedCurseId = await supplyGainService.gainTopSupplyCardForPileKey({
       playerId,
       pileKey: 'curse',
       from: 'basicSupply',
       to: { location: 'playerHand' },
       logTag: 'plague hex',
+      // supplyGainService's own actionService bypasses the effect's auto-injected source.
+      source: { kind: 'cardLike', id: cardId },
     });
     if (!gainedCurseId) {
       loggerService.debug('[plague hex] no Curse cards available to gain');
