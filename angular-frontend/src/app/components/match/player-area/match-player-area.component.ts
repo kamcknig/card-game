@@ -13,6 +13,7 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
 import { CardComponent } from '../../card/card.component';
+import { BoardSelectionActionComponent } from '../board-selection/board-selection-action.component';
 import { SocketService } from '../../../core/socket-service/socket.service';
 import { WAY_PICKER_PANEL_WIDTH_PX, WayPickerOverlayService } from '../../../core/way-picker/way-picker-overlay.service';
 import { PromptDialogCoordinatorService } from '../../../core/prompt-dialog/prompt-dialog-coordinator.service';
@@ -43,7 +44,7 @@ import {
   playerTreasureStore,
   turnPhaseStore
 } from '../../../state/turn-state';
-import { cofferStore, debtStore, villagerStore } from '../../../state/resource-logic';
+import { cofferStore, debtStore, matchUsesCoffersStore, matchUsesVillagersStore, villagerStore } from '../../../state/resource-logic';
 import { CARD_WIDTH } from '../../../core/app-contants';
 import { SUPPLY_PANEL_GAP_PX } from '../supply/supply-layout.constants';
 import { TokenImageBadgeComponent } from '../token-image-badge/token-image-badge.component';
@@ -90,17 +91,6 @@ type ResourceStateViewModel = {
   debt: number;
 };
 
-type CardPileViewModel = {
-  cardId: CardId | null;
-  forceFacing: 'front' | 'back';
-  count: number;
-  showCount: boolean;
-  selectable: boolean;
-  selected: boolean;
-  waySelectable: boolean;
-  tokenBadges: TokenBadgeViewModel[];
-};
-
 const CUBE_TOKEN_ID = 'cube-token';
 const VICTORY_TOKEN_ID = 'prosperity:victory';
 const WAY_PICKER_EDGE_OVERLAP_PX = 5;
@@ -110,6 +100,7 @@ const WAY_PICKER_EDGE_OVERLAP_PX = 5;
   imports: [
     CardComponent,
     TokenImageBadgeComponent,
+    BoardSelectionActionComponent,
   ],
   templateUrl: './match-player-area.component.html',
   styleUrl: './match-player-area.component.scss',
@@ -200,6 +191,15 @@ export class MatchPlayerAreaComponent {
 
   private readonly _debtByPlayer = toSignal(this._nanoStores.useStore(debtStore), {
     initialValue: debtStore.get(),
+  });
+
+  // Whether the match contains any Coffers/Villagers provider content —
+  // drives whether the corresponding HUD controls render at all.
+  private readonly _matchUsesCoffers = toSignal(this._nanoStores.useStore(matchUsesCoffersStore), {
+    initialValue: matchUsesCoffersStore.get(),
+  });
+  private readonly _matchUsesVillagers = toSignal(this._nanoStores.useStore(matchUsesVillagersStore), {
+    initialValue: matchUsesVillagersStore.get(),
   });
 
   private readonly _showCofferControls = signal(false);
@@ -315,20 +315,6 @@ export class MatchPlayerAreaComponent {
     });
   });
 
-  readonly deckPile = computed(() => {
-    const cardsById = this._cardsById() ?? {};
-    const cards = this.resolveCardsBySourceKey(this.selfSourceKey('playerDeck'), cardsById);
-    const topCard = cards[cards.length - 1] ?? null;
-    return this.buildPileViewModel(topCard, cards.length, 'deck');
-  });
-
-  readonly discardPile = computed(() => {
-    const cardsById = this._cardsById() ?? {};
-    const cards = this.resolveCardsBySourceKey(this.selfSourceKey('playerDiscard'), cardsById);
-    const topCard = cards[cards.length - 1] ?? null;
-    return this.buildPileViewModel(topCard, cards.length, 'discard');
-  });
-
   readonly activeDurationCardIds = computed(() => {
     const sourceMap = this._cardSources() ?? {};
     return [...(sourceMap['activeDuration'] ?? [])];
@@ -436,16 +422,48 @@ export class MatchPlayerAreaComponent {
     return handCards.some((card) => card.type?.includes('TREASURE'));
   });
 
-  readonly canSpendVillagers = computed(() => {
+  // Whether the Coffers control renders at all: only when the match
+  // contains a Coffers provider. The non-zero-balance fallback is a safety
+  // net in case a provider card was minted without its tag.
+  readonly coffersVisible = computed(() => {
+    return this._matchUsesCoffers() || this.resourceState().coffers > 0;
+  });
+
+  // Whether the villager icon should be shown at all — mirrors
+  // coffersVisible: visible whenever the match contains a Villagers
+  // provider (or the player already holds some), regardless of phase. The
+  // non-zero-balance check is a safety net in case a provider card was
+  // minted without its tag.
+  readonly villagerControlsVisible = computed(() => {
+    return this._matchUsesVillagers() || this.resourceState().villagers > 0;
+  });
+
+  // Whether it is currently the player's own turn (any phase) — Coffers
+  // can be exchanged at any point during the owner's own turn (2022
+  // errata widened this from "start of Buy phase only"), while Villagers
+  // are further restricted to the owner's own Action phase specifically.
+  private readonly _isOwnTurn = computed(() => {
     const selfPlayerId = this._selfPlayerId();
     if (selfPlayerId === undefined) {
       return false;
     }
-    return (
-      this._currentPlayerTurnId() === selfPlayerId
-      && this._turnPhase() === 'action'
-      && this.resourceState().villagers > 0
-    );
+    return this._currentPlayerTurnId() === selfPlayerId;
+  });
+
+  // Whether it is currently the player's own action phase — the only time
+  // Villagers are spendable (for +1 Action each). Separate from
+  // villagerControlsVisible so the icon stays visible outside the action
+  // phase while the spend control itself stays disabled.
+  private readonly _isOwnActionPhase = computed(() => {
+    return this._isOwnTurn() && this._turnPhase() === 'action';
+  });
+
+  readonly canSpendVillagers = computed(() => {
+    return this._isOwnActionPhase() && this.resourceState().villagers > 0;
+  });
+
+  readonly canExchangeCoffers = computed(() => {
+    return this._isOwnTurn() && this.resourceState().coffers > 0;
   });
 
   readonly availableCubeTokens = computed(() => {
@@ -860,41 +878,6 @@ export class MatchPlayerAreaComponent {
     emitTap();
   }
 
-  private buildPileViewModel(topCard: Card | null, count: number, pileType: 'deck' | 'discard'): CardPileViewModel {
-    const cardId = topCard?.id ?? null;
-    const selectableCards = new Set(this._selectableCards() ?? []);
-    const selectedCards = new Set(this._selectedCards() ?? []);
-    const waySelectableCards = new Set(this._waySelectableCards() ?? []);
-    const match = this._match();
-    const selfPlayerId = this._selfPlayerId();
-    const tokenDefinitions = this._tokenDefinitions();
-
-    let tokenBadges: TokenBadgeViewModel[] = [];
-    if (pileType === 'deck' && match && selfPlayerId !== undefined) {
-      const playerColorMap = new Map(match.players.map((player) => [player.id, player.color]));
-      const deckTokens = (Object.values(match.tokens ?? {}) as TokenInstance[])
-        .filter((token) => token.location.type === 'playerDeck' && token.location.playerId === selfPlayerId)
-        .map((token) => ({
-          id: token.id,
-          label: getTokenShortLabel(token.tokenId, tokenDefinitions[token.tokenId]),
-          color: playerColorMap.get(token.ownerId ?? selfPlayerId) ?? '#ffffff',
-          imagePath: getTokenImagePath(token.tokenId),
-        }));
-      tokenBadges = this.buildTokenBadgeStacks(deckTokens);
-    }
-
-    return {
-      cardId,
-      count,
-      showCount: pileType !== 'discard',
-      forceFacing: topCard && pileType === 'deck' && topCard.type.includes('SHADOW') ? 'front' : (pileType === 'deck' ? 'back' : 'front'),
-      selectable: cardId !== null && selectableCards.has(cardId),
-      selected: cardId !== null && selectedCards.has(cardId),
-      waySelectable: cardId !== null && waySelectableCards.has(cardId),
-      tokenBadges,
-    };
-  }
-
   private resolveCardsBySourceKey(sourceKey: string, cardsById: Record<CardId, Card>): Card[] {
     const sourceMap = this._cardSources() ?? {};
     return (sourceMap[sourceKey] ?? [])
@@ -902,7 +885,9 @@ export class MatchPlayerAreaComponent {
       .filter((card): card is Card => !!card);
   }
 
-  private selfSourceKey(baseKey: 'playerHand' | 'playerDeck' | 'playerDiscard'): string {
+  // Deck/discard sources moved to MatchSupplyComponent (basic-supply
+  // panel) — this helper is now only used for the local player's hand.
+  private selfSourceKey(baseKey: 'playerHand'): string {
     const selfPlayerId = this._selfPlayerId();
     if (selfPlayerId === undefined) {
       return `${baseKey}:-1`;

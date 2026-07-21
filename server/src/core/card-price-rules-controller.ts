@@ -4,7 +4,16 @@ import { MatchCardLibrary } from './match-card-library.ts';
 export type CardPriceRule = (
   card: CardLike,
   context: { match: Match; playerId: PlayerId },
-) => { restricted: boolean; cost: CardCost };
+) => {
+  restricted: boolean;
+  cost: CardCost;
+  // When set, this rule's cost is the final cost for the card — every other
+  // registered rule's additive cost delta is skipped for this evaluation
+  // (still contributes to `restricted`). Used by effects whose card text
+  // says a cost "overrides other cost-changing effects" (e.g. Wayfarer)
+  // instead of stacking with them.
+  overrideCost?: CardCost;
+};
 
 export class CardPriceRulesController {
   private _rules: Record<CardId, CardPriceRule[]> = {};
@@ -49,6 +58,7 @@ export class CardPriceRulesController {
   applyRules(card: CardLike, { playerId }: { playerId: PlayerId }) {
     let restricted = false;
     let modifiedCost = { ...card.cost };
+    let overrideCost: CardCost | undefined;
 
     const rules = this._rules[card.id];
     if (!rules) {
@@ -60,11 +70,28 @@ export class CardPriceRulesController {
 
       restricted ||= result.restricted;
 
+      if (result.overrideCost) {
+        // Last override wins; it replaces the additive accumulation entirely.
+        overrideCost = result.overrideCost;
+        continue;
+      }
+
       modifiedCost = {
         treasure: Math.max(0, modifiedCost.treasure + (result.cost.treasure ?? 0)),
         potion: Math.max(0, (modifiedCost.potion ?? 0) + (result.cost.potion ?? 0)),
         // Debt is adjusted independently from treasure/potions.
         debt: Math.max(0, (modifiedCost.debt ?? 0) + (result.cost.debt ?? 0)),
+      };
+    }
+
+    if (overrideCost) {
+      return {
+        restricted,
+        cost: {
+          treasure: Math.max(0, overrideCost.treasure),
+          potion: Math.max(0, overrideCost.potion ?? 0),
+          debt: Math.max(0, overrideCost.debt ?? 0),
+        },
       };
     }
 

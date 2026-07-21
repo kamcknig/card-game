@@ -1,5 +1,11 @@
 import type { AppSocket } from '@server-types/index.ts';
-import type { MatchConfiguration, PlayerId, ServerEmitEvents, ServerListenEvents } from 'shared/types/index.ts';
+import type {
+  MatchConfiguration,
+  Player,
+  PlayerId,
+  ServerEmitEvents,
+  ServerListenEvents,
+} from 'shared/types/index.ts';
 import { Server } from 'socket.io';
 import { LobbySocketBindings } from './lobby-socket-bindings.ts';
 import { ExpansionSearchService } from './expansion-search-service.ts';
@@ -142,17 +148,34 @@ export class GameLobbySessionCoordinatorService {
       this.loggerService.info('[game] game already started');
       socket.emit('setPlayerList', state.players);
       this.disconnectedPlayerVoteService.removePendingRemovalPlayer(state.players, player.id);
+      this.broadcastRemovalVoteState(state);
+      socket.emit('removalVoteState', this.disconnectedPlayerVoteService.getVoteSnapshot());
       state.matchController?.playerReconnected(player.id, socket);
       registerRemovalVoteHandler(socket, player.id);
       const hasDisconnectedHuman = this.playerSessionService.hasDisconnectedHumanPlayers(state.players);
       if (!hasDisconnectedHuman) {
         void state.matchController?.runGameAction('checkForRemainingPlayerActions');
       }
+
+      if (state.postGamePhase) {
+        // Rejoining during the summary screen on a fresh socket: the prior
+        // socket's post-game handlers died with it, and this branch never
+        // bound them for reconnects — stranding the player on an inert
+        // summary screen (returnToLobby/playerReady/restartMatch/editMatch
+        // all silently did nothing). Rebind them here. The `setPlayerList`
+        // emit above already mirrors enterPostGamePhase's only broadcast
+        // payload, so no further state re-emit is needed.
+        this.bindPostGamePlayerHandlers(state, player.id, socket, callbacks);
+        if (state.owner?.id === player.id) {
+          this.bindPostGameOwnerHandlers(state, player.id, socket, callbacks);
+        }
+      }
     } else {
       this.loggerService.info('[game] not yet started, sending player to match configuration');
       socket.emit(
+        // Sort a copy — shared lobby state must never be reordered in place by an emit.
         'expansionList',
-        state.availableExpansion.sort((a, b) => a.order - b.order),
+        [...state.availableExpansion].sort((a, b) => a.order - b.order),
       );
       socket.emit('matchConfigurationUpdated', state.matchConfiguration!);
       this.lobbySocketBindings.bindPlayerLobbyHandlers(socket, {
@@ -216,6 +239,7 @@ export class GameLobbySessionCoordinatorService {
       this.onPlayerEnteredMatch(state, {
         playerId,
         socketId: socket.id,
+        socket,
         callbacks,
       });
     };
@@ -246,6 +270,56 @@ export class GameLobbySessionCoordinatorService {
     this.runtimeSocketHandlersBySocketId.delete(socket.id);
   }
 
+  /**
+   * Transfers game ownership away from `leavingPlayerId` to a replacement, if
+   * one exists. Consolidates the six near-identical `findReplacementOwner` +
+   * `gameOwnerUpdated` + optional-rebind blocks that were previously
+   * duplicated across disconnect/resign/vote-removal/lobby-removal/post-game
+   * call sites.
+   *
+   * Two intentional per-site differences are preserved via options rather
+   * than smoothed over:
+   * - `clearOnNoReplacement` — most call sites clear `state.owner` to
+   *   `undefined` when no eligible replacement exists; the two disconnect
+   *   paths that only ever fire mid-match (onPlayerDisconnected's non-post-game
+   *   branch, onRemoveDisconnectedPlayerVote) instead leave the stale owner in
+   *   place, matching their pre-consolidation behavior exactly.
+   * - `rebind` — lobby-phase callers pass `bindOwnerLobbyHandlers`,
+   *   post-game callers pass `bindPostGameOwnerHandlers`, and resign/vote-removal
+   *   callers pass neither (they only ever announce the new owner).
+   */
+  private transferOwnershipAway(
+    state: GameRuntimeState,
+    leavingPlayerId: PlayerId,
+    options: {
+      clearOnNoReplacement?: boolean;
+      rebind?: (state: GameRuntimeState, ownerId: PlayerId, socket: AppSocket, callbacks: GameLobbyCallbacks) => void;
+      callbacks?: GameLobbyCallbacks;
+    } = {},
+  ): Player | undefined {
+    const { clearOnNoReplacement = true, rebind, callbacks } = options;
+    const replacement = this.playerSessionService.findReplacementOwner(state.players, leavingPlayerId);
+
+    if (!replacement) {
+      if (clearOnNoReplacement) {
+        state.owner = undefined;
+      }
+      return undefined;
+    }
+
+    state.owner = replacement;
+    this.io.in(state.roomName).emit('gameOwnerUpdated', replacement.id);
+
+    if (rebind && callbacks) {
+      const replacementSocket = state.socketMap.get(replacement.id);
+      if (replacementSocket) {
+        rebind(state, replacement.id, replacementSocket, callbacks);
+      }
+    }
+
+    return replacement;
+  }
+
   // Handles socket disconnect behavior for lobby and active-match contexts.
   public onPlayerDisconnected(
     state: GameRuntimeState,
@@ -267,14 +341,45 @@ export class GameLobbySessionCoordinatorService {
       return;
     }
 
-    // Guard: during post-game phase, treat a disconnect as a voluntary return to lobby.
+    // During post-game, a DISCONNECT is transient: keep the seat so the
+    // session can rejoin the summary screen. Only an explicit returnToLobby
+    // removes the player. `matchStarted` stays true through post-game, so
+    // treating this as onReturnToLobby (which drops the player from
+    // state.players) would make the later `matchStarted && !hasSession`
+    // reconnect gate reject the rejoin as "already started" — permanently
+    // locking the player out after any network blip on the summary screen.
     if (state.postGamePhase) {
+      const player = this.playerRegistryService.markPlayerDisconnected(state.players, playerId);
       const socket = state.socketMap.get(playerId);
-      // Treat disconnect during post-game summary the same as voluntarily returning to lobby.
-      this.onReturnToLobby(state, playerId, callbacks);
       if (socket) {
         this.runtimeSocketHandlersBySocketId.delete(socket.id);
+        // The post-game handlers bound to this now-dead socket are inert once
+        // disconnected, but leaving the map entry around leaks one closure per
+        // reconnect cycle; drop it the same way runtime handlers are dropped above.
+        this.unbindPostGameHandlers(socket);
       }
+      state.socketMap.delete(playerId);
+
+      if (!player) {
+        this.loggerService.warn('[game] post-game disconnect for unknown player');
+        return;
+      }
+
+      // Owner transfer mirrors onReturnToLobby's post-game handling.
+      if (state.owner?.id === playerId) {
+        this.transferOwnershipAway(state, playerId, { rebind: this.bindPostGameOwnerHandlers.bind(this), callbacks });
+      }
+
+      // If nobody connected remains, clear the match as before.
+      if (!this.playerSessionService.hasConnectedHumanPlayers(state.players)) {
+        this.loggerService.log('[game] no connected humans left in post-game, clearing match');
+        state.postGamePhase = false;
+        callbacks.onClearMatch();
+        return;
+      }
+
+      this.io.in(state.roomName).emit('playerDisconnected', player);
+      callbacks.onGameStateChanged?.();
       return;
     }
 
@@ -294,15 +399,14 @@ export class GameLobbySessionCoordinatorService {
 
     if (player.id === state.owner?.id) {
       this.lobbySocketBindings.unbindOwnerLobbyHandlers(state.socketMap.get(player.id));
-      const replacement = this.playerSessionService.findReplacementOwner(state.players, player.id);
-      if (replacement) {
-        state.owner = replacement;
-        this.io.in(state.roomName).emit('gameOwnerUpdated', replacement.id);
-        const replacementSocket = state.socketMap.get(replacement.id);
-        if (replacementSocket) {
-          this.bindOwnerLobbyHandlers(state, replacement.id, replacementSocket, callbacks);
-        }
-      }
+      // Unlike most transfer sites, a mid-match disconnect with no eligible
+      // replacement leaves the stale (disconnected) owner in place rather
+      // than clearing it.
+      this.transferOwnershipAway(state, player.id, {
+        clearOnNoReplacement: false,
+        rebind: this.bindOwnerLobbyHandlers.bind(this),
+        callbacks,
+      });
     }
 
     if (state.matchStarted) {
@@ -310,6 +414,10 @@ export class GameLobbySessionCoordinatorService {
       if (!player.isComputer) {
         this.disconnectedPlayerVoteService.addPendingRemovalPlayer(state.players, player.id);
       }
+      // The disconnect shrank the required voter set — an outstanding tally
+      // may now be complete without any new vote arriving.
+      this.resolveCompletedRemovals(state);
+      this.broadcastRemovalVoteState(state);
     }
 
     this.io.in(state.roomName).emit('playerDisconnected', player);
@@ -386,16 +494,26 @@ export class GameLobbySessionCoordinatorService {
 
     this.io.in(state.roomName).emit('setPlayerList', state.players);
     this.io.in(state.roomName).emit('playerDisconnected', player);
+    // Resignation is permanent — remaining clients render "(removed)" in
+    // the disconnect dialog rather than a votable row.
+    this.io.in(state.roomName).emit('playerRemovedFromMatch', {
+      playerId: player.id,
+      playerName: player.name,
+      reason: 'resigned',
+    });
 
     if (state.owner?.id === player.id) {
-      const replacement = this.playerSessionService.findReplacementOwner(state.players, player.id);
-      state.owner = replacement;
-      if (replacement) {
-        this.io.in(state.roomName).emit('gameOwnerUpdated', replacement.id);
-      }
+      // Resign never rebinds owner handlers — the departing socket already
+      // left the room, and any replacement's handlers were bound on join.
+      this.transferOwnershipAway(state, player.id);
     }
 
     this.disconnectedPlayerVoteService.removePendingRemovalPlayer(state.players, player.id);
+    this.disconnectedPlayerVoteService.clearVotesByVoter(player.id);
+    // The resigner left the required voter set — outstanding tallies may
+    // now be complete.
+    this.resolveCompletedRemovals(state);
+    this.broadcastRemovalVoteState(state);
 
     const hasConnectedHuman = this.playerSessionService.hasConnectedHumanPlayers(state.players);
     if (!hasConnectedHuman && this.serverConfigService.shouldEndMatchOnNoHumans()) {
@@ -418,10 +536,11 @@ export class GameLobbySessionCoordinatorService {
     args: {
       playerId: PlayerId;
       socketId: string;
+      socket: AppSocket;
       callbacks: GameLobbyCallbacks;
     },
   ): void {
-    const { playerId, socketId, callbacks } = args;
+    const { playerId, socketId, socket, callbacks } = args;
 
     if (!state.matchStarted) {
       this.loggerService.debug(`[game] enteredMatch ignored from ${playerId}; match not started`);
@@ -452,9 +571,20 @@ export class GameLobbySessionCoordinatorService {
     player.connected = true;
     this.disconnectedPlayerVoteService.removePendingRemovalPlayer(state.players, playerId);
     this.io.in(state.roomName).emit('playerConnected', player);
+    this.broadcastRemovalVoteState(state);
+
+    // leftMatch ran the full disconnect path, which removed this player
+    // from the match socketMap — without re-adding them here they would
+    // never receive another patch (and no pending prompt could replay).
+    // playerReconnected restores the socketMap entry, rebinds gameplay
+    // listeners, resends full state, and re-arms the clientReady handshake
+    // that replays pending prompts once the scene has rebound its
+    // listeners.
+    state.matchController?.playerReconnected(playerId, socket);
 
     // Resume the action engine if every human is now connected. Mirrors the
-    // resume branch in addPlayer (line 145-148).
+    // resume branch in addPlayer (line 145-148). Phase 2's auto-advance
+    // guard makes this safe even while a prompt is suspended mid-match.
     const hasDisconnectedHuman = this.playerSessionService.hasDisconnectedHumanPlayers(state.players);
     if (!hasDisconnectedHuman) {
       void state.matchController?.runGameAction('checkForRemainingPlayerActions');
@@ -463,29 +593,86 @@ export class GameLobbySessionCoordinatorService {
     callbacks.onGameStateChanged?.();
   }
 
-  // Handles owner votes to remove disconnected players after consensus.
-  public onRemoveDisconnectedPlayerVote(state: GameRuntimeState, voterId: PlayerId, targetPlayerId: PlayerId): void {
-    if (!state.matchStarted) return;
-    if (this.disconnectedPlayerVoteService.getPendingRemovalPlayerId() !== targetPlayerId) return;
+  // Broadcasts the authoritative removal-vote snapshot to the room.
+  private broadcastRemovalVoteState(state: GameRuntimeState): void {
+    this.io.in(state.roomName).emit('removalVoteState', this.disconnectedPlayerVoteService.getVoteSnapshot());
+  }
 
-    const voteResult = this.disconnectedPlayerVoteService.registerRemovalVote(state.players, voterId, targetPlayerId);
-    if (!voteResult.accepted || !voteResult.allVoted) return;
+  // Permanently removes a voted-out player from the active match. Shared by
+  // the direct vote-completion path and the connection-change re-evaluation
+  // path. Mirrors the pre-existing removal block from
+  // onRemoveDisconnectedPlayerVote, plus a playerRemovedFromMatch broadcast
+  // so clients can render the "(removed)" row.
+  private removeVotedOutPlayer(state: GameRuntimeState, targetPlayerId: PlayerId): void {
+    const target = state.players.find(player => player.id === targetPlayerId);
+    if (!target) return;
 
+    this.loggerService.log(`[game] ${target} voted out of active match`);
     state.players = state.players.filter(player => player.id !== targetPlayerId);
     state.socketMap.delete(targetPlayerId);
     state.matchController?.removePlayerFromMatch(targetPlayerId);
     this.io.in(state.roomName).emit('setPlayerList', state.players);
+    this.io.in(state.roomName).emit('playerRemovedFromMatch', {
+      playerId: targetPlayerId,
+      playerName: target.name,
+      reason: 'voted',
+    });
 
     if (state.owner?.id === targetPlayerId) {
-      const replacement = this.playerSessionService.findReplacementOwner(state.players, targetPlayerId);
-      if (replacement) {
-        state.owner = replacement;
-        this.io.in(state.roomName).emit('gameOwnerUpdated', replacement.id);
-      }
+      // No eligible replacement leaves the stale owner in place; no rebind.
+      this.transferOwnershipAway(state, targetPlayerId, { clearOnNoReplacement: false });
     }
 
     this.disconnectedPlayerVoteService.removePendingRemovalPlayer(state.players, targetPlayerId);
+    // A removed player's own outstanding votes must not linger in snapshots.
+    this.disconnectedPlayerVoteService.clearVotesByVoter(targetPlayerId);
     void state.matchController?.runGameAction('checkForRemainingPlayerActions');
+  }
+
+  // Re-checks all pending tallies after the connected set shrinks (voter
+  // disconnect or resign) and removes any target whose vote is now
+  // complete. Removing a target never changes the connected set (targets
+  // are disconnected by definition), so a single pass suffices.
+  private resolveCompletedRemovals(state: GameRuntimeState): void {
+    const completed = this.disconnectedPlayerVoteService.getCompletedTargetIds(state.players);
+    for (const targetPlayerId of completed) {
+      this.removeVotedOutPlayer(state, targetPlayerId);
+    }
+  }
+
+  // Handles a connected human's vote to remove any pending disconnected player.
+  public onRemoveDisconnectedPlayerVote(state: GameRuntimeState, voterId: PlayerId, targetPlayerId: PlayerId): void {
+    if (!state.matchStarted) return;
+    // Votes are only valid for players actually queued for removal; this
+    // replaces the old head-of-queue-only gate so every disconnected player
+    // is votable concurrently.
+    if (!this.disconnectedPlayerVoteService.isPendingRemoval(targetPlayerId)) {
+      this.loggerService.debug(
+        `[game] ignoring removal vote from ${voterId} for non-pending target ${targetPlayerId}`,
+      );
+      return;
+    }
+
+    const voteResult = this.disconnectedPlayerVoteService.registerRemovalVote(state.players, voterId, targetPlayerId);
+    if (!voteResult.accepted) return;
+
+    this.loggerService.info(`[game] player ${voterId} voted to remove ${targetPlayerId}`);
+    if (voteResult.allVoted) {
+      this.removeVotedOutPlayer(state, targetPlayerId);
+    }
+    this.broadcastRemovalVoteState(state);
+  }
+
+  // Handles a voter withdrawing their earlier removal vote.
+  public onRetractRemovalVote(state: GameRuntimeState, voterId: PlayerId, targetPlayerId: PlayerId): void {
+    if (!state.matchStarted) return;
+    const retracted = this.disconnectedPlayerVoteService.retractRemovalVote(voterId, targetPlayerId);
+    if (!retracted) {
+      this.loggerService.debug(`[game] ignoring retract from ${voterId}; no active vote for ${targetPlayerId}`);
+      return;
+    }
+    this.loggerService.info(`[game] player ${voterId} retracted removal vote for ${targetPlayerId}`);
+    this.broadcastRemovalVoteState(state);
   }
 
   // Removes a player from a lobby game before match start (leave/kick/ban flow).
@@ -520,17 +707,7 @@ export class GameLobbySessionCoordinatorService {
     player.ready = false;
 
     if (state.owner?.id === player.id) {
-      const replacement = this.playerSessionService.findReplacementOwner(state.players, player.id);
-      if (replacement) {
-        state.owner = replacement;
-        this.io.in(state.roomName).emit('gameOwnerUpdated', replacement.id);
-        const replacementSocket = state.socketMap.get(replacement.id);
-        if (replacementSocket) {
-          this.bindOwnerLobbyHandlers(state, replacement.id, replacementSocket, callbacks);
-        }
-      } else {
-        state.owner = undefined;
-      }
+      this.transferOwnershipAway(state, player.id, { rebind: this.bindOwnerLobbyHandlers.bind(this), callbacks });
     }
 
     this.io.in(state.roomName).emit('setPlayerList', state.players);
@@ -684,6 +861,21 @@ export class GameLobbySessionCoordinatorService {
           `[game] way search '${searchTerm}' returned ${ways.length} way card(s) for player ${playerId}`,
         );
         state.socketMap.get(playerId)?.emit('searchWayResponse', ways);
+      },
+      onSearchTraits: (playerId, searchTerm) => {
+        state.socketMap
+          .get(playerId)
+          ?.emit('searchTraitResponse', this.expansionSearchService.searchTraits(searchTerm));
+      },
+      onSearchAllies: (playerId, searchTerm) => {
+        state.socketMap
+          .get(playerId)
+          ?.emit('searchAllyResponse', this.expansionSearchService.searchAllies(searchTerm));
+      },
+      onSearchProphecies: (playerId, searchTerm) => {
+        state.socketMap
+          .get(playerId)
+          ?.emit('searchProphecyResponse', this.expansionSearchService.searchProphecies(searchTerm));
       },
     });
   }
@@ -876,15 +1068,7 @@ export class GameLobbySessionCoordinatorService {
 
     // Transfer ownership if this player was the owner.
     if (state.owner?.id === playerId) {
-      const replacement = this.playerSessionService.findReplacementOwner(state.players, playerId);
-      state.owner = replacement;
-      if (replacement) {
-        this.io.in(state.roomName).emit('gameOwnerUpdated', replacement.id);
-        const replacementSocket = state.socketMap.get(replacement.id);
-        if (replacementSocket) {
-          this.bindPostGameOwnerHandlers(state, replacement.id, replacementSocket, callbacks);
-        }
-      }
+      this.transferOwnershipAway(state, playerId, { rebind: this.bindPostGameOwnerHandlers.bind(this), callbacks });
     }
 
     // If no human players remain, end the post-game phase and clear match state.

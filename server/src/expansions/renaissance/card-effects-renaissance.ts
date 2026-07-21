@@ -1,12 +1,13 @@
-import { Card, CardId } from 'shared/types/index.ts';
+import { Card, CardId, PROMPT_DECLINE_ACTION } from 'shared/types/index.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
-import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
-import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
+import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 import { renaissanceArtifactKeys } from './artifact-keys-renaissance.ts';
 import { resolveChooseAbilities } from '../../utils/resolve-choose-abilities.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
+import { registerStartTurnEffect } from '../../utils/register-start-turn-effect.ts';
 
 // Renaissance card effects module (artifacts handled separately).
 const expansion: CardExpansionModule = {
@@ -26,29 +27,11 @@ const expansion: CardExpansionModule = {
 
       loggerService.debug(`[border-guard effect] revealing ${revealCount} card(s) (lantern: ${hasLantern})`);
 
-      const deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
-      const revealedCards: Card[] = [];
-
-      // Reveal the top N cards, shuffling if needed.
-      for (let index = 0; index < revealCount; index++) {
-        if (deck.length < 1) {
-          loggerService.debug('[border-guard effect] deck empty, shuffling discard');
-          await cardEffectArgs.actionService.run('shuffleDeck', { playerId: cardEffectArgs.playerId });
-          if (deck.length < 1) {
-            loggerService.debug('[border-guard effect] no cards to reveal after shuffling');
-            break;
-          }
-        }
-
-        const cardId = deck.slice(-1)[0];
-        const card = cardEffectArgs.cardLibrary.getCard(cardId);
-        revealedCards.push(card);
-        await cardEffectArgs.actionService.run('revealCard', {
-          cardId,
-          playerId: cardEffectArgs.playerId,
-          moveToSetAside: true,
-        });
-      }
+      // Reveal the top N cards, set aside — shuffling the discard back in
+      // automatically if the deck runs dry mid-reveal.
+      const revealedCards = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, revealCount, {
+        setAside: true,
+      });
 
       if (!revealedCards.length) {
         loggerService.debug('[border-guard effect] no cards revealed');
@@ -117,7 +100,14 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      if (availableArtifacts.length === 1) {
+      // Taking an artifact is mandatory for the base "take the Lantern or
+      // Horn" clause (whether one or both are available). It is only
+      // optional in the narrower case where the player already has the
+      // Lantern and Horn is the sole remaining option ("...you may take
+      // the Horn").
+      const takeIsOptional = hasLantern;
+
+      if (availableArtifacts.length === 1 && !takeIsOptional) {
         const selectedArtifact = availableArtifacts[0];
         loggerService.debug(`[border-guard effect] gaining artifact ${selectedArtifact.artifactId}`);
         await cardEffectArgs.actionService.run('gainArtifact', {
@@ -127,18 +117,26 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      // Prompt the player to take an artifact or decline when multiple are available.
+      // Prompt the player to take an artifact. Only the optional single-Horn
+      // case (see takeIsOptional above) gets a decline button; the two-option
+      // case is a forced choice between the Lantern and Horn.
       const actionButtons = [
         ...availableArtifacts.map((artifact, index) => ({
           label: artifact.label,
           action: index + 1,
         })),
+        ...(takeIsOptional ? [{ label: 'KEEP CURRENT', action: PROMPT_DECLINE_ACTION, role: 'cancel' as const }] : []),
       ];
       const result = (await cardEffectArgs.actionService.run('userPrompt', {
         playerId: cardEffectArgs.playerId,
         prompt: 'Take an Artifact?',
         actionButtons,
       })) as { action: number };
+
+      if (takeIsOptional && result.action === PROMPT_DECLINE_ACTION) {
+        loggerService.debug('[border-guard effect] player declined to take the Horn');
+        return;
+      }
 
       const selectedArtifact = availableArtifacts[result.action - 1];
       if (!selectedArtifact) {
@@ -243,20 +241,23 @@ const expansion: CardExpansionModule = {
             const gainedCard = triggeredArgs.cardLibrary.getCard(gainedCardId);
 
             loggerService.debug(`[cargo-ship cardGained effect] gained ${gainedCard}; prompting set-aside choice`);
-            const promptResult = (await triggeredArgs.actionService.run('userPrompt', {
-              playerId: cardEffectArgs.playerId,
-              prompt: `Set aside ${gainedCard.cardName} with Cargo Ship?`,
-              actionButtons: [
-                { label: 'NO', action: 1 },
-                { label: 'YES', action: 2 },
-              ],
-              content: {
-                type: 'display-cards',
-                cardIds: [gainedCardId],
+            const shouldSetAside = await triggeredArgs.promptService.confirm(
+              {
+                playerId: cardEffectArgs.playerId,
+                prompt: `Set aside ${gainedCard.cardName} with Cargo Ship?`,
+                actionButtons: [
+                  { label: 'NO', action: 1 },
+                  { label: 'YES', action: 2 },
+                ],
+                content: {
+                  type: 'display-cards',
+                  cardIds: [gainedCardId],
+                },
               },
-            })) as { action?: number } | null;
+              2,
+            );
 
-            if (promptResult?.action !== 2) {
+            if (!shouldSetAside) {
               loggerService.debug('[cargo-ship cardGained effect] player declined set-aside');
               return;
             }
@@ -286,15 +287,10 @@ const expansion: CardExpansionModule = {
             loggerService.debug('[cargo-ship cardGained effect] registering next-turn retrieval');
 
             // Keep Cargo Ship through cleanup and return the set-aside card next turn.
-            cardEffectArgs.registerDurationEffect(cargoShipCard, {
-              id: `cargo-ship:${cardEffectArgs.cardId}:startTurn:${cargoShipPlayInstance}`,
-              playerId: cardEffectArgs.playerId,
-              compulsory: true,
-              once: true,
-              allowMultipleInstances: true,
-              listeningFor: 'startTurn',
-              condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-              triggeredEffectFn: async startTurnArgs => {
+            registerStartTurnEffect(
+              cardEffectArgs,
+              cargoShipCard,
+              async startTurnArgs => {
                 // Move Cargo Ship back to playArea so it discards normally in this turn's cleanup.
 
                 if (setAsideCardId === undefined) {
@@ -321,7 +317,8 @@ const expansion: CardExpansionModule = {
                   to: { location: 'playerHand' },
                 });
               },
-            });
+              { id: `cargo-ship:${cardEffectArgs.cardId}:startTurn:${cargoShipPlayInstance}` },
+            );
           },
         },
         { idSuffix: cardGainedTriggerIdSuffix },
@@ -361,16 +358,19 @@ const expansion: CardExpansionModule = {
         loggerService.debug(
           `[ducat onGained effect] prompting whether to trash Copper from ${copperInHandIds.length} card(s)`,
         );
-        const promptResult = (await cardEffectArgs.actionService.run('userPrompt', {
-          playerId: eventArgs.playerId,
-          prompt: 'Trash a Copper from your hand?',
-          actionButtons: [
-            { label: 'NO', action: 1 },
-            { label: 'YES', action: 2 },
-          ],
-        })) as { action?: number } | null;
+        const shouldTrashCopper = await cardEffectArgs.promptService.confirm(
+          {
+            playerId: eventArgs.playerId,
+            prompt: 'Trash a Copper from your hand?',
+            actionButtons: [
+              { label: 'NO', action: 1 },
+              { label: 'YES', action: 2 },
+            ],
+          },
+          2,
+        );
 
-        if (promptResult?.action !== 2) {
+        if (!shouldTrashCopper) {
           loggerService.debug('[ducat onGained effect] player declined to trash Copper');
           return;
         }
@@ -432,7 +432,7 @@ const expansion: CardExpansionModule = {
             to: { location: 'playerDiscard' },
           },
           {
-            loggingContext: { source: eventArgs.cardId },
+            source: eventArgs.cardId,
             lifecycleContext: {
               onGained: {
                 sourceCardId: eventArgs.cardId,
@@ -455,7 +455,7 @@ const expansion: CardExpansionModule = {
           count: 2,
         },
         {
-          loggingContext: { source: cardEffectArgs.cardId },
+          source: cardEffectArgs.cardId,
         },
       );
       await cardEffectArgs.actionService.run(
@@ -464,7 +464,7 @@ const expansion: CardExpansionModule = {
           count: 1,
         },
         {
-          loggingContext: { source: cardEffectArgs.cardId },
+          source: cardEffectArgs.cardId,
         },
       );
 
@@ -578,6 +578,8 @@ const expansion: CardExpansionModule = {
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
         logTag: 'hideout effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: cardEffectArgs.cardId,
       });
       if (!gainedCurseId) {
         loggerService.debug('[hideout effect] no Curse cards in supply');
@@ -626,7 +628,7 @@ const expansion: CardExpansionModule = {
               to: { location: 'playerDiscard' },
             },
             {
-              loggingContext: { source: cardEffectArgs.cardId },
+              source: cardEffectArgs.cardId,
             },
           );
         }
@@ -637,9 +639,6 @@ const expansion: CardExpansionModule = {
       loggerService.debug(`[inventor effect] applying -$1 cost reduction to ${allCards.length} card(s) this turn`);
       const ruleUnsubs = allCards.map(card =>
         cardEffectArgs.cardPriceController.registerRule(card, (_targetCard, context) => {
-          if (context.playerId !== cardEffectArgs.playerId) {
-            return { restricted: false, cost: { treasure: 0 } };
-          }
           if (getCurrentPlayer(context.match).id !== cardEffectArgs.playerId) {
             return { restricted: false, cost: { treasure: 0 } };
           }
@@ -850,11 +849,7 @@ const expansion: CardExpansionModule = {
       });
 
       // Attack each other non-immune player in turn order.
-      const targetPlayerIds = findOrderedTargets({
-        startingPlayerId: cardEffectArgs.playerId,
-        appliesTo: 'ALL_OTHER',
-        match: cardEffectArgs.match,
-      }).filter(id => !isPlayerImmune(cardEffectArgs.reactionContext, id));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       loggerService.debug(`[old-witch effect] targets ${targetPlayerIds.join(', ')}`);
 
@@ -866,6 +861,8 @@ const expansion: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'old-witch effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: cardEffectArgs.cardId,
         });
         if (gainedCurseId) {
           const curseCard = cardEffectArgs.cardLibrary.getCard(gainedCurseId);
@@ -885,16 +882,19 @@ const expansion: CardExpansionModule = {
         }
 
         loggerService.debug(`[old-witch effect] player ${targetPlayerId} may trash a Curse from hand`);
-        const promptResult = (await cardEffectArgs.actionService.run('userPrompt', {
-          playerId: targetPlayerId,
-          prompt: 'Trash a Curse from your hand?',
-          actionButtons: [
-            { label: 'NO', action: 1 },
-            { label: 'YES', action: 2 },
-          ],
-        })) as { action?: number } | null;
+        const shouldTrashCurse = await cardEffectArgs.promptService.confirm(
+          {
+            playerId: targetPlayerId,
+            prompt: 'Trash a Curse from your hand?',
+            actionButtons: [
+              { label: 'NO', action: 1 },
+              { label: 'YES', action: 2 },
+            ],
+          },
+          2,
+        );
 
-        if (promptResult?.action !== 2) {
+        if (!shouldTrashCurse) {
           loggerService.debug(`[old-witch effect] player ${targetPlayerId} declined to trash a Curse`);
           continue;
         }
@@ -1144,16 +1144,16 @@ const expansion: CardExpansionModule = {
 
       loggerService.debug(`[research effect] set aside ${setAsideCardIds.length} card(s)`);
 
+      if (!setAsideCardIds.length) {
+        loggerService.debug('[research effect] nothing set aside, skipping next-turn duration effect');
+        return;
+      }
+
       // Keep Research through cleanup and return set-aside cards to hand next turn.
-      cardEffectArgs.registerDurationEffect(researchCard, {
-        id: `research:${cardEffectArgs.cardId}:startTurn:${researchPlayInstance}`,
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        listeningFor: 'startTurn',
-        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        researchCard,
+        async triggeredArgs => {
           loggerService.debug('[research startTurn effect] returning Research to play area');
 
           for (const setAsideCardId of setAsideCardIds) {
@@ -1173,7 +1173,8 @@ const expansion: CardExpansionModule = {
             });
           }
         },
-      });
+        { id: `research:${cardEffectArgs.cardId}:startTurn:${researchPlayInstance}` },
+      );
     },
   },
   scepter: {
@@ -1202,16 +1203,19 @@ const expansion: CardExpansionModule = {
         return;
       }
 
-      const promptResult = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId: cardEffectArgs.playerId,
-        prompt: 'Choose one',
-        actionButtons: [
-          { label: '+$2', action: 1 },
-          { label: 'REPLAY ACTION', action: 2 },
-        ],
-      })) as { action?: number } | null;
+      const shouldReplayAction = await cardEffectArgs.promptService.confirm(
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Choose one',
+          actionButtons: [
+            { label: '+$2', action: 1 },
+            { label: 'REPLAY ACTION', action: 2 },
+          ],
+        },
+        2,
+      );
 
-      if (promptResult?.action !== 2) {
+      if (!shouldReplayAction) {
         loggerService.debug('[scepter effect] player chose +2 treasure');
         await cardEffectArgs.actionService.run('gainTreasure', {
           count: 2,
@@ -1407,33 +1411,10 @@ const expansion: CardExpansionModule = {
       });
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
-      // Reveal up to the top 3 cards of deck, shuffling if needed.
-      const revealedCardIds: CardId[] = [];
-      for (let index = 0; index < 3; index++) {
-        let deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
-        if (!deck.length) {
-          loggerService.debug('[seer effect] deck empty, shuffling discard');
-          await cardEffectArgs.actionService.run('shuffleDeck', {
-            playerId: cardEffectArgs.playerId,
-          });
-          deck = cardEffectArgs.cardSourceController.getSource('playerDeck', cardEffectArgs.playerId);
-        }
-
-        if (!deck.length) {
-          loggerService.debug('[seer effect] no cards left to reveal');
-          break;
-        }
-
-        const topCardId = deck.slice(-1)[0];
-        const topCard = cardEffectArgs.cardLibrary.getCard(topCardId);
-        loggerService.debug(`[seer effect] revealing ${topCard}`);
-        await cardEffectArgs.actionService.run('revealCard', {
-          cardId: topCardId,
-          playerId: cardEffectArgs.playerId,
-          moveToSetAside: true,
-        });
-        revealedCardIds.push(topCardId);
-      }
+      // Reveal up to the top 3 cards of deck, set aside — shuffling the
+      // discard back in automatically if the deck runs dry mid-reveal.
+      const revealedCards = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, 3, { setAside: true });
+      const revealedCardIds: CardId[] = revealedCards.map(card => card.id);
 
       if (!revealedCardIds.length) {
         return;
@@ -1715,11 +1696,7 @@ const expansion: CardExpansionModule = {
       });
 
       // Attack each other non-immune player in turn order.
-      const targetPlayerIds = findOrderedTargets({
-        startingPlayerId: cardEffectArgs.playerId,
-        appliesTo: 'ALL_OTHER',
-        match: cardEffectArgs.match,
-      }).filter(id => !isPlayerImmune(cardEffectArgs.reactionContext, id));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, cardEffectArgs.playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         const hand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);

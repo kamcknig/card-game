@@ -127,6 +127,13 @@ The nginx container enforces a strict CSP with `script-src 'self'`. This means:
 - Use new control flow syntax (`@if`, `@for`, `@let`) in templates
 - Convert nanostores to signals with `toSignal(nanoStoresService.useStore(store))`
 - SCSS with `@use` (never `@import`); prefer flexbox over grid
+- New dialogs must use `app-ui-dialog` (or `app-confirm-dialog` for the
+  heading + message + Cancel/Confirm pattern) with a named `layer` and
+  `skin` — never hand-roll backdrop, panel chrome, or Escape handling.
+  Dismissal (Escape/backdrop/close-X, gated by the single `dismissable`
+  input) must always invoke the same handler as the dialog's Cancel button;
+  required-action dialogs set `dismissable=false`. See
+  `docs/design-guidelines.md` "Dialogs / Modals" for skins/layers/policy.
 - Card source keys use format `sourceKey` or `sourceKey:playerId` (e.g., `playerHand:1`, `setAside:TrashToken`)
 - Card images at `public/assets/card-images/base-v2/{full-size,half-size}/`
 - Dev server port: 51455

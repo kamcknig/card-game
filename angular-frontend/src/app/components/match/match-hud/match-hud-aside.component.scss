@@ -92,21 +92,12 @@ app-game-log {
   }
 }
 
-// Mat preview modal styles — mirrored from match-hud.component.scss so the
-// dialog renders correctly when triggered from the aside.
+// Mat preview modal content layout; panel chrome comes from the shell's
+// dark skin. Bottom padding leaves room for the fanned .card-item
+// negative-margin overlap below the last row.
 .mat-modal-content {
-  color: var(--theme-text-on-dark);
   position: relative;
-  background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
-  border: 1px solid var(--theme-border-strong);
-  pointer-events: auto;
-  padding: var(--theme-space-md) var(--theme-space-md) 120px var(--theme-space-md);
-}
-
-.mat-modal-title {
-  color: var(--theme-text-on-dark);
-  margin-bottom: var(--theme-space-xl);
-  font-size: 24px;
+  padding-bottom: 120px;
 }
 
 .player-flex-container {

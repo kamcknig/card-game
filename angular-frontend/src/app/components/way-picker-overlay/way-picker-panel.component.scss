@@ -1,0 +1,68 @@
+// Shared panel chrome. Position (fixed/absolute), z-index, and width are
+// consumer-specific — set from each consumer's own stylesheet by targeting
+// the `app-way-picker-panel` host tag directly (Angular's emulated
+// encapsulation lets a parent stylesheet reach a child's host element this
+// way without `::ng-deep`).
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--theme-space-sm);
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-medium));
+  border: 1px solid var(--theme-border-action);
+  border-radius: var(--theme-radius-md);
+  padding: var(--theme-space-sm);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+.way-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--theme-space-sm);
+}
+
+.way-picker-list.scrollable {
+  max-height: 320px;
+  overflow: auto;
+}
+
+.way-entry {
+  background: transparent;
+  // No border: a border consumes layout space, shrinking the button's
+  // content box below the fixed-width app-card-like it wraps and causing a
+  // few-px overflow — invisible on the board flyout (no overflow set) but a
+  // visible scrollbar once the modal tooltip's list becomes `scrollable`.
+  // Hover/selected rings use box-shadow instead, which paints outside the
+  // box without affecting layout.
+  border: none;
+  border-radius: var(--theme-radius-md);
+  padding: 0;
+  cursor: pointer;
+  display: block;
+  transition: box-shadow 120ms ease;
+}
+
+.way-entry:hover {
+  box-shadow: 0 0 0 1px var(--theme-border-action);
+}
+
+// The chosen Way keeps a Way-blue ring so re-opening the tooltip shows the
+// current pick (only the modal tooltip sets selectedWayId).
+.way-entry.selected-way {
+  box-shadow: 0 0 0 2px var(--theme-color-way);
+}
+
+// Suppresses app-card-like's own hover treatment (transform: scale(1.02) +
+// its own border/box-shadow) inside a way-entry: it's visually redundant
+// with the ring above, and — critically — the scaled paint box gets
+// counted in the scrollable-overflow calculation for the ancestor
+// .way-picker-list.scrollable, which is what causes spurious scrollbars
+// on hover in the modal tooltip. ::ng-deep is required to reach the
+// child component's internal .card-like-frame element (established
+// pattern; see match.component.scss).
+::ng-deep .way-entry .card-like-frame:hover {
+  transform: none;
+  border-color: var(--theme-border-strong);
+  box-shadow: none;
+}

@@ -133,7 +133,13 @@ export type MatchStats = {
   /**
    * Keys are the card's ID that was played, and values are CardStats objects.
    */
-  playedCards: Record<CardId, CardStats>;
+  playedCards: Record<CardId, CardStats & {
+    // Where the card was played from, captured immediately before playCard
+    // moves it to playArea. Undefined if the prior source couldn't be
+    // resolved (defensive; should not happen in normal play).
+    sourceLocation?: CardLocation;
+    sourcePlayerId?: PlayerId;
+  }>;
   playedCardsByTurn: Record<number, CardId[] | undefined>;
 
   trashedCards: Record<CardId, CardStats>;
@@ -208,6 +214,12 @@ export interface Match {
   debt: Record<PlayerId, number>;
   // Tracks pending skipped turns by player (used by effects like Lich).
   skippedTurns: Record<PlayerId, number>;
+  // Per-player-per-turn flag for Empires' Fortune ("double your $ if you
+  // haven't yet this turn") — shared across all 5 Fortune copies, since
+  // per-card metadata can't track state that must be visible to other
+  // instances of the same pile. Reset to false by Fortune's own endTurn
+  // reaction.
+  fortuneDoubledThisTurn: Record<PlayerId, boolean>;
   config: ComputedMatchConfiguration,
   currentPlayerTurnIndex: number;
   events: Event[];
@@ -287,7 +299,10 @@ export type CardOverrides = Record<PlayerId, Record<CardId, Partial<Card>>>;
 
  ******************/
 
-export type LogEntrySource = CardId;
+// A log entry's cause: a match card instance, or a card-like (boon, hex,
+// event, project, ...) tagged so the client resolves it in the right
+// namespace — card-like ids never exist in the card library.
+export type LogEntrySource = CardId | { kind: 'cardLike'; id: CardLikeId };
 
 export type LogEntry =
   | { type: 'draw'; playerId: PlayerId; cardId: CardId; depth?: number; source?: LogEntrySource }
@@ -302,12 +317,17 @@ export type LogEntry =
   | { type: 'gainVictoryToken'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   // Logs a card-like effect (boon/hex/state/artifact/event/landmark).
   | { type: 'cardLikeEffect'; playerId: PlayerId; cardLikeId: CardLikeId; effectText: string; depth?: number; source?: LogEntrySource }
+  // Logs a real-card effect that has no dedicated action/log entry (e.g. a state change with no
+  // card-agnostic loggable equivalent). Mirrors cardLikeEffect but for a Card rather than a card-like.
+  | { type: 'cardEffect'; playerId: PlayerId; cardId: CardId; effectText: string; depth?: number; source?: LogEntrySource }
   | { type: 'tokenEffect'; playerId: PlayerId; cardId: CardId; tokenId: TokenId; effectText: string; depth?: number; source?: LogEntrySource }
   // Token placement and consumption logs.
   | { type: 'tokenPlaced'; playerId: PlayerId; tokenId: TokenId; depth?: number; source?: LogEntrySource }
   | { type: 'tokenConsumed'; playerId: PlayerId; tokenId: TokenId; depth?: number; source?: LogEntrySource }
   // Logs when a player buys a Project.
   | { type: 'buyProject'; playerId: PlayerId; cardLikeId: CardLikeId; depth?: number; source?: LogEntrySource }
+  // Logs when a player receives a boon/hex (or other card-like) from a landscape deck.
+  | { type: 'receiveCardLike'; playerId: PlayerId; cardLikeId: CardLikeId; depth?: number; source?: LogEntrySource }
   | { type: 'gainCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'cardPlayed'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'revealCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
@@ -491,6 +511,9 @@ export type SelectableSearchCatalog = {
   prophecies: ProphecyNoId[];
 };
 
+// Discriminates which SelectableSearchCatalog bucket a search request targets.
+export type SearchCatalogKind = keyof SelectableSearchCatalog;
+
 // Represents one persisted match-configuration save file visible to clients.
 export type SavedMatchConfigurationEntry = {
   key: string;
@@ -528,6 +551,22 @@ export type MatchConfigurationDeleteResult = {
   message?: string;
 };
 
+// One target's removal-vote tally, broadcast whenever vote state changes.
+export type RemovalVoteStateEntry = {
+  targetPlayerId: PlayerId;
+  // Players who currently have an active vote to remove the target.
+  voterIds: PlayerId[];
+};
+
+// Announces that a player permanently left an active match (voted out or
+// resigned). Carries the name because setPlayerList broadcasts erase the
+// player from client state before this can be resolved locally.
+export type PlayerRemovedFromMatchPayload = {
+  playerId: PlayerId;
+  playerName: string;
+  reason: 'voted' | 'resigned';
+};
+
 export type ServerEmitEvents = {
   addLogEntry: (logEntry: LogEntry[]) => void;
   // Sent to a freshly-authenticated client immediately after the socket
@@ -552,6 +591,11 @@ export type ServerEmitEvents = {
   matchConfigurationUpdated: (val: MatchConfiguration) => void;
   matchReady: () => void;
   matchStarted: () => void;
+  // Sent to a game's room when matchController.initialize() rejects after a
+  // startMatch attempt. The lobby is rolled back to a joinable state (see
+  // GameMatchLifecycleCoordinatorService) and clients should show `message`
+  // and re-enable the ready/start controls instead of waiting on matchReady.
+  matchStartFailed: (payload: { gameId: string; message: string }) => void;
   nextPhaseComplete: () => void;
   patchUpdate: (patchMatch: Operation[], patchCardLibrary: Operation[]) => void;
   patchCardLibrary: (patch: Operation[]) => void;
@@ -561,6 +605,12 @@ export type ServerEmitEvents = {
   playAllTreasureComplete: () => void;
   playerConnected: (player: Player) => void;
   playerDisconnected: (player: Player) => void;
+  // Full removal-vote snapshot; sent to the room on every vote change and
+  // to a reconnecting socket so Kick/Undo-kick state survives reloads.
+  removalVoteState: (entries: RemovalVoteStateEntry[]) => void;
+  // A player was permanently removed from the active match (voted out or
+  // resigned); clients show them as "(removed)" in the disconnect dialog.
+  playerRemovedFromMatch: (payload: PlayerRemovedFromMatchPayload) => void;
   playerNameUpdated: (playerId: PlayerId, name: string) => void;
   playerReady: (playerId: PlayerId, ready: boolean) => void;
   // Full game-lobby snapshot sent on connect and on explicit request.
@@ -581,6 +631,10 @@ export type ServerEmitEvents = {
   kickedFromGame: (payload: { gameId: string; message: string }) => void;
   // Client was removed and banned from a lobby game by owner action.
   bannedFromGame: (payload: { gameId: string; message: string }) => void;
+  // Sent to the requesting owner socket after a successful unban, carrying
+  // the refreshed banned-session list so the owner's UI can acknowledge the
+  // action without a separate round trip.
+  bannedSessionsUpdated: (payload: { gameId: string; bannedSessionIds: string[] }) => void;
   // Runtime debug identity used by client-side diagnostic overlays.
   debugRuntimeContext: (payload: DebugRuntimeContext) => void;
   // Full searchable card-like catalog used for local UI filtering in match configuration.
@@ -606,6 +660,12 @@ export type ServerEmitEvents = {
   searchProjectResponse: (projectData: ProjectNoId[]) => void;
   // Sends way search results to the client.
   searchWayResponse: (wayData: WayNoId[]) => void;
+  // Sends trait search results to the client.
+  searchTraitResponse: (traitData: TraitNoId[]) => void;
+  // Sends ally search results to the client.
+  searchAllyResponse: (allyData: AllyNoId[]) => void;
+  // Sends prophecy search results to the client.
+  searchProphecyResponse: (prophecyData: ProphecyNoId[]) => void;
   selectCard: (signalId: string, selectCardArgs: SelectActionCardArgs & { selectableCardIds: CardId[] }) => void;
   setPlayerList: (players: Player[]) => void;
   // Sends the full ordered log history for clients to replace their local
@@ -647,7 +707,6 @@ export interface ServerListenEvents {
   banLobbyPlayer: (gameId: string, targetPlayerId: PlayerId) => void;
   // Owner-only request to unban a previously banned session from a lobby game.
   unbanLobbyPlayer: (gameId: string, targetSessionId: string) => void;
-  cardsSelected: (selected: CardId[]) => void
   cardLikeTapped: (playerId: PlayerId, cardId: CardId) => void;
   cardTapped: (playerId: PlayerId, cardId: CardId) => void;
   // Plays a hand Action card using an active Way instead of its printed effect.
@@ -683,6 +742,8 @@ export interface ServerListenEvents {
   editMatch: () => void;
   // Vote to remove a disconnected human player and resume the match.
   removeDisconnectedPlayer: (playerId: PlayerId) => void;
+  // Retracts this player's earlier vote to remove a disconnected player.
+  retractRemoveDisconnectedPlayer: (playerId: PlayerId) => void;
   // Originator clicks the undo button; server starts a vote round.
   undoRequested: () => void;
   // Originator clicks Cancel on their waiting dialog.
@@ -712,6 +773,12 @@ export interface ServerListenEvents {
   searchProjects: (playerId: PlayerId, searchStr: string) => void;
   // Requests way search results from the server.
   searchWays: (playerId: PlayerId, searchStr: string) => void;
+  // Requests trait search results from the server.
+  searchTraits: (playerId: PlayerId, searchStr: string) => void;
+  // Requests ally search results from the server.
+  searchAllies: (playerId: PlayerId, searchStr: string) => void;
+  // Requests prophecy search results from the server.
+  searchProphecies: (playerId: PlayerId, searchStr: string) => void;
   updatePlayerName: (playerId: PlayerId, name: string) => void;
   userInputReceived: (signalId: string, input: unknown) => void;
 }
@@ -880,6 +947,34 @@ export class CardLike<M = unknown> {
   // shows e.g. 'castles-art.jpg' rather than the first member's art. Real
   // in-play cards do not set this — they always render their own art.
   imageKeyOverride?: string;
+  // Alternate search terms for a pile-representative catalog entry: the
+  // cardName of every OTHER member of the same split pile (e.g. the
+  // "Clashes" representative carries ["Archer","Warlord","Territory"] when
+  // "Battle Plan" is the representative). Lets a kingdom search for "Battle
+  // Plan" surface the single "Clashes" row. Undefined for non-pile /
+  // single-card entries. Search-index-only — never rendered.
+  searchAliases?: string[];
+  // Every member of the same split pile (INCLUDING this entry's own
+  // original identity — the representative's cardName/image are overridden
+  // to the pile-level randomizer art above, so it no longer visually
+  // corresponds to any specific member). cardKey + cardName + cost is
+  // enough to derive each member's own detail image path (expansionName +
+  // cardKey) and sort order (cost ascending) without needing full CardNoId
+  // objects. Undefined for non-pile / single-card entries. Powers the
+  // split-pile sibling display in the card detail dialog when the primary
+  // card comes from the lobby/match-configuration search catalog.
+  pileMembers?: { cardKey: string; cardName: string; cost: CardCost }[];
+  // The pile key this card's presence in the kingdom causes to exist (e.g.
+  // Young Witch's linkedPileKey is the chosen Bane pile's kingdom key; a
+  // Looter-typed card's linkedPileKey is 'ruins'). Stamped only on the
+  // TRIGGER side by each mechanic's configurator at match-configuration
+  // time. The reverse direction (viewing the target pile, seeing every
+  // trigger currently in the kingdom) is resolved client-side by scanning
+  // for any card whose linkedPileKey equals the viewed pile's own kingdom
+  // key — no field is needed on the target side, which also naturally
+  // covers many:1 relationships (several Looters sharing one Ruins pile)
+  // without enumerating triggers anywhere.
+  linkedPileKey?: string | null;
   metadata: M;
 
   constructor(args: CardLike) {
@@ -903,6 +998,13 @@ export class CardLike<M = unknown> {
     this.randomizerData = args.randomizerData;
     this.kingdomSelectable = args.kingdomSelectable ?? true;
     this.imageKeyOverride = args.imageKeyOverride;
+    this.searchAliases = args.searchAliases;
+    this.pileMembers = args.pileMembers;
+    // Preserved through card instantiation (unlike searchAliases/pileMembers,
+    // which are catalog-only plain objects) since real in-play Card instances
+    // are built via `new Card(...)` (card-instance-factory-service.ts) and
+    // need this field to resolve "caused by" siblings in the detail dialog.
+    this.linkedPileKey = args.linkedPileKey ?? null;
     this.cost = args.cost ?? { treasure: 0 };
     const metadata = args.metadata ?? {};
     this.metadata = metadata as M;
@@ -1039,12 +1141,18 @@ type ProjectArgs = {
   [p in keyof CardLike]: CardLike[p];
 } & {
   randomizer?: string | null;
+  // Freeform filter tags (mirrors Card.tags), e.g. 'coffers' / 'villagers'
+  // provider markers consumed by the frontend resource-visibility logic.
+  tags?: string[];
 };
 
 // Projects are landscape card-likes that grant permanent abilities.
 export class Project extends CardLike {
   // Randomizer key used to group projects during selection.
   randomizer: string | null;
+  // Freeform filter tags (mirrors Card.tags); flows from the project
+  // library JSON through createProject's spread into this constructor.
+  tags?: string[];
 
   constructor(args: ProjectArgs) {
     super(args);
@@ -1052,6 +1160,7 @@ export class Project extends CardLike {
     this.id = args.id;
     this.cardName = args.cardName;
     this.randomizer = args.randomizer ?? null;
+    this.tags = args.tags ?? [];
   }
 
   override toString() {
@@ -1336,9 +1445,27 @@ export class Card<M = unknown> extends CardLike<M> {
 
 const EffectTargetValues = ['ANY', 'ALL_OTHER', 'ALL'] as const;
 export type EffectTarget = typeof EffectTargetValues[number] | string;
-export type ActionButtons = {
+
+/**
+ * The conventional action id for declining/cancelling a prompt without
+ * performing its action. Kept for the many existing prompts whose Cancel
+ * buttons use id 0; new/updated prompt builders should ALSO set
+ * `role: 'cancel'` explicitly rather than relying on this id.
+ */
+export const PROMPT_DECLINE_ACTION = 0 as const;
+
+export type ActionButton = {
   label: string;
   action: string | number;
-}[];
+  /**
+   * Marks this button as the prompt's decline path — pressing it (or
+   * dismissing the dialog via Escape/backdrop) means "do not perform the
+   * requested action". A prompt with no cancel-role button and no
+   * PROMPT_DECLINE_ACTION button is a required action and cannot be
+   * dismissed.
+   */
+  role?: 'cancel';
+};
+export type ActionButtons = ActionButton[];
 export type CardNoId = Omit<Card, 'id'>;
 export type CardFacing = 'front' | 'back';

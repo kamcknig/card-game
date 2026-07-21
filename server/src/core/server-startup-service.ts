@@ -2,6 +2,7 @@ import { ExpansionListElement } from 'shared/types/index.ts';
 import { LobbyDirectoryService } from './lobby-directory-service.ts';
 import { LoggerService } from './logger-service.ts';
 import { ExpansionLoaderService } from './expansion-loader-service.ts';
+import { ExpansionSearchService } from './expansion-search-service.ts';
 import { AuthSessionService } from './auth/auth-session-service.ts';
 import { UserAccountAuthProvider } from './auth/user-account-auth-provider.ts';
 import { AuthSessionCleanupService } from './auth/auth-session-cleanup-service.ts';
@@ -39,6 +40,7 @@ export class ServerStartupService {
     private readonly matchConfigurationSaveService: MatchConfigurationSaveStore,
     private readonly supabaseClientProvider: SupabaseClientProvider,
     private readonly serverHealthService: ServerHealthService,
+    private readonly expansionSearchService: ExpansionSearchService,
   ) {}
 
   /**
@@ -135,9 +137,25 @@ export class ServerStartupService {
 
       for (const expansion of expansionList) {
         this.loggerService.info(`[SERVER] loading expansion card data for ${expansion.title}`);
-        await this.expansionLoaderService.loadExpansion(expansion);
+        const loaded = await this.expansionLoaderService.loadExpansion(expansion);
+        if (!loaded) {
+          // The expansion failed to load and was removed from the catalog by
+          // ExpansionLoaderService — do not announce it to the lobby as available.
+          this.loggerService.warn(`[SERVER] skipping lobby announcement for failed expansion ${expansion.title}`);
+          continue;
+        }
         this.lobbyDirectoryService.expansionLoaded(expansion);
       }
+
+      // ExpansionSearchService builds its indexes in its constructor, which runs
+      // before any expansion has loaded — every per-expansion setSelectableSearchCatalog
+      // emit above was therefore sent against an empty/stale catalog. Rebuild once
+      // now that every expansion has finished loading, then re-broadcast so already
+      // connected clients (and the first snapshot new clients receive) reflect the
+      // full catalog.
+      this.loggerService.info('[SERVER] rebuilding expansion search indexes after expansion load');
+      this.expansionSearchService.rebuildIndexes();
+      this.lobbyDirectoryService.broadcastSelectableSearchCatalog();
     } catch (error) {
       this.loggerService.error('[SERVER] failed while loading expansions');
       this.loggerService.error(error);

@@ -1,7 +1,23 @@
 <ng-template #dialogContent>
   <div class="ui-dialog-shell" (mousedown)="$event.stopPropagation()">
-    <div class="ui-dialog-panel" [ngClass]="panelClass()">
-      <ng-content></ng-content>
+    <div class="ui-dialog-panel" [ngClass]="panelNgClass()" cdkTrapFocus>
+      @if (heading() || showClose()) {
+        <div class="ui-dialog-header">
+          <h2 class="ui-dialog-heading">{{ heading() }}</h2>
+          @if (showClose()) {
+            <button type="button" class="ui-dialog-close" aria-label="Close" (click)="onCloseClicked()">
+              <lucide-icon [img]="XIcon" [size]="16" />
+            </button>
+          }
+        </div>
+      }
+      <div class="ui-dialog-body">
+        <ng-content></ng-content>
+      </div>
+      <!-- Footer band: consumers project <div class="ui-dialog-footer">…</div>
+           with shared .btn buttons; the class carries the band styling so an
+           absent footer renders nothing. -->
+      <ng-content select=".ui-dialog-footer"></ng-content>
     </div>
   </div>
 </ng-template>

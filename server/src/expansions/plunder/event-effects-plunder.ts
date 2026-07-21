@@ -373,6 +373,8 @@ const registerMirrorListener = (
             pileKey: gainedPileKey,
             to: { location: 'playerDiscard' },
             logTag: 'mirror effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: { kind: 'cardLike', id: event.id },
           });
 
           if (gainedCopyId === undefined) {
@@ -609,6 +611,8 @@ const effectMap: CardExpansionModule = {
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
         logTag: 'invasion effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: { kind: 'cardLike', id: cardEffectArgs.cardId },
       });
 
       // Invasion then gains an Action card onto deck.
@@ -734,9 +738,9 @@ const effectMap: CardExpansionModule = {
       const playerId = cardEffectArgs.playerId;
       const launchRestrictionRule: CardPriceRule = (card, context) => {
         if (card.id !== event.id || context.playerId !== playerId) {
-          return { restricted: false, cost: card.cost };
+          return { restricted: false, cost: { treasure: 0 } };
         }
-        return { restricted: true, cost: card.cost };
+        return { restricted: true, cost: { treasure: 0 } };
       };
       const launchRestrictionUnsub = cardEffectArgs.cardPriceController.registerRule(event, launchRestrictionRule);
 
@@ -1051,16 +1055,19 @@ const effectMap: CardExpansionModule = {
   scrounge: {
     registerEffects: () => async cardEffectArgs => {
       const playerId = cardEffectArgs.playerId;
-      const choice = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId,
-        prompt: 'Choose one',
-        actionButtons: [
-          { label: 'TRASH A CARD', action: 1 },
-          { label: 'GAIN ESTATE FROM TRASH', action: 2 },
-        ],
-      })) as { action: number };
+      const choseTrash = await cardEffectArgs.promptService.confirm(
+        {
+          playerId,
+          prompt: 'Choose one',
+          actionButtons: [
+            { label: 'TRASH A CARD', action: 1 },
+            { label: 'GAIN ESTATE FROM TRASH', action: 2 },
+          ],
+        },
+        1,
+      );
 
-      if (choice.action === 1) {
+      if (choseTrash) {
         const hand = getPlayerSourceSafe(cardEffectArgs, 'playerHand', playerId);
         if (!hand.length) {
           return;

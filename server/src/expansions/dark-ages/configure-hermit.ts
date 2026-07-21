@@ -2,9 +2,17 @@ import { Supply } from 'shared/types/index.ts';
 import { ExpansionConfiguratorContext } from '@server-types/index.ts';
 
 export const configureHermit = async (args: ExpansionConfiguratorContext) => {
-  if (!args.config.kingdomSupply.some(supply => supply.name === 'hermit')) {
+  const hermitSupply = args.config.kingdomSupply.find(supply => supply.name === 'hermit');
+  if (!hermitSupply) {
     return;
   }
+
+  // Point Hermit at the Madman pile so the detail dialog can show them as
+  // siblings, regardless of whether the Madman pile itself still needs to
+  // be built below.
+  hermitSupply.cards.forEach(card => {
+    card.linkedPileKey = 'madman';
+  });
 
   if (args.config.nonSupply?.some(supply => supply.name === 'madman')) {
     return;

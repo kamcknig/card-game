@@ -1,9 +1,13 @@
 import { AppSocket, MatchBaseConfiguration } from '@server-types/index.ts';
 import {
+  AllyNoId,
   Card,
   CardId,
+  CardNoId,
   DebugRuntimeContext,
+  EventNoId,
   ExpansionListElement,
+  LandmarkNoId,
   MatchConfigurationDeleteResult,
   MatchConfigurationLoadResult,
   MatchConfigurationSaveNameCheckResult,
@@ -12,9 +16,14 @@ import {
   MatchConfiguration,
   Player,
   PlayerId,
+  ProjectNoId,
+  ProphecyNoId,
   SavedMatchConfigurationEntry,
   ServerEmitEvents,
   ServerListenEvents,
+  Supply,
+  TraitNoId,
+  WayNoId,
 } from 'shared/types/index.ts';
 import jsonPatch from 'fast-json-patch';
 import { Server } from 'socket.io';
@@ -350,7 +359,8 @@ export class Game {
     this.io.in(this.runtimeState.roomName).emit('setPlayerList', this.runtimeState.players);
     this.io
       .in(this.runtimeState.roomName)
-      .emit('expansionList', this.runtimeState.availableExpansion.sort((a, b) => a.order - b.order));
+      // Sort a copy — shared lobby state must never be reordered in place by an emit.
+      .emit('expansionList', [...this.runtimeState.availableExpansion].sort((a, b) => a.order - b.order));
     this.io
       .in(this.runtimeState.roomName)
       .emit('matchConfigurationUpdated', this.runtimeState.matchConfiguration!);
@@ -373,65 +383,32 @@ export class Game {
     // Enforce expansion mutual-exclusion rules before applying the updated lobby config.
     await this.expansionCompatibilityService.applyMutualExclusions(currentConfig, newConfig);
 
-    const kingdomPatch = jsonPatch.compare(currentConfig.kingdomSupply, newConfig.kingdomSupply);
-    if (kingdomPatch.length) {
-      this.configStore.persistPreselectedKingdoms(newConfig.kingdomSupply);
-      this.defaultMatchConfiguration.kingdomSupply = structuredClone(newConfig.kingdomSupply);
-    }
+    // Every persisted lobby-config field follows the same shape: diff current
+    // vs. new, and when changed, persist it and mirror it onto the in-memory
+    // default so future lobby resets see the latest selection. The `persist`
+    // cast is safe because `key` and `persist` always originate from the same
+    // table row — each row's value type matches what its store method expects.
+    // `kingdomSupply` persists via `persistPreselectedKingdoms` (store method
+    // naming predates this table; the config field itself is still `kingdomSupply`).
+    const configPersistFields: ReadonlyArray<{ key: keyof MatchConfiguration; persist: (value: unknown) => void }> = [
+      { key: 'kingdomSupply', persist: value => this.configStore.persistPreselectedKingdoms(value as Supply[]) },
+      { key: 'bannedKingdoms', persist: value => this.configStore.persistBannedKingdoms(value as CardNoId[]) },
+      { key: 'events', persist: value => this.configStore.persistEvents(value as EventNoId[]) },
+      { key: 'landmarks', persist: value => this.configStore.persistLandmarks(value as LandmarkNoId[]) },
+      { key: 'projects', persist: value => this.configStore.persistProjects(value as ProjectNoId[]) },
+      { key: 'ways', persist: value => this.configStore.persistWays(value as WayNoId[]) },
+      { key: 'traits', persist: value => this.configStore.persistTraits(value as TraitNoId[]) },
+      { key: 'allies', persist: value => this.configStore.persistAllies(value as AllyNoId[]) },
+      { key: 'prophecies', persist: value => this.configStore.persistProphecies(value as ProphecyNoId[]) },
+    ];
 
-    const bannedKingdomsPatch = jsonPatch.compare(currentConfig.bannedKingdoms, newConfig.bannedKingdoms);
-    if (bannedKingdomsPatch.length) {
-      this.configStore.persistBannedKingdoms(newConfig.bannedKingdoms);
-      this.defaultMatchConfiguration.bannedKingdoms = structuredClone(newConfig.bannedKingdoms);
-    }
-
-    const eventsPatch = jsonPatch.compare(currentConfig.events, newConfig.events);
-    if (eventsPatch.length) {
-      // Persist selected events between sessions.
-      this.configStore.persistEvents(newConfig.events);
-      this.defaultMatchConfiguration.events = structuredClone(newConfig.events);
-    }
-
-    const landmarksPatch = jsonPatch.compare(currentConfig.landmarks, newConfig.landmarks);
-    if (landmarksPatch.length) {
-      // Persist selected landmarks between sessions.
-      this.configStore.persistLandmarks(newConfig.landmarks);
-      this.defaultMatchConfiguration.landmarks = structuredClone(newConfig.landmarks);
-    }
-
-    const projectsPatch = jsonPatch.compare(currentConfig.projects, newConfig.projects);
-    if (projectsPatch.length) {
-      // Persist selected projects between sessions.
-      this.configStore.persistProjects(newConfig.projects);
-      this.defaultMatchConfiguration.projects = structuredClone(newConfig.projects);
-    }
-
-    const waysPatch = jsonPatch.compare(currentConfig.ways, newConfig.ways);
-    if (waysPatch.length) {
-      // Persist selected ways between sessions.
-      this.configStore.persistWays(newConfig.ways);
-      this.defaultMatchConfiguration.ways = structuredClone(newConfig.ways);
-    }
-
-    const traitsPatch = jsonPatch.compare(currentConfig.traits, newConfig.traits);
-    if (traitsPatch.length) {
-      // Persist selected traits between sessions.
-      this.configStore.persistTraits(newConfig.traits);
-      this.defaultMatchConfiguration.traits = structuredClone(newConfig.traits);
-    }
-
-    const alliesPatch = jsonPatch.compare(currentConfig.allies, newConfig.allies);
-    if (alliesPatch.length) {
-      // Persist selected ally between sessions.
-      this.configStore.persistAllies(newConfig.allies);
-      this.defaultMatchConfiguration.allies = structuredClone(newConfig.allies);
-    }
-
-    const propheciesPatch = jsonPatch.compare(currentConfig.prophecies, newConfig.prophecies);
-    if (propheciesPatch.length) {
-      // Persist selected prophecy between sessions.
-      this.configStore.persistProphecies(newConfig.prophecies);
-      this.defaultMatchConfiguration.prophecies = structuredClone(newConfig.prophecies);
+    for (const field of configPersistFields) {
+      const fieldPatch = jsonPatch.compare(currentConfig[field.key], newConfig[field.key]);
+      if (!fieldPatch.length) continue;
+      field.persist(newConfig[field.key]);
+      (this.defaultMatchConfiguration as unknown as Record<string, unknown>)[field.key] = structuredClone(
+        newConfig[field.key],
+      );
     }
 
     const patch = jsonPatch.compare(currentConfig, newConfig);
@@ -545,16 +522,25 @@ export class Game {
     this.onGameStateChanged?.();
   };
 
-  // Registers the socket handler for disconnected-player removal votes.
+  // Registers the socket handlers for disconnected-player removal votes.
   private registerRemovalVoteHandler = (socket: AppSocket, playerId: PlayerId): void => {
     socket.on('removeDisconnectedPlayer', (targetPlayerId: PlayerId) => {
       this.onRemoveDisconnectedPlayerVote(playerId, targetPlayerId);
+    });
+    socket.on('retractRemoveDisconnectedPlayer', (targetPlayerId: PlayerId) => {
+      this.onRetractRemovalVote(playerId, targetPlayerId);
     });
   };
 
   // Handles a connected human player's vote to remove a disconnected player.
   private onRemoveDisconnectedPlayerVote = (voterId: PlayerId, targetPlayerId: PlayerId): void => {
     this.gameLobbySessionCoordinatorService.onRemoveDisconnectedPlayerVote(this.runtimeState, voterId, targetPlayerId);
+    this.onGameStateChanged?.();
+  };
+
+  // Handles a voter withdrawing a removal vote for a disconnected player.
+  private onRetractRemovalVote = (voterId: PlayerId, targetPlayerId: PlayerId): void => {
+    this.gameLobbySessionCoordinatorService.onRetractRemovalVote(this.runtimeState, voterId, targetPlayerId);
     this.onGameStateChanged?.();
   };
 }

@@ -1,23 +1,18 @@
 <div class="name-card-content">
-  <input
-    class="name-card-input"
-    type="text"
+  <app-search-input
     [value]="searchTerm()"
-    placeholder="Search cards"
-    (input)="onSearchTermChanged($any($event.target).value)" />
+    [placeholder]="'Search cards'"
+    (valueChange)="onSearchTermChanged($event)"
+  />
 
   <div class="name-card-results">
     @for (card of searchResults(); track card.cardKey) {
       <button
         type="button"
         class="name-card-result"
+        [class.selected]="card.cardKey === selectedCardKey()"
         (click)="selectCard(card)">
-        <img
-          [ngSrc]="card.artImagePath"
-          width="140"
-          height="20"
-          [alt]="card.cardName"
-          (contextmenu)="onCardContextMenu($event, card)" />
+        <app-card [cardData]="card" [forceFacing]="'front'" />
       </button>
     }
 

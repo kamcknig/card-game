@@ -1,4 +1,4 @@
-import { CardId, SelectSingleActionCardArgs, SelectSingleCardPromptArgs, UserPromptActionArgs } from 'shared/types/index.ts';
+import { CardId, SelectSingleCardPromptArgs, UserPromptActionArgs } from 'shared/types/index.ts';
 import { PromptService } from '../types.ts';
 
 // Test-double for PromptService that replays queued actions and records prompt requests.
@@ -43,15 +43,7 @@ export class PromptServiceStub implements PromptService {
     return action;
   }
 
-  public async selectCardsFromPrompt(_args: UserPromptActionArgs): Promise<CardId[]> {
-    return [];
-  }
-
   public async selectSingleCardFromPrompt(_args: SelectSingleCardPromptArgs): Promise<CardId | null> {
-    return null;
-  }
-
-  public async selectSingleCardFromAction(_args: SelectSingleActionCardArgs): Promise<CardId | null> {
     return null;
   }
 

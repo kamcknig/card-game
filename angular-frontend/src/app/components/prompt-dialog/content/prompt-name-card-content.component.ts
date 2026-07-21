@@ -4,20 +4,22 @@ import {
   OnDestroy,
   OnInit,
   computed,
+  effect,
   inject,
   input,
   output,
   signal,
 } from '@angular/core';
-import { NgOptimizedImage } from '@angular/common';
 import { CardNoId, PlayerId } from 'shared/types';
 import { SocketService } from '../../../core/socket-service/socket.service';
-import { displayCardDetail } from '../../match/views/modal/display-card-detail';
+import { CardComponent } from '../../card/card.component';
+import { SearchInputComponent } from '../../ui/search-input/search-input.component';
 
 @Component({
   selector: 'app-prompt-name-card-content',
   imports: [
-    NgOptimizedImage,
+    CardComponent,
+    SearchInputComponent,
   ],
   templateUrl: './prompt-name-card-content.component.html',
   styleUrl: './prompt-name-card-content.component.scss',
@@ -29,12 +31,13 @@ export class PromptNameCardContentComponent implements OnInit, OnDestroy {
   selfPlayerId = input.required<PlayerId>();
 
   resultsUpdated = output<string>();
-  finished = output<void>();
+  validationUpdated = output<boolean>();
 
   private _searchTimeout: ReturnType<typeof setTimeout> | null = null;
 
   private readonly _searchTerm = signal('');
   private readonly _searchResults = signal<CardNoId[]>([]);
+  private readonly _selectedCardKey = signal<string | null>(null);
 
   // Search term shown in the prompt input.
   readonly searchTerm = computed(() => this._searchTerm());
@@ -45,6 +48,27 @@ export class PromptNameCardContentComponent implements OnInit, OnDestroy {
   // True when non-empty search text has no matching results.
   readonly showNoResults = computed(() => {
     return this._searchTerm().trim().length > 0 && this._searchResults().length < 1;
+  });
+
+  // Currently selected search result, or null when the search results no
+  // longer contain the picked card (stale selection after a new search).
+  readonly selectedCardKey = computed(() => {
+    const selectedKey = this._selectedCardKey();
+    if (selectedKey === null) {
+      return null;
+    }
+    return this._searchResults().some((card) => card.cardKey === selectedKey)
+      ? selectedKey
+      : null;
+  });
+
+  // Emits result + validation whenever the effective selection changes. The
+  // host resets its validation state to true per prompt, so the initial
+  // `false` emission here is what disables Confirm until a card is picked.
+  private readonly _emitSelectionState = effect(() => {
+    const selectedKey = this.selectedCardKey();
+    this.resultsUpdated.emit(selectedKey ?? '');
+    this.validationUpdated.emit(selectedKey !== null);
   });
 
   ngOnInit(): void {
@@ -74,16 +98,12 @@ export class PromptNameCardContentComponent implements OnInit, OnDestroy {
     }, 250);
   }
 
-  // Selects one card key and completes the prompt.
+  // Toggles the clicked search result as the named card; clicking a
+  // different card moves the selection (single pick by definition).
   selectCard(card: CardNoId): void {
-    this.resultsUpdated.emit(card.cardKey);
-    this.finished.emit();
-  }
-
-  // Opens detail art for a search result via right-click.
-  onCardContextMenu(event: MouseEvent, card: CardNoId): void {
-    event.preventDefault();
-    void displayCardDetail(card);
+    this._selectedCardKey.set(
+      this._selectedCardKey() === card.cardKey ? null : card.cardKey,
+    );
   }
 
   // Receives server-backed name search results.

@@ -5,7 +5,7 @@
   <div class="pane left">
     <div class="player-score-content">
       @for (playerSummary of playerSummaries(); track playerSummary.playerId) {
-        <div class="player-score-wrapper">
+        <div class="player-score-wrapper" [class.winner]="winnerFlags()[$index]">
           <span class="place">{{ $index + 1 }}</span>
 
           <div class="hr-rule place-name-separator"><div class="line"></div></div>
@@ -45,8 +45,9 @@
             @let card = allCards()[entry.cardId];
 
             <div class="card-summary">
-              <div class="card-image">
-                <img [src]="card?.artImagePath">
+              <!-- Right-click opens the card detail dialog (no sibling column). -->
+              <div class="card-image" (contextmenu)="onCardContextMenu($event, card)">
+                <img [src]="card?.detailImagePath" [alt]="card?.cardName ?? ''">
                 <span class="count">{{entry.count}}</span>
               </div>
             </div>

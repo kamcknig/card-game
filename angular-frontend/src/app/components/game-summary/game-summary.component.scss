@@ -38,7 +38,24 @@
   align-items: center;
 
   .player-score-wrapper {
-    display: contents;
+    // Real box spanning the full row so it can carry the winner border;
+    // subgrid keeps every row's cells on the shared column tracks. All rows
+    // share identical border/padding metrics (transparent by default) so
+    // the winner's visible border doesn't shift its cells relative to
+    // non-winner rows.
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+    align-items: center;
+    border: 2px solid transparent;
+    border-radius: var(--theme-radius-lg);
+    padding: var(--theme-space-sm) var(--theme-space-md);
+
+    &.winner {
+      // Dedicated winner token — themed for dark and light
+      // (app-theme.scss:51 light #b89340, :174 dark #e6c54a).
+      border-color: var(--theme-color-winner);
+    }
 
     div.hr-rule {
       display: flex;
@@ -107,18 +124,31 @@
   }
 
   .card-summary {
+    // Uniform strip width — previously the img's natural size leaked through
+    // and every strip was a different width.
+    width: 190px;
+
     .card-image {
       position: relative;
-      height: 30px;
+      height: 36px;
       overflow: hidden;
+
+      img {
+        // Full card scan anchored to its own top: the visible slice is the
+        // card's outer border + name band in the card's color. Scaling to
+        // the strip width keeps the slice proportional for every card.
+        display: block;
+        width: 100%;
+        height: auto;
+      }
     }
 
     .count {
       text-align: center;
-      width: 30px;
-      height: 30px;
+      width: 36px;
+      height: 36px;
       font-size: 0.85rem;
-      line-height: 30px;
+      line-height: 36px;
       position: absolute;
       top: 0;
       left: 0;

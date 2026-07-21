@@ -8,6 +8,10 @@ import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { findEventInMatch } from '@shared/find-card-like-in-match.ts';
+import {
+  buildGainedLocationExpectedFrom,
+  isCardStillAtGainedLocation,
+} from '../../utils/is-card-still-at-gained-location.ts';
 
 const effectMap: CardExpansionModule = {
   alms: {
@@ -193,6 +197,69 @@ const effectMap: CardExpansionModule = {
       }
     },
   },
+  borrow: {
+    registerEffects: () => async cardEffectArgs => {
+      const loggerService = cardEffectArgs.loggerService;
+      const event = findEventInMatch(cardEffectArgs.match, cardEffectArgs.cardId);
+      if (!event) {
+        loggerService.warn(`[borrow effect] event not found`);
+        return;
+      }
+
+      // Enforce 'once per turn' by restricting this event for the current player until end of turn.
+      const priceUnsub = cardEffectArgs.cardPriceController.registerRule(event, (card, context) => {
+        if (context.playerId === cardEffectArgs.playerId) {
+          return { restricted: true, cost: card.cost };
+        }
+        return { restricted: false, cost: card.cost };
+      });
+      cardEffectArgs.reactionManager.registerSystemTemplate(event, 'endTurn', {
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        allowMultipleInstances: true,
+        compulsory: true,
+        condition: async () => true,
+        triggeredEffectFn: async () => {
+          priceUnsub();
+        },
+      });
+
+      // +1 Buy happens unconditionally, even when the -1 Card token is already on the deck.
+      loggerService.debug(`[borrow effect] gaining 1 buy`);
+      await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
+
+      const tokenEntry = Object.entries(cardEffectArgs.match.tokens ?? {}).find(
+        ([_tokenInstanceId, token]) =>
+          token.tokenId === adventuresTokenIds.minusCard && token.ownerId === cardEffectArgs.playerId,
+      );
+
+      if (!tokenEntry) {
+        loggerService.warn(`[borrow effect] no -1 Card token for player`);
+        return;
+      }
+
+      const [tokenInstanceId, token] = tokenEntry;
+
+      // The token already sitting on the player's deck means no +$1 (and it stays put).
+      if (token.location.type === 'playerDeck' && token.location.playerId === cardEffectArgs.playerId) {
+        loggerService.debug(`[borrow effect] -1 Card token already on deck, no +$1`);
+        return;
+      }
+
+      loggerService.debug(`[borrow effect] putting -1 Card token on deck and gaining +$1`);
+
+      await cardEffectArgs.actionService.run(
+        'moveToken',
+        {
+          tokenInstanceId,
+          location: { type: 'playerDeck', playerId: cardEffectArgs.playerId },
+        },
+        { source: event.id },
+      );
+
+      await cardEffectArgs.actionService.run('gainTreasure', { count: 1 });
+    },
+  },
   expedition: {
     registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
@@ -283,7 +350,7 @@ const effectMap: CardExpansionModule = {
           tokenInstanceId: existingTokenEntry[0],
           location: { type: 'supplyPile', cardKey: selectedPile },
         },
-        { loggingContext: { source: event.id } },
+        { source: event.id },
       );
     },
   },
@@ -369,7 +436,7 @@ const effectMap: CardExpansionModule = {
           tokenInstanceId: existingTokenEntry[0],
           location: { type: 'supplyPile', cardKey: selectedPile },
         },
-        { loggingContext: { source: event.id } },
+        { source: event.id },
       );
     },
   },
@@ -439,7 +506,7 @@ const effectMap: CardExpansionModule = {
           tokenInstanceId: existingTokenEntry[0],
           location: { type: 'card', cardId: selectedCard.id },
         },
-        { loggingContext: { source: event.id } },
+        { source: event.id },
       );
 
       cardEffectArgs.cardPriceController.registerRule(event, (card, context) => {
@@ -654,6 +721,8 @@ const effectMap: CardExpansionModule = {
           pileKey: getCardPileKey(selectedCard),
           to: { location: 'playerDiscard' },
           logTag: 'pilgrimage effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: { kind: 'cardLike', id: cardEffectArgs.cardId },
         });
       }
     },
@@ -710,7 +779,7 @@ const effectMap: CardExpansionModule = {
           tokenInstanceId: existingTokenEntry[0],
           location: { type: 'supplyPile', cardKey: selectedPile },
         },
-        { loggingContext: { source: cardEffectArgs.cardId } },
+        { source: cardEffectArgs.cardId },
       );
     },
   },
@@ -845,7 +914,7 @@ const effectMap: CardExpansionModule = {
           tokenInstanceId: existingTokenEntry[0],
           location: { type: 'supplyPile', cardKey: selectedPile },
         },
-        { loggingContext: { source: event.id } },
+        { source: event.id },
       );
     },
   },
@@ -860,7 +929,7 @@ const effectMap: CardExpansionModule = {
         prompt: 'Choose one',
         actionButtons: [
           { label: 'DISCARD ATTACK', action: 1 },
-          { label: 'DISCARD 2 COPPER', action: 2 },
+          { label: 'DISCARD 2 CURSES', action: 2 },
           { label: 'DISCARD 6 CARDS', action: 3 },
         ],
       })) as { action: number; result: number[] };
@@ -873,15 +942,17 @@ const effectMap: CardExpansionModule = {
           playerId: cardEffectArgs.playerId,
           prompt: `Discard attack`,
           restrict: handCards.filter(card => card.type.includes('ATTACK')).map(card => card.id),
-          count: { kind: 'upTo', count: hand.length },
+          count: { kind: 'exact', count: 1 },
+          optional: true,
         });
-        gainGold = true;
+        gainGold = selectedCardIds.length === 1;
       } else if (result.action === 2) {
         selectedCardIds = await cardEffectArgs.actionService.run('selectCard', {
           playerId: cardEffectArgs.playerId,
-          prompt: `Discard 2 copper`,
-          restrict: handCards.filter(card => card.type.includes('ATTACK')).map(card => card.id),
-          count: { kind: 'upTo', count: hand.length },
+          prompt: `Discard 2 curses`,
+          restrict: handCards.filter(card => card.cardKey === 'curse').map(card => card.id),
+          count: { kind: 'exact', count: 2 },
+          optional: true,
         });
         gainGold = selectedCardIds.length === 2;
       } else {
@@ -899,6 +970,14 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
+      loggerService.debug(`[quest effect] discarding ${selectedCardIds.length} cards`);
+      for (const selectedCardId of selectedCardIds) {
+        await cardEffectArgs.actionService.run('discardCard', {
+          cardId: selectedCardId,
+          playerId: cardEffectArgs.playerId,
+        });
+      }
+
       if (gainGold) {
         await cardEffectArgs.supplyGainService.gainTopSupplyCardForPileKey({
           playerId: cardEffectArgs.playerId,
@@ -906,6 +985,8 @@ const effectMap: CardExpansionModule = {
           to: { location: 'playerDiscard' },
           from: 'basicSupply',
           logTag: 'quest effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: { kind: 'cardLike', id: cardEffectArgs.cardId },
         });
       }
     },
@@ -930,6 +1011,8 @@ const effectMap: CardExpansionModule = {
             to: { location: 'playerDiscard' },
             from: 'basicSupply',
             logTag: 'raid effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: { kind: 'cardLike', id: cardEffectArgs.cardId },
           });
           if (gainedSilverCardId === undefined) {
             break;
@@ -961,7 +1044,7 @@ const effectMap: CardExpansionModule = {
             tokenInstanceId: existingTokenEntry[0],
             location: { type: 'playerDeck', playerId: targetPlayerId },
           },
-          { loggingContext: { source: cardEffectArgs.cardId } },
+          { source: cardEffectArgs.cardId },
         );
       }
     },
@@ -1099,7 +1182,7 @@ const effectMap: CardExpansionModule = {
           tokenInstanceId: existingTokenEntry[0],
           location: { type: 'supplyPile', cardKey: pileKey },
         },
-        { loggingContext: { source: cardEffectArgs.cardId } },
+        { source: cardEffectArgs.cardId },
       );
     },
   },
@@ -1241,6 +1324,15 @@ const effectMap: CardExpansionModule = {
         return;
       }
 
+      loggerService.debug(`[trade effect] trashing ${selectedCardIds.length} cards`);
+
+      for (const selectedCardId of selectedCardIds) {
+        await cardEffectArgs.actionService.run('trashCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedCardId,
+        });
+      }
+
       loggerService.debug(`[trade effect] gaining ${selectedCardIds.length} silver cards`);
 
       for (let i = 0; i < selectedCardIds.length; i++) {
@@ -1250,6 +1342,8 @@ const effectMap: CardExpansionModule = {
           to: { location: 'playerDiscard' },
           from: 'basicSupply',
           logTag: 'trade effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: { kind: 'cardLike', id: cardEffectArgs.cardId },
         });
 
         if (gainedSilverCardId === undefined) {
@@ -1315,7 +1409,7 @@ const effectMap: CardExpansionModule = {
           tokenInstanceId: existingTokenEntry[0],
           location: { type: 'supplyPile', cardKey: selectedPile },
         },
-        { loggingContext: { source: event.id } },
+        { source: event.id },
       );
     },
   },
@@ -1331,7 +1425,7 @@ const effectMap: CardExpansionModule = {
 
       await cardEffectArgs.actionService.run('gainBuy', { count: 2 });
 
-      cardEffectArgs.reactionManager.registerReactionTemplate(event, 'cardGained', {
+      const cardGainedReactionId = cardEffectArgs.reactionManager.registerReactionTemplate(event, 'cardGained', {
         playerId: cardEffectArgs.playerId,
         once: false,
         allowMultipleInstances: false,
@@ -1343,12 +1437,22 @@ const effectMap: CardExpansionModule = {
         triggeredEffectFn: async triggeredArgs => {
           const card = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
 
+          // Lose Track guard: if the gained card is no longer where it was
+          // gained (already moved or covered up), there is nothing left to
+          // top-deck.
+          const gainedLocation = triggeredArgs.trigger.args.gainedLocation;
+          if (!isCardStillAtGainedLocation(triggeredArgs.cardSourceController, card.id, gainedLocation)) {
+            loggerService.debug('[travelling-fair cardGained effect] lost track of gained card; skipping');
+            return;
+          }
+
           loggerService.debug(`[travelling-fair cardGained effect] putting ${card} on deck`);
 
           await triggeredArgs.actionService.run('moveCard', {
             toPlayerId: cardEffectArgs.playerId,
             cardId: card.id,
             to: { location: 'playerDeck' },
+            expectedFrom: buildGainedLocationExpectedFrom(gainedLocation),
           });
         },
       });
@@ -1360,7 +1464,7 @@ const effectMap: CardExpansionModule = {
         compulsory: false,
         condition: async () => true,
         triggeredEffectFn: async triggeredArgs => {
-          triggeredArgs.reactionManager.unregisterTrigger(`travelling-fair:${cardEffectArgs.cardId}:cardGained`);
+          triggeredArgs.reactionManager.unregisterTrigger(cardGainedReactionId);
         },
       });
     },

@@ -1,0 +1,39 @@
+// Shared "selectable tile" recipe for interactive prompt-entry buttons:
+// transparent-bordered chrome, a border-color highlight on hover
+// (--theme-color-selectable), and a solid green ring on selection
+// (--theme-color-selected) — matching the board's selectable/selected pile
+// highlight colors so dialog and board selection read the same way.
+// Consumers `@include` the pieces they need — background, padding, and
+// cursor default state stay local since those vary with the surrounding
+// markup (card wrapper vs. text button vs. thumbnail). Used by
+// prompt-select-content's `.selection-entry`, prompt-select-pile-content's
+// `.pile-entry`, and prompt-name-card-content's `.name-card-result`.
+
+// Base chrome shared by every tile: no visible border until interacted with,
+// rounded corners, no default padding, pointer cursor (override locally if
+// an entry starts non-interactive, e.g. `.selection-entry`'s base
+// `cursor: default`).
+@mixin tile-base {
+  border: 1px solid transparent;
+  border-radius: var(--theme-radius-md);
+  padding: 0;
+  cursor: pointer;
+}
+
+// Hover highlight: border-color only, no layout shift (layout shift on
+// hover, when wanted, is applied by the consumer alongside this include).
+@mixin tile-hover {
+  border-color: var(--theme-color-selectable);
+}
+
+// Selected-state highlight: the same bright-green ring used for selected
+// piles on the board (--theme-color-selected), with an optional lift
+// ($lift omitted or null = no transform, matching
+// prompt-select-pile-content's non-lifting selected state).
+@mixin tile-selected($lift: null) {
+  @if $lift != null {
+    transform: translateY(#{$lift});
+  }
+  border-color: var(--theme-color-selected);
+  box-shadow: 0 0 0 3px var(--theme-color-selected);
+}

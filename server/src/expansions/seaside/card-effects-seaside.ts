@@ -1,43 +1,33 @@
 import { CardExpansionModule } from '@server-types/index.ts';
-import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { Card, CardId } from 'shared/types/index.ts';
 import { getPlayerStartingFrom, getPlayerTurnIndex } from '@shared/get-player-position-utils.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { getAttackTargets } from '../../utils/get-attack-targets.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
+import { registerStartTurnEffect } from '../../utils/register-start-turn-effect.ts';
+import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 
 const expansion: CardExpansionModule = {
   astrolabe: {
     registerEffects: () => async args => {
       const loggerService = args.loggerService;
-      loggerService.debug(`[SEASON EFFECT] gaining 1 treasure...`);
+      loggerService.debug(`[ASTROLABE EFFECT] gaining 1 treasure...`);
       await args.actionService.run('gainTreasure', { count: 1 });
 
-      loggerService.debug(`[SEASON EFFECT] gaining 1 buy...`);
+      loggerService.debug(`[ASTROLABE EFFECT] gaining 1 buy...`);
       await args.actionService.run('gainBuy', { count: 1 });
 
-      const id = `astrolabe:${args.cardId}:starTurn`;
       const card = args.cardLibrary.getCard(args.cardId);
       // Ensure the duration card remains in play through cleanup.
-      args.registerDurationEffect(card, {
-        id,
-        playerId: args.playerId,
-        listeningFor: 'startTurn',
-        compulsory: true,
-        allowMultipleInstances: true,
-        once: true,
-        condition: conditionArgs => {
-          const { trigger } = conditionArgs;
-          return trigger.args.playerId === args.playerId;
-        },
-        triggeredEffectFn: async ({ loggerService, actionService }) => {
-          loggerService.debug(`[SEASIDE TRIGGERED EFFECT] gaining 1 treasure...`);
-          await actionService.run('gainTreasure', { count: 1 }, { source: args.cardId });
+      registerStartTurnEffect(args, card, async ({ loggerService, actionService }) => {
+        loggerService.debug(`[ASTROLABE TRIGGERED EFFECT] gaining 1 treasure...`);
+        await actionService.run('gainTreasure', { count: 1 }, { source: args.cardId });
 
-          loggerService.debug(`[SEASIDE TRIGGERED EFFECT] gaining 1 buy...`);
-          await actionService.run('gainBuy', { count: 1 }, { source: args.cardId });
-        },
+        loggerService.debug(`[ASTROLABE TRIGGERED EFFECT] gaining 1 buy...`);
+        await actionService.run('gainBuy', { count: 1 }, { source: args.cardId });
       });
     },
   },
@@ -45,13 +35,13 @@ const expansion: CardExpansionModule = {
     registerEffects:
       () =>
       async ({ loggerService, actionService, playerId }) => {
-        loggerService.debug(`[SEASON EFFECT] drawing 1 card...`);
+        loggerService.debug(`[BAZAAR EFFECT] drawing 1 card...`);
         await actionService.run('drawCard', { playerId: playerId });
 
-        loggerService.debug(`[SEASON EFFECT] gaining 2 actions...`);
+        loggerService.debug(`[BAZAAR EFFECT] gaining 2 actions...`);
         await actionService.run('gainAction', { count: 2 });
 
-        loggerService.debug(`[SEASON EFFECT] gaining 1 treasure...`);
+        loggerService.debug(`[BAZAAR EFFECT] gaining 1 treasure...`);
         await actionService.run('gainTreasure', { count: 1 });
       },
   },
@@ -90,23 +80,15 @@ const expansion: CardExpansionModule = {
 
       const blockadeCard = args.cardLibrary.getCard(args.cardId);
       // Keep the duration card in play until its start-turn effect resolves.
-      args.registerDurationEffect(blockadeCard, {
-        playerId: args.playerId,
-        id: `blockade:${args.cardId}:startTurn`,
-        once: true,
-        condition: ({ trigger }) => trigger.args.playerId === args.playerId,
-        listeningFor: 'startTurn',
-        compulsory: true,
-        triggeredEffectFn: async triggeredArgs => {
-          loggerService.debug(`[BLOCKADE TRIGGERED EFFECT] moving previously selected card to hand...`);
-          await triggeredArgs.actionService.run('moveCard', {
-            cardId: gainedCardId,
-            toPlayerId: args.playerId,
-            to: { location: 'playerHand' },
-          });
+      registerStartTurnEffect(args, blockadeCard, async triggeredArgs => {
+        loggerService.debug(`[BLOCKADE TRIGGERED EFFECT] moving previously selected card to hand...`);
+        await triggeredArgs.actionService.run('moveCard', {
+          cardId: gainedCardId,
+          toPlayerId: args.playerId,
+          to: { location: 'playerHand' },
+        });
 
-          args.reactionManager.unregisterTrigger(`blockade:${args.cardId}:cardGained`);
-        },
+        args.reactionManager.unregisterTrigger(`blockade:${args.cardId}:cardGained`);
       });
 
       const cardGained = args.cardLibrary.getCard(gainedCardId);
@@ -116,6 +98,19 @@ const expansion: CardExpansionModule = {
         id: `blockade:${args.cardId}:cardGained`,
         condition: conditionArgs => {
           if (getCurrentPlayer(args.match).id !== conditionArgs.trigger.args.playerId) {
+            return false;
+          }
+
+          // Only OTHER players who gain a copy are cursed — the owner gaining
+          // one (e.g. buying another copy the same turn Blockade was played)
+          // must not curse themselves.
+          if (conditionArgs.trigger.args.playerId === args.playerId) {
+            return false;
+          }
+
+          // Respect attack immunity (Moat/Lighthouse) recorded when Blockade
+          // was played, mirroring Corsair's deferred-reaction immunity check.
+          if (isPlayerImmune(args.reactionContext, conditionArgs.trigger.args.playerId!)) {
             return false;
           }
 
@@ -142,10 +137,11 @@ const expansion: CardExpansionModule = {
             'gainCard',
             {
               playerId: args.trigger.args.playerId!,
-              cardId: curseCardIds[0].id,
+              // Gain from the TOP of the pile — index 0 is the bottom.
+              cardId: curseCardIds.slice(-1)[0].id,
               to: { location: 'playerDiscard' },
             },
-            { loggingContext: { source: args.trigger.args.cardId } },
+            { source: args.trigger.args.cardId },
           );
         },
       });
@@ -162,23 +158,15 @@ const expansion: CardExpansionModule = {
 
       const caravanCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       // Use the shared duration flow to keep the card active through cleanup.
-      cardEffectArgs.registerDurationEffect(caravanCard, {
-        id: `caravan:${cardEffectArgs.cardId}:startTurn`,
-        playerId: cardEffectArgs.playerId,
-        compulsory: true,
-        once: true,
-        listeningFor: 'startTurn',
-        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-        triggeredEffectFn: async triggeredArgs => {
-          loggerService.debug(`[CARAVAN TRIGGERED EFFECT] drawing a card...`);
-          await triggeredArgs.actionService.run(
-            'drawCard',
-            { playerId: cardEffectArgs.playerId },
-            {
-              loggingContext: { source: cardEffectArgs.cardId },
-            },
-          );
-        },
+      registerStartTurnEffect(cardEffectArgs, caravanCard, async triggeredArgs => {
+        loggerService.debug(`[CARAVAN TRIGGERED EFFECT] drawing a card...`);
+        await triggeredArgs.actionService.run(
+          'drawCard',
+          { playerId: cardEffectArgs.playerId },
+          {
+            source: cardEffectArgs.cardId,
+          },
+        );
       });
     },
   },
@@ -196,24 +184,16 @@ const expansion: CardExpansionModule = {
       const cardPlayedTriggerId = `corsair:${cardEffectArgs.cardId}:cardPlayed`;
       const corsairCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       // Use the shared duration flow to keep the card active through cleanup.
-      cardEffectArgs.registerDurationEffect(corsairCard, {
-        id: `corsair:${cardEffectArgs.cardId}:startTurn`,
-        playerId: cardEffectArgs.playerId,
-        compulsory: true,
-        once: true,
-        listeningFor: 'startTurn',
-        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-        triggeredEffectFn: async triggeredArgs => {
-          loggerService.debug(`[CORSAIR TRIGGERED EFFECT] drawing card...`);
-          await triggeredArgs.actionService.run(
-            'drawCard',
-            {
-              playerId: cardEffectArgs.playerId,
-            },
-            { loggingContext: { source: cardEffectArgs.cardId } },
-          );
-          cardEffectArgs.reactionManager.unregisterTrigger(cardPlayedTriggerId);
-        },
+      registerStartTurnEffect(cardEffectArgs, corsairCard, async triggeredArgs => {
+        loggerService.debug(`[CORSAIR TRIGGERED EFFECT] drawing card...`);
+        await triggeredArgs.actionService.run(
+          'drawCard',
+          {
+            playerId: cardEffectArgs.playerId,
+          },
+          { source: cardEffectArgs.cardId },
+        );
+        cardEffectArgs.reactionManager.unregisterTrigger(cardPlayedTriggerId);
       });
 
       cardEffectArgs.reactionManager.registerReactionTemplate({
@@ -247,18 +227,21 @@ const expansion: CardExpansionModule = {
         },
         triggeredEffectFn: async ({ loggerService, trigger }) => {
           loggerService.debug(`[CORSAIR TRIGGERED EFFECT] trashing card...`);
-          await cardEffectArgs.actionService.run(
+          const trashed = await cardEffectArgs.actionService.run(
             'trashCard',
             {
               playerId: trigger.args.playerId!,
               cardId: trigger.args.cardId!,
+              expectedFrom: { location: 'playArea' },
             },
             {
-              loggingContext: {
-                source: cardEffectArgs.cardId,
-              },
+              source: cardEffectArgs.cardId,
             },
           );
+
+          if (!trashed) {
+            loggerService.debug('[CORSAIR TRIGGERED EFFECT] lose track: card already trashed by another Corsair');
+          }
         },
       });
     },
@@ -270,11 +253,7 @@ const expansion: CardExpansionModule = {
         loggerService.debug(`[cutpurse effect] gaining 2 treasure...`);
         await actionService.run('gainTreasure', { count: 2 });
 
-        const targetIds = findOrderedTargets({
-          startingPlayerId: playerId,
-          appliesTo: 'ALL_OTHER',
-          match,
-        }).filter(id => !isPlayerImmune(reactionContext, id));
+        const targetIds = getAttackTargets(match, playerId, reactionContext);
 
         for (const targetId of targetIds) {
           const hand = args.cardSourceController.getSource('playerHand', targetId);
@@ -309,33 +288,24 @@ const expansion: CardExpansionModule = {
 
       const fishingVillageCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       // Use the shared duration flow to keep the card active through cleanup.
-      cardEffectArgs.registerDurationEffect(fishingVillageCard, {
-        id: `fishing-village:${cardEffectArgs.cardId}:startTurn`,
-        once: true,
-        compulsory: true,
-        playerId: cardEffectArgs.playerId,
-        allowMultipleInstances: true,
-        listeningFor: 'startTurn',
-        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-        triggeredEffectFn: async triggeredArgs => {
-          loggerService.debug(`[fishing village triggered effect] gaining 1 action...`);
-          await triggeredArgs.actionService.run(
-            'gainAction',
-            { count: 1 },
-            {
-              loggingContext: { source: cardEffectArgs.cardId },
-            },
-          );
+      registerStartTurnEffect(cardEffectArgs, fishingVillageCard, async triggeredArgs => {
+        loggerService.debug(`[fishing village triggered effect] gaining 1 action...`);
+        await triggeredArgs.actionService.run(
+          'gainAction',
+          { count: 1 },
+          {
+            source: cardEffectArgs.cardId,
+          },
+        );
 
-          loggerService.debug(`[fishing village triggered effect] gaining 1 treasure...`);
-          await triggeredArgs.actionService.run(
-            'gainTreasure',
-            { count: 1 },
-            {
-              loggingContext: { source: cardEffectArgs.cardId },
-            },
-          );
-        },
+        loggerService.debug(`[fishing village triggered effect] gaining 1 treasure...`);
+        await triggeredArgs.actionService.run(
+          'gainTreasure',
+          { count: 1 },
+          {
+            source: cardEffectArgs.cardId,
+          },
+        );
       });
     },
   },
@@ -369,23 +339,15 @@ const expansion: CardExpansionModule = {
 
       const havenCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       // Use the shared duration flow to keep the card active through cleanup.
-      cardEffectArgs.registerDurationEffect(havenCard, {
-        id: `haven:${cardEffectArgs.cardId}:startTurn`,
-        listeningFor: 'startTurn',
-        compulsory: true,
-        once: true,
-        playerId: cardEffectArgs.playerId,
-        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-        triggeredEffectFn: async triggerEffectArgs => {
-          loggerService.debug(`[haven triggered effect] moving selected card to hand...`);
+      registerStartTurnEffect(cardEffectArgs, havenCard, async triggerEffectArgs => {
+        loggerService.debug(`[haven triggered effect] moving selected card to hand...`);
 
-          await triggerEffectArgs.actionService.run('moveCard', {
-            cardId,
-            toPlayerId: cardEffectArgs.playerId,
-            to: { location: 'playerHand' },
-            facing: 'front',
-          });
-        },
+        await triggerEffectArgs.actionService.run('moveCard', {
+          cardId,
+          toPlayerId: cardEffectArgs.playerId,
+          to: { location: 'playerHand' },
+          facing: 'front',
+        });
       });
     },
   },
@@ -455,24 +417,15 @@ const expansion: CardExpansionModule = {
 
       const lighthouseCard = args.cardLibrary.getCard(args.cardId);
       // Keep the duration card active through cleanup.
-      args.registerDurationEffect(lighthouseCard, {
-        id: `lighthouse:${args.cardId}:startTurn`,
-        playerId: args.playerId,
-        listeningFor: 'startTurn',
-        condition: ({ trigger }) => trigger.args.playerId === args.playerId,
-        once: true,
-        allowMultipleInstances: true,
-        compulsory: true,
-        triggeredEffectFn: async triggeredArgs => {
-          args.reactionManager.unregisterTrigger(`lighthouse:${args.cardId}:cardPlayed`);
-          await triggeredArgs.actionService.run(
-            'gainTreasure',
-            { count: 1 },
-            {
-              loggingContext: { source: args.cardId },
-            },
-          );
-        },
+      registerStartTurnEffect(args, lighthouseCard, async triggeredArgs => {
+        args.reactionManager.unregisterTrigger(`lighthouse:${args.cardId}:cardPlayed`);
+        await triggeredArgs.actionService.run(
+          'gainTreasure',
+          { count: 1 },
+          {
+            source: args.cardId,
+          },
+        );
       });
 
       loggerService.debug(`[lighthouse effect] gaining 1 action...`);
@@ -588,24 +541,15 @@ const expansion: CardExpansionModule = {
 
       const merchantShipCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       // Use the shared duration flow to keep the card active through cleanup.
-      cardEffectArgs.registerDurationEffect(merchantShipCard, {
-        id: `merchant-ship:${cardEffectArgs.cardId}:startTurn`,
-        playerId: cardEffectArgs.playerId,
-        compulsory: true,
-        allowMultipleInstances: true,
-        once: true,
-        listeningFor: 'startTurn',
-        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-        triggeredEffectFn: async triggeredArgs => {
-          loggerService.debug(`[merchant ship triggered effect] gaining 2 treasure...`);
-          await triggeredArgs.actionService.run(
-            'gainTreasure',
-            { count: 2 },
-            {
-              loggingContext: { source: cardEffectArgs.cardId },
-            },
-          );
-        },
+      registerStartTurnEffect(cardEffectArgs, merchantShipCard, async triggeredArgs => {
+        loggerService.debug(`[merchant ship triggered effect] gaining 2 treasure...`);
+        await triggeredArgs.actionService.run(
+          'gainTreasure',
+          { count: 2 },
+          {
+            source: cardEffectArgs.cardId,
+          },
+        );
       });
     },
   },
@@ -619,26 +563,17 @@ const expansion: CardExpansionModule = {
       const loggerService = cardEffectArgs.loggerService;
       const monkeyCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       // Use the shared duration flow to keep the card active through cleanup.
-      cardEffectArgs.registerDurationEffect(monkeyCard, {
-        id: `monkey:${cardEffectArgs.cardId}:startTurn`,
-        playerId: cardEffectArgs.playerId,
-        compulsory: true,
-        once: true,
-        allowMultipleInstances: true,
-        listeningFor: 'startTurn',
-        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-        triggeredEffectFn: async triggeredArgs => {
-          loggerService.debug(`[monkey triggered effect] drawing card at start of turn...`);
-          await triggeredArgs.actionService.run(
-            'drawCard',
-            { playerId: cardEffectArgs.playerId },
-            {
-              loggingContext: { source: cardEffectArgs.cardId },
-            },
-          );
+      registerStartTurnEffect(cardEffectArgs, monkeyCard, async triggeredArgs => {
+        loggerService.debug(`[monkey triggered effect] drawing card at start of turn...`);
+        await triggeredArgs.actionService.run(
+          'drawCard',
+          { playerId: cardEffectArgs.playerId },
+          {
+            source: cardEffectArgs.cardId,
+          },
+        );
 
-          cardEffectArgs.reactionManager.unregisterTrigger(`monkey:${cardEffectArgs.cardId}:cardGained`);
-        },
+        cardEffectArgs.reactionManager.unregisterTrigger(`monkey:${cardEffectArgs.cardId}:cardGained`);
       });
 
       const thisPlayerTurnIdx = cardEffectArgs.match.players.findIndex(p => p.id === cardEffectArgs.playerId);
@@ -661,7 +596,7 @@ const expansion: CardExpansionModule = {
             'drawCard',
             { playerId: cardEffectArgs.playerId },
             {
-              loggingContext: { source: cardEffectArgs.cardId },
+              source: cardEffectArgs.cardId,
             },
           );
         },
@@ -704,16 +639,7 @@ const expansion: CardExpansionModule = {
       });
 
       // Keep Outpost in duration state until the owner's next start-of-turn.
-      cardEffectArgs.registerDurationEffect(outpostCard, {
-        id: `outpost:${cardEffectArgs.cardId}:startTurn`,
-        playerId: cardEffectArgs.playerId,
-        listeningFor: 'startTurn',
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
-        triggeredEffectFn: async triggeredArgs => {},
-      });
+      registerStartTurnEffect(cardEffectArgs, outpostCard, async () => {});
     },
   },
   pirate: {
@@ -737,7 +663,7 @@ const expansion: CardExpansionModule = {
                   actionCost: 0,
                 },
               },
-              { loggingContext: { source: cardId } },
+              { source: cardId },
             );
           },
         });
@@ -750,48 +676,38 @@ const expansion: CardExpansionModule = {
     registerEffects:
       () =>
       async ({ loggerService, reactionManager, playerId, match, cardId, actionService, ...effectArgs }) => {
-        const id = `pirate:${cardId}:startTurn`;
         const pirateCard = effectArgs.cardLibrary.getCard(cardId);
         // Use the shared duration flow to keep the card active through cleanup.
-        effectArgs.registerDurationEffect(pirateCard, {
-          id,
-          playerId,
-          listeningFor: 'startTurn',
-          once: true,
-          allowMultipleInstances: true,
-          compulsory: true,
-          condition: ({ trigger, reaction }) => trigger.args.playerId === playerId && reaction.id === id,
-          triggeredEffectFn: async triggeredArgs => {
-            loggerService.debug(`[pirate triggered effect] prompting user to select treasure costing up to 6...`);
-            const selectedCardId = await triggeredArgs.actionService.run('selectSingleCard', {
-              prompt: 'Gain card',
-              validPrompt: '',
-              playerId,
-              restrict: {
-                all: [
-                  { location: ['basicSupply', 'kingdomSupply'] },
-                  { cardType: 'TREASURE' },
-                  { kind: 'upTo', amount: { treasure: 6 }, playerId },
-                ],
-              },
-              count: 1,
-            });
-            if (!selectedCardId) {
-              loggerService.warn(`[pirate triggered effect] no card selected...`);
-              return;
-            }
+        registerStartTurnEffect({ ...effectArgs, playerId }, pirateCard, async triggeredArgs => {
+          loggerService.debug(`[pirate triggered effect] prompting user to select treasure costing up to 6...`);
+          const selectedCardId = await triggeredArgs.actionService.run('selectSingleCard', {
+            prompt: 'Gain card',
+            validPrompt: '',
+            playerId,
+            restrict: {
+              all: [
+                { location: ['basicSupply', 'kingdomSupply'] },
+                { cardType: 'TREASURE' },
+                { kind: 'upTo', amount: { treasure: 6 }, playerId },
+              ],
+            },
+            count: 1,
+          });
+          if (!selectedCardId) {
+            loggerService.warn(`[pirate triggered effect] no card selected...`);
+            return;
+          }
 
-            loggerService.debug(`[pirate triggered effect] gaining selected card to hand...`);
-            await triggeredArgs.actionService.run(
-              'gainCard',
-              {
-                playerId,
-                cardId: selectedCardId,
-                to: { location: 'playerHand' },
-              },
-              { loggingContext: { source: cardId } },
-            );
-          },
+          loggerService.debug(`[pirate triggered effect] gaining selected card to hand...`);
+          await triggeredArgs.actionService.run(
+            'gainCard',
+            {
+              playerId,
+              cardId: selectedCardId,
+              to: { location: 'playerHand' },
+            },
+            { source: cardId },
+          );
         });
       },
   },
@@ -804,15 +720,18 @@ const expansion: CardExpansionModule = {
 
         loggerService.debug(`[NATIVE VILLAGE EFFECT] prompting user to choose...`);
 
-        const result = (await actionService.run('userPrompt', {
-          playerId,
-          actionButtons: [
-            { label: 'Put top card on mat', action: 1 },
-            { label: 'Take cards from mat', action: 2 },
-          ],
-        })) as { action: number };
+        const shouldPutOnMat = await args.promptService.confirm(
+          {
+            playerId,
+            actionButtons: [
+              { label: 'Put top card on mat', action: 1 },
+              { label: 'Take cards from mat', action: 2 },
+            ],
+          },
+          1,
+        );
 
-        if (result.action === 1) {
+        if (shouldPutOnMat) {
           const deck = args.cardSourceController.getSource('playerDeck', playerId);
 
           if (deck.length === 0) {
@@ -839,7 +758,7 @@ const expansion: CardExpansionModule = {
           return;
         }
 
-        const matCardIds = args.findCardService.findCards({ location: 'native-village' });
+        const matCardIds = args.findCardService.findCards({ location: 'native-village', playerId });
 
         loggerService.debug(
           `[NATIVE VILLAGE EFFECT] moving ${matCardIds.length} cards from native village mat to hand...`,
@@ -910,55 +829,49 @@ const expansion: CardExpansionModule = {
               cardId: triggeredArgs.trigger.args.cardId!,
               overrides: { actionCost: 0 },
             },
-            { loggingContext: { source: args.cardId } },
+            { source: args.cardId },
           );
         },
       });
 
       const sailorCard = args.cardLibrary.getCard(args.cardId);
       // Keep the duration card in play until its start-turn effect resolves.
-      args.registerDurationEffect(sailorCard, {
-        id: `sailor:${args.cardId}:startTurn`,
-        listeningFor: 'startTurn',
-        playerId: args.playerId,
-        compulsory: true,
-        once: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger }) => trigger.args.playerId === args.playerId,
-        triggeredEffectFn: async triggeredArgs => {
-          loggerService.debug(`[sailor triggered effect] gaining 2 treasure...`);
-          await triggeredArgs.actionService.run(
-            'gainTreasure',
-            { count: 2 },
-            {
-              loggingContext: { source: args.cardId },
-            },
-          );
+      registerStartTurnEffect(args, sailorCard, async triggeredArgs => {
+        loggerService.debug(`[sailor triggered effect] gaining 2 treasure...`);
+        await triggeredArgs.actionService.run(
+          'gainTreasure',
+          { count: 2 },
+          {
+            source: args.cardId,
+          },
+        );
 
-          const cardId = (await triggeredArgs.actionService.run('selectSingleCard', {
-            prompt: 'Trash card',
+        // Named distinctly from args.cardId (the Sailor card itself) so the
+        // log source below can't accidentally shadow-attribute to the
+        // trashed card instead of the effect card.
+        const selectedCardId = (await triggeredArgs.actionService.run('selectSingleCard', {
+          prompt: 'Trash card',
+          playerId: args.playerId,
+          restrict: args.cardSourceController.getSource('playerHand', args.playerId),
+          count: 1,
+          optional: true,
+          cancelPrompt: `Don't trash`,
+        })) as number | null;
+
+        if (!selectedCardId) {
+          loggerService.debug(`[sailor triggered effect] no card chosen`);
+          return;
+        }
+
+        loggerService.debug(`[sailor triggered effect] trashing selected card...`);
+        await triggeredArgs.actionService.run(
+          'trashCard',
+          {
             playerId: args.playerId,
-            restrict: args.cardSourceController.getSource('playerHand', args.playerId),
-            count: 1,
-            optional: true,
-            cancelPrompt: `Don't trash`,
-          })) as number | null;
-
-          if (!cardId) {
-            loggerService.debug(`[sailor triggered effect] no card chosen`);
-            return;
-          }
-
-          loggerService.debug(`[sailor triggered effect] trashing selected card...`);
-          await triggeredArgs.actionService.run(
-            'trashCard',
-            {
-              playerId: args.playerId,
-              cardId,
-            },
-            { loggingContext: { source: cardId } },
-          );
-        },
+            cardId: selectedCardId,
+          },
+          { source: args.cardId },
+        );
       });
 
       loggerService.debug(`[sailor effect] gaining 1 action...`);
@@ -1005,27 +918,19 @@ const expansion: CardExpansionModule = {
         loggerService.debug(`[SEA CHART EFFECT] gaining 1 action...`);
         await actionService.run('gainAction', { count: 1 });
 
-        const deck = args.cardSourceController.getSource('playerDeck', playerId);
+        // Reveal the top card of the deck, set aside — shuffling the
+        // discard back in automatically if the deck is empty.
+        const revealed = await revealTopDeckCards({ actionService, cardLibrary, loggerService }, playerId, 1, {
+          setAside: true,
+        });
+        const card = revealed[0];
 
-        if (deck.length === 0) {
-          loggerService.debug(`[SEA CHART EFFECT] shuffling deck...`);
-          await actionService.run('shuffleDeck', { playerId });
-
-          if (deck.length === 0) {
-            loggerService.debug(`[SEA CHART EFFECT] no cards in deck...`);
-            return;
-          }
+        if (!card) {
+          loggerService.debug(`[SEA CHART EFFECT] no cards in deck...`);
+          return;
         }
 
-        const cardId = deck.slice(-1)[0];
-        const card = cardLibrary.getCard(cardId);
-
-        loggerService.debug(`[SEA CHART EFFECT] revealing card...`);
-        await actionService.run('revealCard', {
-          cardId,
-          playerId,
-          moveToSetAside: true,
-        });
+        const cardId = card.id;
 
         const copyInPlay = args.findCardService
           .findCards({ location: 'playArea' })
@@ -1047,74 +952,60 @@ const expansion: CardExpansionModule = {
       const loggerService = args.loggerService;
       const seaWitchCard = args.cardLibrary.getCard(args.cardId);
       // Keep the duration card active through cleanup.
-      args.registerDurationEffect(seaWitchCard, {
-        id: `sea-witch:${args.cardId}:startTurn`,
-        playerId: args.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        listeningFor: 'startTurn',
-        condition: conditionArgs => {
-          return conditionArgs.trigger.args.playerId === args.playerId;
-        },
-        triggeredEffectFn: async triggerArgs => {
-          loggerService.debug(`[sea-witch triggered effect] drawing 2 cards...`);
+      registerStartTurnEffect(args, seaWitchCard, async triggerArgs => {
+        loggerService.debug(`[sea-witch triggered effect] drawing 2 cards...`);
+        await triggerArgs.actionService.run(
+          'drawCard',
+          {
+            playerId: args.playerId,
+            count: 2,
+          },
+          { source: args.cardId },
+        );
+
+        loggerService.debug(`[sea-witch triggered effect] selecting discarding cards...`);
+
+        const selectedCards = await triggerArgs.actionService.run('selectCard', {
+          prompt: 'Discard cards',
+          restrict: args.cardSourceController.getSource('playerHand', args.playerId),
+          count: 2,
+          playerId: args.playerId,
+        });
+
+        for (const selectedCardId of selectedCards) {
           await triggerArgs.actionService.run(
-            'drawCard',
+            'discardCard',
             {
+              cardId: selectedCardId,
               playerId: args.playerId,
-              count: 2,
             },
             { source: args.cardId },
           );
-
-          loggerService.debug(`[sea-witch triggered effect] selecting discarding cards...`);
-
-          const selectedCards = await triggerArgs.actionService.run('selectCard', {
-            prompt: 'Discard cards',
-            restrict: args.cardSourceController.getSource('playerHand', args.playerId),
-            count: 2,
-            playerId: args.playerId,
-          });
-
-          for (const selectedCardId of selectedCards) {
-            await triggerArgs.actionService.run(
-              'discardCard',
-              {
-                cardId: selectedCardId,
-                playerId: args.playerId,
-              },
-              { loggingContext: { source: args.cardId } },
-            );
-          }
-        },
+        }
       });
 
       loggerService.debug(`[sea witch effect] drawing 2 cards...`);
       await args.actionService.run('drawCard', { playerId: args.playerId, count: 2 });
 
-      const targetPlayerIds = findOrderedTargets({
-        startingPlayerId: args.playerId,
-        appliesTo: 'ALL_OTHER',
-        match: args.match,
-      }).filter(playerId => !isPlayerImmune(args.reactionContext, playerId));
+      const targetPlayerIds = getAttackTargets(args.match, args.playerId, args.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
-        const curseCardIds = args.findCardService.findCards({
-          all: [{ location: 'basicSupply' }, { cardKeys: 'curse' }],
+        loggerService.debug(`[sea witch effect] giving curse to ${getPlayerById(args.match, targetPlayerId)}`);
+
+        const gainedCurseId = await args.supplyGainService.gainTopSupplyCardForPileKey({
+          playerId: targetPlayerId,
+          pileKey: 'curse',
+          from: 'basicSupply',
+          to: { location: 'playerDiscard' },
+          logTag: 'sea witch effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: args.cardId,
         });
 
-        if (curseCardIds.length === 0) {
+        if (!gainedCurseId) {
           loggerService.debug(`[sea witch effect] no curses in supply...`);
           break;
         }
-
-        loggerService.debug(`[sea witch effect] giving curse to ${getPlayerById(args.match, targetPlayerId)}`);
-        await args.actionService.run('gainCard', {
-          cardId: curseCardIds[0].id,
-          playerId: targetPlayerId,
-          to: { location: 'playerDiscard' },
-        });
       }
     },
   },
@@ -1160,10 +1051,16 @@ const expansion: CardExpansionModule = {
 
       loggerService.debug(`[smugglers effect] found ${cards.length} costing up to 6 that were played`);
 
-      const inSupply = (card: Card) =>
-        cardEffectArgs.findCardService
-          .findCards({ location: ['kingdomSupply', 'basicSupply'] })
-          .find(supplyCard => supplyCard.cardKey === card.cardKey);
+      // Gains must take the top card of the pile, and for split/mixed piles
+      // the top card must be the exact same card the right-hand player
+      // gained — a pile whose top has since become a different member is
+      // not a legal target even though the pile itself still matches.
+      const inSupply = (card: Card) => {
+        const topOfPile = cardEffectArgs.findCardService.findTopSupplyCardForPileKey({
+          pileKey: getCardPileKey(card),
+        });
+        return topOfPile?.cardKey === card.cardKey ? topOfPile : undefined;
+      };
 
       const cardsInSupply = cards.map(inSupply).filter(id => id !== undefined);
 
@@ -1211,33 +1108,22 @@ const expansion: CardExpansionModule = {
 
       const tacticianCard = args.cardLibrary.getCard(args.cardId);
       // Use the shared duration flow to keep the card active through cleanup.
-      args.registerDurationEffect(tacticianCard, {
-        id: `tactician:${args.cardId}:startTurn`,
-        playerId: args.playerId,
-        listeningFor: 'startTurn',
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: conditionArgs => {
-          return conditionArgs.trigger.args.playerId === args.playerId;
-        },
-        triggeredEffectFn: async triggerArgs => {
-          loggerService.warn(`[tactician triggered effect] drawing 5 cards`);
-          await triggerArgs.actionService.run(
-            'drawCard',
-            {
-              count: 5,
-              playerId: args.playerId,
-            },
-            { loggingContext: { source: args.cardId } },
-          );
+      registerStartTurnEffect(args, tacticianCard, async triggerArgs => {
+        loggerService.warn(`[tactician triggered effect] drawing 5 cards`);
+        await triggerArgs.actionService.run(
+          'drawCard',
+          {
+            count: 5,
+            playerId: args.playerId,
+          },
+          { source: args.cardId },
+        );
 
-          loggerService.warn(`[tactician triggered effect] gaining 1 action`);
-          await triggerArgs.actionService.run('gainAction', { count: 1 });
+        loggerService.warn(`[tactician triggered effect] gaining 1 action`);
+        await triggerArgs.actionService.run('gainAction', { count: 1 });
 
-          loggerService.warn(`[tactician triggered effect] gaining 1 buy`);
-          await triggerArgs.actionService.run('gainBuy', { count: 1 });
-        },
+        loggerService.warn(`[tactician triggered effect] gaining 1 buy`);
+        await triggerArgs.actionService.run('gainBuy', { count: 1 });
       });
     },
   },
@@ -1252,38 +1138,33 @@ const expansion: CardExpansionModule = {
 
       const tidePoolsCard = args.cardLibrary.getCard(args.cardId);
       // Use the shared duration flow to keep the card active through cleanup.
-      args.registerDurationEffect(tidePoolsCard, {
-        id: `tide-pools:${args.cardId}:startTurn`,
-        playerId: args.playerId,
-        listeningFor: 'startTurn',
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: conditionArgs => conditionArgs.trigger.args.playerId === args.playerId,
-        triggeredEffectFn: async triggerArgs => {
-          loggerService.debug(`[tide pools triggered effect] selecting two cards to discard`);
-          const selectedCardIds = await triggerArgs.actionService.run('selectCard', {
-            playerId: args.playerId,
-            prompt: `Discard cards`,
-            restrict: args.cardSourceController.getSource('playerHand', args.playerId),
-            count: 2,
-          });
+      registerStartTurnEffect(args, tidePoolsCard, async triggerArgs => {
+        loggerService.debug(`[tide pools triggered effect] selecting two cards to discard`);
+        const selectedCardIds = await triggerArgs.actionService.run('selectCard', {
+          playerId: args.playerId,
+          prompt: `Discard cards`,
+          restrict: args.cardSourceController.getSource('playerHand', args.playerId),
+          count: 2,
+        });
 
-          if (!selectedCardIds.length) {
-            return;
-          }
+        if (!selectedCardIds.length) {
+          return;
+        }
 
-          for (const cardId of selectedCardIds) {
-            await triggerArgs.actionService.run(
-              'discardCard',
-              {
-                cardId,
-                playerId: args.playerId,
-              },
-              { loggingContext: { source: cardId } },
-            );
-          }
-        },
+        // Capture the effect card's own id before the loop — the loop
+        // variable below shadows args.cardId, and log attribution must
+        // point at Tide Pools, not the discarded card.
+        const sourceCardId = args.cardId;
+        for (const cardId of selectedCardIds) {
+          await triggerArgs.actionService.run(
+            'discardCard',
+            {
+              cardId,
+              playerId: args.playerId,
+            },
+            { source: sourceCardId },
+          );
+        }
       });
     },
   },
@@ -1292,9 +1173,10 @@ const expansion: CardExpansionModule = {
       () =>
       async ({ loggerService, actionService, playerId, cardId, match, cardLibrary, ...args }) => {
         loggerService.debug(`[treasure map effect] trashing played treasure map...`);
-        await actionService.run('trashCard', {
+        const playedMapTrashed = await actionService.run('trashCard', {
           playerId,
           cardId,
+          expectedFrom: { location: 'playArea' },
         });
 
         const hand = args.cardSourceController.getSource('playerHand', playerId);
@@ -1308,12 +1190,22 @@ const expansion: CardExpansionModule = {
           return;
         }
 
+        // "Trash this and a Treasure Map from your hand" are two separate
+        // instructions — the hand trash still happens even if the "this"
+        // trash lost track (e.g. a Throne Room replay whose card is already
+        // in the trash). But "if you trashed two Treasure Maps" requires
+        // BOTH to have actually happened this resolution.
         loggerService.debug(`[treasure map effect] trashing treasure map from hand...`);
 
         await actionService.run('trashCard', {
           playerId,
           cardId: inHand,
         });
+
+        if (!playedMapTrashed) {
+          loggerService.debug('[treasure map effect] lose track: played copy already trashed, no Golds');
+          return;
+        }
 
         const goldCardIds = args.findCardService.findCards({
           all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }],
@@ -1355,15 +1247,20 @@ const expansion: CardExpansionModule = {
         condition: conditionArgs => {
           if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') return false;
 
-          const victoryCardsGained = Object.entries(conditionArgs.match.stats.cardsGained)
-            .filter(([id, stats]) => {
-              const currentTurnHistoryIndex = conditionArgs.match.stats.turns.length - 1;
-              const gainedThisTurn = stats.turnHistoryIndex === currentTurnHistoryIndex;
-              return gainedThisTurn && conditionArgs.cardLibrary.getCard(+id).type.includes('VICTORY');
-            })
-            .map(results => Number(results[0]));
+          // "if you didn't gain a Victory card in your Buy phase this turn" —
+          // ANY means of gaining counts (not just buying), but only gains by
+          // the Treasury owner, and only ones that happened during a Buy
+          // phase. CardStats already records the phase each gain happened in.
+          const currentTurnHistoryIndex = conditionArgs.match.stats.turns.length - 1;
+          const gainedVictoryInBuyPhase = Object.entries(conditionArgs.match.stats.cardsGained).some(
+            ([id, stats]) =>
+              stats.turnHistoryIndex === currentTurnHistoryIndex &&
+              stats.playerId === args.playerId &&
+              stats.turnPhase === 'buy' &&
+              conditionArgs.cardLibrary.getCard(+id).type.includes('VICTORY'),
+          );
 
-          if (victoryCardsGained.length > 0) {
+          if (gainedVictoryInBuyPhase) {
             return false;
           }
 
@@ -1411,30 +1308,19 @@ const expansion: CardExpansionModule = {
       const loggerService = args.loggerService;
       const wharfCard = args.cardLibrary.getCard(args.cardId);
       // Keep the duration card active through cleanup.
-      args.registerDurationEffect(wharfCard, {
-        id: `wharf:${args.cardId}:startTurn`,
-        playerId: args.playerId,
-        listeningFor: 'startTurn',
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: conditionArgs => {
-          return conditionArgs.trigger.args.playerId === args.playerId;
-        },
-        triggeredEffectFn: async triggerArgs => {
-          loggerService.debug(`[wharf triggered effect] drawing 2 cards`);
-          await triggerArgs.actionService.run(
-            'drawCard',
-            {
-              playerId: args.playerId,
-              count: 2,
-            },
-            { loggingContext: { source: args.cardId } },
-          );
+      registerStartTurnEffect(args, wharfCard, async triggerArgs => {
+        loggerService.debug(`[wharf triggered effect] drawing 2 cards`);
+        await triggerArgs.actionService.run(
+          'drawCard',
+          {
+            playerId: args.playerId,
+            count: 2,
+          },
+          { source: args.cardId },
+        );
 
-          loggerService.debug(`[wharf triggered effect] gaining 1 buy`);
-          await triggerArgs.actionService.run('gainBuy', { count: 1 }, { source: args.cardId });
-        },
+        loggerService.debug(`[wharf triggered effect] gaining 1 buy`);
+        await triggerArgs.actionService.run('gainBuy', { count: 1 }, { source: args.cardId });
       });
 
       loggerService.debug(`[wharf effect] drawing 2 cards...`);

@@ -1,6 +1,7 @@
 @if (isOpen()) {
   <app-ui-dialog
-    [zIndex]="5000"
+    [skin]="'none'"
+    [layer]="'detail'"
     [backdropVariant]="'strong'"
     (close)="closeDetailDialog()"
   >
@@ -9,8 +10,29 @@
       (mousedown)="onPanelMouseDown($event)"
       (contextmenu)="onPanelContextMenu($event)"
     >
-      @for (detailPath of detailImagePaths(); track detailPath) {
-        <img class="card-detail-image" [src]="detailPath" alt="Card detail" draggable="false" />
+      <div class="card-detail-group">
+        <img class="card-detail-image card-detail-primary" [src]="state().primary!.detailImagePath" alt="Card detail" draggable="false" />
+        @if (state().siblings.length > 0) {
+          <div class="card-detail-siblings">
+            @for (sibling of state().siblings; track sibling.detailImagePath) {
+              <!-- mousedown fires before contextmenu, and the panel's own
+                   (mousedown) closes the dialog on any button-0/2 press —
+                   stop it here too, or a right-click would close the
+                   dialog before onSiblingContextMenu ever runs. -->
+              <img
+                class="card-detail-image card-detail-sibling"
+                [src]="sibling.detailImagePath"
+                alt="Card detail"
+                draggable="false"
+                (mousedown)="$event.stopPropagation()"
+                (contextmenu)="onSiblingContextMenu($event, sibling)"
+              />
+            }
+          </div>
+        }
+      </div>
+      @for (extra of state().extras; track extra.detailImagePath) {
+        <img class="card-detail-image" [src]="extra.detailImagePath" alt="Card detail" draggable="false" />
       }
     </div>
   </app-ui-dialog>

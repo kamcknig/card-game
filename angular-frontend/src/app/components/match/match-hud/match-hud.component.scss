@@ -6,36 +6,17 @@
   pointer-events: none;
 }
 
+// Typography-only rules for content projected into shell dialogs; panel
+// chrome (background/border/radius/shadow) comes from the shell's skin.
 .pause-dialog-card {
-  border: 1px solid var(--theme-border-strong);
-  border-radius: var(--theme-radius-lg);
-  padding: var(--theme-space-lg) var(--theme-space-xl);
-  color: var(--theme-text-on-dark);
   font-size: 36px;
   font-weight: 700;
   line-height: 1.2;
-  background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
 }
 
 .waiting-dialog-card {
-  border: 1px solid var(--theme-border-strong);
-  border-radius: var(--theme-radius-lg);
-  padding: var(--theme-space-lg) var(--theme-space-xl);
-  color: var(--theme-text-on-dark);
   font-size: 28px;
   line-height: 1.2;
-  background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
-}
-
-.disconnect-card {
-  background: var(--theme-surface-panel);
-  color: var(--theme-text-primary);
-  border: 1px solid var(--theme-border-strong);
-  padding: var(--theme-space-xl) var(--theme-space-2xl);
-  border-radius: var(--theme-radius-pill);
-  min-width: 280px;
-  text-align: center;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
 }
 
 .disconnect-title {
@@ -44,87 +25,47 @@
   margin-bottom: var(--theme-space-sm);
 }
 
-.disconnect-names {
+.disconnect-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--theme-space-sm);
   margin-bottom: var(--theme-space-md);
+  min-width: 280px;
+}
+
+.disconnect-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--theme-space-md);
+
+  // Voted-out/resigned rows: no button, muted "<name> (removed)" text.
+  &.is-removed {
+    color: var(--theme-text-secondary);
+    opacity: 0.6;
+  }
 }
 
 .disconnect-name {
   font-size: 14px;
-  margin-top: var(--theme-space-xs);
 }
 
-// Visual identity comes from `.btn .btn-danger` in styles.scss. No local
-// rule needed.
+// Visual identity for the Kick/Undo kick and Resign buttons comes from
+// `.btn`, `.btn-danger`, `.btn-secondary` in styles.scss. No local rule needed.
 
-.resign-dialog-card {
-  background: var(--theme-surface-panel);
-  color: var(--theme-text-primary);
-  border: 1px solid var(--theme-border-strong);
-  padding: var(--theme-space-xl) var(--theme-space-2xl);
-  border-radius: var(--theme-radius-pill);
-  min-width: 300px;
-  max-width: 400px;
-  text-align: center;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
-  pointer-events: auto;
-}
-
-.resign-dialog-title {
-  font-size: 18px;
+.undo-waiting-title {
   font-weight: 700;
+  font-size: 18px;
   margin-bottom: var(--theme-space-md);
 }
 
-.resign-dialog-body {
+.undo-waiting-body {
   font-size: 14px;
   color: var(--theme-text-secondary);
-  margin-bottom: var(--theme-space-xl);
-  line-height: 1.4;
+  margin-bottom: var(--theme-space-lg);
 }
 
-.resign-dialog-actions {
-  display: flex;
-  justify-content: center;
-  gap: var(--theme-space-md);
-}
-
-// Cancel/Resign buttons in this dialog use the shared `.btn .btn-secondary`
-// and `.btn .btn-danger` classes from styles.scss. No local rules needed.
-
-// Undo waiting dialog (originator) and undo allow dialog (voter) share the
-// same card chrome. Phase 4 adds .undo-waiting-card; Phase 5 will use
-// .undo-allow-card, which is listed here in advance so both phases share
-// the same rule block.
-.undo-waiting-card,
-.undo-allow-card {
-  pointer-events: auto;
-  background: var(--theme-surface-panel);
-  color: var(--theme-text-primary);
-  padding: var(--theme-space-lg);
-  border-radius: var(--theme-radius-md);
-  border: 1px solid var(--theme-border-strong);
-  box-shadow: var(--theme-shadow-strong);
-  min-width: 320px;
-  max-width: 420px;
-  display: flex;
-  flex-direction: column;
-  gap: var(--theme-space-md);
-}
-
-.undo-waiting-title,
-.undo-allow-title {
-  font-weight: 700;
-  font-size: 18px;
-}
-
-.undo-waiting-body,
-.undo-allow-body {
-  font-size: 14px;
-  color: var(--theme-text-secondary);
-}
-
-.undo-waiting-actions,
-.undo-allow-actions {
+.undo-waiting-actions {
   display: flex;
   justify-content: flex-end;
   gap: var(--theme-space-sm);

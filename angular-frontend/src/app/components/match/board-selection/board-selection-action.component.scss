@@ -1,0 +1,34 @@
+// Rendered inside .play-area-panel (match-player-area.component.html, which
+// is position: relative) so the bar's bottom edge aligns with the play
+// area's own bottom edge instead of floating over the phase-status-bar /
+// hand row below it. display: contents keeps the host out of the panel's
+// flex flow — .board-selection-overlay-root below positions against the
+// panel's own box.
+:host {
+  display: contents;
+}
+
+.board-selection-overlay-root {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: var(--theme-space-md);
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+// Dark panel chrome matching a normal dialog's dark-skin footer (see
+// ui-dialog.component.scss .skin-dark) so the bar reads clearly over played
+// cards instead of floating borderless/transparent.
+.board-selection-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--theme-space-md);
+  background: rgba(0, 0, 0, var(--theme-overlay-alpha-strong));
+  border: 1px solid var(--theme-border-strong);
+  border-radius: var(--theme-radius-lg);
+  box-shadow: var(--theme-shadow-high);
+  padding: var(--theme-space-sm) var(--theme-space-md);
+  pointer-events: auto;
+}

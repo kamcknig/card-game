@@ -1,13 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
-import { ActionButtons, UserPromptActionArgs } from 'shared/types';
+import { ActionButtons, PROMPT_DECLINE_ACTION, UserPromptActionArgs } from 'shared/types';
 import { UiDialogComponent } from '../ui/dialog/ui-dialog.component';
 import { PromptDialogCoordinatorService } from '../../core/prompt-dialog/prompt-dialog-coordinator.service';
 import { PromptSelectContentComponent } from './content/prompt-select-content.component';
 import { PromptNumberInputContentComponent } from './content/prompt-number-input-content.component';
 import { PromptNameCardContentComponent } from './content/prompt-name-card-content.component';
-import { PromptOverpayContentComponent } from './content/prompt-overpay-content.component';
+import { PromptSliderContentComponent } from './content/prompt-slider-content.component';
 import { PromptRearrangeContentComponent } from './content/prompt-rearrange-content.component';
-import { PromptBlindRearrangeContentComponent } from './content/prompt-blind-rearrange-content.component';
 import { PromptSelectPileContentComponent } from './content/prompt-select-pile-content.component';
 
 @Component({
@@ -17,9 +16,8 @@ import { PromptSelectPileContentComponent } from './content/prompt-select-pile-c
     PromptSelectContentComponent,
     PromptNumberInputContentComponent,
     PromptNameCardContentComponent,
-    PromptOverpayContentComponent,
+    PromptSliderContentComponent,
     PromptRearrangeContentComponent,
-    PromptBlindRearrangeContentComponent,
     PromptSelectPileContentComponent,
   ],
   templateUrl: './prompt-dialog-host.component.html',
@@ -44,8 +42,16 @@ export class PromptDialogHostComponent {
   // Active prompt request emitted by the prompt dialog coordinator.
   readonly activeRequest = this._promptDialogCoordinator.activeRequest;
 
+  // Display-only prompt request (boon/hex reveal, card showcase) rendered
+  // alongside the interactive prompt in its own dialog; stays open until
+  // the player explicitly closes it.
+  readonly displayRequest = this._promptDialogCoordinator.displayRequest;
+
   // Convenience accessor for active prompt args.
   readonly promptArgs = computed(() => this.activeRequest()?.args);
+
+  // Convenience accessor for display prompt args.
+  readonly displayArgs = computed(() => this.displayRequest()?.args);
 
   // Resolved action button list with number-input/select defaults.
   readonly resolvedActionButtons = computed<ActionButtons | undefined>(() => {
@@ -59,7 +65,7 @@ export class PromptDialogHostComponent {
     if (promptContent?.type === 'number-input') {
       const actionButtons: ActionButtons = [{ label: promptContent.submitText ?? 'SUBMIT', action: 1 }];
       if (promptContent.optional) {
-        actionButtons.push({ label: promptContent.cancelText ?? 'CANCEL', action: 0 });
+        actionButtons.push({ label: promptContent.cancelText ?? 'CANCEL', action: PROMPT_DECLINE_ACTION, role: 'cancel' });
       }
       return actionButtons;
     }
@@ -68,8 +74,9 @@ export class PromptDialogHostComponent {
       return promptArgs.actionButtons;
     }
 
-    // Provide a default confirm action for select prompts that do not define action buttons.
-    if (promptContent?.type === 'select') {
+    // Provide a default confirm action for select/name-card prompts that do
+    // not define action buttons.
+    if (promptContent?.type === 'select' || promptContent?.type === 'name-card') {
       return [{ label: 'Confirm', action: 1 }];
     }
 
@@ -93,7 +100,10 @@ export class PromptDialogHostComponent {
       return promptArgs.validationAction;
     }
 
-    if (promptContent?.type === 'select' && !promptArgs.actionButtons?.length) {
+    if (
+      (promptContent?.type === 'select' || promptContent?.type === 'name-card')
+      && !promptArgs.actionButtons?.length
+    ) {
       return 1;
     }
 
@@ -110,6 +120,29 @@ export class PromptDialogHostComponent {
       return false;
     }
     return !(this.resolvedActionButtons()?.length);
+  });
+
+  // The prompt's decline button, if any: prefer the explicit role marker,
+  // fall back to the legacy PROMPT_DECLINE_ACTION id convention.
+  readonly declineButton = computed(() => {
+    const buttons = this.resolvedActionButtons() ?? [];
+    return buttons.find((button) => button.role === 'cancel')
+      ?? buttons.find((button) => button.action === PROMPT_DECLINE_ACTION);
+  });
+
+  // Dismissal policy: a prompt may be dismissed (Escape / backdrop / close-X)
+  // only when it has an explicit decline path — a cancel-role (or legacy
+  // action-0) button, or a display-only / action-less payload that already
+  // shows the close X. Required-action prompts (no decline path) cannot be
+  // dismissed; the player must perform the requested action.
+  readonly promptDismissable = computed(() => {
+    if (!this.activeRequest()) {
+      return false;
+    }
+    if (this.showDisplayCloseButton() || this.showFallbackCloseButton()) {
+      return true;
+    }
+    return this.declineButton() !== undefined;
   });
 
   // Current prompt validation state used by action button disable logic.
@@ -130,19 +163,23 @@ export class PromptDialogHostComponent {
     this._selectedWayId.set(wayId);
   }
 
-  // Handles content-level finish events.
-  onContentFinished(): void {
-    this.submitResponse();
-  }
-
   // Handles explicit dialog action button clicks.
   onActionSelected(action: string | number): void {
     this.submitResponse(action);
   }
 
-  // Handles display-only close button actions.
-  onDisplayClose(): void {
-    this.submitResponse(0);
+  // Shell-initiated dismissal (Escape / backdrop / close-X). Submits the
+  // decline button's OWN action id (not a hard-coded 0) through the same
+  // submitResponse path as clicking it, so the server receives the exact
+  // cancel payload and knows the prompt was declined without a selection.
+  onDismissRequested(): void {
+    this.submitResponse(this.declineButton()?.action ?? PROMPT_DECLINE_ACTION);
+  }
+
+  // Closes the display-only prompt dialog (its own close-X / backdrop /
+  // Escape) — no response payload is ever submitted for display prompts.
+  onDisplayDismissRequested(): void {
+    this._promptDialogCoordinator.dismissDisplayPrompt();
   }
 
   // Returns true when a button action should be disabled by validation state.

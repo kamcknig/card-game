@@ -7,6 +7,34 @@ import { matchStore } from '../state/match-state';
 import { findCardLikeEntryInMatch } from 'shared/find-card-like-in-match';
 import { getSourceAccentColorForCard, getSourceAccentColorForCardLikeKind } from './source-accent-colors';
 
+// Tracks the card / card-like "subject" of the most recent entry rendered at
+// each depth level. Used to suppress redundant "(Source)" parentheticals:
+// when an entry's source card is already named by its visual parent (the
+// nearest shallower entry) or by the entry itself, indentation conveys the
+// causality and the parenthetical would be noise. Detached entries (e.g. a
+// Duration effect firing on a later turn) have no matching parent and keep
+// their attribution.
+let subjectByDepth: (string | undefined)[] = [];
+
+/**
+ * Resets render-time log tracking state. Must be called whenever the log
+ * stores are cleared and re-fed from scratch (undo `setLog` replay and
+ * `matchReady` between matches) so a new render pass cannot inherit parent
+ * subjects from the previous one.
+ */
+export const resetLogRenderTracking = () => {
+  subjectByDepth = [];
+};
+
+// Resolves the identity key an entry contributes as a potential visual
+// parent. Cards and card-likes occupy distinct id namespaces, so the key is
+// prefixed to avoid cross-namespace collisions.
+const subjectKeyFor = (logEntry: LogEntry): string | undefined => {
+  if ('cardId' in logEntry) return `card:${logEntry.cardId}`;
+  if ('cardLikeId' in logEntry) return `cardLike:${logEntry.cardLikeId}`;
+  return undefined;
+};
+
 export const logManager = {
   addLogEntry(logEntry: LogEntry) {
     let msg: string = '';
@@ -91,6 +119,13 @@ export const logManager = {
           : `${logEntry.effectText} from ${cardLikeLink(logEntry.cardLikeId)}`;
         break;
       }
+      case 'cardEffect': {
+        // effectText is server-supplied prose — keep plain. Only the card name is clickable.
+        msg = selfId === playerId
+          ? `${logEntry.effectText} from ${cardLink(logEntry.cardId, cardsById)}`
+          : `${logEntry.effectText} from ${cardLink(logEntry.cardId, cardsById)}`;
+        break;
+      }
       // Token placement and consumption logs — token names are not card or
       // card-like references and therefore stay as plain text.
       case 'tokenPlaced': {
@@ -111,6 +146,12 @@ export const logManager = {
         msg = selfId === playerId
           ? `%Y% bought ${cardLikeLink(logEntry.cardLikeId)}`
           : `%P${player?.id}% bought ${cardLikeLink(logEntry.cardLikeId)}`;
+        break;
+      }
+      case 'receiveCardLike': {
+        msg = selfId === playerId
+          ? `%Y% receives ${cardLikeLink(logEntry.cardLikeId)}`
+          : `%P${player?.id}% receives ${cardLikeLink(logEntry.cardLikeId)}`;
         break;
       }
       case 'gainCard': {
@@ -181,11 +222,32 @@ export const logManager = {
     const indentLevels = Math.max(0, (logEntry.depth ?? 0) - 1);
     msg = `${'&nbsp;'.repeat(indentLevels * 3)}${msg}`;
 
-    // Source attribution: render the source card as a clickable card-link in
-    // parentheses so players can open its detail view too.
-    if (logEntry.source) {
-      msg = `${msg} (${cardLink(logEntry.source, cardsById)})`;
+    const depth = logEntry.depth ?? 0;
+
+    // Source attribution: render the source card/card-like as a clickable
+    // link in parentheses so players can open its detail view too. Skip it
+    // when the source is redundant — already named by the entry itself
+    // ("revealed Moat" sourced to Moat) or by the visual parent one indent
+    // level up (Smithy's draws under "played Smithy") — since indentation
+    // already conveys that causality. Card-like sources (boon/hex/event/
+    // project) are tagged so they resolve outside the card library.
+    const source: LogEntrySource | undefined = logEntry.source;
+    const sourceKey = source === undefined
+      ? undefined
+      : typeof source === 'number' ? `card:${source}` : `cardLike:${source.id}`;
+    const redundantSource =
+      sourceKey !== undefined &&
+      (sourceKey === subjectKeyFor(logEntry) || subjectByDepth[depth - 1] === sourceKey);
+    if (source !== undefined && !redundantSource) {
+      msg = `${msg} (${typeof source === 'number' ? cardLink(source, cardsById) : cardLikeLink(source.id)})`;
     }
+
+    // Record this entry as the latest subject at its depth and drop stale
+    // deeper levels so a new chain cannot inherit parents from a finished
+    // one. Entries that render no message return before reaching here and
+    // never become parents.
+    subjectByDepth[depth] = subjectKeyFor(logEntry);
+    subjectByDepth.length = depth + 1;
 
     const ids = logEntryIdsStore.get();
     const newId = ids.length + 1;
@@ -194,7 +256,7 @@ export const logManager = {
   }
 };
 
-const getSourceColor = (source: LogEntrySource, cardsById: Record<CardId, Card>) => {
+const getSourceColor = (source: CardId, cardsById: Record<CardId, Card>) => {
   const sourceCard = cardsById[source];
   return getSourceAccentColorForCard(sourceCard);
 }

@@ -99,7 +99,8 @@ const runOriginalCardEffectsFromContext = async (args: CardEffectFunctionContext
   }
 };
 
-// Registers this-turn Chameleon conversion from +Cards into +$ for the current player.
+// Registers this-turn Chameleon conversion between +Cards and +$ (both
+// directions) for the current player.
 const registerWayOfTheChameleonDrawSwap = (args: CardEffectFunctionContext): void => {
   const loggerService = args.loggerService;
   const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: args.match }) ?? 0;
@@ -116,6 +117,10 @@ const registerWayOfTheChameleonDrawSwap = (args: CardEffectFunctionContext): voi
       allowMultipleInstances: true,
       compulsory: true,
       autoResolve: true,
+      // The swapped +$ replaces the draw entries this trigger suppresses, so
+      // it must log at the same depth they would have used (aligned with the
+      // card's other output), not one level deeper.
+      suppressLogIndent: true,
       condition: ({ trigger, match }) =>
         trigger.args.playerId === args.playerId &&
         trigger.args.count > 0 &&
@@ -136,9 +141,7 @@ const registerWayOfTheChameleonDrawSwap = (args: CardEffectFunctionContext): voi
             count: swappedCount,
           },
           {
-            loggingContext: {
-              source: triggeredArgs.trigger.args.source,
-            },
+            source: triggeredArgs.trigger.args.source,
           },
         );
       },
@@ -146,7 +149,41 @@ const registerWayOfTheChameleonDrawSwap = (args: CardEffectFunctionContext): voi
     { idSuffix: `way-of-the-chameleon:draw:turn:${turnHistoryIndex}:play:${playInstance}` },
   );
 
-  // Always remove the draw swap at end of turn so it cannot leak into future turns.
+  // Mirror trigger: converts +$ granted by the played card into an equal +Cards.
+  const treasureSwapTriggerId = args.reactionManager.registerSystemTemplate(
+    sourceCard,
+    'treasureGain',
+    {
+      playerId: args.playerId,
+      once: false,
+      allowMultipleInstances: true,
+      compulsory: true,
+      autoResolve: true,
+      suppressLogIndent: true,
+      condition: ({ trigger, match }) =>
+        trigger.args.playerId === args.playerId &&
+        trigger.args.count > 0 &&
+        trigger.args.source === sourceCard.id &&
+        match.stats.turns.length - 1 === turnHistoryIndex,
+      triggeredEffectFn: async triggeredArgs => {
+        const swappedCount = Math.max(0, triggeredArgs.trigger.args.count);
+        if (swappedCount < 1) {
+          loggerService.debug('[way-of-the-chameleon effect] treasure swap skipped because count is 0');
+          return;
+        }
+
+        loggerService.info(`[way-of-the-chameleon effect] converting +$${swappedCount} into +${swappedCount} Cards`);
+        triggeredArgs.trigger.args.count = 0;
+        await triggeredArgs.actionService.run('drawCard', {
+          playerId: args.playerId,
+          count: swappedCount,
+        });
+      },
+    },
+    { idSuffix: `way-of-the-chameleon:treasure:turn:${turnHistoryIndex}:play:${playInstance}` },
+  );
+
+  // Always remove both swaps at end of turn so they cannot leak into future turns.
   args.reactionManager.registerSystemTemplate(
     sourceCard,
     'endTurn',
@@ -159,7 +196,8 @@ const registerWayOfTheChameleonDrawSwap = (args: CardEffectFunctionContext): voi
         trigger.args.playerId === args.playerId && match.stats.turns.length - 1 === turnHistoryIndex,
       triggeredEffectFn: async triggeredArgs => {
         triggeredArgs.reactionManager.unregisterTrigger(drawSwapTriggerId);
-        loggerService.debug('[way-of-the-chameleon effect] removed draw swap trigger at end of turn');
+        triggeredArgs.reactionManager.unregisterTrigger(treasureSwapTriggerId);
+        loggerService.debug('[way-of-the-chameleon effect] removed draw/treasure swap triggers at end of turn');
       },
     },
     {
@@ -216,7 +254,6 @@ const expansion: CardExpansionModule = {
           ],
         },
         count: 1,
-        optional: true,
       });
       const selectedCardId = selectedCardIds[0];
 
@@ -406,12 +443,14 @@ const expansion: CardExpansionModule = {
         );
       }
 
-      // Play the set-aside card without moving it and force the normal path (cannot recurse into Way of the Mouse).
+      // Play the set-aside card without moving it. Way of the Mouse itself
+      // cannot be reselected (no recursion), but a different active Way is
+      // still a legal choice for this replay.
       loggerService.info(`[way-of-the-mouse effect] playing set-aside card ${setAsideCard}`);
       await cardEffectArgs.actionService.run('playCard', {
         playerId: cardEffectArgs.playerId,
         cardId: setAsideCardId,
-        wayId: null,
+        excludeWayKeys: ['way-of-the-mouse'],
         overrides: {
           actionCost: 0,
           moveCard: false,
@@ -523,16 +562,19 @@ const expansion: CardExpansionModule = {
           const gainedCardId = triggeredArgs.trigger.args.cardId;
           const gainedCard = triggeredArgs.cardLibrary.getCard(gainedCardId);
 
-          const decision = (await triggeredArgs.actionService.run('userPrompt', {
-            playerId: cardEffectArgs.playerId,
-            prompt: `Put ${gainedCard.cardName} onto your deck?`,
-            actionButtons: [
-              { label: 'NO', action: 1 },
-              { label: 'YES', action: 2 },
-            ],
-          })) as { action: number };
+          const shouldTopDeck = await triggeredArgs.promptService.confirm(
+            {
+              playerId: cardEffectArgs.playerId,
+              prompt: `Put ${gainedCard.cardName} onto your deck?`,
+              actionButtons: [
+                { label: 'NO', action: 1 },
+                { label: 'YES', action: 2 },
+              ],
+            },
+            2,
+          );
 
-          if (decision.action !== 2) {
+          if (!shouldTopDeck) {
             loggerService.debug('[way-of-the-seal effect] player declined to topdeck gained card');
             return;
           }

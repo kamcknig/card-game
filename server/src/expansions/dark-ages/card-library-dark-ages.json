@@ -4,56 +4,65 @@
       "treasure": 0
     },
     "type": ["ACTION", "RUINS"],
-    "kingdomSelectable": false
+    "kingdomSelectable": false,
+    "abilityText": "+$1"
   },
   "altar": {
     "cost": {
       "treasure": 6
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "Trash a card from your hand. Gain a card costing up to $5."
   },
   "armory": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "Gain a card onto your deck costing up to $4."
   },
   "band-of-misfits": {
     "cardName": "Band of Misfits",
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "COMMAND"]
+    "type": ["ACTION", "COMMAND"],
+    "abilityText": "Play a non-Command non-Duration Action card from the Supply that costs less than this, leaving it there."
   },
   "bandit-camp": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+2 Actions\nGain a Spoils."
   },
   "beggar": {
     "cost": {
       "treasure": 2
     },
-    "type": ["ACTION", "REACTION"]
+    "type": ["ACTION", "REACTION"],
+    "abilityText": "Gain 3 Coppers to your hand.\n----\nWhen another player plays an Attack card, you may first discard this to gain 2 Silvers, putting one onto your deck."
   },
   "catacombs": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "Look at the top 3 cards of your deck. Choose one: Put them into your hand; or discard them and +3 Cards.\n----\nWhen you trash this, gain a cheaper card."
   },
   "count": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "Choose one: Discard 2 cards; or put a card from your hand onto your deck; or gain a Copper.\nChoose one: +$3; or trash your hand; or gain a Duchy."
   },
   "counterfeit": {
     "cost": {
       "treasure": 5
     },
-    "type": ["TREASURE"]
+    "type": ["TREASURE"],
+    "abilityText": "$1\n+1 Buy\nYou may play a non-Duration Treasure from your hand twice. Trash it."
   },
   "cultist": {
     "cost": {
@@ -61,7 +70,80 @@
     },
     "type": ["ACTION", "ATTACK", "LOOTER"],
     "targetScheme": "ALL_OTHER",
-    "abilityText": "+2 Cards\nEach other player gains a Ruins. You may play a Cultist from your hand.\nWhen you trash this, +3 Cards."
+    "abilityText": "+2 Cards\nEach other player gains a Ruins. You may play a Cultist from your hand.\n----\nWhen you trash this, +3 Cards."
+  },
+  "death-cart": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION", "LOOTER"],
+        "abilityText": "You may trash this or an Action card from your hand, for +$5$5.\nWhen you gain this, gain 2 Ruins."
+  },
+  "feodum": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["VICTORY"],
+    "victoryPoints": 0,
+    "abilityText": "Worth 1VP per 3 Silvers you have (round down).\n----\nWhen you trash this, gain 3 Silvers."
+  },
+  "forager": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION"],
+    "abilityText": "+1 Action\n+1 Buy\nTrash a card from your hand, then +$1 per differently named Treasure in the trash."
+  },
+  "fortress": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+2 Actions\n----\nWhen you trash this, put it into your hand."
+  },
+  "graverobber": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"],
+    "abilityText": "Choose one: Gain a card from the trash costing from $3 to $6, onto your deck; or trash an Action card from your hand and gain a card costing up to $3 more than it."
+  },
+  "hermit": {
+    "cost": {
+      "treasure": 3
+    },
+    "type": ["ACTION"],
+    "abilityText": "Look through your discard pile. You may trash a non-Treasure from it or from your hand. Gain a card costing up to $3. At the end of your Buy phase this turn, if you didn't gain any cards in it, exchange this for a Madman."
+  },
+  "hovel": {
+    "cost": {
+      "treasure": 1
+    },
+    "type": ["REACTION", "SHELTER"],
+    "kingdomSelectable": false,
+    "abilityText": "When you gain a Victory card, you may trash this from your hand."
+  },
+  "hunting-grounds": {
+    "cost": {
+      "treasure": 6
+    },
+    "type": ["ACTION"],
+    "abilityText": "+4 Cards\n----\nWhen you trash this, gain a Duchy or 3 Estates."
+  },
+  "ironmonger": {
+    "cardName": "Iron Monger",
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+1 Action\nReveal the top card of your deck; you may discard it. Either way, if it is an…\nAction card, +1 Action\nTreasure card, +$1\nVictory card, +1 Card"
+  },
+  "junk-dealer": {
+    "cost": {
+      "treasure": 5
+    },
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+1 Action\n+$1\nTrash a card from your hand."
   },
   "knights": {
     "pile": {
@@ -78,7 +160,8 @@
           "treasure": 5
         },
         "type": ["ACTION", "ATTACK", "KNIGHT"],
-        "targetScheme": "ALL_OTHER"
+        "targetScheme": "ALL_OTHER",
+        "abilityText": "You may trash up to 2 cards from your hand. Each other player reveals the top 2 cards of their deck, trashes one of them costing from $3 to $6, and discards the rest. If a Knight is trashed by this, trash this."
       },
       {
         "cardKey": "dame-josephine",
@@ -87,7 +170,8 @@
         },
         "type": ["ACTION", "ATTACK", "VICTORY", "KNIGHT"],
         "targetScheme": "ALL_OTHER",
-        "victoryPoints": 2
+        "victoryPoints": 2,
+        "abilityText": "Each other player reveals the top 2 cards of their deck, trashes one of them costing from $3 to $6, and discards the rest. If a Knight is trashed by this, trash this.\n----\n2VP"
       },
       {
         "cardKey": "dame-molly",
@@ -95,7 +179,8 @@
           "treasure": 5
         },
         "type": ["ACTION", "ATTACK", "KNIGHT"],
-        "targetScheme": "ALL_OTHER"
+        "targetScheme": "ALL_OTHER",
+        "abilityText": "+2 Actions\nEach other player reveals the top 2 cards of their deck, trashes one of them costing from $3 to $6, and discards the rest. If a Knight is trashed by this, trash this."
       },
       {
         "cardKey": "dame-natalie",
@@ -103,7 +188,8 @@
           "treasure": 5
         },
         "type": ["ATTACK", "ACTION", "KNIGHT"],
-        "targetScheme": "ALL_OTHER"
+        "targetScheme": "ALL_OTHER",
+        "abilityText": "You may gain a card costing up to $3. Each other player reveals the top 2 cards of their deck, trashes one of them costing from $3 to $6, and discards the rest. If a Knight is trashed by this, trash this."
       },
       {
         "cardKey": "dame-sylvia",
@@ -111,7 +197,8 @@
           "treasure": 5
         },
         "type": ["ACTION", "ATTACK", "KNIGHT"],
-        "targetScheme": "ALL_OTHER"
+        "targetScheme": "ALL_OTHER",
+        "abilityText": "+$2\nEach other player reveals the top 2 cards of their deck, trashes one of them costing from $3 to $6$6, and discards the rest. If a Knight is trashed by this, trash this."
       },
       {
         "cardKey": "sir-bailey",
@@ -119,7 +206,8 @@
           "treasure": 5
         },
         "type": ["ACTION", "ATTACK", "KNIGHT"],
-        "targetScheme": "ALL_OTHER"
+        "targetScheme": "ALL_OTHER",
+        "abilityText": "+1 Card\n+1 Action\nEach other player reveals the top 2 cards of their deck, trashes one of them costing from $3 to $6, and discards the rest. If a Knight is trashed by this, trash this."
       },
       {
         "cardKey": "sir-destry",
@@ -127,7 +215,8 @@
           "treasure": 5
         },
         "type": ["ACTION", "ATTACK", "KNIGHT"],
-        "targetScheme": "ALL_OTHER"
+        "targetScheme": "ALL_OTHER",
+        "abilityText": "+2 Cards\nEach other player reveals the top 2 cards of their deck, trashes one of them costing from $3 to $6, and discards the rest. If a Knight is trashed by this, trash this."
       },
       {
         "cardKey": "sir-martin",
@@ -135,7 +224,8 @@
           "treasure": 4
         },
         "type": ["ACTION", "ATTACK", "KNIGHT"],
-        "targetScheme": "ALL_OTHER"
+        "targetScheme": "ALL_OTHER",
+        "abilityText": "+2 Buys\nEach other player reveals the top 2 cards of their deck, trashes one of them costing from $3 to $6, and discards the rest. If a Knight is trashed by this, trash this."
       },
       {
         "cardKey": "sir-michael",
@@ -143,7 +233,8 @@
           "treasure": 5
         },
         "type": ["ACTION", "ATTACK", "KNIGHT"],
-        "targetScheme": "ALL_OTHER"
+        "targetScheme": "ALL_OTHER",
+        "abilityText": "Each other player discards down to 3 cards in hand. Each other player reveals the top 2 cards of their deck, trashes one of them costing from $3 to $6$6, and discards the rest. If a Knight is trashed by this, trash this."
       },
       {
         "cardKey": "sir-vander",
@@ -151,80 +242,18 @@
           "treasure": 5
         },
         "type": ["ACTION", "ATTACK", "KNIGHT"],
-        "targetScheme": "ALL_OTHER"
+        "targetScheme": "ALL_OTHER",
+        "abilityText": "Each other player reveals the top 2 cards of their deck, trashes one of them costing from $3 to $6, and discards the rest. If a Knight is trashed by this, trash this.\n----\nWhen you trash this, gain a Gold."
       }
     ]
-  },
-  "death-cart": {
-    "cost": {
-      "treasure": 4
-    },
-    "type": ["ACTION", "LOOTER"]
-  },
-  "feodum": {
-    "cost": {
-      "treasure": 4
-    },
-    "type": ["VICTORY"],
-    "abilityText": "Worth 1VP per 3 Silvers you have (round down).\nWhen you trash this, gain 3 Silvers.",
-    "victoryPoints": 0
-  },
-  "forager": {
-    "cost": {
-      "treasure": 3
-    },
-    "type": ["ACTION"]
-  },
-  "fortress": {
-    "cost": {
-      "treasure": 4
-    },
-    "type": ["ACTION"]
-  },
-  "graverobber": {
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION"]
-  },
-  "hermit": {
-    "cost": {
-      "treasure": 3
-    },
-    "type": ["ACTION"]
-  },
-  "hovel": {
-    "cost": {
-      "treasure": 1
-    },
-    "type": ["REACTION", "SHELTER"],
-    "kingdomSelectable": false
-  },
-  "hunting-grounds": {
-    "cost": {
-      "treasure": 6
-    },
-    "type": ["ACTION"]
-  },
-  "ironmonger": {
-    "cardName": "Iron Monger",
-    "cost": {
-      "treasure": 4
-    },
-    "type": ["ACTION"]
-  },
-  "junk-dealer": {
-    "cost": {
-      "treasure": 5
-    },
-    "type": ["ACTION"]
   },
   "madman": {
     "cost": {
       "treasure": 0
     },
     "type": ["ACTION"],
-    "kingdomSelectable": false
+    "kingdomSelectable": false,
+    "abilityText": "+2 Actions\nReturn this to the Madman pile. If you do, +1 Card per card in your hand.\n(This is not in the Supply.)"
   },
   "marauder": {
     "cost": {
@@ -238,7 +267,8 @@
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION", "REACTION"]
+    "type": ["ACTION", "REACTION"],
+    "abilityText": "+1 Card\n+1 Action\n+1 Buy\n----\nWhen one of your cards is trashed, you may discard this from your hand to gain a Gold."
   },
   "mercenary": {
     "cost": {
@@ -246,21 +276,23 @@
     },
     "type": ["ATTACK", "ACTION"],
     "targetScheme": "ALL_OTHER",
-    "abilityText": "You may trash 2 cards from your hand. If you did, +2 Cards, +$2, and each other player discards down to 3 cards in hand.\n(This is not in the Supply.)",
-    "kingdomSelectable": false
+    "kingdomSelectable": false,
+    "abilityText": "You may trash 2 cards from your hand. If you did, +2 Cards, +$2, and each other player discards down to 3 cards in hand.\n(This is not in the Supply.)"
   },
   "mystic": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Action\n+$2\nName a card, then reveal the top card of your deck. If you named it, put it into your hand."
   },
   "necropolis": {
     "cost": {
       "treasure": 1
     },
     "type": ["ACTION", "SHELTER"],
-    "kingdomSelectable": false
+    "kingdomSelectable": false,
+    "abilityText": "+2 Actions"
   },
   "overgrown-estate": {
     "cost": {
@@ -268,7 +300,8 @@
     },
     "type": ["VICTORY", "SHELTER"],
     "victoryPoints": 0,
-    "kingdomSelectable": false
+    "kingdomSelectable": false,
+    "abilityText": "0VP\n----\nWhen you trash this, +1 Card."
   },
   "pillage": {
     "cost": {
@@ -282,25 +315,29 @@
     "cost": {
       "treasure": 1
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+$4\nReveal your hand. –$1 per Treasure card in your hand. (You can't go below $0.)"
   },
   "procession": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "You may play a non-Duration Action card from your hand twice. Trash it. Gain an Action card costing exactly $1 more than it."
   },
   "rats": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+1 Action\nGain a Rats. Trash a card from your hand other than a Rats (or reveal a hand of all Rats).\n----\nWhen you trash this, +1 Card."
   },
   "rebuild": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Action\nName a card. Reveal cards from your deck until you reveal a Victory card you did not name. Discard the rest, trash the Victory card, and gain a Victory card costing up to $3 more than it."
   },
   "rogue": {
     "cost": {
@@ -315,52 +352,60 @@
       "treasure": 0
     },
     "type": ["ACTION", "RUINS"],
-    "kingdomSelectable": false
+    "kingdomSelectable": false,
+    "abilityText": ""
   },
   "ruined-market": {
     "cost": {
       "treasure": 0
     },
     "type": ["ACTION", "RUINS"],
-    "kingdomSelectable": false
+    "kingdomSelectable": false,
+    "abilityText": "+1 Card"
   },
   "ruined-village": {
     "cost": {
       "treasure": 0
     },
     "type": ["ACTION", "RUINS"],
-    "kingdomSelectable": false
+    "kingdomSelectable": false,
+    "abilityText": "+1 Action"
   },
   "sage": {
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Action\nReveal cards from the top of your deck until you reveal one costing $3 or more. Put that card into your hand and discard the rest."
   },
   "scavenger": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+$2\nYou may put your deck into your discard pile. Put a card from your discard pile onto your deck."
   },
   "squire": {
     "cost": {
       "treasure": 2
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+$1\nChoose one: +2 Actions; or +2 Buys; or gain a Silver.\n----\nWhen you trash this, gain an Attack card."
   },
   "storeroom": {
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Buy\nDiscard any number of cards, then draw that many. Then discard any number of cards for +$1 each."
   },
   "survivors": {
     "cost": {
       "treasure": 0
     },
     "type": ["ACTION", "RUINS"],
-    "kingdomSelectable": false
+    "kingdomSelectable": false,
+    "abilityText": "Look at the top 2 cards of your deck. Discard them or put them back in any order."
   },
   "urchin": {
     "cost": {
@@ -368,25 +413,28 @@
     },
     "type": ["ACTION", "ATTACK"],
     "targetScheme": "ALL_OTHER",
-    "abilityText": "+1 Card\n+1 Action\nEach other player discards down to 4 cards in hand.\nWhen you play another Attack card with this in play, you may first trash this, to gain a Mercenary."
+    "abilityText": "+1 Card\n+1 Action\nEach other player discards down to 4 cards in hand.\n----\nWhen you play another Attack card with this in play, you may first trash this, to gain a Mercenary."
   },
   "spoils": {
     "cost": {
       "treasure": 0
     },
     "type": ["TREASURE"],
-    "kingdomSelectable": false
+    "kingdomSelectable": false,
+    "abilityText": "$3\nWhen you play this, return it to the Spoils pile.\n----\n(This is not in the Supply.)"
   },
   "vagrant": {
     "cost": {
       "treasure": 2
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+1 Action\nReveal the top card of your deck. If it's a Curse, Ruins, Shelter, or Victory card, put it into your hand."
   },
   "wandering-minstrel": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+2 Actions\nReveal the top 3 cards of your deck. Put the Action cards back in any order and discard the rest."
   }
 }

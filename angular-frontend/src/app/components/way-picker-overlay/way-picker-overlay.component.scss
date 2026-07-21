@@ -11,37 +11,11 @@
   pointer-events: none;
 }
 
+// Position/z-index/width only — panel chrome + entry list styling now live
+// in WayPickerPanelComponent (shared with prompt-select-content's
+// modal-embedded tooltip).
 .way-picker-panel {
   position: fixed;
   z-index: 1;
-  display: flex;
-  flex-direction: column;
-  gap: var(--theme-space-sm);
-  background: rgba(0, 0, 0, var(--theme-overlay-alpha-medium));
-  border: 1px solid var(--theme-border-action);
-  border-radius: var(--theme-radius-md);
-  padding: var(--theme-space-sm);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
   width: calc(var(--card-landscape-width) + 2 * var(--theme-space-sm) + 2px);
-  box-sizing: border-box;
-  pointer-events: auto;
-}
-
-.way-picker-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--theme-space-sm);
-}
-
-.way-entry {
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--theme-radius-md);
-  padding: 0;
-  cursor: pointer;
-  display: block;
-}
-
-.way-entry:hover {
-  border-color: var(--theme-border-action);
 }

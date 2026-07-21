@@ -8,7 +8,14 @@ export class LogManager {
   private readonly _historyLimit = 5000;
   constructor(private readonly socketMap: Map<PlayerId, AppSocket>) {}
 
-  public addLogEntry(entry: DistributiveOmit<LogEntry, 'depth'> & { root?: boolean }) {
+  public addLogEntry(entry: DistributiveOmit<LogEntry, 'depth'> & { root?: boolean; interject?: boolean }) {
+    if (entry.interject) {
+      // Interjected entries (e.g. a player resigning mid-chain) render at the
+      // root column but must NOT reset the depth counter — a rootLog here
+      // would corrupt indentation for the remainder of any in-flight chain.
+      this._queue.push({ ...entry, depth: 0 });
+      return;
+    }
     if (entry.root) {
       this.rootLog(entry);
     } else {

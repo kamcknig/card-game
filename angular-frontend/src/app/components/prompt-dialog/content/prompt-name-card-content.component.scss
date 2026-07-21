@@ -1,21 +1,11 @@
+@use './selectable-tile' as tile;
+
 .name-card-content {
   display: flex;
   flex-direction: column;
   gap: var(--theme-space-md);
   min-width: min(1120px, calc(100vw - 120px));
   max-width: min(1120px, calc(100vw - 120px));
-}
-
-.name-card-input {
-  width: 220px;
-  height: 42px;
-  border-radius: var(--theme-radius-md);
-  border: 1px solid var(--theme-border-strong);
-  background: var(--theme-surface-panel);
-  color: var(--theme-text-primary);
-  padding: var(--theme-space-sm) var(--theme-space-md);
-  font-size: 18px;
-  box-sizing: border-box;
 }
 
 .name-card-results {
@@ -28,17 +18,17 @@
 }
 
 .name-card-result {
+  @include tile.tile-base;
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--theme-radius-md);
-  padding: 0;
-  cursor: pointer;
-  transition: transform 120ms ease, border-color 120ms ease;
+  transition: border-color 120ms ease;
 }
 
 .name-card-result:hover {
-  border-color: var(--theme-border-action);
-  transform: translateY(-6px);
+  @include tile.tile-hover;
+}
+
+.name-card-result.selected {
+  @include tile.tile-selected;
 }
 
 .name-card-empty {

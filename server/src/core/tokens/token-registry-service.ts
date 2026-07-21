@@ -1,15 +1,6 @@
-import type { ActionService } from '@server-types/index.ts';
-import { CardId, Match, PlayerId, TokenDefinition, TokenId } from 'shared/types/index.ts';
+import type { TokenCardPlayedHandler } from '@server-types/index.ts';
+import { TokenDefinition, TokenId } from 'shared/types/index.ts';
 import { LoggerService } from '../logger-service.ts';
-
-export type TokenCardPlayedContext = {
-  match: Match;
-  playerId: PlayerId;
-  cardId: CardId;
-  actionService: ActionService;
-};
-
-export type TokenCardPlayedHandler = (context: TokenCardPlayedContext) => Promise<void>;
 
 // Stores token definitions and token-triggered handlers.
 export class TokenRegistryService {

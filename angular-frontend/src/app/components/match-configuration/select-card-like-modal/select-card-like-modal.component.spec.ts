@@ -4,6 +4,8 @@ import { NanostoresService } from '@nanostores/angular';
 import { of } from 'rxjs';
 
 import { selectableSearchCatalogStore } from '../../../state/selectable-search-state';
+import { selfPlayerIdStore } from '../../../state/player-state';
+import { SocketService } from '../../../core/socket-service/socket.service';
 import { SelectCardLikeModalComponent, SelectableSearchResult } from './select-card-like-modal.component';
 
 /** Builds a minimal CardNoId-shaped object for use in tests. */
@@ -47,9 +49,30 @@ class NanostoresServiceStub {
   ngOnDestroy = (): void => {};
 }
 
+/**
+ * Stubs SocketService: records emits and registered server-event handlers so
+ * tests can simulate server search responses via trigger().
+ */
+class SocketServiceStub {
+  private readonly _handlers = new Map<string, (...args: unknown[]) => void>();
+  on = jest.fn().mockImplementation((event: string, handler: (...args: unknown[]) => void) => {
+    this._handlers.set(event, handler);
+  });
+  off = jest.fn().mockImplementation((event: string) => {
+    this._handlers.delete(event);
+  });
+  emit = jest.fn();
+
+  /** Test helper: fires a previously-registered server event handler. */
+  trigger(event: string, ...args: unknown[]): void {
+    this._handlers.get(event)?.(...args);
+  }
+}
+
 describe('SelectCardLikeModalComponent', () => {
   let component: SelectCardLikeModalComponent;
   let fixture: ComponentFixture<SelectCardLikeModalComponent>;
+  let socket: SocketServiceStub;
 
   /** Creates a component instance with the given catalogKind (default: 'cards'). */
   function createComponent(catalogKind = 'cards'): void {
@@ -68,6 +91,7 @@ describe('SelectCardLikeModalComponent', () => {
       providers: [
         provideZonelessChangeDetection(),
         { provide: NanostoresService, useClass: NanostoresServiceStub },
+        { provide: SocketService, useClass: SocketServiceStub },
       ],
     })
       // Add NO_ERRORS_SCHEMA directly to the standalone component so unknown
@@ -78,9 +102,12 @@ describe('SelectCardLikeModalComponent', () => {
         add: { schemas: [NO_ERRORS_SCHEMA] },
       })
       .compileComponents();
+
+    socket = TestBed.inject(SocketService) as unknown as SocketServiceStub;
   });
 
   afterEach(() => {
+    selfPlayerIdStore.set(undefined);
     jest.clearAllMocks();
   });
 
@@ -263,25 +290,37 @@ describe('SelectCardLikeModalComponent', () => {
         expect(component.displaySearchResults().length).toBe(4);
       });
 
-      describe('debounced search term filtering', () => {
+      // Matching is server-authoritative: a non-empty debounced term emits a
+      // search<Kind> socket request and the grid renders whatever the server
+      // sends back on search<Kind>Response (fuzzy matching lives in
+      // server/src/core/expansion-search-service.ts, not the client).
+      describe('debounced search term filtering (server-driven)', () => {
         beforeEach(() => jest.useFakeTimers());
         afterEach(() => jest.useRealTimers());
 
-        it('filters by cardName after the debounce interval', () => {
+        it('requests server results for the debounced term', () => {
+          // The NanostoresService stub snapshots store values at component
+          // creation, so the player id must be set before re-creating.
+          selfPlayerIdStore.set(7);
+          createComponent();
           component.updateSearchTerm('village');
           jest.advanceTimersByTime(150);
-          expect(component.displaySearchResults().map((r) => r.cardKey)).toEqual(['village']);
+          // Zoneless: flush the request effect explicitly after the debounce.
+          TestBed.tick();
+          expect(socket.emit).toHaveBeenCalledWith('searchCards', 7, 'village');
         });
 
-        it('search is case-insensitive', () => {
-          component.updateSearchTerm('VILLAGE');
+        it('renders the server search response for a non-empty term', () => {
+          component.updateSearchTerm('village');
           jest.advanceTimersByTime(150);
+          socket.trigger('searchCardResponse', [village]);
           expect(component.displaySearchResults().map((r) => r.cardKey)).toEqual(['village']);
         });
 
-        it('returns no results when the search term matches nothing', () => {
+        it('returns no results when the server responds with none', () => {
           component.updateSearchTerm('xyznotfound');
           jest.advanceTimersByTime(150);
+          socket.trigger('searchCardResponse', []);
           expect(component.displaySearchResults().length).toBe(0);
         });
       });
@@ -409,15 +448,19 @@ describe('SelectCardLikeModalComponent', () => {
       beforeEach(() => jest.useFakeTimers());
       afterEach(() => jest.useRealTimers());
 
-      it('is true when a search term matches nothing', () => {
+      it('is true when the server returns no results for the term', () => {
         component.updateSearchTerm('xyznotfound');
         jest.advanceTimersByTime(150);
+        socket.trigger('searchCardResponse', []);
         expect(component.shouldShowNoResults()).toBe(true);
       });
 
-      it('is false when a search term matches at least one result', () => {
+      it('is false when the server returns at least one result', () => {
         component.updateSearchTerm('village');
         jest.advanceTimersByTime(150);
+        socket.trigger('searchCardResponse', [
+          makeCard({ cardKey: 'village', cardName: 'Village', type: ['ACTION'] }),
+        ]);
         expect(component.shouldShowNoResults()).toBe(false);
       });
     });

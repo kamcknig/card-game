@@ -26,6 +26,11 @@ let DUMMY_HASH: string | undefined;
  *
  * Behaviors:
  * - Case-insensitive username lookup (stored lowercase in the user store).
+ * - The sign-in identifier may be a username OR an email: the username
+ *   lookup is tried first, then an email lookup when the identifier
+ *   contains '@'. Lockout/failure counters are keyed by the resolved
+ *   user id, so login-by-email shares lockout state with login-by-username
+ *   for the same account.
  * - Unknown-user requests still run a constant-time dummy hash verification
  *   so timing does not reveal account existence (username enumeration).
  * - Supports both argon2id (preferred) and bcrypt (legacy) stored hashes.
@@ -76,9 +81,10 @@ export class UserAccountAuthProvider implements AuthProvider {
   /**
    * Validates the given credentials and returns an AuthResult.
    *
-   * Credentials shape: `{ username: string, password: string }`. Any missing
-   * or wrong-type field is treated as a generic rejection to avoid leaking
-   * which check failed.
+   * Credentials shape: `{ username: string, password: string }`. The
+   * `username` field accepts either a username or an email address — see
+   * {@link resolveUser}. Any missing or wrong-type field is treated as a
+   * generic rejection to avoid leaking which check failed.
    */
   public async authenticate(credentials: Record<string, unknown>): Promise<AuthResult> {
     const username =
@@ -91,19 +97,27 @@ export class UserAccountAuthProvider implements AuthProvider {
     }
 
     // DANGER: local-dev auth bypass. When AUTH_DEV_BYPASS=true, accept any
-    // non-empty username/password without touching the user store, password
-    // hashes, lockout counters, or Supabase. Downstream identity (admin flag,
-    // email) is resolved by the DevBypassUserStore decorator. Guarded so the
-    // provider behaves identically to production when the flag is off. This
-    // must never be enabled in a shared or production environment.
+    // non-empty username/password without password verification, lockout
+    // counters, or Supabase. Downstream identity (admin flag, email) is
+    // resolved by the DevBypassUserStore decorator. Guarded so the provider
+    // behaves identically to production when the flag is off. This must
+    // never be enabled in a shared or production environment.
     if (this.serverConfigService.isAuthDevBypassEnabled()) {
       this.loggerService.warn(
         `[auth:user] DEV BYPASS active — accepting '${username}' without password verification (AUTH_DEV_BYPASS)`,
       );
-      return { ok: true, username };
+      // Resolve to the canonical username, mirroring the production paths
+      // below which return user.username, never the typed identifier. The
+      // decorator handles the full resolution: real username match, real
+      // email match (sign-in-by-email), or a synthesized dev identity —
+      // so the session and login response always carry a canonical
+      // username, not a raw email address. The ?? fallback is defensive:
+      // under the bypass the decorator always returns a record.
+      const resolved = await this.userStore.getByUsername(username);
+      return { ok: true, username: resolved?.username ?? username };
     }
 
-    const user = await this.userStore.getByUsername(username);
+    const user = await this.resolveUser(username);
 
     // Run a dummy verify even when the user is missing to avoid leaking
     // existence via timing. Also matches the disabled-account case.
@@ -136,6 +150,30 @@ export class UserAccountAuthProvider implements AuthProvider {
     }
 
     return this.authenticateViaArgon2(user, password, now);
+  }
+
+  /**
+   * Resolves the login identifier as a username first (the existing common
+   * case, and safe even for email-shaped usernames since `USERNAME_REGEX`
+   * disallows '@' at registration time), falling back to an email lookup
+   * when the identifier looks like an email.
+   *
+   * This method is not reached in dev-bypass mode — {@link authenticate}
+   * short-circuits before it and resolves the identifier through
+   * `DevBypassUserStore.getByUsername`, which performs the same
+   * username-then-email resolution against the real store before
+   * synthesizing a dev identity. The ordering here matches that decorator
+   * so both paths resolve identifiers identically.
+   *
+   * @param identifier  The raw sign-in field value — may be a username or an email.
+   */
+  private async resolveUser(identifier: string): Promise<UserRecord | undefined> {
+    const byUsername = await this.userStore.getByUsername(identifier);
+    if (byUsername) return byUsername;
+    if (identifier.includes('@')) {
+      return this.userStore.getByEmail(identifier);
+    }
+    return undefined;
   }
 
   /**

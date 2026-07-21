@@ -33,6 +33,11 @@ export const debugOpenApiSpec = {
     { name: 'debug-expansions', description: 'Expansion catalog and search-index debug resources.' },
     { name: 'debug-saved-configurations', description: 'Saved match configuration CRUD resources.' },
   ],
+  // Every /debug/* route requires a valid admin Bearer token
+  // (ServerDebugRouteHandlerService#requireAdminToken). Declaring this at
+  // the document level applies it to every operation by default; per-path
+  // `security` overrides are not needed since no debug route is public.
+  security: [{ bearerAuth: [] }],
   paths: {
     '/debug/openapi.json': {
       get: {
@@ -50,6 +55,7 @@ export const debugOpenApiSpec = {
               },
             },
           },
+          '401': { $ref: '#/components/responses/Unauthorized' },
           '403': {
             $ref: '#/components/responses/DebugApiDisabled',
           },
@@ -81,6 +87,7 @@ export const debugOpenApiSpec = {
               },
             },
           },
+          '401': { $ref: '#/components/responses/Unauthorized' },
           '403': {
             $ref: '#/components/responses/DebugApiDisabled',
           },
@@ -110,6 +117,7 @@ export const debugOpenApiSpec = {
               },
             },
           },
+          '401': { $ref: '#/components/responses/Unauthorized' },
           '403': { $ref: '#/components/responses/DebugApiDisabled' },
           '404': { $ref: '#/components/responses/NotFoundText' },
         },
@@ -142,6 +150,7 @@ export const debugOpenApiSpec = {
               },
             },
           },
+          '401': { $ref: '#/components/responses/Unauthorized' },
           '403': { $ref: '#/components/responses/DebugApiDisabled' },
           '404': { $ref: '#/components/responses/NotFoundText' },
         },
@@ -171,6 +180,7 @@ export const debugOpenApiSpec = {
             },
           },
           '400': { $ref: '#/components/responses/BadRequestText' },
+          '401': { $ref: '#/components/responses/Unauthorized' },
           '403': { $ref: '#/components/responses/DebugApiDisabled' },
           '404': { $ref: '#/components/responses/NotFoundText' },
         },
@@ -192,6 +202,7 @@ export const debugOpenApiSpec = {
             },
           },
           '400': { $ref: '#/components/responses/BadRequestText' },
+          '401': { $ref: '#/components/responses/Unauthorized' },
           '403': { $ref: '#/components/responses/DebugApiDisabled' },
           '404': { $ref: '#/components/responses/NotFoundText' },
         },
@@ -237,6 +248,7 @@ export const debugOpenApiSpec = {
               },
             },
           },
+          '401': { $ref: '#/components/responses/Unauthorized' },
           '403': {
             description: 'Debug API disabled or match state merge disabled',
             content: {
@@ -270,6 +282,33 @@ export const debugOpenApiSpec = {
             },
           },
           '400': { $ref: '#/components/responses/BadRequestText' },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '403': { $ref: '#/components/responses/DebugApiDisabled' },
+          '404': { $ref: '#/components/responses/NotFoundText' },
+        },
+      },
+    },
+    '/debug/games/{gameId}/matches/{matchScopeId}/undo': {
+      post: {
+        tags: ['debug-state'],
+        operationId: 'debugUndoMatch',
+        summary: 'Debug-only: pops the most recent undo snapshot and restores state without a vote.',
+        parameters: [{ $ref: '#/components/parameters/GameId' }, { $ref: '#/components/parameters/MatchScopeId' }],
+        responses: {
+          '200': {
+            description: 'Undo applied',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: { ok: { type: 'boolean' } },
+                  required: ['ok'],
+                },
+              },
+            },
+          },
+          '400': { $ref: '#/components/responses/BadRequestText' },
+          '401': { $ref: '#/components/responses/Unauthorized' },
           '403': { $ref: '#/components/responses/DebugApiDisabled' },
           '404': { $ref: '#/components/responses/NotFoundText' },
         },
@@ -300,6 +339,7 @@ export const debugOpenApiSpec = {
             },
           },
           '400': { $ref: '#/components/responses/BadRequestText' },
+          '401': { $ref: '#/components/responses/Unauthorized' },
           '403': { $ref: '#/components/responses/DebugApiDisabled' },
           '404': { $ref: '#/components/responses/NotFoundText' },
         },
@@ -349,6 +389,7 @@ export const debugOpenApiSpec = {
               },
             },
           },
+          '401': { $ref: '#/components/responses/Unauthorized' },
           '403': { $ref: '#/components/responses/DebugApiDisabled' },
           '404': { $ref: '#/components/responses/NotFoundText' },
         },
@@ -378,6 +419,7 @@ export const debugOpenApiSpec = {
               },
             },
           },
+          '401': { $ref: '#/components/responses/Unauthorized' },
           '403': { $ref: '#/components/responses/DebugApiDisabled' },
         },
       },
@@ -394,6 +436,7 @@ export const debugOpenApiSpec = {
               },
             },
           },
+          '401': { $ref: '#/components/responses/Unauthorized' },
           '403': { $ref: '#/components/responses/DebugApiDisabled' },
           '500': {
             description: 'Delete-all failed',
@@ -434,6 +477,7 @@ export const debugOpenApiSpec = {
             },
           },
           '400': { $ref: '#/components/responses/BadRequestText' },
+          '401': { $ref: '#/components/responses/Unauthorized' },
           '403': { $ref: '#/components/responses/DebugApiDisabled' },
         },
       },
@@ -461,6 +505,7 @@ export const debugOpenApiSpec = {
               },
             },
           },
+          '401': { $ref: '#/components/responses/Unauthorized' },
           '403': { $ref: '#/components/responses/DebugApiDisabled' },
           '404': {
             description: 'Saved configuration not found',
@@ -502,6 +547,7 @@ export const debugOpenApiSpec = {
               },
             },
           },
+          '401': { $ref: '#/components/responses/Unauthorized' },
           '403': { $ref: '#/components/responses/DebugApiDisabled' },
           '404': {
             description: 'Saved configuration not found',
@@ -554,6 +600,7 @@ export const debugOpenApiSpec = {
               },
             },
           },
+          '401': { $ref: '#/components/responses/Unauthorized' },
           '403': { $ref: '#/components/responses/DebugApiDisabled' },
           '404': {
             description: 'Saved configuration not found',
@@ -598,6 +645,7 @@ export const debugOpenApiSpec = {
               },
             },
           },
+          '401': { $ref: '#/components/responses/Unauthorized' },
           '403': { $ref: '#/components/responses/DebugApiDisabled' },
         },
       },
@@ -626,6 +674,7 @@ export const debugOpenApiSpec = {
               },
             },
           },
+          '401': { $ref: '#/components/responses/Unauthorized' },
           '403': { $ref: '#/components/responses/DebugApiDisabled' },
         },
       },
@@ -652,6 +701,7 @@ export const debugOpenApiSpec = {
               },
             },
           },
+          '401': { $ref: '#/components/responses/Unauthorized' },
           '403': { $ref: '#/components/responses/DebugApiDisabled' },
         },
       },
@@ -671,6 +721,7 @@ export const debugOpenApiSpec = {
               },
             },
           },
+          '401': { $ref: '#/components/responses/Unauthorized' },
           '403': { $ref: '#/components/responses/DebugApiDisabled' },
           '404': { $ref: '#/components/responses/NotFoundText' },
         },
@@ -699,6 +750,7 @@ export const debugOpenApiSpec = {
               },
             },
           },
+          '401': { $ref: '#/components/responses/Unauthorized' },
           '403': { $ref: '#/components/responses/DebugApiDisabled' },
           '404': { $ref: '#/components/responses/NotFoundText' },
         },
@@ -706,6 +758,15 @@ export const debugOpenApiSpec = {
     },
   },
   components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        description:
+          'Admin session token issued by POST /auth/login. The authenticated user must have isAdmin=true — ' +
+          'see ServerDebugRouteHandlerService#requireAdminToken.',
+      },
+    },
     parameters: {
       GameId: {
         name: 'gameId',
@@ -764,6 +825,29 @@ export const debugOpenApiSpec = {
       },
     },
     responses: {
+      Unauthorized: {
+        description: 'Missing, invalid, or expired Bearer token.',
+        content: {
+          'text/plain': {
+            schema: { type: 'string' },
+            examples: {
+              missing: { value: 'authorization required' },
+              invalid: { value: 'invalid or expired token' },
+            },
+          },
+        },
+      },
+      AdminAccessRequired: {
+        description: 'Bearer token is valid but the authenticated user is not an admin.',
+        content: {
+          'text/plain': {
+            schema: { type: 'string' },
+            examples: {
+              forbidden: { value: 'admin access required' },
+            },
+          },
+        },
+      },
       DebugApiDisabled: {
         description: 'Debug API disabled by server configuration.',
         content: {

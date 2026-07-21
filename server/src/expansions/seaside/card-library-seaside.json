@@ -3,52 +3,60 @@
     "cost": {
       "treasure": 3
     },
-    "type": ["TREASURE", "DURATION"]
+    "type": ["TREASURE", "DURATION"],
+    "abilityText": "Now and at the start of your next turn:\n$1\n+1 Buy"
   },
   "bazaar": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+2 Actions\n+$1"
   },
   "blockade": {
     "cost": {
       "treasure": 4
     },
     "type": ["ACTION", "DURATION", "ATTACK"],
-    "targetScheme": "ALL_OTHER"
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "Gain a card costing up to $4, setting it aside.\nAt the start of your next turn, put it into your hand. While it's set aside, when another player gains a copy of it on their turn, they gain a Curse."
   },
   "caravan": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION", "DURATION"]
+    "type": ["ACTION", "DURATION"],
+    "abilityText": "+1 Card\n+1 Action\nAt the start of your next turn, +1 Card."
   },
   "corsair": {
     "cost": {
       "treasure": 5
     },
     "type": ["ACTION", "DURATION", "ATTACK"],
-    "targetScheme": "ALL_OTHER"
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+$2\nAt the start of your next turn, +1 Card. Until then, each other player trashes the first Silver or Gold they play each turn."
   },
   "cutpurse": {
     "cost": {
       "treasure": 4
     },
     "type": ["ACTION", "ATTACK"],
-    "targetScheme": "ALL_OTHER"
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+$2\nEach other player discards a Copper (or reveals a hand with no Copper)."
   },
   "fishing-village": {
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION", "DURATION"]
+    "type": ["ACTION", "DURATION"],
+    "abilityText": "+2 Actions\n+$1\nAt the start of your next turn: +1 Action and +$1."
   },
   "haven": {
     "cost": {
       "treasure": 2
     },
-    "type": ["ACTION", "DURATION"]
+    "type": ["ACTION", "DURATION"],
+    "abilityText": "+1 Card\n+1 Action\nSet aside a card from your hand face down (under this). At the start of your next turn, put it into your hand."
   },
   "island": {
     "cost": {
@@ -56,31 +64,44 @@
     },
     "mat": "island",
     "type": ["ACTION", "VICTORY"],
-    "victoryPoints": 2
+    "victoryPoints": 2,
+    "abilityText": "Put this and a card from your hand onto your Island mat.\n----\n2VP"
   },
   "lighthouse": {
     "cost": {
       "treasure": 2
     },
-    "type": ["ACTION", "DURATION"]
+    "type": ["ACTION", "DURATION"],
+    "abilityText": "+1 Action\n+$1\nAt the start of your next turn, +$1. Until then, when another player plays an Attack card, it doesn't affect you."
   },
   "lookout": {
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Action\nLook at the top 3 cards of your deck. Trash one of them. Discard one of them. Put the other one back on top of your deck."
   },
   "merchant-ship": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "DURATION"]
+    "type": ["ACTION", "DURATION"],
+    "abilityText": "Now and at the start of your next turn: +$2."
   },
   "monkey": {
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION", "DURATION"]
+    "type": ["ACTION", "DURATION"],
+    "abilityText": "Until your next turn, when the player to your right gains a card, +1 Card.\nAt the start of your next turn, +1 Card."
+  },
+  "native-village": {
+    "cost": {
+      "treasure": 2
+    },
+    "mat": "native-village",
+    "type": ["ACTION"],
+    "abilityText": "+2 Actions\nChoose one: Put the top card of your deck face down on your Native Village mat (you may look at those cards at any time); or put all the cards from your mat into your hand."
   },
   "outpost": {
     "cost": {
@@ -89,84 +110,89 @@
     "type": ["ACTION", "DURATION"],
     "abilityText": "You only draw 3 cards for your next hand. Take an extra turn after this one (but not a 3rd turn in a row)."
   },
-  "native-village": {
-    "cost": {
-      "treasure": 2
-    },
-    "mat": "native-village",
-    "type": ["ACTION"]
-  },
   "pirate": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "DURATION", "REACTION"]
+    "type": ["ACTION", "DURATION", "REACTION"],
+    "abilityText": "At the start of your next turn, gain a Treasure costing up to $6 to your hand.\n----\nWhen any player gains a Treasure, you may play this from your hand."
   },
   "sailor": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION", "DURATION"]
+    "type": ["ACTION", "DURATION"],
+    "abilityText": "+1 Action\nOnce this turn, when you gain a Duration card, you may play it.\nAt the start of your next turn, +$2 and you may trash a card from your hand."
   },
   "salvager": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Buy\nTrash a card from your hand. +$1 per $1 it costs."
   },
   "sea-chart": {
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+1 Action\nReveal the top card of your deck. If you have a copy of it in play, put it into your hand."
   },
   "sea-witch": {
     "cost": {
       "treasure": 5
     },
     "type": ["ACTION", "DURATION", "ATTACK"],
-    "targetScheme": "ALL_OTHER"
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+2 Cards\nEach other player gains a Curse.\nAt the start of your next turn, +2 Cards, then discard 2 cards."
   },
   "smugglers": {
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "Gain a copy of a card costing up to $6$6 that the player to your right gained on their last turn."
   },
   "tactician": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "DURATION"]
+    "type": ["ACTION", "DURATION"],
+    "abilityText": "If you have at least one card in hand: Discard your hand, and at the start of your next turn, +5 Cards, +1 Action, and +1 Buy."
   },
   "tide-pools": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION", "DURATION"]
+    "type": ["ACTION", "DURATION"],
+    "abilityText": "+3 Cards\n+1 Action\nAt the start of your next turn, discard 2 cards."
   },
   "treasure-map": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "Trash this and a Treasure Map from your hand. If you trashed two Treasure Maps, gain 4 Golds onto your deck."
   },
   "treasury": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+1 Action\n+$1\n----\nWhen you discard this from play, if you didn't gain any Victory cards in your Buy phase this turn, you may put this onto your deck."
   },
   "warehouse": {
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+3 Cards\n+1 Action\nDiscard 3 cards."
   },
   "wharf": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "DURATION"]
+    "type": ["ACTION", "DURATION"],
+    "abilityText": "Now and at the start of your next turn: +2 Cards and +1 Buy."
   }
 }

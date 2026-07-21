@@ -32,6 +32,19 @@ import { ReactionContextFactory } from './reaction-context-factory.ts';
 import { ExpansionCardMetadataRegistryService } from '../expansion-card-metadata-registry-service.ts';
 import { LoggerService } from '../logger-service.ts';
 
+// Trigger events that fire at turn/phase boundaries rather than inside the
+// action chain that caused their registration. Entries these reactions emit
+// are temporally detached from their cause (e.g. a Duration card played on a
+// previous turn), so they must NOT indent under the current chain — they
+// render flush at the turn level and rely on `source` attribution
+// ("(Wharf)") to convey causality instead of indentation.
+const DETACHED_TRIGGER_EVENTS: ReadonlySet<TriggerEventType> = new Set<TriggerEventType>([
+  'startTurn',
+  'endTurn',
+  'startTurnPhase',
+  'endTurnPhase',
+]);
+
 export class ReactionManager {
   private _reactions: Reaction[] = [];
   private _expansionGameEventHandlers: Record<GameLifecycleEvent, GameLifecycleCallback[]> = {} as Record<
@@ -391,7 +404,9 @@ export class ReactionManager {
         // and the same card
         if (shouldPrompt || (promptReactions.length === 1 && compulsoryReactions.length === 0)) {
           const grouped = groupReactionsByCardKey(promptReactions);
-          const actionButtons = buildActionButtons(grouped, this.cardLibrary, this.loggerService);
+          // All-compulsory prompts are ordering-only choices — Cancel has no effect.
+          const includeCancel = compulsoryReactions.length !== promptReactions.length;
+          const actionButtons = buildActionButtons(grouped, this.cardLibrary, this.loggerService, includeCancel);
           const actionMap = buildActionMap(grouped);
 
           this.loggerService.info(`[REACTION MANAGER] prompting ${targetPlayer} to choose reaction`);
@@ -403,11 +418,26 @@ export class ReactionManager {
           });
 
           if (action === null || action === 0) {
-            this.loggerService.info(`[REACTION MANAGER] ${targetPlayer} chose not to react`);
-            break;
-          } else {
-            this.loggerService.info(`[REACTION MANAGER] ${targetPlayer} reacts with ${actionMap.get(action)}`);
+            if (compulsoryReactions.length === 0) {
+              // Only optional reactions were on offer — declining ends this pass.
+              this.loggerService.info(`[REACTION MANAGER] ${targetPlayer} chose not to react`);
+              break;
+            }
+            // Compulsory reactions cannot be declined. Drop only the optional
+            // candidates from this trigger pass and continue the loop so the
+            // remaining compulsory reactions auto-run.
+            this.loggerService.info(
+              `[REACTION MANAGER] ${targetPlayer} declined optional reactions; compulsory reactions still pending`,
+            );
+            for (const reaction of promptReactions) {
+              if (!reaction.compulsory) {
+                usedReactionIds.add(reaction.id);
+              }
+            }
+            continue;
           }
+
+          this.loggerService.info(`[REACTION MANAGER] ${targetPlayer} reacts with ${actionMap.get(action)}`);
 
           selectedReaction = actionMap.get(action);
         } else {
@@ -447,13 +477,30 @@ export class ReactionManager {
     context: TriggeredEffectContext<T>,
     reactionContext?: ReactionContext,
   ) {
-    await this.logManager.withIndent(async () => {
-      // Ensure reaction-caused logs are scoped and unwind cleanly.
+    // Turn/phase-boundary reactions log flush with the turn's entries (their
+    // cause is conveyed by source attribution rather than indentation);
+    // replacement-style reactions (suppressLogIndent) log at the current
+    // depth so their output aligns with the entries they stand in for.
+    const skipIndent = DETACHED_TRIGGER_EVENTS.has(reaction.listeningFor) ||
+      reaction.suppressLogIndent === true;
+    this.loggerService.debug(
+      `[REACTION MANAGER] running reaction ${reaction.id} (${skipIndent ? 'no log indent' : 'in-chain: log indented'})`,
+    );
+
+    if (skipIndent) {
       await reaction.triggeredEffectFn({
         ...context,
         reactionContext,
       });
-    });
+    } else {
+      await this.logManager.withIndent(async () => {
+        // Ensure reaction-caused logs are scoped and unwind cleanly.
+        await reaction.triggeredEffectFn({
+          ...context,
+          reactionContext,
+        });
+      });
+    }
 
     if (reaction.once) {
       this.loggerService.info(`[REACTION MANAGER] selected reaction is single-use, unregistering it`);

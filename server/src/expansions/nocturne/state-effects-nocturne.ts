@@ -21,7 +21,16 @@ const registerLostInTheWoods = (registerStateEffect: StateEffectRegistrar) => {
 
   registerStateEffect(
     'lost-in-the-woods',
-    async ({ loggerService, playerId, match, reactionManager, actionService, cardId, cardSourceController }) => {
+    async ({
+      loggerService,
+      playerId,
+      match,
+      reactionManager,
+      actionService,
+      cardId,
+      cardSourceController,
+      promptService,
+    }) => {
       const state = findStateInMatch(match, cardId);
       if (!state) {
         loggerService.warn('[lost-in-the-woods state] state card not found');
@@ -50,16 +59,19 @@ const registerLostInTheWoods = (registerStateEffect: StateEffectRegistrar) => {
           }
 
           // Ask whether the player wants to discard for a boon.
-          const decision = (await actionService.run('userPrompt', {
-            playerId,
-            prompt: 'Discard a card to receive a Boon?',
-            actionButtons: [
-              { label: 'CANCEL', action: 1 },
-              { label: 'DISCARD', action: 2 },
-            ],
-          })) as { action: number };
+          const shouldDiscard = await promptService.confirm(
+            {
+              playerId,
+              prompt: 'Discard a card to receive a Boon?',
+              actionButtons: [
+                { label: 'CANCEL', action: 1 },
+                { label: 'DISCARD', action: 2 },
+              ],
+            },
+            2,
+          );
 
-          if (decision.action !== 2) {
+          if (!shouldDiscard) {
             loggerService.debug('[lost-in-the-woods state] player declined to discard');
             return;
           }
@@ -249,7 +261,8 @@ const registerEnvious = (registerStateEffect: StateEffectRegistrar) => {
                 return false;
               }
               const sourceId = conditionArgs.trigger.args.source;
-              if (!sourceId) {
+              // A tagged card-like source (boon/hex/event) is never Silver or Gold.
+              if (sourceId === undefined || typeof sourceId !== 'number') {
                 return false;
               }
               const sourceCard = conditionArgs.cardLibrary.getCard(sourceId);
@@ -257,7 +270,7 @@ const registerEnvious = (registerStateEffect: StateEffectRegistrar) => {
             },
             triggeredEffectFn: async triggeredArgs => {
               const sourceId = triggeredArgs.trigger.args.source;
-              if (!sourceId) {
+              if (sourceId === undefined || typeof sourceId !== 'number') {
                 return;
               }
               const sourceCard = cardLibrary.getCard(sourceId);

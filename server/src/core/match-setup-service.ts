@@ -52,10 +52,15 @@ export class MatchSetupService {
 
   // Loads a card library snapshot for a loaded match state.
   public loadCardLibraryFromState(cardLibrary: Record<CardId, Card>): void {
+    let maxId = this.cardInstanceFactoryService.getCardCount();
     for (const card of Object.values(cardLibrary)) {
       // Rehydrate card instances so downstream logic uses Card class methods.
       this.cardLibrary.addCard(this.cardInstanceFactoryService.rehydrateCard(card));
+      maxId = Math.max(maxId, card.id);
     }
+    // Advance the id allocator past every loaded id so post-load card creation
+    // (e.g. Nocturne heirlooms) cannot mint a colliding id.
+    this.cardInstanceFactoryService.setCardCount(maxId);
   }
 
   public createBaseSupply(config: ComputedMatchConfiguration): void {
@@ -178,8 +183,11 @@ export class MatchSetupService {
             return instance.id;
           }),
         );
-        fisherYatesShuffle(deck, true, () => this.rngService.nextFloat());
       });
+      // Shuffle once after every starting-hand card key has been pushed —
+      // shuffling per-key inside the loop above was redundant work that only
+      // ever mattered for the effect of the final key's shuffle anyway.
+      fisherYatesShuffle(deck, true, () => this.rngService.nextFloat());
     }
   }
 
@@ -187,19 +195,6 @@ export class MatchSetupService {
     this.loggerService.debug('[match] creating events');
     for (const event of config.events) {
       this.match.events.push(this.cardInstanceFactoryService.createEvent(event));
-    }
-  }
-
-  public createAllies(config: ComputedMatchConfiguration): void {
-    const allies = config.allies ?? [];
-    if (allies.length < 1) {
-      this.loggerService.info('[match] no ally configured for this match');
-      return;
-    }
-
-    this.loggerService.info('[match] creating ally');
-    for (const ally of allies) {
-      this.match.allies.push(this.cardInstanceFactoryService.createAlly(ally));
     }
   }
 
@@ -309,81 +304,151 @@ export class MatchSetupService {
   }
 
   public createBoons(config: ComputedMatchConfiguration): void {
-    const boons = config.boons ?? [];
-    if (boons.length < 1) {
-      this.loggerService.info('[match] no boons configured for this match');
-      return;
-    }
-
-    this.loggerService.info('[match] creating boons');
-    this.match.boons = {
-      cards: [],
-      deck: [],
-      discard: [],
-      setAside: [],
-    };
-
-    for (const boon of boons) {
-      const instance = this.cardInstanceFactoryService.createBoon(boon);
-      this.match.boons.cards.push(instance);
-      this.match.boons.deck.push(instance.id);
-    }
+    instantiateBoons(this.match, this.cardInstanceFactoryService, config, this.loggerService);
   }
 
   public createHexes(config: ComputedMatchConfiguration): void {
-    const hexes = config.hexes ?? [];
-    if (hexes.length < 1) {
-      this.loggerService.info('[match] no hexes configured for this match');
-      return;
-    }
-
-    this.loggerService.info('[match] creating hexes');
-    this.match.hexes = {
-      cards: [],
-      deck: [],
-      discard: [],
-    };
-
-    for (const hex of hexes) {
-      const instance = this.cardInstanceFactoryService.createHex(hex);
-      this.match.hexes.cards.push(instance);
-      this.match.hexes.deck.push(instance.id);
-    }
+    instantiateHexes(this.match, this.cardInstanceFactoryService, config, this.loggerService);
   }
 
   public createStates(config: ComputedMatchConfiguration): void {
-    const states = config.states ?? [];
-    if (states.length < 1) {
-      this.loggerService.info('[match] no states configured for this match');
-      return;
-    }
+    instantiateStates(this.match, this.cardInstanceFactoryService, config, this.loggerService);
+  }
 
-    this.loggerService.info('[match] creating states');
-    this.match.states = {
-      cards: [],
-      byPlayer: {},
-    };
-
-    for (const state of states) {
-      this.match.states.cards.push(this.cardInstanceFactoryService.createState(state));
-    }
+  public createAllies(config: ComputedMatchConfiguration): void {
+    instantiateAllies(this.match, this.cardInstanceFactoryService, config, this.loggerService);
   }
 
   public createArtifacts(config: ComputedMatchConfiguration): void {
-    const artifacts = config.artifacts ?? [];
-    if (artifacts.length < 1) {
-      this.loggerService.info('[match] no artifacts configured for this match');
-      return;
-    }
-
-    this.loggerService.info('[match] creating artifacts');
-    this.match.artifacts = {
-      cards: [],
-      byPlayer: {},
-    };
-
-    for (const artifact of artifacts) {
-      this.match.artifacts.cards.push(this.cardInstanceFactoryService.createArtifact(artifact));
-    }
+    instantiateArtifacts(this.match, this.cardInstanceFactoryService, config, this.loggerService);
   }
 }
+
+// The landscape/ally instantiation bodies below are extracted as standalone functions so they can be
+// reused mid-game (Rising Sun's Divine Wind re-deals the kingdom and must instantiate any boons,
+// hexes, states, ally, or artifacts the reconfiguration newly seeds — see
+// configurator-rising-sun.ts / resolveDivineWindKingdomSwap). Each resets its match field, so callers
+// must only invoke it when that field is empty (match start, or the first mid-game deal that
+// introduces the landscape).
+
+// Instantiates configured Boon cards into the match's boon deck.
+export const instantiateBoons = (
+  match: Match,
+  cardInstanceFactoryService: CardInstanceFactoryService,
+  config: ComputedMatchConfiguration,
+  loggerService: LoggerService,
+): void => {
+  const boons = config.boons ?? [];
+  if (boons.length < 1) {
+    loggerService.info('[match] no boons configured for this match');
+    return;
+  }
+
+  loggerService.info('[match] creating boons');
+  match.boons = {
+    cards: [],
+    deck: [],
+    discard: [],
+    setAside: [],
+  };
+
+  for (const boon of boons) {
+    const instance = cardInstanceFactoryService.createBoon(boon);
+    match.boons.cards.push(instance);
+    match.boons.deck.push(instance.id);
+  }
+};
+
+// Instantiates configured Hex cards into the match's hex deck.
+export const instantiateHexes = (
+  match: Match,
+  cardInstanceFactoryService: CardInstanceFactoryService,
+  config: ComputedMatchConfiguration,
+  loggerService: LoggerService,
+): void => {
+  const hexes = config.hexes ?? [];
+  if (hexes.length < 1) {
+    loggerService.info('[match] no hexes configured for this match');
+    return;
+  }
+
+  loggerService.info('[match] creating hexes');
+  match.hexes = {
+    cards: [],
+    deck: [],
+    discard: [],
+  };
+
+  for (const hex of hexes) {
+    const instance = cardInstanceFactoryService.createHex(hex);
+    match.hexes.cards.push(instance);
+    match.hexes.deck.push(instance.id);
+  }
+};
+
+// Instantiates configured State cards into the match.
+export const instantiateStates = (
+  match: Match,
+  cardInstanceFactoryService: CardInstanceFactoryService,
+  config: ComputedMatchConfiguration,
+  loggerService: LoggerService,
+): void => {
+  const states = config.states ?? [];
+  if (states.length < 1) {
+    loggerService.info('[match] no states configured for this match');
+    return;
+  }
+
+  loggerService.info('[match] creating states');
+  match.states = {
+    cards: [],
+    byPlayer: {},
+  };
+
+  for (const state of states) {
+    match.states.cards.push(cardInstanceFactoryService.createState(state));
+  }
+};
+
+// Instantiates the configured Ally landscape into the match (appends; does not reset).
+export const instantiateAllies = (
+  match: Match,
+  cardInstanceFactoryService: CardInstanceFactoryService,
+  config: ComputedMatchConfiguration,
+  loggerService: LoggerService,
+): void => {
+  const allies = config.allies ?? [];
+  if (allies.length < 1) {
+    loggerService.info('[match] no ally configured for this match');
+    return;
+  }
+
+  loggerService.info('[match] creating ally');
+  for (const ally of allies) {
+    match.allies.push(cardInstanceFactoryService.createAlly(ally));
+  }
+};
+
+// Instantiates configured Artifact cards into the match.
+export const instantiateArtifacts = (
+  match: Match,
+  cardInstanceFactoryService: CardInstanceFactoryService,
+  config: ComputedMatchConfiguration,
+  loggerService: LoggerService,
+): void => {
+  const artifacts = config.artifacts ?? [];
+  if (artifacts.length < 1) {
+    loggerService.info('[match] no artifacts configured for this match');
+    return;
+  }
+
+  loggerService.info('[match] creating artifacts');
+  match.artifacts = {
+    cards: [],
+    byPlayer: {},
+  };
+
+  for (const artifact of artifacts) {
+    match.artifacts.cards.push(cardInstanceFactoryService.createArtifact(artifact));
+  }
+};

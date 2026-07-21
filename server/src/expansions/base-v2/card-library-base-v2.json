@@ -11,7 +11,7 @@
       "treasure": 0
     },
     "isBasic": true,
-    "type": ["VICTORY"],
+    "type": ["CURSE"],
     "victoryPoints": -1
   },
   "duchy": {

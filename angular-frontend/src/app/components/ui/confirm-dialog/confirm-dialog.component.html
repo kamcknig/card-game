@@ -1,0 +1,24 @@
+<app-ui-dialog
+  [skin]="skin()"
+  [layer]="layer()"
+  [heading]="heading()"
+  [dismissable]="dismissable() && !!cancelLabel()"
+  (close)="cancelled.emit()">
+  @if (message()) {
+    <p class="confirm-dialog-message">{{ message() }}</p>
+  }
+  <ng-content></ng-content>
+  <div class="ui-dialog-footer">
+    @if (cancelLabel()) {
+      <button type="button" class="btn btn-danger" (click)="cancelled.emit()">{{ cancelLabel() }}</button>
+    }
+    <button
+      type="button"
+      class="btn"
+      [class.btn-danger]="danger()"
+      [class.btn-primary]="!danger()"
+      (click)="confirmed.emit()">
+      {{ confirmLabel() }}
+    </button>
+  </div>
+</app-ui-dialog>

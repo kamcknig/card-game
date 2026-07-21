@@ -1,4 +1,4 @@
-import { CardId, CardKey, CardLocation, PlayerId, TokenInstanceId } from 'shared/types/index.ts';
+import { CardId, CardKey, CardLike, CardLocation, PlayerId, TokenInstanceId } from 'shared/types/index.ts';
 import {
   CardEffectFunctionContext,
   CardExpansionModule,
@@ -7,15 +7,16 @@ import {
 } from '@server-types/index.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { baseV2TokenIds } from '@expansions/base-v2/token-ids-base-v2.ts';
-import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { isCardStillAtGainedLocation } from '../../utils/is-card-still-at-gained-location.ts';
 import { isLocationInPlay } from '../../utils/is-in-play.ts';
-import { isPlayerImmune } from '../../utils/reaction-immunity.ts';
+import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 import { resolveChooseAbilities } from '../../utils/resolve-choose-abilities.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { getCurrentTurnHistoryIndex } from '../../utils/get-current-turn-history-index.ts';
 import { resolvePileDestinationForCardKey } from '../../utils/resolve-pile-destination-for-card-key.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
+import { registerStartTurnEffect } from '../../utils/register-start-turn-effect.ts';
 
 const AUGURS_PILE_KEY: CardKey = 'augurs';
 const FORTS_PILE_KEY: CardKey = 'forts';
@@ -28,20 +29,24 @@ const gainTopSupplyCardToDiscard = async (args: {
   playerId: PlayerId;
   pileKey: CardKey;
   logTag: string;
+  source: CardId;
   supplyGainService: {
     gainTopSupplyCardForPileKey: (gainArgs: {
       playerId: PlayerId;
       pileKey: CardKey;
       to: { location: 'playerDiscard' };
       logTag?: string;
+      source?: CardId;
     }) => Promise<CardId | undefined>;
   };
 }) => {
+  // supplyGainService's own actionService bypasses the effect's auto-injected source.
   await args.supplyGainService.gainTopSupplyCardForPileKey({
     playerId: args.playerId,
     pileKey: args.pileKey,
     to: { location: 'playerDiscard' },
     logTag: args.logTag,
+    source: args.source,
   });
 };
 
@@ -107,9 +112,16 @@ const getCoinTokenInstanceIdsOnCard = (args: {
 // Finds trash cards that currently cost strictly less than the source card.
 const getCheaperTrashCardIds = <
   T extends {
-    cardLibrary: { getCard: (cardId: CardId) => unknown };
+    cardLibrary: { getCard: (cardId: CardId) => CardLike };
     cardPriceController: {
-      applyRules: (...args: unknown[]) => { cost: { treasure: number; potion?: number; debt?: number } };
+      // Mirrors CardPriceRulesController.applyRules's real signature — a rest-args
+      // (...args: unknown[]) constraint here doesn't structurally match it (a function
+      // expecting specific typed params is not assignable to one expecting arbitrary
+      // unknown args), which silently broke type-checking for every caller of this helper.
+      applyRules: (
+        card: CardLike,
+        args: { playerId: PlayerId },
+      ) => { restricted: boolean; cost: { treasure: number; potion?: number; debt?: number } };
     };
     cardSourceController: { getSource: (source: 'trash') => CardId[] };
   },
@@ -310,6 +322,7 @@ const cardEffects: CardExpansionModule = {
             playerId,
             pileKey: 'gold',
             logTag: 'acolyte gain gold',
+            source: cardEffectArgs.cardId,
             supplyGainService: cardEffectArgs.supplyGainService,
           });
         }
@@ -340,6 +353,7 @@ const cardEffects: CardExpansionModule = {
         playerId,
         pileKey: AUGURS_PILE_KEY,
         logTag: 'acolyte gain augur',
+        source: cardEffectArgs.cardId,
         supplyGainService: cardEffectArgs.supplyGainService,
       });
     },
@@ -384,17 +398,14 @@ const cardEffects: CardExpansionModule = {
       }
 
       // Matching guess: each other non-immune player gains a Curse.
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: playerId,
-      }).filter(targetPlayerId => !isPlayerImmune(cardEffectArgs.reactionContext, targetPlayerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         await gainTopSupplyCardToDiscard({
           playerId: targetPlayerId,
           pileKey: 'curse',
           logTag: 'sorceress attack',
+          source: cardEffectArgs.cardId,
           supplyGainService: cardEffectArgs.supplyGainService,
         });
       }
@@ -465,15 +476,18 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
       // Student can optionally rotate the Wizards split pile before the mandatory trash.
-      const rotatePrompt = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId,
-        prompt: 'Rotate the Wizards?',
-        actionButtons: [
-          { label: 'NO', action: 1 },
-          { label: 'ROTATE', action: 2 },
-        ],
-      })) as { action?: number } | null;
-      if (rotatePrompt?.action === 2) {
+      const shouldRotate = await cardEffectArgs.promptService.confirm(
+        {
+          playerId,
+          prompt: 'Rotate the Wizards?',
+          actionButtons: [
+            { label: 'NO', action: 1 },
+            { label: 'ROTATE', action: 2 },
+          ],
+        },
+        2,
+      );
+      if (shouldRotate) {
         loggerService.debug('[student effect] rotating Wizards split pile');
         await cardEffectArgs.actionService.run('rotateSplitPile', {
           pileKey: WIZARDS_PILE_KEY,
@@ -560,15 +574,10 @@ const cardEffects: CardExpansionModule = {
       }
 
       const conjurerCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      cardEffectArgs.registerDurationEffect(conjurerCard, {
-        playerId,
-        listeningFor: 'startTurn',
-        once: true,
-        compulsory: true,
-        system: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger }) => trigger.args.playerId === playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        conjurerCard,
+        async triggeredArgs => {
           if (
             !isCardStillInPlay({
               cardId: conjurerCard.id,
@@ -585,7 +594,8 @@ const cardEffects: CardExpansionModule = {
             to: { location: 'playerHand' },
           });
         },
-      });
+        { system: true },
+      );
     },
   },
   sorcerer: {
@@ -597,11 +607,7 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.actionService.run('drawCard', { playerId, count: 1 });
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: playerId,
-      }).filter(targetPlayerId => !isPlayerImmune(cardEffectArgs.reactionContext, targetPlayerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         const namedCardPrompt = (await cardEffectArgs.actionService.run('userPrompt', {
@@ -630,6 +636,7 @@ const cardEffects: CardExpansionModule = {
           playerId: targetPlayerId,
           pileKey: 'curse',
           logTag: 'sorcerer attack',
+          source: cardEffectArgs.cardId,
           supplyGainService: cardEffectArgs.supplyGainService,
         });
       }
@@ -721,6 +728,7 @@ const cardEffects: CardExpansionModule = {
                 playerId,
                 pileKey: 'silver',
                 logTag: 'town-crier gain silver',
+                source: cardEffectArgs.cardId,
                 supplyGainService: cardEffectArgs.supplyGainService,
               });
             },
@@ -737,15 +745,18 @@ const cardEffects: CardExpansionModule = {
       });
 
       // Town Crier rotates the Townsfolk split pile independently of the chosen branch.
-      const rotatePrompt = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId,
-        prompt: 'Rotate the Townsfolk?',
-        actionButtons: [
-          { label: 'NO', action: 1 },
-          { label: 'ROTATE', action: 2 },
-        ],
-      })) as { action?: number } | null;
-      if (rotatePrompt?.action !== 2) {
+      const shouldRotate = await cardEffectArgs.promptService.confirm(
+        {
+          playerId,
+          prompt: 'Rotate the Townsfolk?',
+          actionButtons: [
+            { label: 'NO', action: 1 },
+            { label: 'ROTATE', action: 2 },
+          ],
+        },
+        2,
+      );
+      if (!shouldRotate) {
         loggerService.debug('[town-crier effect] player declined to rotate Townsfolk');
         return;
       }
@@ -915,16 +926,19 @@ const cardEffects: CardExpansionModule = {
           return;
         }
 
-        const prompt = (await cardEffectArgs.actionService.run('userPrompt', {
-          playerId: eventArgs.playerId,
-          prompt: 'Put this onto your deck?',
-          actionButtons: [
-            { label: 'NO', action: 1 },
-            { label: 'YES', action: 2 },
-          ],
-        })) as { action?: number } | null;
+        const shouldTopDeck = await cardEffectArgs.promptService.confirm(
+          {
+            playerId: eventArgs.playerId,
+            prompt: 'Put this onto your deck?',
+            actionButtons: [
+              { label: 'NO', action: 1 },
+              { label: 'YES', action: 2 },
+            ],
+          },
+          2,
+        );
 
-        if (prompt?.action !== 2) {
+        if (!shouldTopDeck) {
           loggerService.debug('[tent onDiscarded effect] player declined to top-deck Tent');
           return;
         }
@@ -944,16 +958,19 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
       // Tent optionally rotates the Forts split pile.
-      const rotatePrompt = (await cardEffectArgs.actionService.run('userPrompt', {
-        playerId: cardEffectArgs.playerId,
-        prompt: 'Rotate the Forts?',
-        actionButtons: [
-          { label: 'NO', action: 1 },
-          { label: 'ROTATE', action: 2 },
-        ],
-      })) as { action?: number } | null;
+      const shouldRotate = await cardEffectArgs.promptService.confirm(
+        {
+          playerId: cardEffectArgs.playerId,
+          prompt: 'Rotate the Forts?',
+          actionButtons: [
+            { label: 'NO', action: 1 },
+            { label: 'ROTATE', action: 2 },
+          ],
+        },
+        2,
+      );
 
-      if (rotatePrompt?.action !== 2) {
+      if (!shouldRotate) {
         loggerService.debug('[tent effect] player declined to rotate Forts');
         return;
       }
@@ -1027,7 +1044,7 @@ const cardEffects: CardExpansionModule = {
               sourceCardId: garrisonCard.id,
             },
             {
-              loggingContext: { source: garrisonCard.id },
+              source: garrisonCard.id,
             },
           );
           const garrisonTokenCount = getCoinTokenInstanceIdsOnCard({
@@ -1044,15 +1061,10 @@ const cardEffects: CardExpansionModule = {
 
           durationRegistered = true;
           // Register duration handling only when the first token is gained.
-          durationTriggerIds = cardEffectArgs.registerDurationEffect(garrisonCard, {
-            listeningFor: 'startTurn',
-            playerId,
-            once: true,
-            compulsory: true,
-            system: true,
-            allowMultipleInstances: true,
-            condition: conditionArgs => conditionArgs.trigger.args.playerId === playerId,
-            triggeredEffectFn: async triggeredArgs => {
+          durationTriggerIds = registerStartTurnEffect(
+            cardEffectArgs,
+            garrisonCard,
+            async triggeredArgs => {
               const tokenInstanceIds = getCoinTokenInstanceIdsOnCard({
                 match: triggeredArgs.match,
                 cardId: garrisonCard.id,
@@ -1068,7 +1080,7 @@ const cardEffects: CardExpansionModule = {
                   'removeToken',
                   { tokenInstanceId },
                   {
-                    loggingContext: { source: garrisonCard.id },
+                    source: garrisonCard.id,
                   },
                 );
               }
@@ -1082,7 +1094,8 @@ const cardEffects: CardExpansionModule = {
                 count: drawCount,
               });
             },
-          });
+            { system: true },
+          );
           loggerService.debug('[garrison cardGained effect] registered deferred duration effect');
         },
       });
@@ -1250,18 +1263,14 @@ const cardEffects: CardExpansionModule = {
             label: 'NEXT TURN +3 CARDS',
             resolve: async () => {
               loggerService.debug('[stronghold effect] registering next-turn +3 cards duration branch');
-              cardEffectArgs.registerDurationEffect(strongholdCard, {
-                playerId,
-                listeningFor: 'startTurn',
-                once: true,
-                compulsory: true,
-                system: true,
-                allowMultipleInstances: true,
-                condition: ({ trigger }) => trigger.args.playerId === playerId,
-                triggeredEffectFn: async triggeredArgs => {
+              registerStartTurnEffect(
+                cardEffectArgs,
+                strongholdCard,
+                async triggeredArgs => {
                   await triggeredArgs.actionService.run('drawCard', { playerId, count: 3 });
                 },
-              });
+                { system: true },
+              );
             },
           },
         ],
@@ -1356,11 +1365,7 @@ const cardEffects: CardExpansionModule = {
       loggerService.debug('[archer effect] gaining 2 treasure');
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: playerId,
-      }).filter(targetPlayerId => !isPlayerImmune(cardEffectArgs.reactionContext, targetPlayerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         const targetHand = cardEffectArgs.cardSourceController.getSource('playerHand', targetPlayerId);
@@ -1451,20 +1456,16 @@ const cardEffects: CardExpansionModule = {
       loggerService.debug('[warlord effect] registered temporary Action play restriction for other players');
 
       // At the start of your next turn, draw 2 cards.
-      cardEffectArgs.registerDurationEffect(warlordCard, {
-        playerId,
-        listeningFor: 'startTurn',
-        once: true,
-        compulsory: true,
-        system: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger }) => trigger.args.playerId === playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        warlordCard,
+        async triggeredArgs => {
           unregisterPlayRestriction();
           loggerService.debug('[warlord effect] removed temporary Action play restriction');
           await triggeredArgs.actionService.run('drawCard', { playerId, count: 2 });
         },
-      });
+        { system: true },
+      );
     },
   },
   bauble: {
@@ -1586,11 +1587,7 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
 
       // Resolve each attacked player in deterministic turn order.
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: playerId,
-      }).filter(targetPlayerId => !isPlayerImmune(cardEffectArgs.reactionContext, targetPlayerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, playerId, cardEffectArgs.reactionContext);
 
       for (const targetPlayerId of targetPlayerIds) {
         let targetDeck = cardEffectArgs.cardSourceController.getSource('playerDeck', targetPlayerId);
@@ -1608,6 +1605,7 @@ const cardEffects: CardExpansionModule = {
             playerId: targetPlayerId,
             pileKey: 'curse',
             logTag: 'barbarian attack',
+            source: cardEffectArgs.cardId,
             supplyGainService: cardEffectArgs.supplyGainService,
           });
           continue;
@@ -1627,6 +1625,7 @@ const cardEffects: CardExpansionModule = {
             playerId: targetPlayerId,
             pileKey: 'curse',
             logTag: 'barbarian attack',
+            source: cardEffectArgs.cardId,
             supplyGainService: cardEffectArgs.supplyGainService,
           });
           continue;
@@ -1640,7 +1639,7 @@ const cardEffects: CardExpansionModule = {
                 playerId: targetPlayerId,
                 kind: 'upTo',
                 amount: {
-                  treasure: Math.max((trashedCardCost.treasure ?? 0) - 1, 0),
+                  treasure: trashedCardCost.treasure ?? 0,
                   potion: trashedCardCost.potion ?? 0,
                   debt: trashedCardCost.debt ?? 0,
                 },
@@ -1769,10 +1768,9 @@ const cardEffects: CardExpansionModule = {
         const hand = cardEffectArgs.cardSourceController.getSource('playerHand', playerId);
         const selectedDiscardIds = await cardEffectArgs.actionService.run('selectCard', {
           playerId,
-          prompt: 'Choose up to 2 cards to discard',
+          prompt: 'Discard 2 cards',
           restrict: hand,
-          count: { kind: 'upTo', count: 2 },
-          optional: true,
+          count: { kind: 'exact', count: Math.min(2, hand.length) },
         });
         for (const selectedDiscardId of selectedDiscardIds) {
           await cardEffectArgs.actionService.run('discardCard', {
@@ -1933,15 +1931,10 @@ const cardEffects: CardExpansionModule = {
         to: { location: 'set-aside' },
       });
 
-      cardEffectArgs.registerDurationEffect(contractCard, {
-        playerId,
-        listeningFor: 'startTurn',
-        once: true,
-        compulsory: true,
-        system: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger }) => trigger.args.playerId === playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        contractCard,
+        async triggeredArgs => {
           const setAside = triggeredArgs.cardSourceController.getSource('set-aside', playerId);
           if (!setAside.includes(selectedSetAsideCardId)) {
             loggerService.debug('[contract startTurn effect] set-aside Action card is no longer available');
@@ -1954,7 +1947,8 @@ const cardEffects: CardExpansionModule = {
             overrides: { actionCost: 0 },
           });
         },
-      });
+        { system: true },
+      );
     },
   },
   courier: {
@@ -2018,6 +2012,7 @@ const cardEffects: CardExpansionModule = {
         playerId,
         pileKey: 'estate',
         logTag: 'distant-shore gain estate',
+        source: cardEffectArgs.cardId,
         supplyGainService: cardEffectArgs.supplyGainService,
       });
     },
@@ -2143,22 +2138,12 @@ const cardEffects: CardExpansionModule = {
       const loggerService = cardEffectArgs.loggerService;
       const playerId = cardEffectArgs.playerId;
       const highwaymanCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: playerId,
-      }).filter(targetPlayerId => !isPlayerImmune(cardEffectArgs.reactionContext, targetPlayerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, playerId, cardEffectArgs.reactionContext);
 
-      cardEffectArgs.registerDurationEffect(highwaymanCard, {
-        listeningFor: 'startTurn',
-        playerId,
-        once: true,
-        compulsory: true,
-        system: true,
-        allowMultipleInstances: true,
-        autoResolve: true,
-        condition: ({ trigger }) => trigger.args.playerId === playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        highwaymanCard,
+        async triggeredArgs => {
           if (
             isCardStillInPlay({
               cardId: highwaymanCard.id,
@@ -2176,7 +2161,8 @@ const cardEffects: CardExpansionModule = {
 
           await triggeredArgs.actionService.run('drawCard', { playerId, count: 3 });
         },
-      });
+        { system: true, autoResolve: true },
+      );
 
       const attackTriggerIds = targetPlayerIds.map(targetPlayerId => {
         return cardEffectArgs.reactionManager.registerReactionTemplate(highwaymanCard, 'beforePlayedCardEffect', {
@@ -2226,28 +2212,28 @@ const cardEffects: CardExpansionModule = {
 
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
-      let deck = cardEffectArgs.cardSourceController.getSource('playerDeck', playerId);
-      if (deck.length < 3 && cardEffectArgs.cardSourceController.getSource('playerDiscard', playerId).length > 0) {
-        await cardEffectArgs.actionService.run('shuffleDeck', { playerId });
-        deck = cardEffectArgs.cardSourceController.getSource('playerDeck', playerId);
-      }
-      const revealedCardIds = deck.slice(-3);
-      if (revealedCardIds.length < 1) {
-        loggerService.debug('[hunter effect] no cards to reveal');
-        return;
-      }
+      const revealedCardIds: CardId[] = [];
 
-      // Keep the looked-at cards in set-aside to resolve independent typed picks.
-      for (const revealedCardId of revealedCardIds) {
-        await cardEffectArgs.actionService.run('revealCard', {
-          playerId,
-          cardId: revealedCardId,
-        });
+      // Reveal the top 3 cards one at a time and set them aside to resolve
+      // independent typed picks; revealTopDeckCards shuffles the discard in
+      // automatically whenever the deck runs dry mid-reveal.
+      for (let i = 0; i < 3; i++) {
+        const revealed = await revealTopDeckCards(cardEffectArgs, playerId, 1);
+        const card = revealed[0];
+        if (!card) {
+          break;
+        }
+        revealedCardIds.push(card.id);
         await cardEffectArgs.actionService.run('moveCard', {
-          cardId: revealedCardId,
+          cardId: card.id,
           toPlayerId: playerId,
           to: { location: 'set-aside' },
         });
+      }
+
+      if (revealedCardIds.length < 1) {
+        loggerService.debug('[hunter effect] no cards to reveal');
+        return;
       }
 
       const remainingSetAside = [...revealedCardIds];
@@ -2294,15 +2280,10 @@ const cardEffects: CardExpansionModule = {
       const playerId = cardEffectArgs.playerId;
       const importerCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
 
-      cardEffectArgs.registerDurationEffect(importerCard, {
-        playerId,
-        listeningFor: 'startTurn',
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        system: true,
-        condition: ({ trigger }) => trigger.args.playerId === playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        importerCard,
+        async triggeredArgs => {
           const gainableCards = triggeredArgs.findCardService.findCards({
             all: [{ location: ['basicSupply', 'kingdomSupply'] }, { playerId, kind: 'upTo', amount: { treasure: 5 } }],
           });
@@ -2323,7 +2304,8 @@ const cardEffects: CardExpansionModule = {
             to: { location: 'playerDiscard' },
           });
         },
-      });
+        { system: true },
+      );
     },
   },
   innkeeper: {
@@ -2614,15 +2596,10 @@ const cardEffects: CardExpansionModule = {
         to: { location: 'set-aside' },
       });
 
-      cardEffectArgs.registerDurationEffect(royalGalleryCard, {
-        playerId,
-        listeningFor: 'startTurn',
-        once: true,
-        compulsory: true,
-        system: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger }) => trigger.args.playerId === playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        royalGalleryCard,
+        async triggeredArgs => {
           const setAside = triggeredArgs.cardSourceController.getSource('set-aside', playerId);
           if (!setAside.includes(selectedActionCardId)) {
             loggerService.debug('[royal-galley startTurn effect] set-aside card no longer available to replay');
@@ -2635,35 +2612,46 @@ const cardEffects: CardExpansionModule = {
             overrides: { actionCost: 0 },
           });
         },
-      });
+        { system: true },
+      );
     },
   },
   sentinel: {
     registerEffects: () => async cardEffectArgs => {
       const playerId = cardEffectArgs.playerId;
       const loggerService = cardEffectArgs.loggerService;
-      let deck = cardEffectArgs.cardSourceController.getSource('playerDeck', playerId);
-      if (deck.length < 5 && cardEffectArgs.cardSourceController.getSource('playerDiscard', playerId).length > 0) {
-        await cardEffectArgs.actionService.run('shuffleDeck', { playerId });
-        deck = cardEffectArgs.cardSourceController.getSource('playerDeck', playerId);
-      }
+      const lookedAtCardIds: CardId[] = [];
 
-      const lookedAtCardIds = deck.slice(-5);
-      if (lookedAtCardIds.length < 1) {
-        return;
-      }
+      // Use set-aside as a stable holding zone while trash/reorder choices
+      // resolve. "Look at" is private information, so cards move straight
+      // from deck to set-aside without the public revealCard action (mirrors
+      // Miller's look-at pattern), shuffling the discard in automatically
+      // whenever the deck runs dry mid-look.
+      for (let i = 0; i < 5; i++) {
+        let deck = cardEffectArgs.cardSourceController.getSource('playerDeck', playerId);
+        if (deck.length < 1) {
+          const discard = cardEffectArgs.cardSourceController.getSource('playerDiscard', playerId);
+          if (discard.length < 1) {
+            break;
+          }
+          await cardEffectArgs.actionService.run('shuffleDeck', { playerId });
+          deck = cardEffectArgs.cardSourceController.getSource('playerDeck', playerId);
+          if (deck.length < 1) {
+            break;
+          }
+        }
 
-      // Use set-aside as a stable holding zone while trash/reorder choices resolve.
-      for (const lookedAtCardId of lookedAtCardIds) {
-        await cardEffectArgs.actionService.run('revealCard', {
-          playerId,
-          cardId: lookedAtCardId,
-        });
+        const cardId = deck.slice(-1)[0];
+        lookedAtCardIds.push(cardId);
         await cardEffectArgs.actionService.run('moveCard', {
-          cardId: lookedAtCardId,
+          cardId,
           toPlayerId: playerId,
           to: { location: 'set-aside' },
         });
+      }
+
+      if (lookedAtCardIds.length < 1) {
+        return;
       }
 
       const selectedTrashCardIds = await cardEffectArgs.actionService.run('selectCard', {
@@ -2717,11 +2705,7 @@ const cardEffects: CardExpansionModule = {
       const playerId = cardEffectArgs.playerId;
       const skirmisherCard = cardEffectArgs.cardLibrary.getCard(cardEffectArgs.cardId);
       const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: cardEffectArgs.match });
-      const targetPlayerIds = findOrderedTargets({
-        match: cardEffectArgs.match,
-        appliesTo: 'ALL_OTHER',
-        startingPlayerId: playerId,
-      }).filter(targetPlayerId => !isPlayerImmune(cardEffectArgs.reactionContext, targetPlayerId));
+      const targetPlayerIds = getAttackTargets(cardEffectArgs.match, playerId, cardEffectArgs.reactionContext);
 
       await cardEffectArgs.actionService.run('drawCard', { playerId, count: 1 });
       await cardEffectArgs.actionService.run('gainAction', { count: 1 });
@@ -3072,15 +3056,10 @@ const cardEffects: CardExpansionModule = {
       });
 
       // Keep Voyage in play through cleanup and arm the extra-turn hand-play limiter for its queued turn.
-      cardEffectArgs.registerDurationEffect(voyageCard, {
-        playerId,
-        listeningFor: 'startTurn',
-        once: true,
-        compulsory: true,
-        system: true,
-        allowMultipleInstances: true,
-        condition: ({ trigger }) => trigger.args.playerId === playerId,
-        triggeredEffectFn: async triggeredArgs => {
+      registerStartTurnEffect(
+        cardEffectArgs,
+        voyageCard,
+        async triggeredArgs => {
           const currentTurnStats = triggeredArgs.match.stats.turns[triggeredArgs.match.stats.turns.length - 1];
           const isVoyageExtraTurn =
             currentTurnStats?.playerId === playerId && currentTurnStats?.sourceId === voyageCard.id;
@@ -3100,8 +3079,12 @@ const cardEffects: CardExpansionModule = {
               return { canPlay: true };
             }
 
-            const playedCardsThisTurn = triggeredArgs.match.stats.playedCardsByTurn[extraTurnHistoryIndex] ?? [];
-            if (playedCardsThisTurn.length < 3) {
+            const playedCardIdsThisTurn = triggeredArgs.match.stats.playedCardsByTurn[extraTurnHistoryIndex] ?? [];
+            const handPlaysThisTurn = playedCardIdsThisTurn.filter(playedCardId => {
+              const playedStats = triggeredArgs.match.stats.playedCards[playedCardId];
+              return playedStats?.sourceLocation === 'playerHand' && playedStats?.sourcePlayerId === playerId;
+            });
+            if (handPlaysThisTurn.length < 3) {
               return { canPlay: true };
             }
 
@@ -3123,7 +3106,8 @@ const cardEffects: CardExpansionModule = {
             },
           });
         },
-      });
+        { system: true },
+      );
     },
   },
   territory: {
@@ -3156,6 +3140,9 @@ const cardEffects: CardExpansionModule = {
             playerId: eventArgs.playerId,
             pileKey: 'gold',
             logTag: 'territory onGained gain gold',
+            // Lifecycle contexts (CardLifecycleCallbackContext) carry no cardId of their own;
+            // the gained card's id lives on the lifecycle event payload instead.
+            source: eventArgs.cardId,
             supplyGainService: cardEffectArgs.supplyGainService,
           });
         }

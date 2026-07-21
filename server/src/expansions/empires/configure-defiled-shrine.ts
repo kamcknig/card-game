@@ -4,6 +4,7 @@ import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
+import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 
 export const configureDefiledShrine = (registrar: GameEventRegistrar, config: ComputedMatchConfiguration) => {
   // Only register Defiled Shrine handlers when the landmark is present.
@@ -22,6 +23,12 @@ export const configureDefiledShrine = (registrar: GameEventRegistrar, config: Co
       // Skip Gathering piles so Farmers' Market/Temple/Wild Hunt keep their own tokens.
       const hasGathering = pileCards.some(card => card.type.includes('GATHERING'));
       if (hasGathering) {
+        continue;
+      }
+
+      // Only Action Supply piles get setup tokens (resolves split-pile randomizer type, e.g. Gladiator/Fortune).
+      const pileDefinition = getPileDefinitionCard(pileCards, supply.name);
+      if (!pileDefinition?.type?.includes('ACTION')) {
         continue;
       }
 

@@ -7,6 +7,18 @@ export const configureRuins = async (args: ExpansionConfiguratorContext) => {
     return;
   }
 
+  // Point every Looter-typed trigger card at the Ruins pile so the detail
+  // dialog can show them as siblings (many:1 — several Looters can share
+  // the one Ruins pile). Stamped every pass, independent of whether the
+  // Ruins pile itself still needs to be built below.
+  for (const supply of args.config.kingdomSupply) {
+    for (const card of supply.cards) {
+      if (card.type.includes('LOOTER')) {
+        card.linkedPileKey = 'ruins';
+      }
+    }
+  }
+
   if (args.config.kingdomSupply?.some(supply => supply.name === 'ruins')) {
     return;
   }

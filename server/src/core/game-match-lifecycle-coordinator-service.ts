@@ -84,8 +84,11 @@ export class GameMatchLifecycleCoordinatorService {
     this.loggerService.log(`[game] expansion '${expansion.name}' loaded`);
     state.availableExpansion.push(expansion);
     this.io.in(state.roomName).emit(
+      // Sort a copy — shared lobby state must never be reordered in place by an emit.
+      // Ascending order matches the other two call sites so ordering stays
+      // consistent regardless of which emit path last ran.
       'expansionList',
-      state.availableExpansion.sort((a, b) => b.order - a.order),
+      [...state.availableExpansion].sort((a, b) => a.order - b.order),
     );
     this.expansionSearchService.rebuildIndexes();
   }
@@ -177,11 +180,14 @@ export class GameMatchLifecycleCoordinatorService {
       state.matchConfiguration = pendingConfig;
     }
 
-    state.matchStarted = true;
+    // Guard against a missing controller BEFORE flipping matchStarted — otherwise
+    // a failed start leaves the lobby permanently non-joinable (matchStarted
+    // stuck true with nothing to retry against).
     if (!state.matchController) {
       this.loggerService.warn('[game] cannot start match without match controller');
       return;
     }
+    state.matchStarted = true;
 
     state.players = this.matchStartOrchestrator.startMatch({
       gameRoomName: state.roomName,
@@ -192,6 +198,18 @@ export class GameMatchLifecycleCoordinatorService {
       matchConfiguration: state.matchConfiguration,
       onGameOver: args.onGameOver,
       registerRemovalVoteHandler: args.registerRemovalVoteHandler,
+      onInitializeFailed: error => {
+        // matchController.initialize() rejected (e.g. bad configuration). Never
+        // let this become an unhandled rejection — roll the lobby back to a
+        // fresh, joinable match scope and tell clients why, mirroring the
+        // stale-controller recovery path above.
+        this.loggerService.error(`[game] match initialize failed for game '${state.gameId}'`);
+        this.loggerService.error(error);
+        state.matchStarted = false;
+        this.createNewMatch(state, args.defaultMatchConfiguration);
+        const message = error instanceof Error ? error.message : String(error);
+        this.io.in(state.roomName).emit('matchStartFailed', { gameId: state.gameId, message });
+      },
     });
   }
 }

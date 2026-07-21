@@ -43,7 +43,7 @@ Do not use this skill for:
 2. Add or update `GameActionDefinitionMap` typing first.
 3. Implement the action with explicit state transitions and early returns.
 4. Keep lifecycle trigger invocation explicit and localized.
-5. Keep prompts/selection paths deterministic and validated.
+5. Keep prompts/selection paths deterministic and validated. For `userPrompt` actions, an optional prompt's decline button must set `role: 'cancel'` (see `server/CLAUDE.md` "Prompt buttons"); required prompts omit it.
 6. Add log/info/debug statements for branch decisions and state deltas.
 7. Verify no hidden mutation bypasses approved controllers.
 8. Run `deno check` on touched files.

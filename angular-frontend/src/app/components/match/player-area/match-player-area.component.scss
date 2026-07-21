@@ -48,6 +48,10 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  // Positioning context for app-board-selection-action's absolutely
+  // positioned confirm bar, so it anchors to this panel's own bottom edge
+  // instead of the viewport.
+  position: relative;
   flex: 1 1 auto;
   min-height: var(--card-height);
   border: 1px dashed var(--theme-border-subtle);
@@ -102,84 +106,20 @@
   filter: saturate(0.4);
 }
 
-// Flow row — deck pinned to the left edge, discard pinned to the right edge,
-// hand panel fills the middle. The host-level horizontal padding (10px) gives
-// the deck and discard breathing room from the column borders so they don't
-// sit flush with them.
-// align-items: flex-end keeps the deck/discard cards aligned to the bottom of the hand shell.
+// Flow row hosting the hand panel, full width. Deck/discard stacks moved to
+// the basic-supply panel (match-supply.component.scss). The host-level
+// horizontal padding (10px) gives the hand panel breathing room from the
+// column borders.
 .player-bottom-row {
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
   gap: var(--theme-space-md);
   pointer-events: none;
 }
 
-.stack-panel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  pointer-events: auto;
-}
-
-.stack-card {
-  width: var(--card-width);
-  min-height: var(--card-height);
-}
-
-// Half-size stack panels (deck, discard) match the supply / non-supply /
-// play-area / hand cards so the entire match screen reads at one card
-// scale.
-.stack-panel-half .stack-card {
-  min-height: var(--card-small-height);
-}
-
-.stack-panel-half .empty-stack {
-  height: var(--card-small-height);
-}
-
-.stack-label {
-  // theme-text-primary adapts (dark in light mode, light cream in dark mode)
-  // so DECK / DISCARD labels remain readable on either body without changing
-  // the cost/count chrome elsewhere on the match screen.
-  color: var(--theme-text-primary);
-  font-size: 12px;
-  letter-spacing: 0.2px;
-  font-weight: 700;
-  border: 1px solid var(--theme-border-strong);
-  padding: var(--theme-space-xs) var(--theme-space-md);
-}
-
-// Label positioned above the stack card; bottom edge flush with the card top.
-.stack-label-top {
-  border-radius: var(--theme-radius-md) var(--theme-radius-md) 0 0;
-  border-bottom: none;
-}
-
-// Label positioned below the stack card; top edge flush with the card bottom.
-.stack-label-bottom {
-  border-radius: 0 0 var(--theme-radius-md) var(--theme-radius-md);
-  border-top: none;
-}
-
-.empty-stack {
-  width: var(--card-width);
-  height: var(--card-height);
-  border-radius: var(--theme-radius-sm);
-  border: 1px solid var(--theme-border-strong);
-  color: var(--theme-text-on-dark);
-  background: rgba(0, 0, 0, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-}
-
-// Hand panel sits in the middle of .player-bottom-row alongside the deck and
-// discard stacks. flex: 1 fills the entire space between them so the deck and
-// discard can sit pinned to the left and right edges. Cards inside center
-// themselves and switch to overlap mode when they don't fit (driven by a
-// ResizeObserver-backed compact signal in the component class).
+// Hand panel now spans the full width of .player-bottom-row. Cards inside
+// center themselves and switch to overlap mode when they don't fit (driven
+// by a ResizeObserver-backed compact signal in the component class).
 .hand-panel {
   box-sizing: border-box;
   pointer-events: auto;
@@ -385,6 +325,12 @@
   object-fit: cover;
 }
 
+.resource-icon-button:disabled {
+  cursor: not-allowed;
+  filter: grayscale(1) brightness(0.6);
+  opacity: 0.7;
+}
+
 .resource-icon-button span {
   position: absolute;
   inset: 0;
@@ -587,27 +533,6 @@
   transform: scale(1.05);
 }
 
-// Stack cards (deck, discard) only show the hover affordance when they are
-// currently interactive. The default :hover above would always scale and
-// highlight, suggesting the card is clickable when it isn't.
-.board-card.stack-card:hover {
-  transform: none;
-}
-
-.board-card.stack-card.selectable-card:hover,
-.board-card.stack-card.selectable-pile:hover,
-.board-card.stack-card.way-selectable:hover {
-  transform: scale(1.04);
-}
-
-// Non-interactive stack cards override the card-frame's hover treatment so
-// the type-color border / shadow stays neutral. The custom props cascade
-// into the encapsulated <app-card> via standard CSS inheritance.
-.board-card.stack-card:not(.selectable-card):not(.selectable-pile):not(.way-selectable) {
-  --card-hover-border: var(--theme-border-strong);
-  --card-hover-shadow: transparent;
-}
-
 .board-card::before {
   content: '';
   position: absolute;
@@ -633,35 +558,9 @@
   box-shadow: 0 0 0 2px var(--theme-color-way-selectable);
 }
 
-// Count badge positioned at top-left of deck, discard, and hand group stacks.
+// Count badge positioned at top-left of hand group stacks.
 app-count-badge {
   position: absolute;
   top: 4px;
   left: 4px;
-}
-
-.stack-token-badges {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  display: flex;
-  flex-direction: column;
-  gap: var(--theme-space-xs);
-  pointer-events: none;
-}
-
-// Game-art piece: black-on-white pill badge over a stack image — fixed
-// game art, not theme chrome.
-.stack-token-badge {
-  min-width: 24px;
-  height: 24px;
-  border-radius: 999px;
-  border: 2px solid #000000;
-  color: #000000;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 20px;
-  text-align: center;
-  padding: 0 var(--theme-space-xs);
-  box-sizing: border-box;
 }

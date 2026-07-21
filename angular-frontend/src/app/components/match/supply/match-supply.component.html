@@ -1,6 +1,6 @@
 @if (visible()) {
   @if (area() === 'basic') {
-    <section class="supply-panel">
+    <section class="supply-panel basic-supply-panel">
       <div class="basic-columns">
         <div class="pile-column">
           @for (pile of basicVictoryPiles(); track pile.trackKey) {
@@ -16,6 +16,83 @@
             <ng-container *ngTemplateOutlet="pileButton; context: { $implicit: pile }"></ng-container>
           }
         </div>
+      </div>
+
+      <!-- Deck/discard stacks for the local player — bottom-anchored below
+           the victory/curse/treasure piles via margin-top: auto. Moved here
+           from match-player-area so this panel fills the full column
+           height. -->
+      <div class="basic-player-stacks">
+        @let deck = deckPile();
+        <section class="stack-panel stack-panel-half">
+          <div class="stack-label stack-label-top">DECK</div>
+          <button
+            type="button"
+            class="board-card stack-card"
+            [class.selectable-card]="deck.selectable"
+            [class.selected-card]="deck.selected"
+            [class.way-selectable]="deck.waySelectable"
+            [disabled]="deck.cardId === null"
+            (click)="deck.cardId !== null && onPlayerStackClick(deck.cardId, $event)"
+            (mouseenter)="deck.cardId !== null && onPlayerStackMouseEnter(deck.cardId, $event)"
+            (mouseleave)="deck.cardId !== null && onPlayerStackMouseLeave(deck.cardId)"
+          >
+            @if (deck.cardId !== null) {
+              <app-card
+                [cardId]="deck.cardId"
+                [forceFacing]="deck.forceFacing"
+                [count]="deck.showCount ? deck.count : 0"
+              ></app-card>
+            } @else {
+              <div class="empty-stack">Empty</div>
+            }
+            @if (deck.tokenBadges.length > 0) {
+              <div class="stack-token-badges">
+                @for (badge of deck.tokenBadges; track badge.id) {
+                  @if (badge.imagePath) {
+                    <app-token-image-badge
+                      [imagePath]="badge.imagePath"
+                      [highlightColor]="badge.color"
+                    ></app-token-image-badge>
+                  } @else {
+                    <div class="stack-token-badge" [style.background]="badge.color">
+                      {{ badge.label }}
+                      @if (badge.count > 1) {
+                        <span>{{ badge.count }}</span>
+                      }
+                    </div>
+                  }
+                }
+              </div>
+            }
+          </button>
+        </section>
+
+        @let discard = discardPile();
+        <section class="stack-panel stack-panel-half">
+          <div class="stack-label stack-label-top">DISCARD</div>
+          <button
+            type="button"
+            class="board-card stack-card"
+            [class.selectable-card]="discard.selectable"
+            [class.selected-card]="discard.selected"
+            [class.way-selectable]="discard.waySelectable"
+            [disabled]="discard.cardId === null"
+            (click)="discard.cardId !== null && onPlayerStackClick(discard.cardId, $event)"
+            (mouseenter)="discard.cardId !== null && onPlayerStackMouseEnter(discard.cardId, $event)"
+            (mouseleave)="discard.cardId !== null && onPlayerStackMouseLeave(discard.cardId)"
+          >
+            @if (discard.cardId !== null) {
+              <app-card
+                [cardId]="discard.cardId"
+                [forceFacing]="'front'"
+                [count]="discard.showCount ? discard.count : 0"
+              ></app-card>
+            } @else {
+              <div class="empty-stack">Empty</div>
+            }
+          </button>
+        </section>
       </div>
     </section>
   }

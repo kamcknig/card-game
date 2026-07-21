@@ -1,3 +1,4 @@
+.claude/
 .idea/
 node_modules/
 dist/
@@ -10,13 +11,6 @@ preselected-kingdoms.json
 preselected-events.json
 preselected-landmarks.json
 .deno/
-
-# Ignore Codex runtime/config artifacts, but keep project skills versioned.
-.codex/*
-!.claude/skills/
-!.claude/skills/**
-
-.claude/settings.local.json
 
 server/coverage/
 

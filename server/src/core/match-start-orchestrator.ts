@@ -16,6 +16,10 @@ export interface MatchStartOrchestratorArgs {
   matchConfiguration: MatchConfiguration | undefined;
   onGameOver: () => void;
   registerRemovalVoteHandler: (socket: AppSocket, playerId: PlayerId) => void;
+  // Invoked when matchController.initialize() rejects (e.g. bad configuration).
+  // The caller is responsible for rolling the lobby back to a joinable state —
+  // a rejection here must never become an unhandled promise rejection.
+  onInitializeFailed: (error: unknown) => void;
 }
 
 // Encapsulates only the lobby->match startup pipeline.
@@ -40,6 +44,7 @@ export class MatchStartOrchestrator {
       matchConfiguration,
       onGameOver,
       registerRemovalVoteHandler,
+      onInitializeFailed,
     } = args;
 
     // Remove lobby-only handlers before gameplay starts.
@@ -67,11 +72,17 @@ export class MatchStartOrchestrator {
     matchController.on('gameOver', onGameOver);
 
     // Initialize the match with current lobby config overlayed on defaults.
-    void matchController.initialize({
-      ...structuredClone(defaultMatchConfiguration),
-      ...matchConfiguration,
-      players: activePlayers,
-    } as MatchConfiguration);
+    matchController
+      .initialize({
+        ...structuredClone(defaultMatchConfiguration),
+        ...matchConfiguration,
+        players: activePlayers,
+      } as MatchConfiguration)
+      .catch(error => {
+        // Never let a config failure become an unhandled rejection — report
+        // and let the coordinator roll the lobby back to a joinable state.
+        onInitializeFailed(error);
+      });
 
     // Register runtime-only socket handlers after match activation.
     for (const [playerId, socket] of socketMap.entries()) {

@@ -1,0 +1,18 @@
+<div class="slider-content">
+  <input
+    class="slider-input"
+    type="range"
+    min="0"
+    [max]="maxValue()"
+    step="1"
+    [value]="selectedValue()"
+    (input)="onSliderChanged($any($event.target).value)" />
+
+  @if (isOverpay()) {
+    <div class="slider-value">Overpay: {{ selectedValue() }}</div>
+    <div class="slider-breakdown">Treasure: {{ inTreasure() }}</div>
+    <div class="slider-breakdown">Coffers: {{ inCoffer() }}</div>
+  } @else {
+    <div class="slider-value">Split at: {{ selectedValue() }}</div>
+  }
+</div>

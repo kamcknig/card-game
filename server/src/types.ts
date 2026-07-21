@@ -12,6 +12,7 @@ import {
   CardNoId,
   ComputedMatchConfiguration,
   ExtraTurn,
+  LogEntrySource,
   Match,
   PlayerId,
   SelectSingleCardPromptArgs,
@@ -146,12 +147,24 @@ export type SetAsideSourceInput = {
   sourceLabel?: string;
 };
 
+// Lose Track rule guard (opt-in): where the calling effect expects the card
+// to be right now. When provided and the card is not there — wrong zone,
+// wrong owner, buried under other cards when requireTop is set, or in no
+// registered zone — the move does not happen ("the effect has lost track of
+// the card"). Only the movement fails; the caller keeps running and uses the
+// action's result to resolve any "if you do …" riders.
+export type ExpectedCardSource = {
+  location: CardLocation;
+  playerId?: PlayerId;
+  // The card must additionally be the top card of that source (array end).
+  // Implements the covering-up clause for decks and discard piles.
+  requireTop?: boolean;
+};
+
 export type GameActionContext = {
-  source?: CardId;
+  source?: LogEntrySource;
   loggingContext?: {
     suppress?: boolean;
-    /** @deprecated Prefer GameActionContext.source for attribution. */
-    source?: CardId;
   };
   suppressLifeCycle?: LifecycleSuppression;
   // Ephemeral lifecycle payload passed only for this specific action call.
@@ -215,6 +228,13 @@ export interface GameActionDefinitionMap {
   gainTreasure: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   // Spends treasure from the current player's pool (cannot go below zero).
   spendTreasure: (args: { count: number }, context?: GameActionContext) => Promise<void>;
+  // Sets the current player's treasure pool to an exact value (clamped to
+  // >= 0) WITHOUT gain/spend semantics: no treasureGain trigger fires and
+  // no player-visible log entry is written. For effects that adjust coins
+  // rather than gain or pay them (e.g. Poor House / Souk "-$1 per X, you
+  // can't go below $0"). True gains must use gainTreasure (reactions like
+  // the -$1 token hook its trigger); "pay" effects must use spendTreasure.
+  setTreasure: (args: { count: number }, context?: GameActionContext) => Promise<void>;
   gainVictoryToken: (args: { playerId: PlayerId; count: number }, context?: GameActionContext) => Promise<void>;
   // adds a turn to the extra turn queue
   queueExtraTurn: (args: { turn: ExtraTurn }) => Promise<void>;
@@ -301,6 +321,16 @@ export interface GameActionDefinitionMap {
     facing?: CardFacing;
     // Optional source metadata used when the destination is set-aside.
     setAsideSource?: SetAsideSourceInput;
+    // Opt-in: also updates card.owner to the resolved destination player.
+    // moveCard itself is a low-level primitive and leaves ownership alone by
+    // default (mirroring gainCard/exileCard/trashCard, which set it
+    // explicitly for their own semantics); effects that pass a card between
+    // two live players (e.g. Masquerade) opt in here instead of mutating
+    // card.owner directly outside the action layer.
+    updateOwner?: boolean;
+    // Lose Track rule guard (opt-in). Returns undefined (no move) when the
+    // card is not where the caller expects it to be.
+    expectedFrom?: ExpectedCardSource;
   }) => Promise<{ location: CardLocation; playerId?: PlayerId; emptiedSupplyPileKey?: CardKey } | undefined>;
   // Removes a card from the active match (used for "remove from game" / "to the box" effects).
   removeCardFromGame: (args: { cardId: CardId | Card }) => Promise<void>;
@@ -329,6 +359,9 @@ export interface GameActionDefinitionMap {
       // Optional way id to resolve alternate Action play behavior.
       // undefined => resolve via prompt, null => explicit normal play.
       wayId?: CardLikeId | null;
+      // Way cardKeys to exclude from the per-play Way choice (e.g. a Way
+      // replaying a set-aside card must not offer itself again).
+      excludeWayKeys?: CardKey[];
       overrides?: GameActionOverrides;
     },
     context?: GameActionContext,
@@ -365,7 +398,13 @@ export interface GameActionDefinitionMap {
     args: { kind: 'boon' | 'hex'; includeDiscard?: boolean; playerId?: PlayerId },
     context?: GameActionContext,
   ) => Promise<void>;
-  trashCard: (args: { cardId: CardId | Card; playerId: PlayerId }, context?: GameActionContext) => Promise<void>;
+  // Resolves true when the card was actually trashed; false when the
+  // lose-track guard failed (in which case no cardTrashed trigger,
+  // onTrashed lifecycle, stats, or log entries fire).
+  trashCard: (
+    args: { cardId: CardId | Card; playerId: PlayerId; expectedFrom?: ExpectedCardSource },
+    context?: GameActionContext,
+  ) => Promise<boolean>;
   userPrompt: (args: UserPromptActionArgs) => Promise<unknown | null>;
 }
 
@@ -419,9 +458,7 @@ export type PromptService = {
   chooseOne(args: UserPromptActionArgs): Promise<number | null>;
   confirm(args: UserPromptActionArgs, confirmAction?: number): Promise<boolean>;
   requestNumberInput(args: UserPromptActionArgs, confirmAction?: number): Promise<number | null>;
-  selectCardsFromPrompt(args: UserPromptActionArgs): Promise<CardId[]>;
   selectSingleCardFromPrompt(args: SelectSingleCardPromptArgs): Promise<CardId | null>;
-  selectSingleCardFromAction(args: SelectSingleActionCardArgs): Promise<CardId | null>;
   requestActionResult<TResult = unknown>(
     args: UserPromptActionArgs,
   ): Promise<{ action: number; result: TResult | undefined } | null>;
@@ -487,6 +524,11 @@ export type SupplyGainService = {
     to: CardLocationSpec;
     from?: ('basicSupply' | 'kingdomSupply') | ('basicSupply' | 'kingdomSupply')[];
     logTag?: string;
+    // Optional log-entry attribution for the resulting gainCard entry. The service's own
+    // actionService instance is a match-scoped singleton (not the per-effect wrapped one from
+    // createCardEffectContext), so callers that need "(Card/Boon/Hex Name)" attribution on the
+    // gain must pass it explicitly here.
+    source?: LogEntrySource;
   }) => Promise<CardId | undefined>;
   // Gains the current top card from a named non-supply pile.
   gainTopNonSupplyCardForPileName: (args: {
@@ -494,6 +536,10 @@ export type SupplyGainService = {
     pileName: string;
     to: CardLocationSpec;
     logTag?: string;
+    // See gainTopSupplyCardForPileKey's `source` doc: this service's actionService instance
+    // never auto-injects a source, so callers that need "(Card/Boon/Hex Name)" attribution on
+    // the gain must pass it explicitly here.
+    source?: LogEntrySource;
   }) => Promise<CardId | undefined>;
 };
 
@@ -542,6 +588,7 @@ export type CardEffectFunctionMap = Partial<Record<CardKey, CardEffectFunction>>
 
 export interface CardScoringFnContext extends AppContext {
   ownerId: number;
+  cardId: CardId;
 }
 
 export type ExpansionConfiguratorContext = InitializeExpansionContext & {
@@ -561,7 +608,12 @@ export type ExpansionConfiguratorFactory = () => ExpansionConfigurator;
 export type CardScoringFunction = (args: CardScoringFnContext) => number;
 
 export type CardExpansionActionConditionMap = {
-  canBuy?: (args: { match: Match; cardLibrary: MatchCardLibrary; playerId: PlayerId }) => boolean;
+  canBuy?: (args: {
+    match: Match;
+    cardLibrary: MatchCardLibrary;
+    playerId: PlayerId;
+    findCardService: FindCardService;
+  }) => boolean;
 };
 
 // Shared context for checking whether an alternate buy option can currently be bought.
@@ -672,32 +724,32 @@ export type TriggerEventTypeContext = {
     locationAfter: TokenLocation | null;
     countersBefore?: number | null;
     countersAfter?: number | null;
-    // Optional source card for token/log attribution.
-    source?: CardId;
+    // Optional source card/card-like for token/log attribution.
+    source?: LogEntrySource;
   };
   treasureGain: {
     playerId: PlayerId;
     count: number;
-    // Optional source card for token/log attribution.
-    source?: CardId;
+    // Optional source card/card-like for token/log attribution.
+    source?: LogEntrySource;
   };
   actionGain: {
     playerId: PlayerId;
     count: number;
-    // Optional source card for token/log attribution.
-    source?: CardId;
+    // Optional source card/card-like for token/log attribution.
+    source?: LogEntrySource;
   };
   drawHand: {
     playerId: PlayerId;
     count: number;
-    // Optional source card for token/log attribution.
-    source?: CardId;
+    // Optional source card/card-like for token/log attribution.
+    source?: LogEntrySource;
   };
   drawCards: {
     playerId: PlayerId;
     count: number;
-    // Optional source card for token/log attribution.
-    source?: CardId;
+    // Optional source card/card-like for token/log attribution.
+    source?: LogEntrySource;
   };
   cardTrashed: {
     cardId: CardId;
@@ -706,7 +758,7 @@ export type TriggerEventTypeContext = {
     // Present when this trash emptied a configured Supply pile (basic/kingdoms).
     emptiedSupplyPileKey?: CardKey;
     // Optional source landscape for trigger attribution.
-    source?: CardId;
+    source?: LogEntrySource;
   };
   cardPlayed: { playerId: PlayerId; cardId: CardId };
   // Triggered at the start of a player's turn
@@ -730,16 +782,16 @@ export type TriggerEventTypeContext = {
     playerId: PlayerId;
     cardIds?: CardId[];
     cardLikeIds?: CardLikeId[];
-    // Optional source card for token/log attribution.
-    source?: CardId;
+    // Optional source card/card-like for token/log attribution.
+    source?: LogEntrySource;
   };
   // Triggered after randomization so reactions can reshape the shuffled packet before merge.
   afterShuffle: {
     playerId: PlayerId;
     cardIds?: CardId[];
     cardLikeIds?: CardLikeId[];
-    // Optional source card for token/log attribution.
-    source?: CardId;
+    // Optional source card/card-like for token/log attribution.
+    source?: LogEntrySource;
   };
   // Triggered at the end of each player's turn
   endTurn: {
@@ -798,6 +850,17 @@ export class Reaction<T extends TriggerEventType = TriggerEventType> {
   public autoResolve?: boolean = false;
 
   /**
+   * When true, the reaction's triggered effect logs at the current depth
+   * instead of one level deeper. For replacement-style system reactions
+   * (e.g. Way of the Chameleon's draw→treasure swap) whose output stands in
+   * for the entry the trigger would have produced — it must align with
+   * sibling entries rather than nest under them.
+   *
+   * @default false
+   */
+  public suppressLogIndent?: boolean = false;
+
+  /**
    * Indicates that the reaction can be used by multiple different instances of the same card.
    *
    * @default true
@@ -830,6 +893,7 @@ export class Reaction<T extends TriggerEventType = TriggerEventType> {
     this.compulsory = arg.compulsory ?? false;
     this.system = arg.system ?? false;
     this.autoResolve = arg.autoResolve ?? false;
+    this.suppressLogIndent = arg.suppressLogIndent ?? false;
     // Preserve explicit reaction source metadata when provided.
     this.sourceId = arg.sourceId;
     this.sourceKey = arg.sourceKey;
@@ -882,6 +946,11 @@ export type GameLifecycleCallbackContext = AppContext & {
   cardId: CardId;
   actionService: ActionService;
   cardInstanceFactoryService: CardInstanceFactoryService;
+  // Root expansion catalog + raw (uninstantiated) card library. Exposed so game-event
+  // handlers that reshape the kingdom mid-game (Divine Wind) can compute candidate piles
+  // and synthesize expansion-configurator contexts at runtime.
+  expansionCatalog: ExpansionDataLibrary;
+  rawCardLibrary: Record<CardKey, CardNoId>;
 };
 
 export type GameLifecycleCallback = (
@@ -930,6 +999,9 @@ export interface CardLifecycleEventArgMap {
     cardId: CardId;
     bought: boolean;
     gainContext?: OnGainedLifecycleContext;
+    // Where the card landed; mirrors the cardGained reaction trigger's own
+    // gainedLocation field. Undefined for multi-location moves (rare).
+    gainedLocation?: { location: CardLocation; playerId?: PlayerId };
   };
   onTrashed: {
     playerId: PlayerId;
@@ -1002,6 +1074,10 @@ export type PlayerScoreDecorator = (playerId: PlayerId, match: Match, cardLibrar
 
 export type EndGamePolicyDecision = 'continue' | 'end_now' | 'defer';
 export type EndGamePolicyFnContext = AppContext & { endTriggered: boolean };
+// `endTriggered` is ADDITIVE (OR-merged with the running value) — a policy can
+// only turn a trigger on, never clear one set by base rules or an earlier
+// policy. To suppress ending despite a trigger, return `decision: 'defer'`
+// (or 'continue' to leave the final decision to later policies/base rules).
 export type EndGamePolicyFnOutcome = {
   endTriggered?: boolean;
   decision?: EndGamePolicyDecision;

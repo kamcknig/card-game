@@ -232,6 +232,10 @@ export class CardComponent {
     void displayCardDetail({
       detailImagePath,
       kingdom: card.kingdom,
+      cardId: this.cardId(),
+      cardKey: card.cardKey,
+      expansionName: card.expansionName,
+      pileMembers: card.pileMembers,
     });
   }
 

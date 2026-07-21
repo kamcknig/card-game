@@ -1,6 +1,7 @@
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
 import { findWayInMatch } from '@shared/find-card-like-in-match.ts';
 import {
+  AllyNoId,
   BaseCardMetadata,
   Card,
   CardNoId,
@@ -11,9 +12,50 @@ import {
   Prophecy,
   Supply,
 } from 'shared/types/index.ts';
-import { ExpansionConfiguratorContext, ExpansionConfiguratorFactory, GameEventRegistrar } from '@server-types/index.ts';
+import {
+  ExpansionConfiguratorContext,
+  ExpansionConfiguratorFactory,
+  ExpansionRegistrationFacade,
+  GameEventRegistrar,
+  MatchBaseConfiguration,
+} from '@server-types/index.ts';
 import { uniqueByProp } from '../../core/match-configurator.ts';
+import {
+  instantiateAllies,
+  instantiateArtifacts,
+  instantiateBoons,
+  instantiateHexes,
+  instantiateStates,
+} from '../../core/match-setup-service.ts';
+import { rerunExpansionConfiguratorsMidGame } from '../../utils/rerun-expansion-configurators-mid-game.ts';
+import { registerActiveAllyEffects, skippedAllyImplementations } from '../allies/ally-effects-allies.ts';
+import { alliesTokenIds } from '../allies/token-ids-allies.ts';
 import { baseV2TokenIds } from '../base-v2/token-ids-base-v2.ts';
+// Per-card game-start setup functions extracted from their own expansions' configurators so Divine
+// Wind can run each dealt pile's Setup mid-game (Divine Wind Phase 5). Each keeps its original
+// game-start call site behavior identical; see each expansion's configurator for details.
+import { setupCharlatanCurses, setupPeddlerPriceRules } from '../prosperity/configurator-prosperity.ts';
+import {
+  registerFootpadGainReaction,
+  setupBakerCoffers,
+} from '../cornucopia-and-guilds/configurator-cornucopia-and-guilds.ts';
+import {
+  setupDestrierCostRules,
+  setupFishermanCostRules,
+  setupWayfarerCostRules,
+} from '../menagerie/configurator-menagerie.ts';
+import { setupShamanTrashGain } from '../plunder/configurator-plunder.ts';
+import {
+  setupJourneyTokens,
+  setupMinusCoinTokens,
+  setupTeacherTokens,
+} from '../adventures/configurator-adventures.ts';
+import {
+  setupChangelingExchange,
+  setupDruidBoons,
+  setupLostInTheWoodsState,
+  setupNecromancerZombies,
+} from '../nocturne/configurator-nocturne.ts';
 import { getConfiguredCardPileLocation } from '../../utils/get-configured-card-pile-location.ts';
 import { getConfiguredSupplyPileKeys } from '../../utils/get-configured-supply-pile-keys.ts';
 import { getAvailableKingdomRandomizerGroups } from '../../utils/get-available-kingdom-randomizer-groups.ts';
@@ -53,6 +95,22 @@ const RAPID_EXPANSION_PROPHECY_KEY: CardKey = 'rapid-expansion';
 const SICKNESS_PROPHECY_KEY: CardKey = 'sickness';
 const RIVERBOAT_CARD_KEY: CardKey = 'riverboat';
 const RIVERBOAT_RUNTIME_SET_ASIDE_PREFIX = 'riverboat-set-aside:';
+const DIVINE_WIND_PROPHECY_KEY: CardKey = 'divine-wind';
+// Ruins sits in kingdomSupply but is not a "Kingdom card pile" for Divine Wind (official FAQ), so
+// it is never removed by the swap.
+const RUINS_PILE_KEY = 'ruins';
+// Holds cards from piles Divine Wind removed from the game. Never rendered; instances survive so
+// owned copies keep scoring/trait/Obelisk behavior per the official FAQ.
+const REMOVED_FROM_GAME_ZONE = 'removedFromGame';
+// Importer (Allies) raises the starting Favor count from 1 to 5 — mirrors configurator-allies.
+const IMPORTER_PILE_KEY = 'importer';
+// Plateau Shepherds is a score-only ally whose scoring decorator is registered into
+// MatchController._expansionScoringFns at match start and is not reachable from a runtime game-event
+// context. Divine Wind therefore cannot introduce it mid-game (documented gap) and re-picks a
+// different supported ally if the reconfiguration selects it.
+const PLATEAU_SHEPHERDS_ALLY_KEY: CardKey = 'plateau-shepherds';
+// Ally implementations with known-missing engine support, excluded from the Divine Wind ally re-pick.
+const skippedAllyKeys = new Set(skippedAllyImplementations.map(entry => entry.cardKey));
 
 // Returns true when at least one selected kingdoms pile contains an Omen card.
 const hasOmenInKingdom = (config: ComputedMatchConfiguration): boolean => {
@@ -564,6 +622,10 @@ const registerApproachingArmyReactions = (args: RisingSunGameEventContext, proph
       playerId: player.id,
       compulsory: true,
       condition: async ({ trigger, cardLibrary, match }) => {
+        // Only the player who played the card gets the bonus (one firing, not N).
+        if (trigger.args.playerId !== player.id) {
+          return false;
+        }
         if (!isProphecyActive(match, APPROACHING_ARMY_PROPHECY_KEY)) {
           return false;
         }
@@ -682,6 +744,10 @@ const registerGreatLeaderReactions = (args: RisingSunGameEventContext, prophecy:
       playerId: player.id,
       compulsory: true,
       condition: async ({ trigger, cardLibrary, match }) => {
+        // Only the player who played the card gets the bonus (one firing, not N).
+        if (trigger.args.playerId !== player.id) {
+          return false;
+        }
         if (!isProphecyActive(match, GREAT_LEADER_PROPHECY_KEY)) {
           return false;
         }
@@ -1031,21 +1097,51 @@ const registerFlourishingTradeReactions = (args: RisingSunGameEventContext, prop
         }
         return getTurnPhase(trigger.args.phaseIndex) === 'buy';
       },
-      triggeredEffectFn: async ({ match, actionService, loggerService }) => {
-        const actionsToConvert = Math.max(0, match.playerActions);
-        if (actionsToConvert < 1) {
+      triggeredEffectFn: async ({ match, actionService, promptService, loggerService }) => {
+        const availableActions = Math.max(0, match.playerActions);
+        if (availableActions < 1) {
           loggerService.debug(
             `[rising-sun prophecy:flourishing-trade] player ${playerId} entered buy phase with no actions to convert`,
           );
           return;
         }
 
+        // Ask individually per remaining Action play (not a single bulk
+        // prompt), so a player who declines because they're about to buy
+        // Continue/Villa keeps those actions for the return trip to the
+        // Action phase. This reaction is not once:true, so it fires again
+        // on every later re-entry to the Buy phase with actions still unused.
+        let convertedCount = 0;
+        for (let index = 0; index < availableActions; index++) {
+          const shouldConvert = await promptService.confirm(
+            {
+              playerId,
+              prompt: 'Convert an unused Action play into a Buy?',
+              actionButtons: [
+                { label: 'NO', action: 1 },
+                { label: 'YES', action: 2 },
+              ],
+            },
+            2,
+          );
+          if (shouldConvert) {
+            convertedCount++;
+          }
+        }
+
+        if (convertedCount < 1) {
+          loggerService.debug(
+            `[rising-sun prophecy:flourishing-trade] player ${playerId} declined to convert any action plays`,
+          );
+          return;
+        }
+
         loggerService.info(
-          `[rising-sun prophecy:flourishing-trade] player ${playerId} entered buy phase; converting ${actionsToConvert} action(s) into buy(s)`,
+          `[rising-sun prophecy:flourishing-trade] player ${playerId} converted ${convertedCount} action(s) into buy(s)`,
         );
         await actionService.run('convertActionsToBuys', {
           playerId,
-          count: actionsToConvert,
+          count: convertedCount,
         });
       },
     });
@@ -1199,6 +1295,8 @@ const registerBureaucracyReactions = (args: RisingSunGameEventContext, prophecy:
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'rising-sun prophecy:bureaucracy',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: { kind: 'cardLike', id: prophecy.id },
         });
 
         if (!gainedCopperId) {
@@ -1538,6 +1636,8 @@ const registerSicknessReactions = (args: RisingSunGameEventContext, prophecy: Pr
             from: 'basicSupply',
             to: { location: 'playerDeck' },
             logTag: 'rising-sun prophecy:sickness',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: { kind: 'cardLike', id: prophecy.id },
           });
 
           if (!gainedCurseId) {
@@ -1578,6 +1678,533 @@ const registerSicknessReactions = (args: RisingSunGameEventContext, prophecy: Pr
   }
 };
 
+// Moves Riverboat's runtime set-aside card into the shared set-aside zone and stamps it immovable.
+// Extracted from the game-start handler so it also runs when Riverboat is dealt mid-game by Divine
+// Wind: the configurator re-run selects Riverboat's set-aside card into a runtime non-supply pile,
+// and this then performs the game-start move-to-set-aside + immovable stamping. Idempotent: once the
+// card is in set-aside the top-non-supply lookup returns nothing and the already-initialized branch
+// re-stamps the same (idempotent) metadata.
+const setupRiverboatSetAside = async (args: RisingSunGameEventContext): Promise<void> => {
+  const riverboatCard = args.findCardService.findCards({
+    all: [{ location: 'kingdomSupply' }, { cardKeys: RIVERBOAT_CARD_KEY }],
+  })[0];
+
+  if (!riverboatCard) {
+    args.loggerService.warn('[rising-sun onGameStart] Riverboat configured but no runtime Riverboat card found');
+    return;
+  }
+
+  const riverboatMetadata = (riverboatCard.metadata as RiverboatCardMetadata | undefined)?.risingSun?.riverboat;
+  const runtimeSetAsidePileKey = riverboatMetadata?.runtimeSetAsidePileKey;
+  if (!runtimeSetAsidePileKey) {
+    args.loggerService.warn('[rising-sun onGameStart] Riverboat metadata missing runtime set-aside pile key');
+    return;
+  }
+
+  const runtimeSetAsideCard = args.findCardService.findTopNonSupplyCardForPileName({
+    pileName: runtimeSetAsidePileKey,
+  });
+
+  if (runtimeSetAsideCard) {
+    args.loggerService.info(
+      `[rising-sun onGameStart] moving Riverboat set-aside card ${runtimeSetAsideCard.cardKey} to shared set-aside`,
+    );
+    await args.actionService.run('moveCard', {
+      cardId: runtimeSetAsideCard.id,
+      to: { location: 'set-aside' },
+      setAsideSource: {
+        sourceKind: 'card',
+        sourceCardId: riverboatCard.id,
+        sourceCardKey: riverboatCard.cardKey,
+        sourceLabel: riverboatCard.cardName,
+      },
+    });
+
+    // Riverboat set-aside card must stay set aside even when played.
+    const movedSetAsideCard = args.cardLibrary.getCard(runtimeSetAsideCard.id);
+    const movedMetadata = (movedSetAsideCard.metadata as RiverboatCardMetadata | undefined) ?? {};
+    movedMetadata.base ??= {};
+    movedMetadata.base.immovable = true;
+    movedMetadata.risingSun ??= {};
+    movedMetadata.risingSun.riverboat ??= {};
+    movedMetadata.risingSun.riverboat.runtimeSetAsideCard = true;
+    movedMetadata.risingSun.riverboat.runtimeSetAsidePileKey = runtimeSetAsidePileKey;
+    movedSetAsideCard.metadata = movedMetadata;
+    return;
+  }
+
+  const existingSetAsideCard = args.cardSourceController
+    .getSource('set-aside')
+    .map(cardId => args.cardLibrary.getCard(cardId))
+    .find(card => card.kingdom === runtimeSetAsidePileKey);
+
+  if (!existingSetAsideCard) {
+    args.loggerService.warn(
+      `[rising-sun onGameStart] no runtime Riverboat set-aside card found for pile ${runtimeSetAsidePileKey}`,
+    );
+    return;
+  }
+
+  const existingMetadata = (existingSetAsideCard.metadata as RiverboatCardMetadata | undefined) ?? {};
+  existingMetadata.base ??= {};
+  existingMetadata.base.immovable = true;
+  existingMetadata.risingSun ??= {};
+  existingMetadata.risingSun.riverboat ??= {};
+  existingMetadata.risingSun.riverboat.runtimeSetAsideCard = true;
+  existingMetadata.risingSun.riverboat.runtimeSetAsidePileKey = runtimeSetAsidePileKey;
+  existingSetAsideCard.metadata = existingMetadata;
+  args.loggerService.debug('[rising-sun onGameStart] Riverboat set-aside card already initialized');
+};
+
+// Per-card game-start setup dispatch for the piles Divine Wind deals mid-game. Keyed by pile key
+// (getCardPileKey), matching the runtime new-pile pool. Each entry runs the pile's game-start Setup
+// against the live match once the pile has been instantiated (swap step 7). The dealt pile's cards
+// already exist in kingdomSupply at that point, so each setup function resolves its cards from the
+// live sources exactly as it would at game start.
+//
+// Group A (Divine Wind Phase 5): rules & reactions. Most entries are the extracted setup functions
+// invoked directly with the game-event context; Footpad registers an onCardGained game event instead,
+// so it is dispatched through a runtime registrar shim over reactionManager.registerGameEvent (the
+// same handler list match-controller's game-event registrar targets at game start).
+const DIVINE_WIND_PILE_SETUP_DISPATCH: Record<CardKey, (args: RisingSunGameEventContext) => Promise<void> | void> = {
+  // prosperity
+  peddler: setupPeddlerPriceRules,
+  charlatan: setupCharlatanCurses,
+  // cornucopia-and-guilds
+  footpad: args =>
+    registerFootpadGainReaction((event, handler) => args.reactionManager.registerGameEvent(event, handler)),
+  baker: setupBakerCoffers,
+  // menagerie
+  fisherman: setupFishermanCostRules,
+  destrier: setupDestrierCostRules,
+  wayfarer: setupWayfarerCostRules,
+  // plunder
+  shaman: setupShamanTrashGain,
+  // Group B (Divine Wind Phase 6): tokens, states, one-shots.
+  // adventures — Journey token (Giant / Ranger), -$1 token (Bridge Troll), Teacher's vanilla bonus
+  // tokens (dispatched off the Peasant Traveller line that upgrades into Teacher).
+  giant: setupJourneyTokens,
+  ranger: setupJourneyTokens,
+  'bridge-troll': setupMinusCoinTokens,
+  peasant: setupTeacherTokens,
+  // nocturne — Druid boon set-aside, Fool's Lost in the Woods state, Necromancer Zombies, Changeling
+  // exchange reactions. Heirloom handlers are deliberately not dispatched (FAQ: no heirlooms for new
+  // piles).
+  druid: setupDruidBoons,
+  fool: setupLostInTheWoodsState,
+  necromancer: setupNecromancerZombies,
+  changeling: setupChangelingExchange,
+  // rising-sun — Riverboat set-aside move + immovable stamping (the re-run selects its set-aside card
+  // into a runtime non-supply pile; this then performs the game-start set-aside).
+  riverboat: setupRiverboatSetAside,
+};
+
+// Builds a no-op ExpansionRegistrationFacade for the mid-game configurator rerun.
+//
+// The game-event context (RisingSunGameEventContext) does not expose the match's real
+// ExpansionRegistrationFacade — it is constructed in MatchController.initializeInternal and handed
+// only to the configurator factory at match start, not threaded onto runtime contexts. A no-op
+// facade is safe here: every effect/token registration an expansion configurator performs is
+// unconditional (registered in full at match start via its own once-per-instance flags and persisted
+// in the GameActionController/TokenRegistry maps for the match lifetime — verified for nocturne
+// boon/hex/state). Re-invoking them for the same expansion is therefore redundant. The only
+// kingdom-conditional config-time effect registration (Charlatan's Curse retype) is handled instead
+// by the per-card setup dispatch above (Divine Wind Phases 5-6).
+const buildNoopExpansionRegistration = (
+  loggerService: RisingSunGameEventContext['loggerService'],
+): ExpansionRegistrationFacade => {
+  const suppress = (registrar: string) => () => {
+    loggerService.debug(`[rising-sun prophecy:divine-wind] suppressed ${registrar} during mid-game configurator rerun`);
+  };
+  return {
+    registerCardEffect: suppress('registerCardEffect'),
+    registerBoonEffect: suppress('registerBoonEffect'),
+    registerHexEffect: suppress('registerHexEffect'),
+    registerStateEffect: suppress('registerStateEffect'),
+    registerArtifactEffect: suppress('registerArtifactEffect'),
+    registerProjectEffect: suppress('registerProjectEffect'),
+    registerTokenDefinition: suppress('registerTokenDefinition'),
+    registerTokenCardPlayedHandler: suppress('registerTokenCardPlayedHandler'),
+  };
+};
+
+// Instantiates config supply entries that have no runtime instances yet, mirroring
+// MatchSetupService.createKingdom / createNonSupplyCards / createBaseSupply (match-setup-service.ts).
+// A supply entry is considered already-instantiated when a card whose `kingdom` equals the entry's
+// `name` exists in the target source. Returns the number of piles minted. Used to project the
+// post-rerun config diff (10 new piles + any extra/companion/potion piles the rerun added) into the
+// live card sources without re-minting piles that already exist (e.g. surviving Ruins).
+const instantiateNewConfigPiles = (args: {
+  ctx: RisingSunGameEventContext;
+  supplies: Supply[];
+  sourceKey: 'kingdomSupply' | 'nonSupplyCards' | 'basicSupply';
+}): number => {
+  const { ctx, supplies, sourceKey } = args;
+  const source = ctx.cardSourceController.getSource(sourceKey);
+  // Pile names already instantiated in this source, keyed by the instance's kingdom field.
+  const existingPileNames = new Set(source.map(cardId => ctx.cardLibrary.getCard(cardId).kingdom));
+  let mintedPileCount = 0;
+
+  for (const supply of supplies) {
+    if (existingPileNames.has(supply.name)) {
+      continue;
+    }
+
+    ctx.loggerService.info(
+      `[rising-sun prophecy:divine-wind] instantiating ${supply.cards.length} card(s) for new ${sourceKey} pile '${supply.name}'`,
+    );
+    for (const card of supply.cards) {
+      const instance = ctx.cardInstanceFactoryService.createCard(card.cardKey, { ...card, kingdom: supply.name });
+      ctx.cardLibrary.addCard(instance);
+      source.push(instance.id);
+    }
+    existingPileNames.add(supply.name);
+    mintedPileCount++;
+  }
+
+  return mintedPileCount;
+};
+
+// Pre-swap presence of each landscape/ally deck. Captured before Divine Wind removes the kingdom so
+// the diff instantiation only seeds landscapes the reconfiguration newly introduced (never re-seeding
+// or resetting decks that already existed — e.g. an existing boon deck must keep its runtime state).
+type DivineWindLandscapeSnapshot = {
+  hadBoons: boolean;
+  hadHexes: boolean;
+  hadStates: boolean;
+  hadArtifacts: boolean;
+  hadAlly: boolean;
+};
+
+// Captures which landscape/ally decks exist before the swap.
+const captureDivineWindLandscapeSnapshot = (match: Match): DivineWindLandscapeSnapshot => ({
+  hadBoons: match.boons.cards.length > 0,
+  hadHexes: match.hexes.cards.length > 0,
+  hadStates: match.states.cards.length > 0,
+  hadArtifacts: match.artifacts.cards.length > 0,
+  hadAlly: (match.allies?.length ?? 0) > 0,
+});
+
+// Picks a replacement ally (deterministic, seeded RNG) from the configured expansions' ally catalogs,
+// excluding a key plus any unsupported implementations. Mirrors the random-ally selection in
+// configurator-allies. Used only to substitute an unsupported mid-game plateau-shepherds pick.
+const pickDivineWindReplacementAlly = (args: RisingSunGameEventContext, excludeKey: CardKey): AllyNoId | undefined => {
+  const { match, expansionCatalog, rngService } = args;
+  const candidates = match.config.expansions.flatMap(expansion =>
+    Object.values(expansionCatalog[expansion.name]?.allies ?? {}),
+  );
+  const uniqueCandidates = uniqueByProp(candidates, 'cardKey').filter(
+    ally => ally.cardKey !== excludeKey && !skippedAllyKeys.has(ally.cardKey),
+  );
+  if (uniqueCandidates.length < 1) {
+    return undefined;
+  }
+  // structuredClone so mutating config.allies never reaches shared catalog data.
+  return structuredClone(uniqueCandidates[rngService.nextIndex(uniqueCandidates.length)]);
+};
+
+// Instantiates the ally the reconfiguration selected when a Liaison was dealt into a previously
+// ally-less game: substitutes plateau-shepherds (unsupported mid-game), creates the ally landscape,
+// seeds starting Favor tokens (FAQ: a Liaison arriving with no prior ally gets Favors as at setup —
+// mirrors configurator-allies registerGameEvents), then registers the ally's active reactions.
+const instantiateDivineWindAlly = async (args: RisingSunGameEventContext): Promise<void> => {
+  const { match, cardInstanceFactoryService, loggerService, actionService } = args;
+  const config = match.config;
+
+  if (config.allies?.[0]?.cardKey === PLATEAU_SHEPHERDS_ALLY_KEY) {
+    const replacement = pickDivineWindReplacementAlly(args, PLATEAU_SHEPHERDS_ALLY_KEY);
+    if (replacement) {
+      loggerService.info(
+        `[rising-sun prophecy:divine-wind] substituting ally ${replacement.cardKey} for unsupported mid-game plateau-shepherds`,
+      );
+      config.allies = [replacement];
+    } else {
+      loggerService.warn(
+        '[rising-sun prophecy:divine-wind] no replacement ally available; plateau-shepherds scoring will not apply mid-game',
+      );
+    }
+  }
+
+  // Create the ally landscape from config into match state.
+  instantiateAllies(match, cardInstanceFactoryService, config, loggerService);
+
+  // Seed starting Favors. Importer raises the count to 5, otherwise 1 — mirrors configurator-allies.
+  const hasImporter = config.kingdomSupply.some(supply =>
+    supply.cards.some(card => getCardPileKey(card) === IMPORTER_PILE_KEY),
+  );
+  const startingFavors = hasImporter ? 5 : 1;
+  loggerService.info(
+    `[rising-sun prophecy:divine-wind] seeding ${startingFavors} starting Favor token(s) per player for newly dealt Liaison`,
+  );
+  for (const player of match.players) {
+    for (let index = 0; index < startingFavors; index++) {
+      await actionService.run('placeToken', {
+        tokenId: alliesTokenIds.favor,
+        ownerId: player.id,
+        location: { type: 'player', playerId: player.id },
+      });
+    }
+  }
+
+  // Register the ally's active reactions now that the ally and Favors exist in match state.
+  registerActiveAllyEffects(args, config);
+};
+
+// Instantiates the landscape/ally decks the reconfiguration newly seeded into config during the
+// Divine Wind swap (Fate boons, Doom hexes/states, renaissance artifacts, and an ally for a newly
+// dealt Liaison). Only decks that were empty before the swap are instantiated, so existing runtime
+// deck state is never reset. Boon/hex/state/artifact *effect* maps are registered unconditionally at
+// match start by their source expansions' configurators (nocturne / renaissance), so instances alone
+// are needed here; a landscape can only appear now if its source expansion was configured at start.
+const instantiateDivineWindLandscapeDiffs = async (
+  args: RisingSunGameEventContext,
+  before: DivineWindLandscapeSnapshot,
+): Promise<void> => {
+  const { match, cardInstanceFactoryService, loggerService } = args;
+  const config = match.config;
+
+  if (!before.hadBoons && (config.boons?.length ?? 0) > 0) {
+    loggerService.info('[rising-sun prophecy:divine-wind] instantiating boon deck for newly dealt Fate pile(s)');
+    instantiateBoons(match, cardInstanceFactoryService, config, loggerService);
+  }
+  if (!before.hadHexes && (config.hexes?.length ?? 0) > 0) {
+    loggerService.info('[rising-sun prophecy:divine-wind] instantiating hex deck for newly dealt Doom pile(s)');
+    instantiateHexes(match, cardInstanceFactoryService, config, loggerService);
+  }
+  if (!before.hadStates && (config.states?.length ?? 0) > 0) {
+    loggerService.info('[rising-sun prophecy:divine-wind] instantiating states for newly dealt pile(s)');
+    instantiateStates(match, cardInstanceFactoryService, config, loggerService);
+  }
+  if (!before.hadArtifacts && (config.artifacts?.length ?? 0) > 0) {
+    loggerService.info('[rising-sun prophecy:divine-wind] instantiating artifacts for newly dealt pile(s)');
+    instantiateArtifacts(match, cardInstanceFactoryService, config, loggerService);
+  }
+  if (!before.hadAlly && (config.allies?.length ?? 0) > 0) {
+    loggerService.info('[rising-sun prophecy:divine-wind] instantiating ally for newly dealt Liaison');
+    await instantiateDivineWindAlly(args);
+  }
+};
+
+// Resolves Divine Wind: removes every non-Ruins Kingdom pile from the Supply and sets up 10 new
+// random piles (with their full setup), per dominion-docs/expansion-docs/rising-sun/prophecy/
+// divine-wind.md. Runs inside the removeSunToken action context so clients receive one consolidated
+// patch rather than an intermediate empty-kingdom state.
+const resolveDivineWindKingdomSwap = async (args: RisingSunGameEventContext): Promise<void> => {
+  const {
+    match,
+    cardLibrary,
+    cardSourceController,
+    actionService,
+    loggerService,
+    rngService,
+    expansionCatalog,
+    rawCardLibrary,
+    cardInstanceFactoryService,
+  } = args;
+
+  loggerService.info('[rising-sun prophecy:divine-wind] resolving kingdom swap');
+
+  // Snapshot which landscape/ally decks exist before the swap so the post-rerun diff instantiation
+  // only seeds what the reconfiguration newly introduces (never resetting an existing deck's state).
+  const landscapeSnapshotBefore = captureDivineWindLandscapeSnapshot(match);
+
+  // 1. Every pile key ever instantiated is off-limits for the new deal (FAQ: piles already used
+  //    this game can't be among the 10 — covers the original kingdom, Banes, Ferryman piles,
+  //    Riverboat/Mouse set-asides, and heirlooms in one check).
+  const usedPileKeys = new Set(cardLibrary.getAllCardsAsArray().map(card => getCardPileKey(card)));
+  loggerService.debug(
+    `[rising-sun prophecy:divine-wind] ${usedPileKeys.size} used pile key(s) excluded from the new deal`,
+  );
+
+  // Pile names (config supply `.name`) being removed from the Supply — everything except Ruins.
+  const removedPileNames = new Set(
+    match.config.kingdomSupply.filter(supply => supply.name !== RUINS_PILE_KEY).map(supply => supply.name),
+  );
+
+  // 2. Clear tokens sitting on removed piles (FAQ: tokens on removed piles are gone; player-owned
+  //    Adventures tokens return to their owner rather than being destroyed).
+  const removedPileTokens = Object.values(match.tokens ?? {}).filter(
+    token => token.location.type === 'supplyPile' && removedPileNames.has(token.location.cardKey),
+  );
+  for (const token of removedPileTokens) {
+    const pileName = token.location.type === 'supplyPile' ? token.location.cardKey : 'unknown';
+    if (token.ownerId !== undefined) {
+      loggerService.info(
+        `[rising-sun prophecy:divine-wind] returning player-owned token ${token.id} (on ${pileName}) to owner ${token.ownerId}`,
+      );
+      await actionService.run('moveToken', {
+        tokenInstanceId: token.id,
+        location: { type: 'playerAvailable', playerId: token.ownerId },
+      });
+    } else {
+      loggerService.info(`[rising-sun prophecy:divine-wind] removing pile token ${token.id} on removed pile ${pileName}`);
+      await actionService.run('removeToken', { tokenInstanceId: token.id });
+    }
+  }
+
+  // 3. Remove the piles. Snapshot the source first since moveCard mutates it during iteration.
+  const kingdomSourceSnapshot = [...cardSourceController.getSource('kingdomSupply')];
+  const removedCardIds = kingdomSourceSnapshot.filter(
+    cardId => getCardPileKey(cardLibrary.getCard(cardId)) !== RUINS_PILE_KEY,
+  );
+  loggerService.info(
+    `[rising-sun prophecy:divine-wind] removing ${removedCardIds.length} card(s) across ${removedPileNames.size} pile(s) from the Supply`,
+  );
+  for (const cardId of removedCardIds) {
+    // moveCard (not removeCardFromGame) keeps instances in the library so owned copies retain
+    // scoring/trait/Obelisk behavior per the FAQ. Uses no gain event, so Search does not trigger.
+    await actionService.run('moveCard', { cardId, to: { location: REMOVED_FROM_GAME_ZONE } });
+  }
+  // Rewrite config so game-end counting, returns, and exchanges see only the surviving piles.
+  match.config.kingdomSupply = match.config.kingdomSupply.filter(supply => supply.name === RUINS_PILE_KEY);
+
+  // 4. Pick up to 10 new piles from the match's expansions, excluding every used pile key.
+  const selectedExpansions = match.config.expansions
+    .map(expansion => expansionCatalog[expansion.name])
+    .filter((expansion): expansion is NonNullable<typeof expansion> => !!expansion);
+  const pool = getAvailableKingdomRandomizerGroups({
+    expansions: selectedExpansions,
+    bannedPileKeys: match.config.bannedKingdoms.map(card => getCardPileKey(card)),
+    excludedPileKeys: [...usedPileKeys],
+  });
+  const dealCount = Math.min(MatchBaseConfiguration.numberOfKingdomPiles, pool.length);
+  if (pool.length < MatchBaseConfiguration.numberOfKingdomPiles) {
+    loggerService.warn(
+      `[rising-sun prophecy:divine-wind] only ${pool.length} candidate pile(s) available; dealing ${dealCount}`,
+    );
+  }
+
+  // Draw `dealCount` distinct groups by index-splice against the seeded RNG (deterministic).
+  const drawableGroups = [...pool];
+  const dealtPileKeys: CardKey[] = [];
+  for (let index = 0; index < dealCount; index++) {
+    const [group] = drawableGroups.splice(rngService.nextIndex(drawableGroups.length), 1);
+    dealtPileKeys.push(group.pileKey);
+
+    // Install config entries mirroring selectKingdomSupply (match-configurator.ts:399-405): a
+    // single-card group fills a full pile; a multi-card group (split piles, Knights, Castles) is
+    // installed as-is and the configurator rerun applies canonical order / counts. Clone the raw
+    // catalog cards so the rerun cannot mutate shared expansion data.
+    if (group.cards.length === 1) {
+      const card = structuredClone(group.cards[0]);
+      match.config.kingdomSupply.push({
+        name: card.kingdom,
+        cards: new Array(getDefaultKingdomSupplySize(card, match.config)).fill(card),
+      });
+    } else {
+      const cards = group.cards.map(card => structuredClone(card));
+      match.config.kingdomSupply.push({ name: cards[0].kingdom, cards });
+    }
+  }
+  loggerService.info(
+    `[rising-sun prophecy:divine-wind] dealt ${dealtPileKeys.length} new pile(s): ${dealtPileKeys.join(', ')}`,
+  );
+
+  // 5. Re-run every expansion configurator against the post-swap config so each expansion performs
+  //    its own setup for the newly dealt piles (extra/companion piles, mats, Potion, split ordering,
+  //    boon/hex/ally/artifact seeding). See buildNoopExpansionRegistration for the registration
+  //    side-effect policy.
+  await rerunExpansionConfiguratorsMidGame({
+    match,
+    expansionCatalog,
+    rawCardLibrary,
+    cardSourceController,
+    cardInstanceFactoryService,
+    rngService,
+    loggerService,
+    expansionRegistration: buildNoopExpansionRegistration(loggerService),
+  });
+
+  // A fresh alchemy configurator instance re-adds a 'potion' basicSupply entry during the rerun even
+  // when one already exists (its guard is a per-instance flag). De-duplicate by name so downstream
+  // config consumers (pile-key lookups, game-end counting) never see a doubled potion pile.
+  match.config.basicSupply = uniqueByProp(match.config.basicSupply, 'name');
+
+  // 6. Diff-instantiate the post-rerun config into the live card sources (mirrors MatchSetupService).
+  const mintedKingdomPiles = instantiateNewConfigPiles({
+    ctx: args,
+    supplies: match.config.kingdomSupply,
+    sourceKey: 'kingdomSupply',
+  });
+  const mintedNonSupplyPiles = instantiateNewConfigPiles({
+    ctx: args,
+    supplies: match.config.nonSupply ?? [],
+    sourceKey: 'nonSupplyCards',
+  });
+  const mintedBasicPiles = instantiateNewConfigPiles({
+    ctx: args,
+    supplies: match.config.basicSupply,
+    sourceKey: 'basicSupply',
+  });
+  loggerService.info(
+    `[rising-sun prophecy:divine-wind] instantiated ${mintedKingdomPiles} kingdom, ${mintedNonSupplyPiles} non-supply, ${mintedBasicPiles} basic pile(s) from the config diff`,
+  );
+
+  // 6b. Instantiate the landscape/ally decks the reconfiguration newly seeded (boons, hexes, states,
+  //     artifacts, ally + Favors + ally effects). Only decks empty before the swap are instantiated.
+  await instantiateDivineWindLandscapeDiffs(args, landscapeSnapshotBefore);
+
+  // 7. Per-card game-start setup for the dealt piles. The dispatch table is empty until Divine Wind
+  //    Phases 5-6 land; the loop is in place so adding an entry there is the only change needed.
+  for (const pileKey of dealtPileKeys) {
+    const setupFn = DIVINE_WIND_PILE_SETUP_DISPATCH[pileKey];
+    if (!setupFn) {
+      continue;
+    }
+    loggerService.info(`[rising-sun prophecy:divine-wind] running per-card game-start setup for dealt pile '${pileKey}'`);
+    await setupFn(args);
+  }
+
+  loggerService.info('[rising-sun prophecy:divine-wind] kingdom swap complete');
+};
+
+// Registers Divine Wind: when the last Sun is removed, remove all Kingdom piles from the Supply and
+// set up 10 new random piles (dominion-docs/expansion-docs/rising-sun/prophecy/divine-wind.md).
+const registerDivineWindReactions = (args: RisingSunGameEventContext, prophecy: Prophecy): void => {
+  // The removed-from-game zone must exist before any moveCard references it; guarded so a reloaded
+  // match (zone already present in state) does not double-register and throw.
+  if (!args.cardSourceController.hasSource(REMOVED_FROM_GAME_ZONE)) {
+    args.cardSourceController.registerZone(REMOVED_FROM_GAME_ZONE, []);
+    args.loggerService.debug('[rising-sun prophecy:divine-wind] registered removedFromGame zone');
+  }
+
+  args.reactionManager.registerGlobalSystemTemplate(
+    prophecy,
+    'tokenChanged',
+    {
+      compulsory: true,
+      autoResolve: true,
+      allowMultipleInstances: false,
+      condition: ({ trigger, match }) => {
+        if (trigger.args.tokenId !== risingSunTokenIds.sun) {
+          return false;
+        }
+        if (trigger.args.locationBefore.type !== 'cardLike') {
+          return false;
+        }
+        if (trigger.args.locationBefore.cardLikeId !== prophecy.id) {
+          return false;
+        }
+        if (prophecy.cardKey !== DIVINE_WIND_PROPHECY_KEY) {
+          return false;
+        }
+        // Only trigger on the token change that activated the prophecy.
+        return isProphecyActive(match, DIVINE_WIND_PROPHECY_KEY);
+      },
+      triggeredEffectFn: async ({ loggerService }) => {
+        // No "already active at registration" fallback (unlike Enlightenment): the swap's results are
+        // persisted match state, so a reloaded post-activation match must not re-run it. The swap
+        // uses the registration closure's `args` (game-event context) because it carries
+        // cardInstanceFactoryService / expansionCatalog / rawCardLibrary, which the triggered-effect
+        // context does not.
+        loggerService.info('[rising-sun prophecy:divine-wind] final Sun removed; replacing the kingdom');
+        await resolveDivineWindKingdomSwap(args);
+      },
+    },
+    { idSuffix: 'divine-wind:token-activation' },
+  );
+};
+
 // Registers runtime behavior for the selected prophecy at game start.
 const registerSelectedProphecyReactions = (args: RisingSunGameEventContext): void => {
   const prophecy = getRuntimeProphecy(args.match);
@@ -1597,6 +2224,9 @@ const registerSelectedProphecyReactions = (args: RisingSunGameEventContext): voi
       break;
     case BUREAUCRACY_PROPHECY_KEY:
       registerBureaucracyReactions(args, prophecy);
+      break;
+    case DIVINE_WIND_PROPHECY_KEY:
+      registerDivineWindReactions(args, prophecy);
       break;
     case ENLIGHTENMENT_PROPHECY_KEY:
       registerEnlightenmentReactions(args, prophecy);
@@ -1734,71 +2364,7 @@ export const registerGameEvents: (registrar: GameEventRegistrar, config: Compute
 
   registrar('onGameStartSetup', async args => {
     if (hasRiverboat) {
-      const riverboatCard = args.findCardService.findCards({
-        all: [{ location: 'kingdomSupply' }, { cardKeys: RIVERBOAT_CARD_KEY }],
-      })[0];
-
-      if (!riverboatCard) {
-        args.loggerService.warn('[rising-sun onGameStart] Riverboat configured but no runtime Riverboat card found');
-      } else {
-        const riverboatMetadata = (riverboatCard.metadata as RiverboatCardMetadata | undefined)?.risingSun?.riverboat;
-        const runtimeSetAsidePileKey = riverboatMetadata?.runtimeSetAsidePileKey;
-        if (!runtimeSetAsidePileKey) {
-          args.loggerService.warn('[rising-sun onGameStart] Riverboat metadata missing runtime set-aside pile key');
-        } else {
-          const runtimeSetAsideCard = args.findCardService.findTopNonSupplyCardForPileName({
-            pileName: runtimeSetAsidePileKey,
-          });
-
-          if (runtimeSetAsideCard) {
-            args.loggerService.info(
-              `[rising-sun onGameStart] moving Riverboat set-aside card ${runtimeSetAsideCard.cardKey} to shared set-aside`,
-            );
-            await args.actionService.run('moveCard', {
-              cardId: runtimeSetAsideCard.id,
-              to: { location: 'set-aside' },
-              setAsideSource: {
-                sourceKind: 'card',
-                sourceCardId: riverboatCard.id,
-                sourceCardKey: riverboatCard.cardKey,
-                sourceLabel: riverboatCard.cardName,
-              },
-            });
-
-            // Riverboat set-aside card must stay set aside even when played.
-            const movedSetAsideCard = args.cardLibrary.getCard(runtimeSetAsideCard.id);
-            const movedMetadata = (movedSetAsideCard.metadata as RiverboatCardMetadata | undefined) ?? {};
-            movedMetadata.base ??= {};
-            movedMetadata.base.immovable = true;
-            movedMetadata.risingSun ??= {};
-            movedMetadata.risingSun.riverboat ??= {};
-            movedMetadata.risingSun.riverboat.runtimeSetAsideCard = true;
-            movedMetadata.risingSun.riverboat.runtimeSetAsidePileKey = runtimeSetAsidePileKey;
-            movedSetAsideCard.metadata = movedMetadata;
-          } else {
-            const existingSetAsideCard = args.cardSourceController
-              .getSource('set-aside')
-              .map(cardId => args.cardLibrary.getCard(cardId))
-              .find(card => card.kingdom === runtimeSetAsidePileKey);
-
-            if (!existingSetAsideCard) {
-              args.loggerService.warn(
-                `[rising-sun onGameStart] no runtime Riverboat set-aside card found for pile ${runtimeSetAsidePileKey}`,
-              );
-            } else {
-              const existingMetadata = (existingSetAsideCard.metadata as RiverboatCardMetadata | undefined) ?? {};
-              existingMetadata.base ??= {};
-              existingMetadata.base.immovable = true;
-              existingMetadata.risingSun ??= {};
-              existingMetadata.risingSun.riverboat ??= {};
-              existingMetadata.risingSun.riverboat.runtimeSetAsideCard = true;
-              existingMetadata.risingSun.riverboat.runtimeSetAsidePileKey = runtimeSetAsidePileKey;
-              existingSetAsideCard.metadata = existingMetadata;
-              args.loggerService.debug('[rising-sun onGameStart] Riverboat set-aside card already initialized');
-            }
-          }
-        }
-      }
+      await setupRiverboatSetAside(args);
     }
 
     if (!hasOmen) {

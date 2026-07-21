@@ -2,9 +2,10 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject, input, ou
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
 import { CardKey, UserPromptKinds } from 'shared/types';
-import { resolveCountSpec } from 'shared/resolve-count-spec';
 import { validateCountSpec } from 'shared/validate-count-spec';
+import { resolveMaxSelectable } from 'shared/resolve-count-spec';
 import { selectedPileStore } from '../../../state/interactive-state';
+import { createSelectionEmitter } from './selection-emitter';
 
 type PromptSelectPileContent = Extract<UserPromptKinds, { type: 'select-pile' }>;
 
@@ -21,49 +22,34 @@ export class PromptSelectPileContentComponent {
 
   validationUpdated = output<boolean>();
   resultsUpdated = output<CardKey[]>();
-  finished = output<void>();
 
   private readonly _selectedPiles = toSignal(this._nanoService.useStore(selectedPileStore), {
     initialValue: selectedPileStore.get(),
   });
 
-  private _lastValidationState: boolean | null = null;
-  private _lastResultSignature = '';
-  private _lastAutoFinishSignature: string | null = null;
+  // Shared dedup-and-emit machinery for results/validation; see
+  // selection-emitter.ts.
+  private readonly _selectionEmitter = createSelectionEmitter<CardKey[]>({
+    resultsUpdated: this.resultsUpdated,
+    validationUpdated: this.validationUpdated,
+  });
 
   // Resets local emission signatures whenever prompt payload changes.
   private readonly _resetStateOnContentChange = effect(() => {
     this.content();
-    this._lastValidationState = null;
-    this._lastResultSignature = '';
-    this._lastAutoFinishSignature = null;
+    this._selectionEmitter.reset();
   });
 
-  // Emits result + validation updates and applies single-choice auto-finish semantics.
+  // Emits result + validation updates. Submission is always explicit via the
+  // host's Confirm button — this only tracks selection state.
   private readonly _emitSelectionState = effect(() => {
     const selectedPiles = this.selectedPiles();
     const valid = this.isValidSelection();
 
-    const resultSignature = JSON.stringify(selectedPiles);
-    if (resultSignature !== this._lastResultSignature) {
-      this._lastResultSignature = resultSignature;
-      this.resultsUpdated.emit([...selectedPiles]);
-    }
-
-    if (valid !== this._lastValidationState) {
-      this._lastValidationState = valid;
-      this.validationUpdated.emit(valid);
-    }
-
-    if (this.shouldAutoFinish() && valid) {
-      if (resultSignature !== this._lastAutoFinishSignature) {
-        this._lastAutoFinishSignature = resultSignature;
-        this.finished.emit();
-      }
-      return;
-    }
-
-    this._lastAutoFinishSignature = null;
+    this._selectionEmitter.emit({
+      result: [...selectedPiles],
+      isValid: valid,
+    });
   });
 
   // Ordered selectable pile names from prompt payload.
@@ -89,6 +75,11 @@ export class PromptSelectPileContentComponent {
     if (existingIndex >= 0) {
       selected.splice(existingIndex, 1);
     } else {
+      // The count spec's maximum is a hard cap — ignore clicks that would
+      // exceed it; the player must deselect a pile before picking another.
+      if (selected.length >= resolveMaxSelectable(this.content().selectCount)) {
+        return;
+      }
       selected.push(pileName);
     }
     selectedPileStore.set(selected);
@@ -102,19 +93,5 @@ export class PromptSelectPileContentComponent {
   // Validation state derived from prompt count spec and current selection length.
   private isValidSelection(): boolean {
     return validateCountSpec(this.content().selectCount, this.selectedPiles().length);
-  }
-
-  // Mirrors prior auto-complete behavior for non-optional single-pile selects.
-  private shouldAutoFinish(): boolean {
-    if (this.isOptional()) {
-      return false;
-    }
-
-    const countSpec = resolveCountSpec(this.content().selectCount);
-    if (countSpec.kind === 'fixed') {
-      return countSpec.count === 1;
-    }
-
-    return countSpec.min === 1 && countSpec.max === 1;
   }
 }

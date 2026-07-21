@@ -90,6 +90,33 @@ Deno.test('UserAccountAuthProvider: authenticates a known user with correct pass
   });
 });
 
+Deno.test('UserAccountAuthProvider: authenticates a known user via their email address', async () => {
+  await withIsolatedEnv({}, async () => {
+    const { provider, userStore, argon2id } = await makeProvider();
+    const hash = await argon2id.hash('strongpw-xyz');
+    await userStore.create({
+      username: 'Alice',
+      email: 'alice@example.com',
+      passwordHash: hash,
+      passwordAlgo: 'argon2id',
+      now: Date.now(),
+    });
+
+    const res = await provider.authenticate({ username: 'alice@example.com', password: 'strongpw-xyz' });
+    assertEquals(res.ok, true);
+    if (res.ok) assertEquals(res.username, 'Alice');
+  });
+});
+
+Deno.test('UserAccountAuthProvider: unknown email-shaped identifier returns generic rejection', async () => {
+  await withIsolatedEnv({}, async () => {
+    const { provider } = await makeProvider();
+    const res = await provider.authenticate({ username: 'ghost@example.com', password: 'whatever' });
+    assertEquals(res.ok, false);
+    if (!res.ok) assertEquals(res.message, 'Username/password does not match');
+  });
+});
+
 Deno.test('UserAccountAuthProvider: rejects wrong password', async () => {
   await withIsolatedEnv({}, async () => {
     const { provider, userStore, argon2id } = await makeProvider();

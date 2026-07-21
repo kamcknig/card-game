@@ -5,6 +5,7 @@ import { getCurrentTurnHistoryIndex } from '../../utils/get-current-turn-history
 import { getPlayerSourceSafe } from '../../utils/get-player-source-safe.ts';
 import { getTopSupplyCards } from '../../utils/get-top-supply-cards.ts';
 import { Card, CardCost, CardId, CardKey, PlayerId } from 'shared/types/index.ts';
+import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 
 // Returns the effective card cost for the resolving player.
 const getEffectiveCostForPlayer = (cardEffectArgs: CardEffectFunctionContext, card: Card): CardCost => {
@@ -369,21 +370,19 @@ const effectMap: CardExpansionModule = {
       const revealedCardIds: CardId[] = [];
       let revealedActionCardId: CardId | null = null;
 
-      // Reveal and set aside cards until an Action is found or no cards remain.
+      // Reveal and set aside cards until an Action is found or no cards
+      // remain; revealTopDeckCards shuffles the discard in automatically
+      // whenever the deck runs dry mid-reveal.
       while (revealedActionCardId === null) {
-        const revealedCardId = await cardEffectArgs.actionService.run('revealCard', {
-          playerId: cardEffectArgs.playerId,
-          source: 'playerDeck',
-          moveToSetAside: true,
-        });
-        if (revealedCardId === undefined) {
+        const revealed = await revealTopDeckCards(cardEffectArgs, cardEffectArgs.playerId, 1, { setAside: true });
+        const revealedCard = revealed[0];
+        if (!revealedCard) {
           break;
         }
 
-        revealedCardIds.push(revealedCardId);
-        const revealedCard = cardEffectArgs.cardLibrary.getCard(revealedCardId);
+        revealedCardIds.push(revealedCard.id);
         if (revealedCard.type.includes('ACTION')) {
-          revealedActionCardId = revealedCardId;
+          revealedActionCardId = revealedCard.id;
         }
       }
 

@@ -48,9 +48,10 @@ import {
 } from './select-card-like-modal/select-card-like-modal.component';
 import { SceneContentComponent } from '../scene-content/scene-content.component';
 import { UiDialogComponent } from '../ui/dialog/ui-dialog.component';
+import { SearchInputComponent } from '../ui/search-input/search-input.component';
 import { Subject, debounceTime, distinctUntilChanged } from 'rxjs';
 import { compare } from 'fast-json-patch';
-import { FolderOpen, LogOut, LucideAngularModule, Save, Search, Trash2, X } from 'lucide-angular';
+import { FolderOpen, LogOut, LucideAngularModule, Save, Trash2, X } from 'lucide-angular';
 import Fuse from 'fuse.js';
 import { displayCardDetail } from '../match/views/modal/display-card-detail';
 import { CardComponent } from '../card/card.component';
@@ -89,6 +90,7 @@ type SelectionModalState = {
     SceneContentComponent,
     NgStyle,
     UiDialogComponent,
+    SearchInputComponent,
     LucideAngularModule,
     CardComponent,
     CardLikeComponent,
@@ -105,8 +107,6 @@ export class MatchConfigurationComponent implements OnDestroy {
   readonly LeaveIcon = LogOut;
   // Per-slot remove affordance shown on hover over a chosen card.
   readonly RemoveIcon = X;
-  // Lucide icon used in the load-dialog search input.
-  readonly SearchIcon = Search;
 
   private readonly _router = inject(Router);
   private readonly _nanoStoreService = inject(NanostoresService);
@@ -557,14 +557,10 @@ export class MatchConfigurationComponent implements OnDestroy {
     this._socketService.emit('loadSavedMatchConfiguration', key);
   }
 
-  // Updates the load-dialog search term from raw input events.
+  // Updates the load-dialog search term from raw input events; also called
+  // with '' to clear it and restore the full saved list.
   updateLoadDialogSearchTerm(term: string) {
     this.loadDialogSearchTerm.set(term);
-  }
-
-  // Clears the load-dialog search term, restoring the full saved list.
-  clearLoadDialogSearch() {
-    this.loadDialogSearchTerm.set('');
   }
 
   // Deletes a saved configuration entry from the load dialog list.
@@ -756,12 +752,26 @@ export class MatchConfigurationComponent implements OnDestroy {
   // menu so the gesture is reserved for the in-app action; empty slots and
   // missing detail paths are no-ops so the right-click on a "?" placeholder
   // simply prevents the default menu without opening anything.
-  onSlotContextMenu(event: MouseEvent, detailImagePath: string | null | undefined): void {
+  // Accepts the full catalog item (not just its detail path) so split-pile
+  // kingdom slots can surface their pileMembers as detail-dialog siblings —
+  // only CardNoId (the "kingdom" slot type) ever carries a `kingdom` field
+  // or populated `pileMembers`; the other landscape catalog types pass
+  // through with no siblings, unchanged from before.
+  onSlotContextMenu(
+    event: MouseEvent,
+    item: CardNoId | EventNoId | LandmarkNoId | ProjectNoId | WayNoId | TraitNoId | AllyNoId | ProphecyNoId | null | undefined,
+  ): void {
     event.preventDefault();
-    if (!detailImagePath) {
+    if (!item?.detailImagePath) {
       return;
     }
-    void displayCardDetail({ detailImagePath });
+    void displayCardDetail({
+      detailImagePath: item.detailImagePath,
+      kingdom: 'kingdom' in item ? item.kingdom : undefined,
+      cardKey: item.cardKey,
+      expansionName: item.expansionName,
+      pileMembers: item.pileMembers,
+    });
   }
 
   // Removes one selected kingdom card from the fixed kingdom list.

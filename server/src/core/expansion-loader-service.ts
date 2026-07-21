@@ -40,14 +40,17 @@ export class ExpansionLoaderService {
     private readonly loggerService: LoggerService,
   ) {}
 
-  // Loads a single expansion by name when not already loaded.
-  public async loadExpansion(expansion: { name: string }): Promise<void> {
+  // Loads a single expansion by name when not already loaded. Returns true when
+  // the expansion is present in the catalog on return (already loaded or newly
+  // loaded), false when loading failed and the expansion was removed — callers
+  // must not treat a false return as "loaded" (e.g. announcing it to the lobby).
+  public async loadExpansion(expansion: { name: string }): Promise<boolean> {
     const expansionName = expansion.name;
     const expansionPath = `@expansions/${expansionName}`;
 
     if (this.expansionCatalogService.hasExpansion(expansionName)) {
       this.loggerService.info(`[expansion loader] expansion ${expansionName} already loaded`);
-      return;
+      return true;
     }
 
     this.loggerService.log(`[expansion loader] loading expansion ${expansionName}`);
@@ -260,9 +263,14 @@ export class ExpansionLoaderService {
       });
       this.loggerService.log('[expansion loader] base supply card effects loaded');
     } catch (error) {
-      this.loggerService.warn(`[expansion loader] Failed to load expansion: ${expansionName}`);
+      this.loggerService.warn(`[expansion loader] Failed to load expansion: ${expansionName} — skipping`);
       this.loggerService.error(error);
       this.expansionCatalogService.removeExpansion(expansionName);
+      this.expansionCatalogService.removeRawCardsForExpansion(expansionName);
+      // Bail out entirely: the landscape loaders below call getRequiredExpansion()
+      // which would throw for the now-removed expansion, propagating this single
+      // failure into an unhandled rejection that kills the whole server.
+      return false;
     }
 
     this.loggerService.info(`[expansion loader] attempting to load events for ${expansionName}`);
@@ -298,6 +306,8 @@ export class ExpansionLoaderService {
     this.loggerService.info(`[expansion loader] attempting to load allies for ${expansionName}`);
     await this.allyLoaderService.loadExpansionAllies(expansionName);
     this.loggerService.log(`[expansion loader] finished loading allies for ${expansionName}`);
+
+    return true;
   }
 
   // Type guard for boon entries in card libraries.

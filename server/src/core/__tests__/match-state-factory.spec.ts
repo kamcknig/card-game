@@ -13,6 +13,7 @@ const createExpectedInitialMatchState = (): Match => {
     villagers: {},
     debt: {},
     skippedTurns: {},
+    fortuneDoubledThisTurn: {},
     config: {} as ComputedMatchConfiguration,
     currentPlayerTurnIndex: 0,
     events: [],

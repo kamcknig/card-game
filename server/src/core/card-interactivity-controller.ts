@@ -30,10 +30,25 @@ export class CardInteractivityController {
   ) {}
 
   public playerAdded(s: AppSocket | undefined) {
-    s?.on('cardTapped', (pId, cId) => this.onCardTapped(pId, cId));
-    s?.on('cardTappedAsWay', (pId, cId, wId) => this.onCardTappedAsWay(pId, cId, wId));
-    s?.on('cardLikeTapped', (pId, cId) => this.onCardLikeTapped(pId, cId));
-    s?.on('playAllTreasure', async pId => await this.onPlayAllTreasure(pId));
+    // Every handler below is async and unawaited by socket.io's emitter — a
+    // rejection would otherwise become an unhandled promise rejection that can
+    // crash the process. runHandler() catches and logs instead.
+    s?.on('cardTapped', (pId, cId) => this.runHandler('cardTapped', () => this.onCardTapped(pId, cId)));
+    s?.on('cardTappedAsWay', (pId, cId, wId) =>
+      this.runHandler('cardTappedAsWay', () => this.onCardTappedAsWay(pId, cId, wId)),
+    );
+    s?.on('cardLikeTapped', (pId, cId) => this.runHandler('cardLikeTapped', () => this.onCardLikeTapped(pId, cId)));
+    s?.on('playAllTreasure', pId => this.runHandler('playAllTreasure', () => this.onPlayAllTreasure(pId)));
+  }
+
+  // Runs an async socket handler and logs (rather than throws) on rejection,
+  // so a bug in one handler invocation can never surface as an unhandled
+  // promise rejection.
+  private runHandler(label: string, fn: () => Promise<void>): void {
+    fn().catch(error => {
+      this.loggerService.error(`[card interactivity] unhandled error in ${label} handler`);
+      this.loggerService.error(error);
+    });
   }
 
   public playerRemoved(socket: AppSocket | undefined) {
@@ -319,43 +334,47 @@ export class CardInteractivityController {
 
     this.loggerService.info(`[card interactivity] ${player} tapped landscape ${cardId}`);
 
-    if (this._gameOver) {
-      this.loggerService.debug(`[card interactivity] game is over, not processing landscape tap`);
-      return;
-    }
-
-    const phase = getTurnPhase(this.match.turnPhaseIndex);
-
-    if (phase === 'buy') {
-      // Block buying events while the player has debt tokens.
-      if ((this.match.debt?.[playerId] ?? 0) > 0) {
-        this.loggerService.debug(`[card interactivity] ${player} has debt, blocking landscape buy`);
+    try {
+      if (this._gameOver) {
+        this.loggerService.debug(`[card interactivity] game is over, not processing landscape tap`);
         return;
       }
-      this.loggerService.info(
-        `[card interactivity] ${player} tapped landscape ${cardId} in phase ${phase}, processing`,
-      );
 
-      const event = findEventInMatch(this.match, cardId);
-      if (event) {
-        await this.actionService.run('buyEvent', { playerId, cardLikeId: cardId });
-      } else {
-        const project = findProjectInMatch(this.match, cardId);
-        if (project) {
-          await this.actionService.run('buyProject', { playerId, cardLikeId: cardId });
-        } else {
-          this.loggerService.debug(`[card interactivity] ${player} tapped non-buyable landscape ${cardId}`);
+      const phase = getTurnPhase(this.match.turnPhaseIndex);
+
+      if (phase === 'buy') {
+        // Block buying events while the player has debt tokens.
+        if ((this.match.debt?.[playerId] ?? 0) > 0) {
+          this.loggerService.debug(`[card interactivity] ${player} has debt, blocking landscape buy`);
+          return;
         }
+        this.loggerService.info(
+          `[card interactivity] ${player} tapped landscape ${cardId} in phase ${phase}, processing`,
+        );
+
+        const event = findEventInMatch(this.match, cardId);
+        if (event) {
+          await this.actionService.run('buyEvent', { playerId, cardLikeId: cardId });
+        } else {
+          const project = findProjectInMatch(this.match, cardId);
+          if (project) {
+            await this.actionService.run('buyProject', { playerId, cardLikeId: cardId });
+          } else {
+            this.loggerService.debug(`[card interactivity] ${player} tapped non-buyable landscape ${cardId}`);
+          }
+        }
+      } else {
+        this.loggerService.debug(
+          `[card interactivity] ${player} tapped landscape ${cardId} in phase ${phase}, not processing`,
+        );
       }
-    } else {
-      this.loggerService.debug(
-        `[card interactivity] ${player} tapped landscape ${cardId} in phase ${phase}, not processing`,
-      );
+
+      await this.actionService.run('checkForRemainingPlayerActions');
+    } finally {
+      // The client locks input until this arrives; it must fire on every path,
+      // including early returns and thrown errors from action handlers.
+      this.socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
     }
-
-    await this.actionService.run('checkForRemainingPlayerActions');
-
-    this.socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
   }
 
   private async onCardTapped(playerId: PlayerId, cardId: CardId) {
@@ -367,126 +386,141 @@ export class CardInteractivityController {
       return;
     }
 
-    this.loggerService.info(`[card interactivity] pl${player} tapped card ${this.cardLibrary.getCard(cardId)}`);
-
-    if (this._gameOver) {
-      this.loggerService.debug(`[card interactivity] game is over, not processing card tap`);
+    // Validate cardId before touching it — it is unvalidated client input and
+    // getCard() throws for unknown ids, which would otherwise escape this async
+    // socket handler as an unhandled rejection and never fire cardTappedComplete,
+    // permanently locking the client's supply UI.
+    const tappedCard = this.cardLibrary.tryGetCard(cardId);
+    if (!tappedCard) {
+      this.loggerService.warn(`[card interactivity] ${player} tapped unknown card ${cardId}`);
+      this.socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
       return;
     }
 
-    const phase = getTurnPhase(this.match.turnPhaseIndex);
+    try {
+      this.loggerService.info(`[card interactivity] pl${player} tapped card ${tappedCard}`);
 
-    if (phase === 'buy') {
-      let overpay = { inTreasure: 0, inCoffer: 0 };
-
-      const hand = this.cardSourceController.getSource('playerHand', playerId);
-
-      if (hand.includes(cardId)) {
-        const card = this.cardLibrary.getCard(cardId);
-        if (!card.type.includes('TREASURE')) {
-          this.loggerService.debug(`[card interactivity] tapped non-treasure hand card ${card} during buy phase`);
-          return;
-        }
-
-        await this.actionService.run('playCard', {
-          playerId,
-          cardId,
-          overrides: { actionCost: 0 },
-        });
-      } else {
-        // Block buying cards while the player has debt tokens.
-        if ((this.match.debt?.[playerId] ?? 0) > 0) {
-          this.loggerService.debug(`[card interactivity] ${player} has debt, blocking buy`);
-          return;
-        }
-        const card = this.cardLibrary.getCard(cardId);
-        const resolvedBuyOptions = this.buyOptionsResolver.resolveBuyOptions({
-          cardId: card,
-          playerId,
-        });
-        const { cost } = resolvedBuyOptions;
-        const { options } = resolvedBuyOptions;
-
-        // Exit if there are currently no legal ways to buy this card.
-        if (options.length === 0) {
-          this.loggerService.debug(`[card interactivity] no legal buy options for ${card}`);
-          return;
-        }
-
-        let selectedBuyOption: ResolvedBuyOption | undefined = options[0];
-        if (options.length > 1) {
-          // Let the user choose the payment method when multiple paths are legal.
-          const selectedAction = await this.promptService.requestAction({
-            playerId,
-            prompt: `Choose how to buy ${card.cardName}`,
-            actionButtons: options.map((option, index) => ({ label: option.label, action: index + 1 })),
-          });
-          if (selectedAction === null || selectedAction < 1) {
-            this.loggerService.debug(`[card interactivity] buy option prompt cancelled`);
-            return;
-          }
-          selectedBuyOption = options[selectedAction - 1];
-        }
-
-        if (!selectedBuyOption) {
-          this.loggerService.debug(`[card interactivity] selected buy option missing`);
-          return;
-        }
-
-        if (selectedBuyOption.kind === 'standard' && card.tags?.includes('overpay')) {
-          if (this.match.playerTreasure > cost.treasure) {
-            const result = await this.promptService.requestActionResult<{ inTreasure: number; inCoffer: number }>({
-              prompt: 'Overpay?',
-              actionButtons: [{ label: 'DONE', action: 1 }],
-              playerId: playerId,
-              content: { type: 'overpay', cost: cost.treasure },
-            });
-            if (result?.result) {
-              overpay = result.result;
-            }
-          }
-        }
-
-        await this.actionService.run('buyCard', {
-          playerId,
-          cardId,
-          overpay,
-          cardCost: cost,
-          buyOptionId: selectedBuyOption.id,
-        });
-      }
-    } else if (phase === 'action') {
-      const canPlayResult = this.playOptionsResolver.resolveCanPlay({
-        cardId,
-        playerId,
-        phase,
-      });
-      if (!canPlayResult.canPlay) {
-        this.loggerService.debug(
-          `[card interactivity] blocked action play for ${canPlayResult.card}: ${canPlayResult.reasons.join('; ')}`,
-        );
+      if (this._gameOver) {
+        this.loggerService.debug(`[card interactivity] game is over, not processing card tap`);
         return;
       }
-      await this.actionService.run('playCard', { playerId, cardId, wayId: null });
-    } else if (phase === 'night') {
-      // Night phase allows playing Night cards from hand without action cost.
-      const hand = this.cardSourceController.getSource('playerHand', playerId);
-      if (hand.includes(cardId)) {
-        const card = this.cardLibrary.getCard(cardId);
-        if (card.type.includes('NIGHT')) {
-          await this.actionService.run('playCard', { playerId, cardId });
-          this.loggerService.debug(`[card interactivity] played night card ${card}`);
+
+      const phase = getTurnPhase(this.match.turnPhaseIndex);
+
+      if (phase === 'buy') {
+        let overpay = { inTreasure: 0, inCoffer: 0 };
+
+        const hand = this.cardSourceController.getSource('playerHand', playerId);
+
+        if (hand.includes(cardId)) {
+          const card = this.cardLibrary.getCard(cardId);
+          if (!card.type.includes('TREASURE')) {
+            this.loggerService.debug(`[card interactivity] tapped non-treasure hand card ${card} during buy phase`);
+            return;
+          }
+
+          await this.actionService.run('playCard', {
+            playerId,
+            cardId,
+            overrides: { actionCost: 0 },
+          });
         } else {
-          this.loggerService.debug(`[card interactivity] tapped non-night card ${card} during night phase`);
+          // Block buying cards while the player has debt tokens.
+          if ((this.match.debt?.[playerId] ?? 0) > 0) {
+            this.loggerService.debug(`[card interactivity] ${player} has debt, blocking buy`);
+            return;
+          }
+          const card = this.cardLibrary.getCard(cardId);
+          const resolvedBuyOptions = this.buyOptionsResolver.resolveBuyOptions({
+            cardId: card,
+            playerId,
+          });
+          const { cost } = resolvedBuyOptions;
+          const { options } = resolvedBuyOptions;
+
+          // Exit if there are currently no legal ways to buy this card.
+          if (options.length === 0) {
+            this.loggerService.debug(`[card interactivity] no legal buy options for ${card}`);
+            return;
+          }
+
+          let selectedBuyOption: ResolvedBuyOption | undefined = options[0];
+          if (options.length > 1) {
+            // Let the user choose the payment method when multiple paths are legal.
+            const selectedAction = await this.promptService.requestAction({
+              playerId,
+              prompt: `Choose how to buy ${card.cardName}`,
+              actionButtons: options.map((option, index) => ({ label: option.label, action: index + 1 })),
+            });
+            if (selectedAction === null || selectedAction < 1) {
+              this.loggerService.debug(`[card interactivity] buy option prompt cancelled`);
+              return;
+            }
+            selectedBuyOption = options[selectedAction - 1];
+          }
+
+          if (!selectedBuyOption) {
+            this.loggerService.debug(`[card interactivity] selected buy option missing`);
+            return;
+          }
+
+          if (selectedBuyOption.kind === 'standard' && card.tags?.includes('overpay')) {
+            if (this.match.playerTreasure > cost.treasure) {
+              const result = await this.promptService.requestActionResult<{ inTreasure: number; inCoffer: number }>({
+                prompt: 'Overpay?',
+                actionButtons: [{ label: 'DONE', action: 1 }],
+                playerId: playerId,
+                content: { type: 'overpay', cost: cost.treasure },
+              });
+              if (result?.result) {
+                overpay = result.result;
+              }
+            }
+          }
+
+          await this.actionService.run('buyCard', {
+            playerId,
+            cardId,
+            overpay,
+            cardCost: cost,
+            buyOptionId: selectedBuyOption.id,
+          });
         }
-      } else {
-        this.loggerService.debug(`[card interactivity] tapped card ${cardId} not in hand during night phase`);
+      } else if (phase === 'action') {
+        const canPlayResult = this.playOptionsResolver.resolveCanPlay({
+          cardId,
+          playerId,
+          phase,
+        });
+        if (!canPlayResult.canPlay) {
+          this.loggerService.debug(
+            `[card interactivity] blocked action play for ${canPlayResult.card}: ${canPlayResult.reasons.join('; ')}`,
+          );
+          return;
+        }
+        await this.actionService.run('playCard', { playerId, cardId, wayId: null });
+      } else if (phase === 'night') {
+        // Night phase allows playing Night cards from hand without action cost.
+        const hand = this.cardSourceController.getSource('playerHand', playerId);
+        if (hand.includes(cardId)) {
+          const card = this.cardLibrary.getCard(cardId);
+          if (card.type.includes('NIGHT')) {
+            await this.actionService.run('playCard', { playerId, cardId });
+            this.loggerService.debug(`[card interactivity] played night card ${card}`);
+          } else {
+            this.loggerService.debug(`[card interactivity] tapped non-night card ${card} during night phase`);
+          }
+        } else {
+          this.loggerService.debug(`[card interactivity] tapped card ${cardId} not in hand during night phase`);
+        }
       }
+
+      await this.actionService.run('checkForRemainingPlayerActions');
+    } finally {
+      // The client locks input until this arrives; it must fire on every path,
+      // including early returns and thrown errors from action handlers.
+      this.socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
     }
-
-    await this.actionService.run('checkForRemainingPlayerActions');
-
-    this.socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
   }
 
   private async onCardTappedAsWay(playerId: PlayerId, cardId: CardId, wayId: CardLikeId) {
@@ -502,48 +536,56 @@ export class CardInteractivityController {
 
     this.loggerService.info(`[card interactivity] ${player} tapped card ${cardId} as way ${wayId}`);
 
-    if (this._gameOver) {
-      this.loggerService.debug(`[card interactivity] game is over, not processing way card tap`);
-      return;
-    }
+    try {
+      if (this._gameOver) {
+        this.loggerService.debug(`[card interactivity] game is over, not processing way card tap`);
+        return;
+      }
 
-    // Ensure the selected way is active in the current match.
-    const way = findWayInMatch(this.match, wayId);
-    if (!way) {
-      this.loggerService.warn(`[card interactivity] could not find way ${wayId} in active match`);
+      // Ensure the selected way is active in the current match.
+      const way = findWayInMatch(this.match, wayId);
+      if (!way) {
+        this.loggerService.warn(`[card interactivity] could not find way ${wayId} in active match`);
+        return;
+      }
+
+      // Require the tapped card to still be in hand and currently selectable.
+      const hand = this.cardSourceController.getSource('playerHand', playerId);
+      if (!hand.includes(cardId)) {
+        this.loggerService.debug(`[card interactivity] ignored way play for card ${cardId} not in hand`);
+        return;
+      }
+
+      const selectableCards = this.match.selectableCards[playerId] ?? [];
+      if (!selectableCards.includes(cardId)) {
+        this.loggerService.debug(`[card interactivity] ignored way play for card ${cardId} not selectable`);
+        return;
+      }
+
+      // Validate cardId before touching it — same rationale as onCardTapped:
+      // an unvalidated id must never reach getCard() and throw out of this
+      // handler before cardTappedComplete has a chance to fire.
+      const card = this.cardLibrary.tryGetCard(cardId);
+      if (!card) {
+        this.loggerService.warn(`[card interactivity] ${player} tapped unknown card ${cardId} for way play`);
+        return;
+      }
+      if (!card.type.includes('ACTION')) {
+        this.loggerService.debug(`[card interactivity] ignored non-action card ${card} for way play`);
+        return;
+      }
+
+      await this.actionService.run('playCard', {
+        playerId,
+        cardId,
+        wayId,
+      });
+
+      await this.actionService.run('checkForRemainingPlayerActions');
+    } finally {
+      // The client locks input until this arrives; it must fire on every path,
+      // including early returns and thrown errors from action handlers.
       this.socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
-      return;
     }
-
-    // Require the tapped card to still be in hand and currently selectable.
-    const hand = this.cardSourceController.getSource('playerHand', playerId);
-    if (!hand.includes(cardId)) {
-      this.loggerService.debug(`[card interactivity] ignored way play for card ${cardId} not in hand`);
-      this.socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
-      return;
-    }
-
-    const selectableCards = this.match.selectableCards[playerId] ?? [];
-    if (!selectableCards.includes(cardId)) {
-      this.loggerService.debug(`[card interactivity] ignored way play for card ${cardId} not selectable`);
-      this.socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
-      return;
-    }
-
-    const card = this.cardLibrary.getCard(cardId);
-    if (!card.type.includes('ACTION')) {
-      this.loggerService.debug(`[card interactivity] ignored non-action card ${card} for way play`);
-      this.socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
-      return;
-    }
-
-    await this.actionService.run('playCard', {
-      playerId,
-      cardId,
-      wayId,
-    });
-
-    await this.actionService.run('checkForRemainingPlayerActions');
-    this.socketMap.get(playerId)?.emit('cardTappedComplete', playerId, cardId);
   }
 }

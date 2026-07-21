@@ -2,25 +2,25 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  ElementRef,
   effect,
   inject,
   input,
   output,
   signal,
-  ViewChild,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
 import { CardFacing, CardId, CardLikeId, UserPromptKinds } from 'shared/types';
 import { validateCountSpec } from 'shared/validate-count-spec';
-import { resolveCountSpec } from 'shared/resolve-count-spec';
+import { resolveCountSpec, resolveMaxSelectable } from 'shared/resolve-count-spec';
 import { CardComponent } from '../../card/card.component';
 import { CardLikeComponent } from '../../card-like/card-like.component';
+import { WayPickerPanelComponent } from '../../way-picker-overlay/way-picker-panel.component';
 import { cardStore } from '../../../state/card-state';
 import { cardSourceStore } from '../../../state/card-source-store';
 import { matchStore } from '../../../state/match-state';
 import { debugRuntimeContextStore } from '../../../state/debug-runtime-state';
+import { createSelectionEmitter } from './selection-emitter';
 
 type PromptSelectContent = Extract<UserPromptKinds, { type: 'select' | 'display-cards' }>;
 
@@ -38,6 +38,7 @@ type PromptSelectionEntry = {
   imports: [
     CardComponent,
     CardLikeComponent,
+    WayPickerPanelComponent,
   ],
   templateUrl: './prompt-select-content.component.html',
   styleUrl: './prompt-select-content.component.scss',
@@ -47,19 +48,24 @@ export class PromptSelectContentComponent {
   private static readonly DEFAULT_TOOLTIP_CLOSE_DELAY_MS = 160;
   private static readonly TOOLTIP_EDGE_OVERLAP_PX = 5;
   private static readonly TOOLTIP_PADDING_PX = 8;
-  private static readonly TOOLTIP_ESTIMATED_WIDTH_PX = 220;
-  private static readonly TOOLTIP_ESTIMATED_HEIGHT_PX = 320;
+  // Board-parity tooltip metrics: 256 = 238px landscape card-like
+  // + 2 * 8px panel padding + 2px borders (same recipe as
+  // way-picker-overlay.component.scss). Height estimate mirrors
+  // WayPickerOverlayService: 149px per entry + 8px gaps + 18px chrome,
+  // capped by the scrollable list's 320px max-height + chrome.
+  private static readonly TOOLTIP_ESTIMATED_WIDTH_PX = 256;
+  private static readonly TOOLTIP_ENTRY_HEIGHT_PX = 149;
+  private static readonly TOOLTIP_ENTRY_GAP_PX = 8;
+  private static readonly TOOLTIP_CHROME_PX = 18;
+  private static readonly TOOLTIP_MAX_HEIGHT_PX = 338;
 
   private readonly _nanoService = inject(NanostoresService);
-
-  @ViewChild('promptRoot') private readonly _promptRootRef?: ElementRef<HTMLElement>;
 
   content = input.required<PromptSelectContent>();
 
   validationUpdated = output<boolean>();
   resultsUpdated = output<number[]>();
   selectedWayUpdated = output<CardLikeId | null>();
-  finished = output<void>();
 
   private readonly _cardsById = toSignal(this._nanoService.useStore(cardStore), {
     initialValue: cardStore.get(),
@@ -84,10 +90,14 @@ export class PromptSelectContentComponent {
   private readonly _wayTooltipPosition = signal<{ left: number; top: number }>({ left: 8, top: 8 });
   private _wayTooltipCloseTimeout: ReturnType<typeof setTimeout> | null = null;
 
-  private _lastValidationState: boolean | null = null;
-  private _lastResultSignature = '';
   private _lastSelectedWaySignature: string | null = null;
-  private _lastAutoFinishSignature: string | null = null;
+
+  // Shared dedup-and-emit machinery for results/validation; see
+  // selection-emitter.ts for why this isn't itself an `effect()`.
+  private readonly _selectionEmitter = createSelectionEmitter<number[]>({
+    resultsUpdated: this.resultsUpdated,
+    validationUpdated: this.validationUpdated,
+  });
 
   // Rebuilds prompt-local selection state whenever the prompt payload changes.
   private readonly _resetSelectionOnContentChange = effect(() => {
@@ -98,28 +108,19 @@ export class PromptSelectContentComponent {
     this.cancelWayTooltipClose();
     this._wayTooltipEntryKey.set(null);
     this._wayTooltipHovering.set(false);
-    this._lastValidationState = null;
-    this._lastResultSignature = '';
+    this._selectionEmitter.reset();
     this._lastSelectedWaySignature = null;
-    this._lastAutoFinishSignature = null;
   });
 
   // Emits prompt results/validation as selection state changes.
   private readonly _emitSelectionState = effect(() => {
-    const selectedEntryKeys = this._selectedEntryKeys();
     const selectedIds = this.selectedSourceIds();
     const validationState = this.isValidSelection();
 
-    const resultSignature = JSON.stringify(selectedIds);
-    if (resultSignature !== this._lastResultSignature) {
-      this._lastResultSignature = resultSignature;
-      this.resultsUpdated.emit(selectedIds);
-    }
-
-    if (validationState !== this._lastValidationState) {
-      this._lastValidationState = validationState;
-      this.validationUpdated.emit(validationState);
-    }
+    this._selectionEmitter.emit({
+      result: selectedIds,
+      isValid: validationState,
+    });
 
     if (this.showWaySelection()) {
       const selectedWayId = this.resolveSelectedWayIdForEmission();
@@ -129,17 +130,6 @@ export class PromptSelectContentComponent {
         this.selectedWayUpdated.emit(selectedWayId);
       }
     }
-
-    if (this.shouldAutoFinish() && validationState) {
-      const finishSignature = `${resultSignature}:${selectedEntryKeys.join(',')}`;
-      if (finishSignature !== this._lastAutoFinishSignature) {
-        this._lastAutoFinishSignature = finishSignature;
-        this.finished.emit();
-      }
-      return;
-    }
-
-    this._lastAutoFinishSignature = null;
   });
 
   // Prompt entries derived from card/card-like ids in prompt payload order.
@@ -226,6 +216,9 @@ export class PromptSelectContentComponent {
     return [...(this._match()?.ways ?? [])].sort((a, b) => a.cardKey.localeCompare(b.cardKey));
   });
 
+  // Sorted Way ids for the shared way-picker-panel component.
+  readonly sortedWayIds = computed(() => this.sortedWays().map((way) => way.id));
+
   // True when this prompt should expose a modal-local Way selection UI.
   readonly showWaySelection = computed(() => {
     const content = this.content();
@@ -253,43 +246,69 @@ export class PromptSelectContentComponent {
   // Selected way id displayed in the modal-local way picker UI.
   readonly selectedWayId = computed(() => this._selectedWayId());
 
+  // Display name of the currently chosen Way (badge text), or null.
+  readonly selectedWayName = computed(() => {
+    const selectedWayId = this._selectedWayId();
+    if (selectedWayId === null) {
+      return null;
+    }
+    return this.sortedWays().find((way) => way.id === selectedWayId)?.cardName ?? null;
+  });
+
   // True when this prompt content is display-only and should not accept selection.
   readonly displayOnly = computed(() => this.content().type === 'display-cards');
 
-  // Toggles one selectable entry in the prompt selection.
+  // Toggles one selectable entry in the prompt selection. Selection never
+  // submits by itself — the host's Confirm button (validation-gated) is the
+  // only submit path.
   toggleEntry(entry: PromptSelectionEntry): void {
     if (this.displayOnly() || !entry.selectable) {
       return;
     }
 
-    if (this.canShowWayTooltipForEntry(entry)) {
+    const currentSelection = this._selectedEntryKeys();
+
+    if (currentSelection.includes(entry.key)) {
+      // Clicking a selected entry always deselects it (any count spec) —
+      // Confirm disables again if the selection drops below the spec.
+      this.deselectEntry(entry.key);
+    } else if (this.isSingleSelection()) {
+      // Exact-1 specs move the selection to the clicked entry.
       this._selectedEntryKeys.set([entry.key]);
-      this._selectedWayEntryKey.set(entry.key);
-      this._selectedWayId.set(null);
-      this.cancelWayTooltipClose();
-      this._wayTooltipEntryKey.set(null);
-      this._wayTooltipHovering.set(false);
-      this.emitImmediatePlaySelectionFinish(entry, null);
-      return;
-    }
-
-    const currentSelection = [...this._selectedEntryKeys()];
-    const existingIndex = currentSelection.indexOf(entry.key);
-
-    if (existingIndex >= 0) {
-      currentSelection.splice(existingIndex, 1);
+      this.syncWaySelectionWithCurrentSelection();
     } else {
-      currentSelection.push(entry.key);
+      // Multi-pick specs ("select 2", "up to 3") keep pure toggle
+      // semantics: add on click, remove on re-click — never replace. The
+      // count spec's maximum is a hard cap: once reached, further clicks
+      // are ignored until the player deselects an entry.
+      if (currentSelection.length >= this.maxSelectable()) {
+        return;
+      }
+      this._selectedEntryKeys.set([...currentSelection, entry.key]);
+      this.syncWaySelectionWithCurrentSelection();
     }
-
-    this._selectedEntryKeys.set(currentSelection);
-    this.syncWaySelectionWithCurrentSelection();
   }
 
-  // Applies a Way choice to the hovered/selected eligible card.
+  // Hard cap on simultaneous selections derived from the prompt's count
+  // spec. display-cards prompts never select, so the cap is irrelevant there.
+  private readonly maxSelectable = computed(() => {
+    const content = this.content();
+    return content.type === 'select' ? resolveMaxSelectable(content.selectCount) : 0;
+  });
+
+  // Applies a Way choice to the hovered eligible card. Selecting a Way
+  // records the choice (blue ring + badge); re-clicking the chosen Way
+  // fully deselects the card — same result as clicking the card itself
+  // while a Way is selected — rather than falling back to a "selected for
+  // normal play" state. Confirm is the only submit path.
   selectWay(wayId: CardLikeId): void {
     const targetEntry = this.wayTooltipEntry();
     if (!targetEntry) {
+      return;
+    }
+
+    if (this._selectedWayId() === wayId && this._selectedWayEntryKey() === targetEntry.key) {
+      this.deselectEntry(targetEntry.key);
       return;
     }
 
@@ -299,7 +318,15 @@ export class PromptSelectContentComponent {
     this.cancelWayTooltipClose();
     this._wayTooltipEntryKey.set(null);
     this._wayTooltipHovering.set(false);
-    this.emitImmediatePlaySelectionFinish(targetEntry, wayId);
+  }
+
+  // Removes one entry from the current selection and clears any Way choice
+  // tied to it. Shared by toggleEntry() (clicking a selected card) and
+  // selectWay() (re-clicking the currently chosen Way) so both paths
+  // produce the same fully-deselected result.
+  private deselectEntry(entryKey: string): void {
+    this._selectedEntryKeys.set(this._selectedEntryKeys().filter((key) => key !== entryKey));
+    this.syncWaySelectionWithCurrentSelection();
   }
 
   // Indicates whether an entry is currently selected.
@@ -307,9 +334,10 @@ export class PromptSelectContentComponent {
     return this._selectedEntryKeys().includes(entry.key);
   }
 
-  // Indicates whether a way entry is currently selected.
-  isSelectedWay(wayId: CardLikeId): boolean {
-    return this._selectedWayId() === wayId;
+  // True when this entry is the card the current Way choice applies to —
+  // drives the blue "as Way" ring + badge instead of the green selected ring.
+  isSelectedAsWay(entry: PromptSelectionEntry): boolean {
+    return this._selectedWayId() !== null && this._selectedWayEntryKey() === entry.key;
   }
 
   // Opens the modal-local Way tooltip for one hovered card entry.
@@ -395,19 +423,18 @@ export class PromptSelectContentComponent {
     return this._selectedWayId();
   }
 
-  // Mirrors legacy auto-finish behavior for single-card selects without a Way choice.
-  private shouldAutoFinish(): boolean {
+  // True when the prompt's count spec demands exactly one selection —
+  // clicking a different entry then moves the selection instead of
+  // stacking into an invalid two-selected state.
+  private isSingleSelection(): boolean {
     const content = this.content();
-    if (content.type !== 'select' || this.showWaySelection()) {
+    if (content.type !== 'select') {
       return false;
     }
-
     const countSpec = resolveCountSpec(content.selectCount);
-    if (countSpec.kind === 'fixed') {
-      return countSpec.count === 1;
-    }
-
-    return countSpec.min === 1 && countSpec.max === 1;
+    return countSpec.kind === 'fixed'
+      ? countSpec.count === 1
+      : countSpec.min === 1 && countSpec.max === 1;
   }
 
   // Cancels in-flight tooltip close timers.
@@ -439,45 +466,39 @@ export class PromptSelectContentComponent {
     return PromptSelectContentComponent.DEFAULT_TOOLTIP_CLOSE_DELAY_MS;
   }
 
-  // Anchors the modal-local tooltip near the hovered card while clamping to prompt bounds.
+  // Anchors the tooltip beside the hovered card in viewport space. The panel
+  // is position: fixed, so it escapes the dialog body's scroll/overflow
+  // clipping entirely (board-flyout parity). getBoundingClientRect already
+  // yields viewport coordinates.
   private resolveTooltipPosition(anchorElement: HTMLElement): { left: number; top: number } {
-    const promptRoot = this._promptRootRef?.nativeElement;
-    if (!promptRoot) {
-      return {
-        left: PromptSelectContentComponent.TOOLTIP_PADDING_PX,
-        top: PromptSelectContentComponent.TOOLTIP_PADDING_PX,
-      };
-    }
-
-    const rootRect = promptRoot.getBoundingClientRect();
     const anchorRect = anchorElement.getBoundingClientRect();
 
     const tooltipWidth = PromptSelectContentComponent.TOOLTIP_ESTIMATED_WIDTH_PX;
-    const tooltipHeight = PromptSelectContentComponent.TOOLTIP_ESTIMATED_HEIGHT_PX;
+    const tooltipHeight = this.estimateTooltipHeight();
     const padding = PromptSelectContentComponent.TOOLTIP_PADDING_PX;
     const edgeOverlap = PromptSelectContentComponent.TOOLTIP_EDGE_OVERLAP_PX;
 
-    let left = anchorRect.right - rootRect.left - edgeOverlap;
-    let top = anchorRect.top - rootRect.top;
-
-    const maxLeft = Math.max(padding, rootRect.width - tooltipWidth - padding);
-    const maxTop = Math.max(padding, rootRect.height - tooltipHeight - padding);
-
+    const maxLeft = Math.max(padding, window.innerWidth - tooltipWidth - padding);
+    let left = anchorRect.right - edgeOverlap;
     if (left > maxLeft) {
-      left = anchorRect.left - rootRect.left - tooltipWidth + edgeOverlap;
+      // Flip to the card's left edge when the right side would overflow.
+      left = anchorRect.left - tooltipWidth + edgeOverlap;
     }
-
     left = Math.min(Math.max(left, padding), maxLeft);
-    top = Math.min(Math.max(top, padding), maxTop);
+
+    const maxTop = Math.max(padding, window.innerHeight - tooltipHeight - padding);
+    const top = Math.min(Math.max(anchorRect.top, padding), maxTop);
 
     return { left: Math.floor(left), top: Math.floor(top) };
   }
 
-  // Submits single-card play selection immediately to match board-click play behavior.
-  private emitImmediatePlaySelectionFinish(entry: PromptSelectionEntry, selectedWayId: CardLikeId | null): void {
-    this.validationUpdated.emit(true);
-    this.resultsUpdated.emit([entry.sourceId]);
-    this.selectedWayUpdated.emit(selectedWayId);
-    this.finished.emit();
+  // Estimates rendered tooltip height from the way count, capped by the
+  // panel's scrollable max-height, for viewport clamping.
+  private estimateTooltipHeight(): number {
+    const wayCount = Math.max(1, this.sortedWayIds().length);
+    const estimated = PromptSelectContentComponent.TOOLTIP_CHROME_PX +
+      wayCount * PromptSelectContentComponent.TOOLTIP_ENTRY_HEIGHT_PX +
+      (wayCount - 1) * PromptSelectContentComponent.TOOLTIP_ENTRY_GAP_PX;
+    return Math.min(estimated, PromptSelectContentComponent.TOOLTIP_MAX_HEIGHT_PX);
   }
 }

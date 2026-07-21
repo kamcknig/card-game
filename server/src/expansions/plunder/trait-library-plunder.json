@@ -1,47 +1,62 @@
 {
   "cheap": {
-    "randomizer": "cheap"
+    "randomizer": "cheap",
+    "abilityText": "Cheap cards cost $1 less."
   },
   "cursed": {
-    "randomizer": "cursed"
+    "randomizer": "cursed",
+    "abilityText": "When you gain a Cursed card, gain a Loot and a Curse."
   },
   "fated": {
-    "randomizer": "fated"
+    "randomizer": "fated",
+    "abilityText": "When shuffling, you may look through the cards and reveal Fated cards to put them on the top or bottom."
   },
   "fawning": {
-    "randomizer": "fawning"
+    "randomizer": "fawning",
+    "abilityText": "When you gain a Province, gain a Fawning card."
   },
   "friendly": {
-    "randomizer": "friendly"
+    "randomizer": "friendly",
+    "abilityText": "At the start of your Clean-up phase, you may discard a Friendly card to gain a Friendly card."
   },
   "hasty": {
-    "randomizer": "hasty"
+    "randomizer": "hasty",
+    "abilityText": "When you gain a Hasty card, set it aside, and play it at the start of your next turn."
   },
   "inherited": {
-    "randomizer": "inherited"
+    "randomizer": "inherited",
+    "abilityText": "Setup: You start the game with an Inherited card in place of a starting card you choose."
   },
   "inspiring": {
-    "randomizer": "inspiring"
+    "randomizer": "inspiring",
+    "abilityText": "After playing an Inspiring card on your turn, you may play an Action from your hand that you don't have a copy of in play."
   },
   "nearby": {
-    "randomizer": "nearby"
+    "randomizer": "nearby",
+    "abilityText": "When you gain a Nearby card, +1 Buy."
   },
   "patient": {
-    "randomizer": "patient"
+    "randomizer": "patient",
+    "abilityText": "At the start of your Clean-up phase, you may set aside Patient cards from your hand to play them at the start of your next turn."
   },
   "pious": {
-    "randomizer": "pious"
+    "randomizer": "pious",
+    "abilityText": "When you gain a Pious card, you may trash a card from your hand."
   },
   "reckless": {
-    "randomizer": "reckless"
+    "randomizer": "reckless",
+    "abilityText": "Follow the instructions of played Reckless cards twice. When discarding one from play, return it to its pile."
   },
   "rich": {
-    "randomizer": "rich"
+    "randomizer": "rich",
+    "abilityText": "When you gain a Rich card, gain a Silver."
   },
   "shy": {
-    "randomizer": "shy"
+    "randomizer": "shy",
+    "abilityText": "At the start of your turn, you may discard one Shy card for +2 Cards."
   },
   "tireless": {
-    "randomizer": "tireless"
+    "randomizer": "tireless",
+    "abilityText": "When you discard a Tireless card from play, set it aside, and put it onto your deck at end of turn."
   }
 }

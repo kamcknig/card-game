@@ -1,47 +1,61 @@
 {
   "approaching-army": {
-    "cardName": "Approaching Army"
+    "cardName": "Approaching Army",
+    "abilityText": "After you play an Attack card, +$1.\n----\nSetup: Add an Attack kingdom card pile to the Supply."
   },
   "biding-time": {
-    "cardName": "Biding Time"
+    "cardName": "Biding Time",
+    "abilityText": "At the start of your Clean-up, set aside your hand face down. At the start of your next turn, put those cards into your hand."
   },
   "bureaucracy": {
-    "cardName": "Bureaucracy"
+    "cardName": "Bureaucracy",
+    "abilityText": "When you gain a card that doesn't cost $0, gain a Copper."
   },
   "divine-wind": {
-    "cardName": "Divine Wind"
+    "cardName": "Divine Wind",
+    "abilityText": "When you remove the last Sun, remove all Kingdom card piles from the Supply, and set up 10 new random piles."
   },
   "enlightenment": {
-    "cardName": "Enlightenment"
+    "cardName": "Enlightenment",
+    "abilityText": "Treasures are also Actions. When you play a Treasure in an Action phase, instead of following its instructions, +1 Card and +1 Action."
   },
   "flourishing-trade": {
-    "cardName": "Flourishing Trade"
+    "cardName": "Flourishing Trade",
+    "abilityText": "Cards cost $1 less. You may use Action plays as Buys."
   },
   "good-harvest": {
-    "cardName": "Good Harvest"
+    "cardName": "Good Harvest",
+    "abilityText": "The first time you play each differently named Treasure each turn, first, +1 Buy and +$1$1."
   },
   "great-leader": {
-    "cardName": "Great Leader"
+    "cardName": "Great Leader",
+    "abilityText": "After each Action card you play, +1 Action."
   },
   "growth": {
-    "cardName": "Growth"
+    "cardName": "Growth",
+    "abilityText": "When you gain a Treasure, gain a cheaper card."
   },
   "harsh-winter": {
-    "cardName": "Harsh Winter"
+    "cardName": "Harsh Winter",
+    "abilityText": "When you gain a card on your turn, if there's D on its pile, take it; otherwise put 2D on its pile."
   },
   "kind-emperor": {
-    "cardName": "Kind Emperor"
+    "cardName": "Kind Emperor",
+    "abilityText": "At the start of your turn, and when you remove the last Sun: Gain an Action to your hand."
   },
   "panic": {
-    "cardName": "Panic"
+    "cardName": "Panic",
+    "abilityText": "When you play a Treasure, +2 Buys, and when you discard one from play, return it to its pile."
   },
   "progress": {
-    "cardName": "Progress"
+    "cardName": "Progress",
+    "abilityText": "When you gain a card, put it onto your deck."
   },
   "rapid-expansion": {
-    "cardName": "Rapid Expansion"
+    "cardName": "Rapid Expansion",
+    "abilityText": "When you gain an Action or Treasure, set it aside, and play it at the start of your next turn."
   },
   "sickness": {
-    "cardName": "Sickness"
-  }
+    "cardName": "Sickness",
+    "abilityText": "At the start of your turn, choose one: Gain a Curse onto your deck; or discard 3 cards."
 }

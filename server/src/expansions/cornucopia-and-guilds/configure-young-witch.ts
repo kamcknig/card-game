@@ -38,6 +38,8 @@ export const configureYoungWitch = (args: ExpansionConfiguratorContext) => {
     expansions: selectedExpansions,
     excludedPileKeys: existingPileKeys,
     bannedPileKeys,
+    // Bane must cost $2 or $3, with no potion/debt component.
+    cardFilter: card => (card.cost.treasure === 2 || card.cost.treasure === 3) && !card.cost.potion && !card.cost.debt,
   });
 
   if (!availableGroups.length) {
@@ -65,5 +67,13 @@ export const configureYoungWitch = (args: ExpansionConfiguratorContext) => {
   args.config.kingdomSupply.push({
     name: chosenCard.kingdom,
     cards: new Array(getDefaultKingdomSupplySize(chosenCard, args.config)).fill(chosenCard),
+  });
+
+  // Point Young Witch at the bane pile so the detail dialog can show them as
+  // siblings of each other (bidirectional: bane -> young-witch resolved
+  // client-side by scanning for linkedPileKey === 'young-witch' pile key).
+  const youngWitchSupply = args.config.kingdomSupply.find(supply => supply.name === 'young-witch');
+  youngWitchSupply?.cards.forEach(card => {
+    card.linkedPileKey = chosenCard.kingdom;
   });
 };
