@@ -16,6 +16,9 @@ export interface OwnerLobbyHandlers {
   onSearchArtifacts: (playerId: PlayerId, searchTerm: string) => void;
   onSearchProjects: (playerId: PlayerId, searchTerm: string) => void;
   onSearchWays: (playerId: PlayerId, searchTerm: string) => void;
+  onSearchTraits: (playerId: PlayerId, searchTerm: string) => void;
+  onSearchAllies: (playerId: PlayerId, searchTerm: string) => void;
+  onSearchProphecies: (playerId: PlayerId, searchTerm: string) => void;
 }
 
 // Lobby handlers shared by all connected lobby players before match start.
@@ -41,6 +44,9 @@ export class LobbySocketBindings {
     socket.on('searchArtifacts', handlers.onSearchArtifacts);
     socket.on('searchProjects', handlers.onSearchProjects);
     socket.on('searchWays', handlers.onSearchWays);
+    socket.on('searchTraits', handlers.onSearchTraits);
+    socket.on('searchAllies', handlers.onSearchAllies);
+    socket.on('searchProphecies', handlers.onSearchProphecies);
   }
 
   // Unbinds owner-only lobby handlers when ownership changes or match starts.
@@ -62,6 +68,9 @@ export class LobbySocketBindings {
     socket.off('searchArtifacts');
     socket.off('searchProjects');
     socket.off('searchWays');
+    socket.off('searchTraits');
+    socket.off('searchAllies');
+    socket.off('searchProphecies');
   }
 
   // Binds standard lobby handlers shared by all players before match start.

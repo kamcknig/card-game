@@ -42,8 +42,16 @@ export class PromptDialogHostComponent {
   // Active prompt request emitted by the prompt dialog coordinator.
   readonly activeRequest = this._promptDialogCoordinator.activeRequest;
 
+  // Display-only prompt request (boon/hex reveal, card showcase) rendered
+  // alongside the interactive prompt in its own dialog; stays open until
+  // the player explicitly closes it.
+  readonly displayRequest = this._promptDialogCoordinator.displayRequest;
+
   // Convenience accessor for active prompt args.
   readonly promptArgs = computed(() => this.activeRequest()?.args);
+
+  // Convenience accessor for display prompt args.
+  readonly displayArgs = computed(() => this.displayRequest()?.args);
 
   // Resolved action button list with number-input/select defaults.
   readonly resolvedActionButtons = computed<ActionButtons | undefined>(() => {
@@ -166,6 +174,12 @@ export class PromptDialogHostComponent {
   // cancel payload and knows the prompt was declined without a selection.
   onDismissRequested(): void {
     this.submitResponse(this.declineButton()?.action ?? PROMPT_DECLINE_ACTION);
+  }
+
+  // Closes the display-only prompt dialog (its own close-X / backdrop /
+  // Escape) — no response payload is ever submitted for display prompts.
+  onDisplayDismissRequested(): void {
+    this._promptDialogCoordinator.dismissDisplayPrompt();
   }
 
   // Returns true when a button action should be disabled by validation state.

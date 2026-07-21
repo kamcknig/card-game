@@ -22,6 +22,10 @@ const configurator: ExpansionConfiguratorFactory = () => {
     );
 
     for (const supply of alchemySupplies) {
+      if (potionConfigured) {
+        break;
+      }
+
       for (const card of supply.cards) {
         if (card.cost.potion === undefined) {
           continue;

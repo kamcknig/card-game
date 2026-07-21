@@ -4,20 +4,23 @@
       "treasure": 3,
       "potion": 1
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+2 Cards\n+1 Action\nAt the start of Clean-up this turn, if you have a Potion in play, you may put this onto your deck."
   },
   "apothecary": {
     "cost": {
       "treasure": 2,
       "potion": 1
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+1 Action\nReveal the top 4 cards of your deck. Put the Coppers and Potions into your hand. Put the rest back in any order."
   },
   "apprentice": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Action\nTrash a card from your hand.\n+1 Card per $1 it costs.\n+2 Cards if it has \\P in its cost."
   },
   "familiar": {
     "cost": {
@@ -25,20 +28,23 @@
       "potion": 1
     },
     "type": ["ACTION", "ATTACK"],
-    "targetScheme": "ALL_OTHER"
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+1 Card\n+1 Action\nEach other player gains a Curse."
   },
   "golem": {
     "cost": {
       "treasure": 4,
       "potion": 1
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "Reveal cards from your deck until you reveal 2 Action cards other than Golems. Discard the other cards, then play the Action cards in either order."
   },
   "herbalist": {
     "cost": {
       "treasure": 2
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Buy\n+$1\nOnce this turn, when you discard a Treasure from play, you may put it onto your deck."
   },
   "potion": {
     "cost": {
@@ -53,7 +59,8 @@
       "treasure": 3,
       "potion": 1
     },
-    "type": ["TREASURE"]
+    "type": ["TREASURE"],
+    "abilityText": "Count your deck and discard pile. +$1 per 5 cards total between them (round down)."
   },
   "scrying-pool": {
     "cost": {
@@ -61,27 +68,32 @@
       "potion": 1
     },
     "type": ["ACTION", "ATTACK"],
-    "targetScheme": "ALL"
+    "targetScheme": "ALL",
+    "abilityText": "+1 Action\nEach player (including you) reveals the top card of their deck and either discards it or puts it back, your choice. Then reveal cards from your deck until revealing one that isn't an Action. Put all of those revealed cards into your hand."
   },
   "transmute": {
     "cost": {
       "treasure": 0,
       "potion": 1
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "Trash a card from your hand. If it's an…\nAction card, gain a Duchy\nTreasure card, gain a Transmute\nVictory card, gain a Gold"
   },
   "university": {
     "cost": {
       "treasure": 2,
       "potion": 1
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+2 Actions\nYou may gain an Action card costing up to $5."
   },
   "vineyard": {
     "cost": {
       "treasure": 0,
       "potion": 1
     },
-    "type": ["VICTORY"]
+    "victoryPoints": 0,
+    "type": ["VICTORY"],
+    "abilityText": "Worth 1VP per 3 Action cards you have (rounded down)."
   }
 }

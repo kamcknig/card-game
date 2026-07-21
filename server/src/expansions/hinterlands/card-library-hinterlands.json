@@ -3,161 +3,191 @@
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "ATTACK"]
+    "type": ["ACTION", "ATTACK"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "Gain a card costing less than this. Each other player discards down to 3 cards in hand.\n----\nWhen you gain this, if you have an Action in play, play this."
   },
   "border-village": {
     "type": ["ACTION"],
     "cost": {
       "treasure": 6
-    }
+    },
+    "abilityText": "+1 Card\n+2 Actions\n----\nWhen you gain this, gain a cheaper card."
   },
   "cartographer": {
     "type": ["ACTION"],
     "cost": {
       "treasure": 5
-    }
+    },
+    "abilityText": "+1 Card\n+1 Action\nLook at the top 4 cards of your deck. Discard any number of them, then put the rest back in any order."
   },
   "cauldron": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ATTACK", "TREASURE"]
+    "type": ["ATTACK", "TREASURE"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "$2\n+1 Buy\nThe third time you gain an Action this turn, each other player gains a Curse."
   },
   "crossroads": {
     "cost": {
       "treasure": 2
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "Reveal your hand. +1 Card per Victory card revealed. If this is the first time you played a Crossroads this turn, +3 Actions."
   },
   "develop": {
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "Trash a card from your hand. Gain two cards onto your deck, with one costing exactly $1 more than it, and one costing exactly $1 less than it, in either order."
   },
   "farmland": {
     "cost": {
       "treasure": 6
     },
     "type": ["VICTORY"],
-    "victoryPoints": 2
+    "victoryPoints": 2,
+    "abilityText": "2VP\n----\nWhen you gain this, trash a card from your hand and gain a non-Farmland card costing exactly $2 more than it."
   },
   "fools-gold": {
     "cardName": "Fool's Gold",
     "cost": {
       "treasure": 2
     },
-    "type": ["REACTION", "TREASURE"]
+    "type": ["REACTION", "TREASURE"],
+    "abilityText": "If this is the first time you played a Fool's Gold this turn, +$1, otherwise +$4.\n----\nWhen another player gains a Province, you may trash this from your hand, to gain a Gold onto your deck."
   },
   "guard-dog": {
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION", "REACTION"]
+    "type": ["ACTION", "REACTION"],
+    "abilityText": "+2 Cards\nIf you have 5 or fewer cards in hand, +2 Cards.\n----\nWhen another player plays an Attack, you may first play this from your hand."
   },
   "haggler": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+$2\nThis turn, when you gain a card, if you bought it, gain a cheaper non-Victory card."
   },
   "highway": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+1 Action\nThis turn, cards cost $1$1 less."
   },
   "inn": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+2 Cards\n+2 Actions\nDiscard 2 cards.\n----\nWhen you gain this, reveal any number of Action cards from your discard pile and shuffle them into your deck."
   },
   "jack-of-all-trades": {
     "cardName": "Jack of all Trades",
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "Gain a Silver. Look at the top card of your deck; you may discard it. Draw until you have 5 cards in hand. You may trash a non-Treasure card from your hand."
   },
   "margrave": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "ATTACK"]
+    "type": ["ACTION", "ATTACK"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+3 Cards\n+1 Buy\nEach other player draws a card, then discards down to 3 cards in hand."
   },
   "nomads": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Buy\n+$2\n----\nWhen you gain or trash this, +$2."
   },
   "oasis": {
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+1 Action\n+$1\nDiscard a card."
   },
   "scheme": {
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+1 Action\nThis turn, you may put one of your Action cards onto your deck when you discard it from play."
   },
   "souk": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Buy\n+$7\n–$1 per card in your hand (you can't go below $0$0).\n----\nWhen you gain this, trash up to 2 cards from your hand."
   },
   "spice-merchant": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "You may trash a Treasure from your hand to choose one: +2 Cards and +1 Action; or +1 Buy and +$2."
   },
   "stables": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "You may discard a Treasure, for +3 Cards and +1 Action."
   },
   "trader": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION", "REACTION"]
+    "type": ["ACTION", "REACTION"],
+    "abilityText": "Trash a card from your hand. Gain a Silver per $1 it costs.\n----\nWhen you gain a card, you may reveal this from your hand, to exchange the card for a Silver."
   },
   "trail": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION", "REACTION"]
+    "type": ["ACTION", "REACTION"],
+    "abilityText": "+1 Card\n+1 Action\nWhen you gain, trash, or discard this, other than in Clean-up, you may play it."
   },
   "tunnel": {
     "cost": {
       "treasure": 3
     },
     "type": ["VICTORY", "REACTION"],
-    "victoryPoints": 2
+    "victoryPoints": 2,
+    "abilityText": "2VP\n----\nWhen you discard this other than during Clean-up, you may reveal it to gain a Gold."
   },
   "weaver": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION", "REACTION"]
+    "type": ["ACTION", "REACTION"],
+    "abilityText": "Gain two Silvers or a card costing up to $4$4.\n----\nWhen you discard this other than in Clean-up, you may play it."
   },
   "wheelwright": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+1 Action\nYou may discard a card to gain an Action card costing as much as it or less."
   },
   "witchs-hut": {
     "cardName": "Witch's Hut",
     "cost": {
       "treasure": 5
     },
-    "type": ["ATTACK", "ACTION"]
+    "type": ["ATTACK", "ACTION"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+4 Cards\nDiscard 2 cards, revealed. If they're both Actions, each other player gains a Curse."
   }
 }

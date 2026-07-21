@@ -9,7 +9,7 @@ import {
   matchStore,
   matchSummaryStore,
 } from '../../state/match-state';
-import { gameOwnerIdStore } from '../../state/game-state';
+import { gameOwnerIdStore, removalVoteStateStore, removedMatchPlayersStore } from '../../state/game-state';
 import { expansionListStore } from '../../state/expansion-list-state';
 import { cardStore } from '../../state/card-state';
 import { tokenDefinitionStore } from '../../state/token-definition-state';
@@ -30,6 +30,7 @@ import { waitingOnPlayerIdStore } from '../../state/match-ui-overlay-state';
 import { logEntryIdsStore, logStore } from '../../state/log-state';
 import { undoAvailableStore, undoCompletedSignalStore, undoInFlightStore, undoVoteRequestStore } from '../../state/undo-state';
 import { SocketEventMap, SocketService } from './socket.service';
+import { PromptDialogCoordinatorService } from '../prompt-dialog/prompt-dialog-coordinator.service';
 
 /**
  * Owns the full socket connection lifecycle: builds the server-to-store event handler map,
@@ -43,6 +44,7 @@ export class SocketEventMapService {
   private readonly _router = inject(Router);
   private readonly _socketService = inject(SocketService);
   private readonly _authService = inject(AuthService);
+  private readonly _promptDialogCoordinator = inject(PromptDialogCoordinatorService);
 
   /**
    * Tracks whether server-to-client event handlers have been registered.
@@ -87,6 +89,13 @@ export class SocketEventMapService {
   /** Clears transient HUD overlays when leaving match-scoped flows. */
   private _clearMatchUiOverlays(): void {
     waitingOnPlayerIdStore.set(null);
+    removalVoteStateStore.set([]);
+    removedMatchPlayersStore.set([]);
+    // A prompt dialog open when the match ends or the player leaves
+    // (resign, kick, ban, game over) must not survive onto the lobby or
+    // summary screen. Clear without resolving — the server side of that
+    // prompt is gone (or about to be), so no response should be emitted.
+    this._promptDialogCoordinator.clearActivePrompt();
   }
 
   /** Builds and returns the full server-to-client socket event handler map. */
@@ -376,6 +385,22 @@ export class SocketEventMapService {
 
     map['playerDisconnected'] = player => {
       playerStore(player.id).set(player);
+    };
+
+    // Server-authoritative removal-vote snapshot; replaces client state
+    // wholesale so Kick/Undo-kick buttons stay in sync across reconnects.
+    map['removalVoteState'] = entries => {
+      removalVoteStateStore.set(entries);
+    };
+
+    // A player was permanently removed (voted out or resigned) while the
+    // disconnect dialog is relevant; recorded so the dialog can render
+    // "<name> (removed)" even after setPlayerList erases them.
+    map['playerRemovedFromMatch'] = payload => {
+      const current = removedMatchPlayersStore.get();
+      // Dedupe: re-broadcasts must not duplicate a removed row.
+      if (current.some(entry => entry.playerId === payload.playerId)) return;
+      removedMatchPlayersStore.set([...current, payload]);
     };
 
     map['playerNameUpdated'] = (playerId: number, name: string) => {

@@ -1,5 +1,6 @@
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { getConfiguredSupplyPileKeys } from '../../utils/get-configured-supply-pile-keys.ts';
+import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { getPlayerById } from '../../utils/get-player-by-id.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { CardExpansionModule } from '@server-types/index.ts';
@@ -7,6 +8,7 @@ import { Card, CardId } from 'shared/types/index.ts';
 import { markPlayerImmune } from '../../utils/reaction-immunity.ts';
 import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
+import { MerchantMetadata } from './types.ts';
 
 const expansionModule: CardExpansionModule = {
   // Include the source card id for treasure gains so state effects can adjust values.
@@ -104,6 +106,8 @@ const expansionModule: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'bandit effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: args.cardId,
         });
 
         if (!gainedGoldId) {
@@ -219,6 +223,8 @@ const expansionModule: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDeck' },
           logTag: 'bureaucrat effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: args.cardId,
         });
 
         if (!gainedSilverId) {
@@ -602,9 +608,18 @@ const expansionModule: CardExpansionModule = {
   },
   merchant: {
     registerLifeCycleMethods: () => ({
-      onCardPlayed: async ({ reactionManager }, { cardId, playerId }) => {
+      onCardPlayed: async ({ reactionManager, cardLibrary }, { cardId, playerId }) => {
+        // Each activation of this card's instructions (including Throne-Room-style
+        // replays of the same physical card) must independently register and pay
+        // out its own "first Silver this turn" bonus. A shared id would let the
+        // reaction-manager's once-unregister on the first payout silently delete
+        // the second, not-yet-fired registration — see 2026-07-11 audit finding.
+        const card = cardLibrary.getCard<MerchantMetadata>(cardId);
+        const playInstance = (card.metadata.merchantPlayCount ?? 0) + 1;
+        card.metadata.merchantPlayCount = playInstance;
+
         reactionManager.registerReactionTemplate({
-          id: `merchant:${cardId}:cardPlayed`,
+          id: `merchant:${cardId}:cardPlayed:${playInstance}`,
           playerId,
           once: true,
           compulsory: true,
@@ -636,8 +651,13 @@ const expansionModule: CardExpansionModule = {
           },
         });
       },
-      onLeavePlay: async ({ reactionManager }, { cardId }) => {
-        reactionManager.unregisterTrigger(`merchant:${cardId}:cardPlayed`);
+      onLeavePlay: async ({ reactionManager, cardLibrary }, { cardId }) => {
+        const card = cardLibrary.getCard<MerchantMetadata>(cardId);
+        const playCount = card.metadata.merchantPlayCount ?? 0;
+        for (let i = 1; i <= playCount; i++) {
+          reactionManager.unregisterTrigger(`merchant:${cardId}:cardPlayed:${i}`);
+        }
+        card.metadata.merchantPlayCount = 0;
       },
     }),
     registerEffects:
@@ -880,7 +900,7 @@ const expansionModule: CardExpansionModule = {
 
         const remainingSupplyCardKeys = args.findCardService
           .findCards({ location: ['basicSupply', 'kingdomSupply'] })
-          .map(card => card.cardKey)
+          .map(card => getCardPileKey(card))
           .reduce((prev, cardKey) => {
             if (prev.includes(cardKey)) {
               return prev;
@@ -1254,6 +1274,29 @@ const expansionModule: CardExpansionModule = {
           return;
         }
 
+        // Lose Track guard: discardCard runs discard reactions and the
+        // onDiscarded lifecycle before returning, so the card may already have
+        // moved (e.g. Village Green playing itself from the discard) or been
+        // covered (e.g. Tunnel gaining a Gold on top). If it is no longer the
+        // top of this player's discard, Vassal has lost track of it and may
+        // not play it. playCard accepts no expectedFrom and the prompt below
+        // blocks all other effects, so this pre-check cannot be invalidated
+        // before the play happens.
+        let discardedSource: ReturnType<typeof args.cardSourceController.findCardSource> | undefined;
+        try {
+          discardedSource = args.cardSourceController.findCardSource(card.id);
+        } catch {
+          discardedSource = undefined;
+        }
+        const stillTopOfDiscard = discardedSource !== undefined &&
+          discardedSource.sourceKey === 'playerDiscard' &&
+          discardedSource.playerId === playerId &&
+          discardedSource.index === discardedSource.source.length - 1;
+        if (!stillTopOfDiscard) {
+          loggerService.debug('[VASSAL EFFECT] lost track of discarded card; skipping play option');
+          return;
+        }
+
         loggerService.debug(`[VASSAL EFFECT] prompting user to play card or not...`);
 
         const confirmAction = await args.promptService.requestAction({
@@ -1312,6 +1355,8 @@ const expansionModule: CardExpansionModule = {
             from: 'basicSupply',
             to: { location: 'playerDiscard' },
             logTag: 'witch effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: args.cardId,
           });
 
           if (!gainedCurseId) {

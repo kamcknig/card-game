@@ -11,6 +11,7 @@ import {
   CardLocationSpec,
   CountSpec,
   ExtraTurn,
+  LogEntrySource,
   Match,
   PlayerId,
   SelectActionCardArgs,
@@ -39,6 +40,7 @@ import {
   CardEffectFunctionMap,
   DurationReactionTemplate,
   DurationEffectOptions,
+  ExpectedCardSource,
   FindCardService,
   GameActionContext,
   GameActionContextMap,
@@ -576,7 +578,7 @@ export class GameActionController implements GameActionDefinitionMap {
     playerId: PlayerId;
     gainedCardId: CardId;
     gainedCardKey: CardKey;
-    source?: CardId;
+    source?: LogEntrySource;
   }) {
     const exileSource = this.getExileSource(args.playerId);
     if (!exileSource || exileSource.length === 0) {
@@ -899,6 +901,10 @@ export class GameActionController implements GameActionDefinitionMap {
     cardId: CardLikeId;
     playerId: PlayerId;
     reactionContext?: CardEffectFunctionContext['reactionContext'];
+    // Tags whether cardId is a real card (default) or a card-like (boon/hex/event/project) —
+    // card-like ids never exist in the card library, so the auto-injected log source must be
+    // tagged for the client to resolve it in the right namespace.
+    sourceKind?: 'card' | 'cardLike';
   }): CardEffectFunctionContext {
     // deno-lint-ignore prefer-const -- context is referenced inside a closure defined during its own initialization
     let context: CardEffectFunctionContext;
@@ -914,14 +920,19 @@ export class GameActionController implements GameActionDefinitionMap {
         return triggerIds;
       },
     });
-    // Auto-attribute source-aware actions to this effect's card so log
-    // entries can name their cause without per-card boilerplate.
-    context.actionService = wrapActionServiceWithSource(this.actionService, args.cardId as CardId);
+    // Auto-attribute source-aware actions to this effect's owner so log
+    // entries can name their cause without per-card boilerplate. Landscape
+    // effects (boon/hex/event/project) tag their id as card-like so the
+    // client resolves the name outside the card library.
+    const source: LogEntrySource = args.sourceKind === 'cardLike'
+      ? { kind: 'cardLike', id: args.cardId }
+      : (args.cardId as CardId);
+    context.actionService = wrapActionServiceWithSource(this.actionService, source);
     return context;
   }
 
   // Resolves action attribution source from context.
-  private resolveActionSource(context?: GameActionContext): CardId | undefined {
+  private resolveActionSource(context?: GameActionContext): LogEntrySource | undefined {
     return context?.source;
   }
 
@@ -1387,6 +1398,7 @@ export class GameActionController implements GameActionDefinitionMap {
     facing?: CardFacing;
     setAsideSource?: SetAsideSourceInput;
     updateOwner?: boolean;
+    expectedFrom?: ExpectedCardSource;
   }): Promise<{ location: CardLocation; playerId?: PlayerId; emptiedSupplyPileKey?: CardKey } | undefined> {
     // Ensure we are only moving actual cards with moveCard.
     let card: Card;
@@ -1417,6 +1429,29 @@ export class GameActionController implements GameActionDefinitionMap {
       oldSource = this.cardSourceController.findCardSource(cardId);
     } catch (e) {
       this.loggerService.warn(`[moveCard action] could not find source for ${card}`);
+    }
+
+    // Lose Track rule: an effect that would move a card fails when the card
+    // is not where that effect expects it to be. Nothing else is prevented —
+    // the caller decides what was contingent on the move via the undefined
+    // result. requireTop covers the covering-up clause (top of a deck or
+    // discard pile getting buried); top of a pile is the array END by
+    // codebase convention.
+    if (args.expectedFrom) {
+      const locationMatches = oldSource?.sourceKey === args.expectedFrom.location;
+      const playerMatches =
+        args.expectedFrom.playerId === undefined || oldSource?.playerId === args.expectedFrom.playerId;
+      const topMatches =
+        args.expectedFrom.requireTop !== true ||
+        (oldSource !== null && oldSource.index === oldSource.source.length - 1);
+      if (!oldSource || !locationMatches || !playerMatches || !topMatches) {
+        this.loggerService.debug(
+          `[moveCard action] lose track: ${card} expected at ${args.expectedFrom.location}${
+            args.expectedFrom.requireTop ? ' (top)' : ''
+          } but found at ${oldSource?.sourceKey ?? 'nowhere'}; move to ${args.to.location} fails`,
+        );
+        return undefined;
+      }
     }
 
     // Global base metadata can mark cards as immovable regardless of expansion source.
@@ -1898,6 +1933,7 @@ export class GameActionController implements GameActionDefinitionMap {
         cardId,
         bought: context?.bought ?? false,
         gainContext: context?.lifecycleContext?.onGained,
+        gainedLocation: trigger.args.gainedLocation,
       });
     } else {
       this.loggerService.debug('[gainCard action] lifecycle onGained event suppressed');
@@ -1974,8 +2010,9 @@ export class GameActionController implements GameActionDefinitionMap {
     this.loggerService.debug(`[exileCard action] ${card} moved to exile for player ${args.playerId}`);
   }
 
-  // Shared socket round-trip for userPrompt/selectCard: registers the signal id with
-  // PromptAbortRegistry (so an approved undo can abort an in-flight prompt), fans out
+  // Shared socket round-trip for userPrompt/selectCard: registers a full pending-prompt
+  // handle with PromptAbortRegistry (so an approved undo can abort an in-flight prompt,
+  // and a reconnect can replay it onto the player's new socket), fans out
   // waitingForPlayer/doneWaitingForPlayer to other players when the target isn't the
   // current player, emits the request, and resolves via `parseResponse` once a matching
   // `userInputReceived` signal arrives. Listener cleanup (`socket.off`) happens on receipt.
@@ -1997,14 +2034,14 @@ export class GameActionController implements GameActionDefinitionMap {
     }
 
     return new Promise<TResult>((resolve, reject) => {
-      // Register so PromptAbortRegistry can abort this prompt if a vote
-      // approves an undo while we're waiting for input.
-      const unregister = this.promptAbortRegistry.register(signalId, reject);
+      // The socket currently holding the userInputReceived listener.
+      // reattach() swaps this when the player reconnects on a new socket.
+      let boundSocket = socket;
 
       const onInput = (incomingSignalId: string, response: unknown) => {
         if (incomingSignalId !== signalId) return;
 
-        socket.off('userInputReceived', onInput);
+        boundSocket.off('userInputReceived', onInput);
         unregister();
 
         if (playerId !== currentPlayerId) {
@@ -2018,15 +2055,35 @@ export class GameActionController implements GameActionDefinitionMap {
         resolve(parseResponse(response));
       };
 
-      socket.on('userInputReceived', onInput);
       // socket.emit's overloads key off a literal event name; narrow explicitly per branch
       // rather than casting the payload/emit function, since emitPayload's shape is verified
       // by each caller (userPrompt/selectCard) to match the event it requests.
-      if (emitEvent === 'userPrompt') {
-        socket.emit('userPrompt', signalId, emitPayload as UserPromptActionArgs);
-      } else {
-        socket.emit('selectCard', signalId, emitPayload as SelectActionCardArgs & { selectableCardIds: CardId[] });
-      }
+      const emitPrompt = (target: AppSocket) => {
+        if (emitEvent === 'userPrompt') {
+          target.emit('userPrompt', signalId, emitPayload as UserPromptActionArgs);
+        } else {
+          target.emit('selectCard', signalId, emitPayload as SelectActionCardArgs & { selectableCardIds: CardId[] });
+        }
+      };
+
+      // Register the full handle so an approved undo can abort this prompt
+      // and a reconnect can replay it onto the player's new socket.
+      const unregister = this.promptAbortRegistry.register({
+        signalId,
+        playerId,
+        reject,
+        detach: () => boundSocket.off('userInputReceived', onInput),
+        reattach: (newSocket: AppSocket) => {
+          // Off on the old (possibly dead, possibly same) socket is harmless.
+          boundSocket.off('userInputReceived', onInput);
+          boundSocket = newSocket;
+          boundSocket.on('userInputReceived', onInput);
+          emitPrompt(boundSocket);
+        },
+      });
+
+      boundSocket.on('userInputReceived', onInput);
+      emitPrompt(boundSocket);
     });
   }
 
@@ -2228,13 +2285,27 @@ export class GameActionController implements GameActionDefinitionMap {
     return selectedCardIdList[0] ?? null;
   }
 
-  async trashCard(args: { cardId: CardId | Card; playerId: PlayerId }, context?: GameActionContext) {
+  async trashCard(
+    args: { cardId: CardId | Card; playerId: PlayerId; expectedFrom?: ExpectedCardSource },
+    context?: GameActionContext,
+  ): Promise<boolean> {
     const oldLocation = await this.moveCard({
       cardId: args.cardId,
       to: { location: 'trash' },
+      expectedFrom: args.expectedFrom,
     });
 
     const card = args.cardId instanceof Card ? args.cardId : this.cardLibrary.getCard(args.cardId);
+
+    // Lose Track rule: when the guard was requested and the move did not
+    // happen, the trash failed — skip every trash side effect (stats,
+    // cardTrashed trigger, onTrashed lifecycle, owner reset, log entry) so
+    // a trash→trash replay cannot double-fire on-trash reactions.
+    if (args.expectedFrom && oldLocation === undefined) {
+      this.loggerService.debug(`[trashCard action] lose track: ${card} was not trashed`);
+      return false;
+    }
+
     const cardId = card.id;
 
     this.match.stats.trashedCards[cardId] = {
@@ -2269,13 +2340,29 @@ export class GameActionController implements GameActionDefinitionMap {
       previousLocation: oldLocation,
     });
 
-    card.owner = null;
+    // Some onTrashed hooks move the trashed card elsewhere before this point
+    // (e.g. Fortress returns itself to hand via moveCard with
+    // updateOwner: true) — only clear ownership when the card is still
+    // actually sitting in the trash once the lifecycle event has run, so we
+    // don't stomp on an owner a hook just (re)assigned.
+    let postTrashSource: { sourceKey: CardLocation; source: CardId[]; index: number; playerId?: PlayerId } | null =
+      null;
+    try {
+      postTrashSource = this.cardSourceController.findCardSource(cardId);
+    } catch (e) {
+      this.loggerService.warn(`[trashCard action] could not find post-trash source for ${card}`);
+    }
+    if (postTrashSource?.sourceKey === 'trash') {
+      card.owner = null;
+    }
     this.logManager.addLogEntry({
       playerId: args.playerId,
       cardId: cardId,
       type: 'trashCard',
       source: context?.source,
     });
+
+    return true;
   }
 
   async gainVictoryToken(args: { playerId: PlayerId; count: number }, context?: GameActionContext) {
@@ -2423,6 +2510,10 @@ export class GameActionController implements GameActionDefinitionMap {
 
   // Converts Coffers tokens into spendable treasure for the current turn.
   async exchangeCoffer(args: { playerId: PlayerId; count: number }, context?: GameActionContext) {
+    if (getCurrentPlayer(this.match).id !== args.playerId) {
+      this.loggerService.warn(`[exchangeCoffer action] player ${args.playerId} cannot exchange coffers off-turn`);
+      return;
+    }
     this.match.coffers[args.playerId] ??= 0;
     const available = this.match.coffers[args.playerId];
     // Clamp to a non-negative integer no larger than the player's coffers —
@@ -2443,6 +2534,10 @@ export class GameActionController implements GameActionDefinitionMap {
   // Spends Villagers to gain actions during the Action phase.
   async spendVillager(args: { playerId: PlayerId; count: number }, context?: GameActionContext) {
     this.loggerService.log(`[spendVillager action] player ${args.playerId} spending ${args.count} villagers`);
+    if (getCurrentPlayer(this.match).id !== args.playerId) {
+      this.loggerService.warn(`[spendVillager action] player ${args.playerId} cannot spend villagers off-turn`);
+      return;
+    }
     const currentPhase = getTurnPhase(this.match.turnPhaseIndex);
     // Villagers can only be spent during the Action phase.
     if (currentPhase !== 'action') {
@@ -2747,6 +2842,7 @@ export class GameActionController implements GameActionDefinitionMap {
       const context = this.createCardEffectContext({
         cardId: args.cardLikeId,
         playerId: args.playerId,
+        sourceKind: 'cardLike',
       });
 
       // Run the effect with standardized logging.
@@ -2867,6 +2963,16 @@ export class GameActionController implements GameActionDefinitionMap {
       }
     };
 
+    // Game-log record of the receipt; the boon/hex's effect entries nest one
+    // level under it via runEffectWithLogging's withIndent, so their
+    // auto-injected card-like source is suppressed as redundant while
+    // detached later entries (duration-style boons) keep the attribution.
+    this.logManager.addLogEntry({
+      type: 'receiveCardLike',
+      playerId: args.playerId,
+      cardLikeId: resolvedCardLikeId,
+    });
+
     // Show a non-blocking received-<kind> modal.
     const receivedPlayerName = getPlayerById(this.match, args.playerId)?.name ?? `Player ${args.playerId}`;
     await this.actionService.run('userPrompt', {
@@ -2886,6 +2992,7 @@ export class GameActionController implements GameActionDefinitionMap {
         const effectContext = this.createCardEffectContext({
           cardId: resolvedCardLikeId,
           playerId: args.playerId,
+          sourceKind: 'cardLike',
         });
 
         // Run the effect with standardized logging.
@@ -3218,6 +3325,21 @@ export class GameActionController implements GameActionDefinitionMap {
     const hasDisconnectedHuman = match.players.some(player => !player.connected && !player.isComputer);
     if (hasDisconnectedHuman) {
       this.loggerService.debug('[checkForRemainingPlayerActions action] human disconnected, pausing flow');
+      return;
+    }
+
+    // An action is suspended awaiting prompt input from a seated player —
+    // re-entrant callers (reconnect, resign, vote-removal, lobby resume)
+    // must not auto-advance phases underneath it; the suspended action
+    // resumes when the prompt answer arrives. Prompts whose player is no
+    // longer in the match (voted out / resigned mid-prompt) can never
+    // resolve (pre-existing) and must not wedge the match, so they don't
+    // block.
+    const hasSeatedPendingPrompt = this.promptAbortRegistry
+      .getPendingEntries()
+      .some(entry => match.players.some(player => player.id === entry.playerId));
+    if (hasSeatedPendingPrompt) {
+      this.loggerService.debug('[checkForRemainingPlayerActions action] prompt in flight, skipping auto-advance');
       return;
     }
 
@@ -3767,6 +3889,28 @@ export class GameActionController implements GameActionDefinitionMap {
     );
   }
 
+  // Sets the current player's treasure pool to an exact value (>= 0).
+  // Deliberately fires NO treasureGain trigger and writes NO player-visible
+  // log entry: this is the primitive for "adjust without gaining/spending"
+  // effects, and every registered treasureGain reaction applies to gains
+  // only. See the GameActionDefinitionMap entry for usage guidance.
+  async setTreasure(args: { count: number }, _context?: GameActionContext) {
+    const currentPlayer = getCurrentPlayer(this.match);
+    const target = Math.max(0, args.count);
+
+    if (target === this.match.playerTreasure) {
+      this.loggerService.debug(
+        `[setTreasure action] player ${currentPlayer.id} treasure already ${target}; no change`,
+      );
+      return;
+    }
+
+    this.loggerService.info(
+      `[setTreasure action] player ${currentPlayer.id} treasure ${this.match.playerTreasure} -> ${target}`,
+    );
+    this.match.playerTreasure = target;
+  }
+
   // Single, focused implementation of drawCard
   async drawCard(
     args: { playerId: PlayerId; count?: number; suppressReactions?: boolean },
@@ -3875,6 +4019,7 @@ export class GameActionController implements GameActionDefinitionMap {
     playerId: PlayerId;
     card: Card;
     requestedWayId?: CardLikeId | null;
+    excludeWayKeys?: CardKey[];
   }): Promise<CardLikeId | null> {
     const queuedWayId =
       args.requestedWayId === undefined
@@ -3886,7 +4031,8 @@ export class GameActionController implements GameActionDefinitionMap {
       return null;
     }
 
-    const activeWays = this.match.ways ?? [];
+    const excludeWayKeys = args.excludeWayKeys ?? [];
+    const activeWays = (this.match.ways ?? []).filter(way => !excludeWayKeys.includes(way.cardKey));
     if (activeWays.length < 1) {
       return null;
     }
@@ -4038,6 +4184,8 @@ export class GameActionController implements GameActionDefinitionMap {
       // undefined => resolve via queued prompt choice or a per-play prompt,
       // null => explicit normal play, cardLikeId => explicit way play.
       wayId?: CardLikeId | null;
+      // Way cardKeys to exclude from the per-play Way choice.
+      excludeWayKeys?: CardKey[];
       overrides?: GameActionOverrides;
     },
     context?: GameActionContext,
@@ -4050,6 +4198,7 @@ export class GameActionController implements GameActionDefinitionMap {
       playerId,
       card,
       requestedWayId: args.wayId,
+      excludeWayKeys: args.excludeWayKeys,
     });
     const selectedWay = resolvedWayId === null ? undefined : findWayInMatch(this.match, resolvedWayId);
     if (resolvedWayId !== null && !selectedWay) {
@@ -4061,6 +4210,18 @@ export class GameActionController implements GameActionDefinitionMap {
         ? `normal(fallback-way:${selectedWay.cardKey})`
         : `way:${selectedWay.cardKey}`
       : 'normal';
+
+    // Capture the card's location immediately before it moves to playArea so
+    // effects can later distinguish hand plays from replays/discard-plays/etc.
+    let sourceLocation: CardLocation | undefined;
+    let sourcePlayerId: PlayerId | undefined;
+    try {
+      const priorSource = this.cardSourceController.findCardSource(cardId);
+      sourceLocation = priorSource.sourceKey;
+      sourcePlayerId = priorSource.playerId;
+    } catch {
+      this.loggerService.debug(`[playCard action] could not resolve prior source for ${card}`);
+    }
 
     if (args.overrides?.moveCard === undefined || args.overrides.moveCard) {
       await this.moveCard({
@@ -4083,6 +4244,8 @@ export class GameActionController implements GameActionDefinitionMap {
       turnNumber: this.match.turnNumber,
       turnHistoryIndex: this.getCurrentTurnHistoryIndex(),
       playerId: playerId,
+      sourceLocation,
+      sourcePlayerId,
     };
 
     this.loggerService.info(`[playCard action] ${getPlayerById(this.match, playerId)} played card ${card}`);
@@ -4164,8 +4327,8 @@ export class GameActionController implements GameActionDefinitionMap {
       return;
     }
 
-    if (cardIds.length <= 1 && cardLikeIds.length <= 1) {
-      // Ignore non-shuffles where there are not enough elements.
+    if (cardIds.length < 1 && cardLikeIds.length < 1) {
+      // Nothing to shuffle or fire shuffle reactions for.
       return;
     }
 
@@ -4218,6 +4381,20 @@ export class GameActionController implements GameActionDefinitionMap {
     }
   }
 
+  // "When shuffling Shadow cards, put them on the bottom" (Rising Sun rules).
+  // Mutates cardIds in place: already-shuffled SHADOW-typed cards move to the
+  // front of the array (bottom of the deck), each partition keeping its
+  // shuffled relative order.
+  private sinkShadowCardsToBottom(cardIds: CardId[]): void {
+    const shadowCardIds = cardIds.filter(cardId => this.cardLibrary.getCard(cardId).type.includes('SHADOW'));
+    if (!shadowCardIds.length) {
+      return;
+    }
+    const nonShadowCardIds = cardIds.filter(cardId => !this.cardLibrary.getCard(cardId).type.includes('SHADOW'));
+    cardIds.length = 0;
+    cardIds.push(...shadowCardIds, ...nonShadowCardIds);
+  }
+
   // Helper method to shuffle a player's deck
   async shuffleDeck(
     args: { playerId: PlayerId; includeDiscard?: boolean },
@@ -4236,6 +4413,7 @@ export class GameActionController implements GameActionDefinitionMap {
       // Shuffle a copy so reactions can remove cards from the shuffled subset without erasing discard state.
       const discardCardsToShuffle = [...discard];
       await this.shuffle({ playerId, cardIds: discardCardsToShuffle }, context);
+      this.sinkShadowCardsToBottom(discardCardsToShuffle);
 
       for (const shuffledCardId of discardCardsToShuffle) {
         const discardIndex = discard.indexOf(shuffledCardId);
@@ -4246,6 +4424,7 @@ export class GameActionController implements GameActionDefinitionMap {
       deck.unshift(...discardCardsToShuffle);
     } else {
       await this.shuffle({ playerId, cardIds: deck }, context);
+      this.sinkShadowCardsToBottom(deck);
     }
 
     // Deck cards must always be face-down after shuffling.

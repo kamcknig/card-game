@@ -1,5 +1,5 @@
 import { CardEffectFunctionContext, CardExpansionModule } from '@server-types/index.ts';
-import { CardId, CardLikeId } from 'shared/types/index.ts';
+import { CardId, CardLikeId, PlayerId } from 'shared/types/index.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
@@ -11,6 +11,10 @@ import { findBoonInMatch } from '@shared/find-card-like-in-match.ts';
 import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 import { registerStartTurnEffect } from '../../utils/register-start-turn-effect.ts';
+import {
+  buildGainedLocationExpectedFrom,
+  isCardStillAtGainedLocation,
+} from '../../utils/is-card-still-at-gained-location.ts';
 
 // Prompts a player to choose an Action from hand not already represented in play.
 const promptUniqueActionFromHand = async (
@@ -73,6 +77,29 @@ const promptUniqueActionFromHand = async (
   }
 
   return selectedCardId;
+};
+
+// Distributes a single shared Hex to every target: one Hex is drawn for the
+// first target and its resolved id is reused for the rest, per the rule
+// "turn over just one Hex, and the other players all follow the
+// instructions on that same Hex." Skips remaining targets if no Hex was
+// available at all (empty Hex pile).
+const receiveSharedHex = async (
+  cardEffectArgs: Pick<CardEffectFunctionContext, 'actionService' | 'loggerService'>,
+  targetPlayerIds: PlayerId[],
+): Promise<void> => {
+  let hexId: CardLikeId | undefined;
+  for (const [index, targetPlayerId] of targetPlayerIds.entries()) {
+    if (index === 0) {
+      hexId = await cardEffectArgs.actionService.run('receiveHex', { playerId: targetPlayerId });
+      continue;
+    }
+    if (hexId === undefined) {
+      cardEffectArgs.loggerService.debug('[receiveSharedHex] no hex was drawn for the first target, skipping rest');
+      continue;
+    }
+    await cardEffectArgs.actionService.run('receiveHex', { playerId: targetPlayerId, hexId });
+  }
 };
 
 // Nocturne card effects module for non-supply cards and other mechanics.
@@ -328,6 +355,8 @@ const expansion: CardExpansionModule = {
         from: supplyLocation,
         to: { location: 'playerDiscard' },
         logTag: 'changeling effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: cardEffectArgs.cardId,
       });
     },
   },
@@ -495,7 +524,7 @@ const expansion: CardExpansionModule = {
           id: `crypt:${cryptCard.id}:startTurn`,
           listeningFor: 'startTurn',
           playerId: cardEffectArgs.playerId,
-          once: true,
+          once: false,
           compulsory: true,
           allowMultipleInstances: true,
           condition: ({ trigger }) =>
@@ -574,10 +603,15 @@ const expansion: CardExpansionModule = {
 
       while (hand.length < 6) {
         loggerService.debug('[cursed-village effect] drawing 1 card to reach 6 in hand');
-        await cardEffectArgs.actionService.run('drawCard', {
+        const drawnCardId = await cardEffectArgs.actionService.run('drawCard', {
           playerId: cardEffectArgs.playerId,
           count: 1,
         });
+
+        if (drawnCardId === null) {
+          loggerService.debug('[cursed-village effect] no cards left to draw, stopping');
+          break;
+        }
 
         hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
         loggerService.debug(`[cursed-village effect] hand now has ${hand.length} card(s)`);
@@ -766,6 +800,8 @@ const expansion: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'idol effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: cardEffectArgs.cardId,
         });
 
         if (!gainedCurseId) {
@@ -785,6 +821,8 @@ const expansion: CardExpansionModule = {
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
         logTag: 'leprechaun effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: cardEffectArgs.cardId,
       });
 
       if (!gainedGoldId) {
@@ -1135,6 +1173,8 @@ const expansion: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'skulk onGained',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: eventArgs.cardId,
         });
 
         if (!gainedGoldId) {
@@ -1153,11 +1193,7 @@ const expansion: CardExpansionModule = {
         `[skulk effect] hex targets ${targetPlayerIds.map(id => getPlayerById(cardEffectArgs.match, id))}`,
       );
 
-      for (const targetPlayerId of targetPlayerIds) {
-        await cardEffectArgs.actionService.run('receiveHex', {
-          playerId: targetPlayerId,
-        });
-      }
+      await receiveSharedHex(cardEffectArgs, targetPlayerIds);
     },
   },
   tracker: {
@@ -1182,6 +1218,15 @@ const expansion: CardExpansionModule = {
         triggeredEffectFn: async triggeredArgs => {
           const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
 
+          // Lose Track guard: skip the prompt entirely if the gained card already
+          // left its gained location (moved, or covered up in an ordered pile) by
+          // the time this reaction fires.
+          const gainedLocation = triggeredArgs.trigger.args.gainedLocation;
+          if (!isCardStillAtGainedLocation(triggeredArgs.cardSourceController, gainedCard.id, gainedLocation)) {
+            loggerService.debug('[tracker effect] lost track of gained card; skipping topdeck offer');
+            return;
+          }
+
           const shouldTopdeck = await triggeredArgs.promptService.confirm(
             {
               playerId: cardEffectArgs.playerId,
@@ -1204,6 +1249,7 @@ const expansion: CardExpansionModule = {
             cardId: gainedCard.id,
             toPlayerId: cardEffectArgs.playerId,
             to: { location: 'playerDeck' },
+            expectedFrom: buildGainedLocationExpectedFrom(gainedLocation),
           });
         },
       });
@@ -1292,11 +1338,7 @@ const expansion: CardExpansionModule = {
         `[vampire effect] hex targets ${targetPlayerIds.map(id => getPlayerById(cardEffectArgs.match, id))}`,
       );
 
-      for (const targetPlayerId of targetPlayerIds) {
-        await cardEffectArgs.actionService.run('receiveHex', {
-          playerId: targetPlayerId,
-        });
-      }
+      await receiveSharedHex(cardEffectArgs, targetPlayerIds);
 
       // Gain a card costing up to $5 other than a Vampire.
       const eligibleCards = cardEffectArgs.findCardService
@@ -1400,11 +1442,7 @@ const expansion: CardExpansionModule = {
         `[werewolf effect] hex targets ${targetPlayerIds.map(id => getPlayerById(cardEffectArgs.match, id))}`,
       );
 
-      for (const targetPlayerId of targetPlayerIds) {
-        await cardEffectArgs.actionService.run('receiveHex', {
-          playerId: targetPlayerId,
-        });
-      }
+      await receiveSharedHex(cardEffectArgs, targetPlayerIds);
     },
   },
   tormentor: {
@@ -1446,11 +1484,7 @@ const expansion: CardExpansionModule = {
         `[tormentor effect] hex targets ${targetPlayerIds.map(id => getPlayerById(cardEffectArgs.match, id))}`,
       );
 
-      for (const targetPlayerId of targetPlayerIds) {
-        await cardEffectArgs.actionService.run('receiveHex', {
-          playerId: targetPlayerId,
-        });
-      }
+      await receiveSharedHex(cardEffectArgs, targetPlayerIds);
     },
   },
   'secret-cave': {
@@ -2029,6 +2063,8 @@ const expansion: CardExpansionModule = {
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
         logTag: 'devils-workshop effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: cardEffectArgs.cardId,
       });
 
       if (!gainedGoldId) {
@@ -2169,6 +2205,14 @@ const expansion: CardExpansionModule = {
 
       if (lostInTheWoods) {
         loggerService.debug('[fool effect] taking Lost in the Woods');
+        // gainState has no dedicated log entry and is not a source-aware action; note the state
+        // change explicitly so it's visible and attributed to Fool.
+        cardEffectArgs.logManager.addLogEntry({
+          type: 'cardEffect',
+          playerId: cardEffectArgs.playerId,
+          cardId: cardEffectArgs.cardId,
+          effectText: 'Takes the Lost in the Woods state',
+        });
         await cardEffectArgs.actionService.run('gainState', {
           playerId: cardEffectArgs.playerId,
           stateId: lostInTheWoods.id,
@@ -2273,14 +2317,27 @@ const expansion: CardExpansionModule = {
         }
 
         // Set the card aside on the owner's mat.
+        // Lose Track guard: onDiscarded fires after all discard reactions/lifecycle
+        // have run, so a live Scheme reaction may already have topdecked this card,
+        // or a co-fired reaction may have covered it in the discard. Require it to
+        // still be on top of the discard before setting it aside.
         loggerService.debug(`[faithful-hound onDiscarded] setting aside ${faithfulHound}`);
-        await args.actionService.run('moveCard', {
+        const setAsideResult = await args.actionService.run('moveCard', {
           cardId: eventArgs.cardId,
           toPlayerId: eventArgs.playerId,
           to: { location: 'set-aside' },
+          expectedFrom: { location: 'playerDiscard', playerId: eventArgs.playerId, requireTop: true },
         });
 
-        // Return it to hand at the end of the current turn.
+        if (!setAsideResult) {
+          loggerService.debug('[faithful-hound onDiscarded] lost track of card; not setting aside');
+          return;
+        }
+
+        // Return it to hand at the end of the current turn. Only register this
+        // reaction when the set-aside move above actually succeeded — otherwise a
+        // lost-track Hound would get snatched to hand at end of turn from wherever
+        // it actually ended up.
         const discardTurnHistoryIndex = args.match.stats.turns.length - 1;
         args.reactionManager.registerReactionTemplate(faithfulHound, 'endTurn', {
           playerId: eventArgs.playerId,
@@ -2290,10 +2347,14 @@ const expansion: CardExpansionModule = {
           condition: conditionArgs => conditionArgs.match.stats.turns.length - 1 === discardTurnHistoryIndex,
           triggeredEffectFn: async triggeredArgs => {
             loggerService.debug(`[faithful-hound endTurn] moving ${faithfulHound} to hand`);
+            // Lose Track guard (defensive): set-aside has no covering semantics
+            // (no requireTop), but the card could conceivably have been moved out
+            // of set-aside by some other effect between now and the discard.
             await triggeredArgs.actionService.run('moveCard', {
               cardId: eventArgs.cardId,
               toPlayerId: eventArgs.playerId,
               to: { location: 'playerHand' },
+              expectedFrom: { location: 'set-aside', playerId: eventArgs.playerId },
             });
           },
         });
@@ -2319,6 +2380,8 @@ const expansion: CardExpansionModule = {
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
         logTag: 'lucky-coin effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: cardEffectArgs.cardId,
       });
 
       if (!gainedSilverId) {
@@ -2518,6 +2581,8 @@ const expansion: CardExpansionModule = {
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
         logTag: 'cursed-gold effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: cardEffectArgs.cardId,
       });
 
       if (!gainedCurseId) {

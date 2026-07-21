@@ -218,6 +218,8 @@ const registerTreasureChest = (registerArtifactEffect: ArtifactEffectRegistrar) 
             from: 'basicSupply',
             to: { location: 'playerDiscard' },
             logTag: 'treasure-chest artifact',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: { kind: 'cardLike', id: cardId },
           });
           if (!gainedGoldId) {
             loggerService.debug('[treasure-chest artifact] no Gold cards available in supply');

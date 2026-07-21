@@ -3,26 +3,30 @@
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION", "DURATION"]
+    "type": ["ACTION", "DURATION"],
+    "abilityText": "Now and at the start of your next turn, choose one: +$1; or trash a card from your hand; or gain a Silver."
   },
   "artificer": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+1 Action\n+$1\nDiscard any number of cards. You may gain a card onto your deck, costing exactly $1 per card discarded."
   },
   "bridge-troll": {
     "cost": {
       "treasure": 5
     },
     "type": ["ACTION", "DURATION", "ATTACK"],
-    "targetScheme": "ALL_OTHER"
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "Each other player takes their –$1 token. On this turn and your next turn, cards cost $1 less. Now and at the start of your next turn: +1 Buy."
   },
   "caravan-guard": {
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION", "DURATION", "REACTION"]
+    "type": ["ACTION", "DURATION", "REACTION"],
+    "abilityText": "+1 Card\n+1 Action\nAt the start of your next turn, +$1.\n----\nWhen another player plays an Attack card, you may first play this from your hand."
   },
   "champion": {
     "cost": {
@@ -30,52 +34,61 @@
     },
     "type": ["ACTION", "DURATION"],
     "kingdomSelectable": false,
-    "kingdom": "page"
+    "kingdom": "page",
+    "abilityText": "+1 Action\nFor the rest of the game, when another player plays an Attack, it doesn't affect you, and when you play an Action card, you first get +1 Action.\n(This is not in the Supply.)"
   },
   "coin-of-the-realm": {
     "cardName": "Coin of the Realm",
     "cost": {
       "treasure": 2
     },
-    "type": ["TREASURE", "RESERVE"]
+    "type": ["TREASURE", "RESERVE"],
+    "abilityText": "$1\nPut this on your Tavern mat.\n-----\nAfter you play an Action card, you may call this, for +2 Actions."
   },
   "disciple": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "TRAVELLER"]
+    "type": ["ACTION", "TRAVELLER"],
+    "kingdomSelectable": false,
+    "abilityText": "You may play an Action card from your hand twice. Gain a copy of it.\n----\nWhen you discard this from play, you may exchange it for a Teacher.\n(This is not in the Supply.)"
   },
   "distant-lands": {
     "cost": {
       "treasure": 5
     },
     "type": ["ACTION", "VICTORY", "RESERVE"],
-    "abilityText": "Put this on your Tavern mat.\nWorth 4VP if on your Tavern mat at the end of the game (otherwise worth 0VP).",
+    "abilityText": "Put this on your Tavern mat.\n----\nWorth 4VP if on your Tavern mat at the end of the game (otherwise worth 0VP).",
     "victoryPoints": 0
   },
   "dungeon": {
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION", "DURATION"]
+    "type": ["ACTION", "DURATION"],
+    "abilityText": "+1 Action\nNow and at the start of your next turn: +2 Cards, then discard 2 Cards."
   },
   "duplicate": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION", "RESERVE"]
+    "type": ["ACTION", "RESERVE"],
+    "abilityText": "Put this on your Tavern mat.\n----\nWhen you gain a card costing up to $6, you may call this, to gain a copy of that card."
   },
   "fugitive": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION", "TRAVELLER"]
+    "type": ["ACTION", "TRAVELLER"],
+    "kingdomSelectable": false,
+    "abilityText": "+2 Cards\n+1 Action\nDiscard a card.\n----\nWhen you discard this from play, you may exchange it for a Disciple.\n(This is not in the Supply.)"
   },
   "gear": {
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION", "DURATION"]
+    "type": ["ACTION", "DURATION"],
+    "abilityText": "+2 Cards\nSet aside up to 2 cards from your hand face down (under this). At the start of your next turn, put them into your hand."
   },
   "giant": {
     "cost": {
@@ -89,7 +102,8 @@
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION", "RESERVE"]
+    "type": ["ACTION", "RESERVE"],
+    "abilityText": "+1 Card\n+1 Action\nPut this on your Tavern mat.\n----\nAt the start of your turn, you may call this, to discard your hand and draw 5 cards."
   },
   "haunted-woods": {
     "cost": {
@@ -105,25 +119,29 @@
     },
     "type": ["ACTION", "TRAVELLER"],
     "kingdomSelectable": false,
-    "kingdom": "page"
+    "kingdom": "page",
+    "abilityText": "+$2\nGain a Treasure.\n----\nWhen you discard this from play, you may exchange it for a Champion.\n(This is not in the Supply.)"
   },
   "hireling": {
     "cost": {
       "treasure": 6
     },
-    "type": ["ACTION", "DURATION"]
+    "type": ["ACTION", "DURATION"],
+    "abilityText": "At the start of each of your turns for the rest of the game: +1 Card."
   },
   "lost-city": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+2 Cards\n+2 Actions\n----\nWhen you gain this, each other player draws a card."
   },
   "magpie": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+1 Action\nReveal the top card of your deck. If it's a Treasure, put it into your hand. If it's an Action or Victory card, gain a Magpie."
   },
   "messenger": {
     "cost": {
@@ -135,37 +153,50 @@
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "Choose one: Put a Copper from your hand onto your Tavern mat; or +$1 per Copper on your Tavern mat."
   },
   "page": {
     "cost": {
       "treasure": 2
     },
-    "type": ["ACTION", "TRAVELLER"]
+    "type": ["ACTION", "TRAVELLER"],
+    "abilityText": "+1 Card\n+1 Action\n----\nWhen you discard this from play, you may exchange it for a Treasure Hunter."
   },
   "peasant": {
     "cost": {
       "treasure": 2
     },
-    "type": ["ACTION", "TRAVELLER"]
+    "type": ["ACTION", "TRAVELLER"],
+    "abilityText": "+1 Buy\n+$1\n----\nWhen you discard this from play, you may exchange it for a Soldier."
+  },
+  "port": {
+    "cost": {
+      "treasure": 4
+    },
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+2 Actions\nWhen you gain this, gain another Port (that doesn't come with another)."
   },
   "ratcatcher": {
     "cost": {
       "treasure": 2
     },
-    "type": ["ACTION", "RESERVE"]
+    "type": ["ACTION", "RESERVE"],
+    "abilityText": "+1 Card\n+1 Action\nPut this on your Tavern mat.\n----\nAt the start of your turn, you may call this, to trash a card from your hand."
   },
   "ranger": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Buy\nTurn your Journey token over (it starts face up). Then if it's face up, +5 Cards."
   },
   "raze": {
     "cost": {
       "treasure": 2
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Action\nTrash this or a card from your hand. Look at one card from the top of your deck per $1 the trashed card costs. Put one of them into your hand and discard the rest."
   },
   "relic": {
     "cost": {
@@ -179,21 +210,24 @@
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "RESERVE"]
+    "type": ["ACTION", "RESERVE"],
+    "abilityText": "+1 Action\nPut this on your Tavern mat.\n----\nAfter you play an Action card, if it's still in play, you may call this, to replay that Action."
   },
   "soldier": {
     "cost": {
       "treasure": 3
     },
     "type": ["ACTION", "ATTACK", "TRAVELLER"],
-    "abilityText": "+2\n+$1 per other Attack you have in play. Each other player with 4 or more cards in hand discards a card.\nWhen you discard this from play, you may exchange it for a Fugitive.\n(This is not in the Supply.)",
-    "targetScheme": "ALL_OTHER"
+    "abilityText": "+2\n+$1 per other Attack you have in play. Each other player with 4 or more cards in hand discards a card.\n----\nWhen you discard this from play, you may exchange it for a Fugitive.\n(This is not in the Supply.)",
+    "targetScheme": "ALL_OTHER",
+    "kingdomSelectable": false
   },
   "storyteller": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Action\nPlay up to 3 Treasures from your hand. Then, +1 Card, and pay all of your $$ for +1 Card per $1 you paid."
   },
   "swamp-hag": {
     "cost": {
@@ -207,13 +241,16 @@
     "cost": {
       "treasure": 6
     },
-    "type": ["ACTION", "RESERVE"]
+    "type": ["ACTION", "RESERVE"],
+    "kingdomSelectable": false,
+    "abilityText": "Put this on your Tavern mat.\n----\nAt the start of your turn, you may call this, to move your +1 Card, +1 Action, +1 Buy, or +$1 token to an Action Supply pile you have no tokens on. (When you play a card from that pile, you first get that bonus.)\n(This is not in the Supply.)"
   },
   "transmogrify": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION", "RESERVE"]
+    "type": ["ACTION", "RESERVE"],
+    "abilityText": "+1 Action\nPut this on your Tavern mat.\n----\nAt the start of your turn, you may call this, to trash a card from your hand, and gain a card to your hand costing up to $1 more than it."
   },
   "treasure-hunter": {
     "cost": {
@@ -221,13 +258,15 @@
     },
     "type": ["ACTION", "TRAVELLER"],
     "kingdomSelectable": false,
-    "kingdom": "page"
+    "kingdom": "page",
+    "abilityText": "+1 Action\n+$1\nGain a Silver per card the player to your right gained in their last turn.\n----\nWhen you discard this from play, you may exchange it for a Warrior.\n(This is not in the Supply.)"
   },
   "treasure-trove": {
     "cost": {
       "treasure": 5
     },
-    "type": ["TREASURE"]
+    "type": ["TREASURE"],
+    "abilityText": "$2\nGain a Gold and a Copper."
   },
   "warrior": {
     "cost": {
@@ -236,13 +275,14 @@
     "type": ["ACTION", "TRAVELLER", "ATTACK"],
     "kingdomSelectable": false,
     "kingdom": "page",
-    "abilityText": "+2 Cards\nFor each Traveller you have in play (including this), each other player discards the top card of their deck and trashes it if it costs $3 or $4.\nWhen you discard this from play, you may exchange it for a Hero.\n(This is not in the Supply.)",
+    "abilityText": "+2 Cards\nFor each Traveller you have in play (including this), each other player discards the top card of their deck and trashes it if it costs $3 or $4.\n----\nWhen you discard this from play, you may exchange it for a Hero.\n(This is not in the Supply.)",
     "targetScheme": "ALL_OTHER"
   },
   "wine-merchant": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "RESERVE"]
+    "type": ["ACTION", "RESERVE"],
+    "abilityText": "+$4\n+1 Buy\nPut this on your Tavern mat.\n----\nAt the end of your Buy phase, if you have at least $2 unspent, you may discard this from your Tavern mat."
   }
 }

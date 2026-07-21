@@ -51,7 +51,11 @@ const makeMatch = (overrides: Partial<Match> = {}): Match =>
       cardsGained: {},
     },
     config: { basicSupply: [], kingdomSupply: [] },
-    players: [],
+    // exchangeCoffer/spendVillager require the caller to be the current
+    // turn's player; default the fixture to PLAYER_ID's own turn so tests
+    // that don't care about turn-ownership don't need to set this up.
+    currentPlayerTurnIndex: 0,
+    players: [{ id: PLAYER_ID }],
     ...overrides,
   }) as unknown as Match;
 
@@ -83,6 +87,22 @@ const makeReactionManagerStub = (): ReactionManager =>
     cleanupDurationTriggers: () => undefined,
   }) as unknown as ReactionManager;
 
+/**
+ * ReactionManager stub whose `runTrigger` throws. Used to prove an action
+ * never reaches the trigger pipeline at all -- e.g. setTreasure must not
+ * fire treasureGain, so any reaction (like the -$1 token) that would
+ * rewrite `trigger.args.count` never gets the chance to run.
+ */
+const makeThrowingReactionManagerStub = (): ReactionManager =>
+  ({
+    runTrigger: async () => {
+      throw new Error('[test stub] unexpected reaction trigger fired');
+    },
+    runCardLifecycleEvent: async () => undefined,
+    runGameLifecycleEvent: async () => undefined,
+    cleanupDurationTriggers: () => undefined,
+  }) as unknown as ReactionManager;
+
 /** MatchCardLibrary backed by a plain Map, seeded with the test card. */
 const makeCardLibraryStub = (cards: Map<CardId, Card>): MatchCardLibrary =>
   ({
@@ -109,7 +129,9 @@ const makeBuyOptionsResolverStub = (card: Card): BuyOptionsResolver =>
  * Assembles a GameActionController with stub collaborators sufficient to
  * drive exchangeCoffer and buyCard's standard-payment path.
  */
-const makeController = (opts: { match?: Partial<Match>; cardCost?: number } = {}) => {
+const makeController = (
+  opts: { match?: Partial<Match>; cardCost?: number; reactionManager?: ReactionManager } = {},
+) => {
   const { loggerService } = createTestLogger();
   const match = makeMatch(opts.match);
   const card = new Card({
@@ -118,7 +140,7 @@ const makeController = (opts: { match?: Partial<Match>; cardCost?: number } = {}
   });
   const cardLibrary = makeCardLibraryStub(new Map([[card.id, card]]));
   const cardSourceController = makeCardSourceControllerStub();
-  const reactionManager = makeReactionManagerStub();
+  const reactionManager = opts.reactionManager ?? makeReactionManagerStub();
   const buyOptionsResolver = makeBuyOptionsResolverStub(card);
   const logManager = { addLogEntry: () => undefined } as unknown as LogManager;
   const inertCardEffectMap = {} as unknown as CardEffectFunctionMap;
@@ -270,4 +292,55 @@ Deno.test('buyCard with no overpay only deducts the base cost', async () => {
 
   assertEquals(match.playerTreasure, 6);
   assertEquals(match.stats.cardsBought[card.id].paid, 4);
+});
+
+// ---------------------------------------------------------------------------
+// setTreasure
+// ---------------------------------------------------------------------------
+
+Deno.test('setTreasure sets the pool down to the given value', async () => {
+  const { controller, match } = makeController({ match: { playerTreasure: 5 } });
+
+  await controller.setTreasure({ count: 2 });
+
+  assertEquals(match.playerTreasure, 2);
+});
+
+Deno.test('setTreasure sets the pool up to the given value', async () => {
+  const { controller, match } = makeController({ match: { playerTreasure: 2 } });
+
+  await controller.setTreasure({ count: 7 });
+
+  assertEquals(match.playerTreasure, 7);
+});
+
+Deno.test('setTreasure clamps a negative count to 0', async () => {
+  const { controller, match } = makeController({ match: { playerTreasure: 5 } });
+
+  await controller.setTreasure({ count: -3 });
+
+  assertEquals(match.playerTreasure, 0);
+});
+
+Deno.test('setTreasure no-ops cleanly when the target equals the current value', async () => {
+  const { controller, match } = makeController({ match: { playerTreasure: 4 } });
+
+  await controller.setTreasure({ count: 4 });
+
+  assertEquals(match.playerTreasure, 4);
+});
+
+Deno.test('setTreasure does not fire a treasureGain reaction trigger', async () => {
+  // The reaction manager stub throws on any runTrigger call -- if setTreasure
+  // fired treasureGain (the way gainTreasure does, letting reactions like the
+  // -$1 token rewrite trigger.args.count), this test would fail with the
+  // stub's thrown error instead of asserting the plain set outcome.
+  const { controller, match } = makeController({
+    match: { playerTreasure: 5 },
+    reactionManager: makeThrowingReactionManagerStub(),
+  });
+
+  await controller.setTreasure({ count: 2 });
+
+  assertEquals(match.playerTreasure, 2);
 });

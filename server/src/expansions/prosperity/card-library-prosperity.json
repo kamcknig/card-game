@@ -3,19 +3,22 @@
     "cost": {
       "treasure": 3
     },
-    "type": ["TREASURE"]
+    "type": ["TREASURE"],
+    "abilityText": "$1\nYou may discard a Treasure to gain a card costing up to $4."
   },
   "bank": {
     "cost": {
       "treasure": 7
     },
-    "type": ["TREASURE"]
+    "type": ["TREASURE"],
+    "abilityText": "+$1 per Treasure card you have in play (counting this)."
   },
   "bishop": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+$1\n+1VP\nTrash a card from your hand. +1VP per $2 it costs (round down). Each other player may trash a card from their hand."
   },
   "colony": {
     "cost": {
@@ -29,92 +32,109 @@
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "ATTACK"]
+    "type": ["ACTION", "ATTACK"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+$3\nEach other player gains a Curse.\n----\nIn games using this, Curse is also a Treasure worth $1."
   },
   "city": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+2 Actions\nIf there are one or more empty Supply piles, +1 Card. If there are two or more, +1 Buy and +$1."
   },
   "clerk": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION", "REACTION", "ATTACK"]
+    "type": ["ACTION", "REACTION", "ATTACK"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+$2\nEach other player with 5 or more cards in hand puts one onto their deck.\n----\nAt the start of your turn, you may play this from your hand."
   },
   "collection": {
     "cost": {
       "treasure": 5
     },
-    "type": ["TREASURE"]
+    "type": ["TREASURE"],
+    "abilityText": "$2\n+1 Buy\nThis turn, when you gain an Action card, +1VP."
   },
   "crystal-ball": {
     "cost": {
       "treasure": 5
     },
-    "type": ["TREASURE"]
+    "type": ["TREASURE"],
+    "abilityText": "$1\nLook at the top card of your deck. You may trash it, discard it, or, if it's an Action or Treasure, play it."
   },
   "expand": {
     "cost": {
       "treasure": 7
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "Trash a card from your hand. Gain a card costing up to $3 more than it."
   },
   "forge": {
     "cost": {
       "treasure": 7
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "Trash any number of cards from your hand. Gain a card with cost exactly equal to the total cost in $$ of the trashed cards."
   },
   "grand-market": {
     "cost": {
       "treasure": 6
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+1 Action\n+1 Buy\n+$2\n----\nYou can't buy this if you have any Coppers in play."
   },
   "hoard": {
     "cost": {
       "treasure": 6
     },
-    "type": ["TREASURE"]
+    "type": ["TREASURE"],
+    "abilityText": "$2\nThis turn, when you gain a Victory card, if you bought it, gain a Gold."
   },
   "investment": {
     "cost": {
       "treasure": 4
     },
-    "type": ["TREASURE"]
+    "type": ["TREASURE"],
+    "abilityText": "Trash a card from your hand. Choose one: +$1; or trash this to reveal your hand for +1VP per differently named Treasure there."
   },
   "kings-court": {
     "cardName": "King's Court",
     "cost": {
       "treasure": 7
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "You may play an Action card from your hand three times."
   },
   "magnate": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "Reveal your hand. +1 Card per Treasure in it."
   },
   "mint": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "You may reveal a Treasure card from your hand. Gain a copy of it.\n----\nWhen you gain this, trash all non-Duration Treasures you have in play."
   },
   "monument": {
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+$2\n+1VP"
   },
   "peddler": {
     "cost": {
       "treasure": 8
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+1 Action\n+$1\n----\nDuring a player's Buy phase, this costs $2 less per Action card they have in play."
   },
   "platinum": {
     "cost": {
@@ -127,43 +147,51 @@
     "cost": {
       "treasure": 4
     },
-    "type": ["TREASURE"]
+    "type": ["TREASURE"],
+    "abilityText": "$1\nThis turn, Actions cost $2 less."
   },
   "rabble": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION", "ATTACK"]
+    "type": ["ACTION", "ATTACK"],
+    "targetScheme": "ALL_OTHER",
+    "abilityText": "+3 Cards\nEach other player reveals the top 3 cards of their deck, discards the Actions and Treasures, and puts the rest back in any order they choose."
   },
   "tiara": {
     "cost": {
       "treasure": 4
     },
-    "type": ["TREASURE"]
+    "type": ["TREASURE"],
+    "abilityText": "+1 Buy\nThis turn, when you gain a card, you may put it onto your deck.\nYou may play a Treasure from your hand twice."
   },
   "vault": {
     "cost": {
       "treasure": 5
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+2 Cards\nDiscard any number of cards for +$1$1 each.\nEach other player may discard 2 cards, to draw a card."
   },
   "war-chest": {
     "cost": {
       "treasure": 5
     },
-    "type": ["TREASURE"]
+    "type": ["TREASURE"],
+    "abilityText": "The player to your left names a card. Gain a card costing up to $5 that hasn't been named for War Chests this turn."
   },
   "watchtower": {
     "cost": {
       "treasure": 3
     },
-    "type": ["ACTION", "REACTION"]
+    "type": ["ACTION", "REACTION"],
+    "abilityText": "Draw until you have 6 cards in hand.\n----\nWhen you gain a card, you may reveal this from your hand, to either trash that card or put it onto your deck."
   },
   "workers-village": {
     "cardName": "Worker's Village",
     "cost": {
       "treasure": 4
     },
-    "type": ["ACTION"]
+    "type": ["ACTION"],
+    "abilityText": "+1 Card\n+2 Actions\n+1 Buy"
   }
 }

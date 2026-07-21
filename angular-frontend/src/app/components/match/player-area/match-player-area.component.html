@@ -181,8 +181,8 @@
             <button
               type="button"
               class="resource-icon-button"
-              [disabled]="resources.coffers === 0"
-              [title]="resources.coffers > 0 ? 'Exchange Coffers for +$1 Treasure each' : 'No Coffers to exchange'"
+              [disabled]="!canExchangeCoffers()"
+              [title]="canExchangeCoffers() ? 'Exchange Coffers for +$1 Treasure each' : 'No Coffers to exchange'"
               (click)="onToggleCofferControls()"
             >
               <img src="/assets/ui-icons/coffers.jpg" alt="" />

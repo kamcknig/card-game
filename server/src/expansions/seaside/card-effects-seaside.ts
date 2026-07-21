@@ -8,6 +8,7 @@ import { isPlayerImmune, markPlayerImmune } from '../../utils/reaction-immunity.
 import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 import { registerStartTurnEffect } from '../../utils/register-start-turn-effect.ts';
+import { getCardPileKey } from '../../utils/get-card-pile-key.ts';
 
 const expansion: CardExpansionModule = {
   astrolabe: {
@@ -97,6 +98,19 @@ const expansion: CardExpansionModule = {
         id: `blockade:${args.cardId}:cardGained`,
         condition: conditionArgs => {
           if (getCurrentPlayer(args.match).id !== conditionArgs.trigger.args.playerId) {
+            return false;
+          }
+
+          // Only OTHER players who gain a copy are cursed — the owner gaining
+          // one (e.g. buying another copy the same turn Blockade was played)
+          // must not curse themselves.
+          if (conditionArgs.trigger.args.playerId === args.playerId) {
+            return false;
+          }
+
+          // Respect attack immunity (Moat/Lighthouse) recorded when Blockade
+          // was played, mirroring Corsair's deferred-reaction immunity check.
+          if (isPlayerImmune(args.reactionContext, conditionArgs.trigger.args.playerId!)) {
             return false;
           }
 
@@ -213,16 +227,21 @@ const expansion: CardExpansionModule = {
         },
         triggeredEffectFn: async ({ loggerService, trigger }) => {
           loggerService.debug(`[CORSAIR TRIGGERED EFFECT] trashing card...`);
-          await cardEffectArgs.actionService.run(
+          const trashed = await cardEffectArgs.actionService.run(
             'trashCard',
             {
               playerId: trigger.args.playerId!,
               cardId: trigger.args.cardId!,
+              expectedFrom: { location: 'playArea' },
             },
             {
               source: cardEffectArgs.cardId,
             },
           );
+
+          if (!trashed) {
+            loggerService.debug('[CORSAIR TRIGGERED EFFECT] lose track: card already trashed by another Corsair');
+          }
         },
       });
     },
@@ -739,7 +758,7 @@ const expansion: CardExpansionModule = {
           return;
         }
 
-        const matCardIds = args.findCardService.findCards({ location: 'native-village' });
+        const matCardIds = args.findCardService.findCards({ location: 'native-village', playerId });
 
         loggerService.debug(
           `[NATIVE VILLAGE EFFECT] moving ${matCardIds.length} cards from native village mat to hand...`,
@@ -979,6 +998,8 @@ const expansion: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'sea witch effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: args.cardId,
         });
 
         if (!gainedCurseId) {
@@ -1030,10 +1051,16 @@ const expansion: CardExpansionModule = {
 
       loggerService.debug(`[smugglers effect] found ${cards.length} costing up to 6 that were played`);
 
-      const inSupply = (card: Card) =>
-        cardEffectArgs.findCardService
-          .findCards({ location: ['kingdomSupply', 'basicSupply'] })
-          .find(supplyCard => supplyCard.cardKey === card.cardKey);
+      // Gains must take the top card of the pile, and for split/mixed piles
+      // the top card must be the exact same card the right-hand player
+      // gained — a pile whose top has since become a different member is
+      // not a legal target even though the pile itself still matches.
+      const inSupply = (card: Card) => {
+        const topOfPile = cardEffectArgs.findCardService.findTopSupplyCardForPileKey({
+          pileKey: getCardPileKey(card),
+        });
+        return topOfPile?.cardKey === card.cardKey ? topOfPile : undefined;
+      };
 
       const cardsInSupply = cards.map(inSupply).filter(id => id !== undefined);
 
@@ -1146,9 +1173,10 @@ const expansion: CardExpansionModule = {
       () =>
       async ({ loggerService, actionService, playerId, cardId, match, cardLibrary, ...args }) => {
         loggerService.debug(`[treasure map effect] trashing played treasure map...`);
-        await actionService.run('trashCard', {
+        const playedMapTrashed = await actionService.run('trashCard', {
           playerId,
           cardId,
+          expectedFrom: { location: 'playArea' },
         });
 
         const hand = args.cardSourceController.getSource('playerHand', playerId);
@@ -1162,12 +1190,22 @@ const expansion: CardExpansionModule = {
           return;
         }
 
+        // "Trash this and a Treasure Map from your hand" are two separate
+        // instructions — the hand trash still happens even if the "this"
+        // trash lost track (e.g. a Throne Room replay whose card is already
+        // in the trash). But "if you trashed two Treasure Maps" requires
+        // BOTH to have actually happened this resolution.
         loggerService.debug(`[treasure map effect] trashing treasure map from hand...`);
 
         await actionService.run('trashCard', {
           playerId,
           cardId: inHand,
         });
+
+        if (!playedMapTrashed) {
+          loggerService.debug('[treasure map effect] lose track: played copy already trashed, no Golds');
+          return;
+        }
 
         const goldCardIds = args.findCardService.findCards({
           all: [{ location: 'basicSupply' }, { cardKeys: 'gold' }],
@@ -1209,15 +1247,20 @@ const expansion: CardExpansionModule = {
         condition: conditionArgs => {
           if (getTurnPhase(conditionArgs.trigger.args.phaseIndex) !== 'buy') return false;
 
-          const victoryCardsGained = Object.entries(conditionArgs.match.stats.cardsGained)
-            .filter(([id, stats]) => {
-              const currentTurnHistoryIndex = conditionArgs.match.stats.turns.length - 1;
-              const gainedThisTurn = stats.turnHistoryIndex === currentTurnHistoryIndex;
-              return gainedThisTurn && conditionArgs.cardLibrary.getCard(+id).type.includes('VICTORY');
-            })
-            .map(results => Number(results[0]));
+          // "if you didn't gain a Victory card in your Buy phase this turn" —
+          // ANY means of gaining counts (not just buying), but only gains by
+          // the Treasury owner, and only ones that happened during a Buy
+          // phase. CardStats already records the phase each gain happened in.
+          const currentTurnHistoryIndex = conditionArgs.match.stats.turns.length - 1;
+          const gainedVictoryInBuyPhase = Object.entries(conditionArgs.match.stats.cardsGained).some(
+            ([id, stats]) =>
+              stats.turnHistoryIndex === currentTurnHistoryIndex &&
+              stats.playerId === args.playerId &&
+              stats.turnPhase === 'buy' &&
+              conditionArgs.cardLibrary.getCard(+id).type.includes('VICTORY'),
+          );
 
-          if (victoryCardsGained.length > 0) {
+          if (gainedVictoryInBuyPhase) {
             return false;
           }
 

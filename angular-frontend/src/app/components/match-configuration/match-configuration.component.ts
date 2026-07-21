@@ -768,6 +768,7 @@ export class MatchConfigurationComponent implements OnDestroy {
     void displayCardDetail({
       detailImagePath: item.detailImagePath,
       kingdom: 'kingdom' in item ? item.kingdom : undefined,
+      cardKey: item.cardKey,
       expansionName: item.expansionName,
       pileMembers: item.pileMembers,
     });

@@ -37,6 +37,13 @@
   gap: var(--theme-space-sm);
   max-height: calc(100vh - 64px);
   overflow-y: auto;
+  // Reserve the scrollbar gutter from the first layout pass. Without it,
+  // the scrollbar appearing after images load widens this column by the
+  // scrollbar width, pushing the outer .card-detail-panel into a
+  // horizontal scrollbar, which steals height and triggers the panel's
+  // vertical scrollbar too — a stable-but-wrong double-scrollbar layout
+  // that only resolved on the next forced reflow (e.g. hovering a sibling).
+  scrollbar-gutter: stable;
 }
 
 // Siblings are smaller and clickable (right-click promotes them to

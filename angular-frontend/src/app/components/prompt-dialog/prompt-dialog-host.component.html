@@ -1,3 +1,28 @@
+@let displayReq = displayRequest();
+@if (displayReq) {
+  <app-ui-dialog
+    [layer]="'prompt'"
+    [skin]="'dark'"
+    [backdropVariant]="'strong'"
+    [heading]="displayReq.args.prompt"
+    [showClose]="true"
+    [dismissable]="true"
+    [panelClass]="'prompt-dialog-panel'"
+    (close)="onDisplayDismissRequested()">
+
+    @let displayContent = displayReq.args.content;
+    @if (displayContent) {
+      @switch (displayContent.type) {
+        @case ('display-cards') {
+          <app-prompt-select-content
+            [content]="displayContent"
+          ></app-prompt-select-content>
+        }
+      }
+    }
+  </app-ui-dialog>
+}
+
 @let request = activeRequest();
 @if (request) {
   <app-ui-dialog

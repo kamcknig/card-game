@@ -274,6 +274,11 @@ export class MatchSupplyComponent {
         // highlighted at once, matching the dialog selection policy.
         selectedPileStore.set([pile.pileKey]);
       } else {
+        // The count spec's maximum is a hard cap — ignore clicks beyond
+        // it; the player must deselect a pile before picking another.
+        if (selected.length >= this._boardSelectionOverlay().maxSelectable) {
+          return;
+        }
         selected.push(pile.pileKey);
         selectedPileStore.set(selected);
       }
@@ -296,6 +301,11 @@ export class MatchSupplyComponent {
         // highlighted at once, matching the dialog selection policy.
         selectedCardStore.set([pile.cardId]);
       } else {
+        // The count spec's maximum is a hard cap — ignore clicks beyond
+        // it; the player must deselect a card before picking another.
+        if (selected.length >= this._boardSelectionOverlay().maxSelectable) {
+          return;
+        }
         selected.push(pile.cardId);
         selectedCardStore.set(selected);
       }

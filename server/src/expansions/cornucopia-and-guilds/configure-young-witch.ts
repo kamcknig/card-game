@@ -38,6 +38,8 @@ export const configureYoungWitch = (args: ExpansionConfiguratorContext) => {
     expansions: selectedExpansions,
     excludedPileKeys: existingPileKeys,
     bannedPileKeys,
+    // Bane must cost $2 or $3, with no potion/debt component.
+    cardFilter: card => (card.cost.treasure === 2 || card.cost.treasure === 3) && !card.cost.potion && !card.cost.debt,
   });
 
   if (!availableGroups.length) {

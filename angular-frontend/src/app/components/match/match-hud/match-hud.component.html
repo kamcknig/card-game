@@ -24,23 +24,36 @@
   </app-ui-dialog>
 }
 
-@let disconnectedPlayers = disconnectedHumans();
-@if (disconnectedPlayers.length) {
+@if (disconnectDialogVisible()) {
   <app-ui-dialog
     [skin]="'light'"
     [layer]="'hud'"
     [dismissable]="false"
   >
-    <div class="disconnect-title">Player disconnected</div>
-    <div class="disconnect-names">
-      @for (player of disconnectedPlayers; track player.id) {
-        <div class="disconnect-name">{{ player.name }}</div>
+    <div class="disconnect-title">Players disconnected</div>
+    <div class="disconnect-rows">
+      @for (row of disconnectDialogRows(); track row.playerId) {
+        <div class="disconnect-row" [class.is-removed]="row.removed">
+          <span class="disconnect-name">
+            {{ row.name }}@if (row.removed) { (removed)}
+          </span>
+          @if (!row.removed) {
+            <!-- Toggle: Kick registers a removal vote; Undo kick retracts it. -->
+            <button
+              class="btn"
+              [class.btn-danger]="!row.votedBySelf"
+              [class.btn-secondary]="row.votedBySelf"
+              (click)="onToggleKickVote(row)"
+            >
+              {{ row.votedBySelf ? 'Undo kick' : 'Kick' }}
+            </button>
+          }
+        </div>
       }
     </div>
     <div class="ui-dialog-footer">
-      <button class="btn btn-danger" (click)="onRemoveDisconnectedPlayer()">
-        Remove player and keep playing
-      </button>
+      <!-- Routes through the existing resign confirmation dialog. -->
+      <button class="btn btn-danger" (click)="requestResign()">Resign</button>
     </div>
   </app-ui-dialog>
 }

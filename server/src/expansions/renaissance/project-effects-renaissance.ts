@@ -263,10 +263,6 @@ const effectMap: CardExpansionModule = {
 
         for (const card of allCards) {
           const unsub = cardEffectArgs.cardPriceController.registerRule(card, (_targetCard, context) => {
-            if (context.playerId !== cardEffectArgs.playerId) {
-              return { restricted: false, cost: { treasure: 0 } };
-            }
-
             const currentPlayer = context.match.players[context.match.currentPlayerTurnIndex];
             if (currentPlayer?.id !== cardEffectArgs.playerId) {
               return { restricted: false, cost: { treasure: 0 } };
@@ -328,6 +324,21 @@ const effectMap: CardExpansionModule = {
           clearRules();
         },
       });
+
+      // Buying Canal mid-turn should apply the discount immediately for the rest of that turn.
+      if (!isCurrentTurnPlayer(cardEffectArgs.match, cardEffectArgs.playerId)) {
+        return;
+      }
+
+      if (!isProjectOwned(cardEffectArgs.match, cardEffectArgs.playerId, project)) {
+        loggerService.debug(
+          `[canal project] player ${cardEffectArgs.playerId} does not own cube yet for immediate apply`,
+        );
+        return;
+      }
+
+      loggerService.debug(`[canal project] applying immediate cost reduction for player ${cardEffectArgs.playerId}`);
+      registerRules();
     },
   },
   capitalism: {
@@ -1012,6 +1023,10 @@ const effectMap: CardExpansionModule = {
             return false;
           }
 
+          if (getCurrentPlayer(conditionArgs.match).id !== cardEffectArgs.playerId) {
+            return false;
+          }
+
           const owned = isProjectOwned(conditionArgs.match, cardEffectArgs.playerId, project);
           if (!owned) {
             return false;
@@ -1140,7 +1155,9 @@ const effectMap: CardExpansionModule = {
           });
 
           loggerService.debug('[pageant project] paying $1 and granting +1 Coffer');
-          await triggeredArgs.actionService.run('gainTreasure', { count: -1 });
+          // "Pay $1" — a pay, so spendTreasure (gainTreasure clamps negative
+          // counts to 0, which made this a free Coffer before).
+          await triggeredArgs.actionService.run('spendTreasure', { count: 1 });
           await triggeredArgs.actionService.run('gainCoffer', {
             playerId: cardEffectArgs.playerId,
             count: 1,
@@ -1208,6 +1225,7 @@ const effectMap: CardExpansionModule = {
           await triggeredArgs.actionService.run('playCard', {
             playerId: cardEffectArgs.playerId,
             cardId: topCardId,
+            overrides: { actionCost: 0 },
           });
         },
       });

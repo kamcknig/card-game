@@ -12,7 +12,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { NanostoresService } from '@nanostores/angular';
 import { CardFacing, CardId, CardLikeId, UserPromptKinds } from 'shared/types';
 import { validateCountSpec } from 'shared/validate-count-spec';
-import { resolveCountSpec } from 'shared/resolve-count-spec';
+import { resolveCountSpec, resolveMaxSelectable } from 'shared/resolve-count-spec';
 import { CardComponent } from '../../card/card.component';
 import { CardLikeComponent } from '../../card-like/card-like.component';
 import { WayPickerPanelComponent } from '../../way-picker-overlay/way-picker-panel.component';
@@ -278,11 +278,23 @@ export class PromptSelectContentComponent {
       this.syncWaySelectionWithCurrentSelection();
     } else {
       // Multi-pick specs ("select 2", "up to 3") keep pure toggle
-      // semantics: add on click, remove on re-click — never replace.
+      // semantics: add on click, remove on re-click — never replace. The
+      // count spec's maximum is a hard cap: once reached, further clicks
+      // are ignored until the player deselects an entry.
+      if (currentSelection.length >= this.maxSelectable()) {
+        return;
+      }
       this._selectedEntryKeys.set([...currentSelection, entry.key]);
       this.syncWaySelectionWithCurrentSelection();
     }
   }
+
+  // Hard cap on simultaneous selections derived from the prompt's count
+  // spec. display-cards prompts never select, so the cap is irrelevant there.
+  private readonly maxSelectable = computed(() => {
+    const content = this.content();
+    return content.type === 'select' ? resolveMaxSelectable(content.selectCount) : 0;
+  });
 
   // Applies a Way choice to the hovered eligible card. Selecting a Way
   // records the choice (blue ring + badge); re-clicking the chosen Way

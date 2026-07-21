@@ -254,10 +254,15 @@ export class ExpansionSearchService {
   // resolves to the single owning object, so "one row per pile" holds.
   private createFuse<T extends { cardName: string; searchAliases?: string[] }>(items: T[]): Fuse<T> {
     const index = Fuse.createIndex(['cardName', 'searchAliases'], items);
+    // threshold tightened from Fuse's default (0.6) so short queries require a near-exact
+    // substring/typo match instead of scattered-letter fuzzy hits (e.g. "abe" previously
+    // matched "Berserker" and "Abundance"). ignoreLocation removes position-based scoring
+    // (superseding the old distance:2) so a match can occur anywhere in the name/alias.
     const fuseOptions: IFuseOptions<T> = {
       ignoreDiacritics: true,
-      minMatchCharLength: 1,
-      distance: 2,
+      threshold: 0.3,
+      ignoreLocation: true,
+      minMatchCharLength: 2,
       keys: ['cardName', 'searchAliases'],
     };
     return new Fuse(items, fuseOptions, index);

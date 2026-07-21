@@ -1,5 +1,5 @@
 import { ActionService, FindCardService, SupplyGainService } from '@server-types/index.ts';
-import { CardId, CardKey, CardLocationSpec, PlayerId } from 'shared/types/index.ts';
+import { CardId, CardKey, CardLocationSpec, LogEntrySource, PlayerId } from 'shared/types/index.ts';
 import { LoggerService } from './logger-service.ts';
 
 // Supply locations that can provide top cards for pile-key gain effects.
@@ -19,6 +19,7 @@ export class DefaultSupplyGainService implements SupplyGainService {
     to: CardLocationSpec;
     from?: SupplyLocation | SupplyLocation[];
     logTag?: string;
+    source?: LogEntrySource;
   }): Promise<CardId | undefined> {
     const tag = args.logTag ?? 'gainTopSupplyCardForPileKey';
     const fromLocations = args.from
@@ -44,11 +45,18 @@ export class DefaultSupplyGainService implements SupplyGainService {
 
     this.loggerService.debug(`[${tag}] found top cardId=${topSupplyCard.id} for pile ${args.pileKey}, gaining now`);
 
-    await this.actionService.run('gainCard', {
-      playerId: args.playerId,
-      cardId: topSupplyCard.id,
-      to: args.to,
-    });
+    await this.actionService.run(
+      'gainCard',
+      {
+        playerId: args.playerId,
+        cardId: topSupplyCard.id,
+        to: args.to,
+      },
+      // Explicit source attribution: this service's actionService is a match-scoped singleton,
+      // not the per-effect wrapped instance, so it never auto-injects a source (see the
+      // SupplyGainService type comment).
+      args.source !== undefined ? { source: args.source } : undefined,
+    );
 
     this.loggerService.debug(`[${tag}] gained cardId=${topSupplyCard.id} for player ${args.playerId}`);
 
@@ -61,6 +69,7 @@ export class DefaultSupplyGainService implements SupplyGainService {
     pileName: string;
     to: CardLocationSpec;
     logTag?: string;
+    source?: LogEntrySource;
   }): Promise<CardId | undefined> {
     const tag = args.logTag ?? 'gainTopNonSupplyCardForPileName';
     this.loggerService.debug(
@@ -79,11 +88,15 @@ export class DefaultSupplyGainService implements SupplyGainService {
       `[${tag}] found top cardId=${topNonSupplyCard.id} in non-supply pile ${args.pileName}, gaining now`,
     );
 
-    await this.actionService.run('gainCard', {
-      playerId: args.playerId,
-      cardId: topNonSupplyCard.id,
-      to: args.to,
-    });
+    await this.actionService.run(
+      'gainCard',
+      {
+        playerId: args.playerId,
+        cardId: topNonSupplyCard.id,
+        to: args.to,
+      },
+      args.source !== undefined ? { source: args.source } : undefined,
+    );
 
     this.loggerService.debug(`[${tag}] gained cardId=${topNonSupplyCard.id} for player ${args.playerId}`);
 

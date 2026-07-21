@@ -1,4 +1,4 @@
-import { CardId } from 'shared/types/index.ts';
+import { LogEntrySource } from 'shared/types/index.ts';
 import { ActionService, GameActionDefinitionMap, GameActionReturnTypeMap, GameActions } from '@server-types/index.ts';
 
 // Actions whose GameActionContext.source feeds log-entry attribution. When an
@@ -28,15 +28,17 @@ export const SOURCE_AWARE_ACTIONS: ReadonlySet<GameActions> = new Set<GameAction
 
 /**
  * Wraps an ActionService so SOURCE_AWARE_ACTIONS automatically carry
- * `context.source = sourceCardId` unless the caller provided a source
+ * `context.source = source` unless the caller provided a source
  * explicitly (an explicit source always wins). Non-source-aware actions and
- * malformed argument shapes pass through untouched.
+ * malformed argument shapes pass through untouched. `source` may be a plain
+ * card id or a tagged card-like id (boon/hex/event/project) — card-like ids
+ * never exist in the card library, so callers must tag them explicitly.
  *
  * Defined here and consumed by GameActionController.createCardEffectContext
  * (on-play effects) and ReactionContextFactory.createTriggeredEffectContext
  * (reactions / duration effects).
  */
-export function wrapActionServiceWithSource(actionService: ActionService, sourceCardId: CardId): ActionService {
+export function wrapActionServiceWithSource(actionService: ActionService, source: LogEntrySource): ActionService {
   return {
     run: async <K extends GameActions>(
       action: K,
@@ -57,7 +59,7 @@ export function wrapActionServiceWithSource(actionService: ActionService, source
         actionArgs as Parameters<GameActionDefinitionMap[K]>[0],
         {
           ...(actionContext ?? {}),
-          source: sourceCardId,
+          source,
         },
       ] as unknown as Parameters<GameActionDefinitionMap[K]>;
       return await actionService.run(action, ...argsWithSource);

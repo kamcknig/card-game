@@ -1,10 +1,22 @@
 import { atom } from 'nanostores';
-import { Player, PlayerId } from 'shared/types';
+import { Player, PlayerId, PlayerRemovedFromMatchPayload, RemovalVoteStateEntry } from 'shared/types';
 import { playerIdStore, playerStore } from './player-state';
 
 
 export const playerDisconnectedStore = atom<boolean>(false);
 export const disconnectedHumanIdsStore = atom<PlayerId[]>([]);
+
+// Server-authoritative removal-vote snapshot (one entry per pending
+// disconnected player). Replaced wholesale on every removalVoteState event.
+export const removalVoteStateStore = atom<RemovalVoteStateEntry[]>([]);
+(globalThis as any).removalVoteStateStore = removalVoteStateStore;
+
+// Players permanently removed from the current match (voted out or
+// resigned) while the disconnect dialog is relevant. Appended on
+// playerRemovedFromMatch; cleared when the dialog closes (no disconnected
+// players remain) and on match teardown.
+export const removedMatchPlayersStore = atom<PlayerRemovedFromMatchPayload[]>([]);
+(globalThis as any).removedMatchPlayersStore = removedMatchPlayersStore;
 
 // Internal: Track all subscriptions so we can clean them up
 let unsubscribers: (() => void)[] = [];

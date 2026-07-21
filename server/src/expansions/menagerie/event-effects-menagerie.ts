@@ -81,6 +81,8 @@ const effectMap: CardExpansionModule = {
           pileKey: gainPileKey,
           to: { location: 'playerDiscard' },
           logTag: 'alliance effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: { kind: 'cardLike', id: cardEffectArgs.cardId },
         });
       }
     },
@@ -106,12 +108,10 @@ const effectMap: CardExpansionModule = {
         {} as Record<CardKey, CardId[]>,
       );
 
-      const selectableNameCardIds = Object.values(cardIdsByKey)
-        .filter(cardIds => cardIds.length > 1)
-        .map(cardIds => cardIds[0]);
+      const selectableNameCardIds = Object.values(cardIdsByKey).map(cardIds => cardIds[0]);
 
       if (!selectableNameCardIds.length) {
-        loggerService.debug('[banish effect] no duplicated card names in hand');
+        loggerService.debug('[banish effect] no cards in hand to Exile');
         return;
       }
 
@@ -400,6 +400,8 @@ const effectMap: CardExpansionModule = {
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
         logTag: 'desperation effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: { kind: 'cardLike', id: cardEffectArgs.cardId },
       });
 
       if (!gainedCurseId) {
@@ -420,6 +422,8 @@ const effectMap: CardExpansionModule = {
         pileKey: 'gold',
         to: { location: 'playerDiscard' },
         logTag: 'enclave effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: { kind: 'cardLike', id: cardEffectArgs.cardId },
       });
 
       const duchyCards = cardEffectArgs.findCardService.findCards({
@@ -624,7 +628,7 @@ const effectMap: CardExpansionModule = {
         {
           playerId: cardEffectArgs.playerId,
           once: false,
-          allowMultipleInstances: false,
+          allowMultipleInstances: true,
           compulsory: true,
           condition: async conditionArgs => {
             if (conditionArgs.trigger.args.playerId === cardEffectArgs.playerId) {
@@ -835,6 +839,8 @@ const effectMap: CardExpansionModule = {
         from: 'basicSupply',
         to: { location: 'set-aside' },
         logTag: 'reap effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: { kind: 'cardLike', id: cardEffectArgs.cardId },
       });
 
       if (!gainedGoldId) {
@@ -891,7 +897,10 @@ const effectMap: CardExpansionModule = {
       event.metadata.menagerie.usedByPlayerId[cardEffectArgs.playerId] = true;
       loggerService.debug(`[seize-the-day effect] marking usage for player ${cardEffectArgs.playerId}`);
 
-      const lockRule: CardPriceRule = () => ({ restricted: true, cost: { treasure: 0 } });
+      const lockRule: CardPriceRule = (_card, context) => ({
+        restricted: context.playerId === cardEffectArgs.playerId,
+        cost: { treasure: 0 },
+      });
       cardEffectArgs.cardPriceController.registerRule(event, lockRule);
 
       await cardEffectArgs.actionService.run('queueExtraTurn', {

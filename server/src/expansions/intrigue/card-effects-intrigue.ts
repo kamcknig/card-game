@@ -81,6 +81,8 @@ const expansionModule: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'baron effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: args.cardId,
         });
       },
   },
@@ -133,16 +135,22 @@ const expansionModule: CardExpansionModule = {
 
         await actionService.run('gainTreasure', { count: 2 });
 
-        // we want those cards played on the player's turn that are actions and played by THAT player
-        const actionCardCount = Object.keys(match.stats.playedCards).filter(
-          cardId =>
-            cardLibrary.getCard(+cardId).type.includes('ACTION') &&
-            match.stats.playedCards[+cardId].playerId === playerId,
+        // Count Action *plays* this turn (counting this Conspirator) made by this
+        // player — playedCardsByTurn records one entry per play, so Throne-Room
+        // replays count as additional plays per the official ruling. playedCards
+        // (whole-match, per-card) must NOT be used here: it never resets between
+        // turns and collapses replays into one entry.
+        const turnHistoryIndex = match.stats.turns.length - 1;
+        const playedThisTurn = match.stats.playedCardsByTurn[turnHistoryIndex] ?? [];
+        const actionPlaysThisTurn = playedThisTurn.filter(
+          playedCardId =>
+            cardLibrary.getCard(playedCardId).type.includes('ACTION') &&
+            match.stats.playedCards[playedCardId]?.playerId === playerId,
         );
 
-        loggerService.debug(`[CONSPIRATOR EFFECT] action cards played so far ${actionCardCount.length}`);
+        loggerService.debug(`[CONSPIRATOR EFFECT] action plays this turn ${actionPlaysThisTurn.length}`);
 
-        if (actionCardCount?.length >= 3) {
+        if (actionPlaysThisTurn.length >= 3) {
           loggerService.debug(`[CONSPIRATOR EFFECT] drawing card...`);
 
           await actionService.run('drawCard', { playerId });
@@ -246,6 +254,8 @@ const expansionModule: CardExpansionModule = {
                   from: 'basicSupply',
                   to: { location: 'playerDiscard' },
                   logTag: 'courtier effect',
+                  // supplyGainService's own actionService bypasses the effect's auto-injected source.
+                  source: args.cardId,
                 });
 
                 if (!gainedGoldId) {
@@ -679,7 +689,7 @@ const expansionModule: CardExpansionModule = {
   'mining-village': {
     registerEffects:
       () =>
-      async ({ loggerService, actionService, playerId, cardId, cardLibrary, promptService }) => {
+      async ({ loggerService, actionService, playerId, cardId, cardLibrary, promptService, cardSourceController }) => {
         loggerService.debug(`[MINING VILLAGE EFFECT] drawing card...`);
 
         await actionService.run('drawCard', { playerId });
@@ -687,6 +697,17 @@ const expansionModule: CardExpansionModule = {
         loggerService.debug(`[MINING VILLAGE EFFECT] gaining 2 actions`);
 
         await actionService.run('gainAction', { count: 2 });
+
+        // Lose Track rule: on a replay (Throne Room) the physical card may
+        // already be in the trash — "trash this" then does nothing, so don't
+        // even offer the prompt.
+        const currentSource = cardSourceController.findCardSource(cardId);
+        if (currentSource.sourceKey !== 'playArea') {
+          loggerService.debug(
+            `[MINING VILLAGE EFFECT] card is in ${currentSource.sourceKey}, not playArea; skipping trash option`,
+          );
+          return;
+        }
 
         loggerService.debug(`[MINING VILLAGE EFFECT] prompting user to trash mining village or not`);
         const shouldTrash = await promptService.confirm(
@@ -704,16 +725,22 @@ const expansionModule: CardExpansionModule = {
         if (shouldTrash) {
           loggerService.debug(`[MINING VILLAGE EFFECT] trashing ${cardLibrary.getCard(cardId)}...`);
 
-          await actionService.run('trashCard', {
+          const trashed = await actionService.run('trashCard', {
             playerId,
             cardId,
+            expectedFrom: { location: 'playArea' },
           });
 
-          loggerService.debug(`[MINING VILLAGE EFFECT] gaining 2 treasure...`);
+          // "You may trash this for +$2" — the +$2 only happens if the trash did.
+          if (trashed) {
+            loggerService.debug(`[MINING VILLAGE EFFECT] gaining 2 treasure...`);
 
-          await actionService.run('gainTreasure', {
-            count: 2,
-          });
+            await actionService.run('gainTreasure', {
+              count: 2,
+            });
+          } else {
+            loggerService.debug(`[MINING VILLAGE EFFECT] trash failed (lose track); no treasure gained`);
+          }
         } else {
           loggerService.debug(`[MINING VILLAGE EFFECT] player chose not to trash mining village`);
         }
@@ -1041,15 +1068,33 @@ const expansionModule: CardExpansionModule = {
         }
         card = cardLibrary.getCard(cardId);
 
-        const location = card.type.some(t => ['ACTION', 'TREASURE'].includes(t)) ? 'playerDeck' : 'playerDiscard';
+        const isActionOrTreasure = card.type.some(t => ['ACTION', 'TREASURE'].includes(t));
 
-        loggerService.debug(`[REPLACE EFFECT] gaining ${cardLibrary.getCard(cardId)} to ${location}...`);
+        loggerService.debug(`[REPLACE EFFECT] gaining ${cardLibrary.getCard(cardId)} to playerDiscard...`);
 
+        // Always gain to the discard first — this is the card's true gained
+        // location and is what on-gain reactions should see reported.
         await actionService.run('gainCard', {
           playerId,
           cardId,
-          to: { location },
+          to: { location: 'playerDiscard' },
         });
+
+        // "If the gained card is an Action or Treasure, put it onto your
+        // deck" is a second move after the gain, so the Lose Track rule
+        // applies: a reaction that trashed/moved/covered the gained card
+        // makes this topdeck fail. The Curse rider below still happens
+        // regardless of whether the topdeck succeeds.
+        if (isActionOrTreasure) {
+          loggerService.debug(`[REPLACE EFFECT] putting gained card onto deck...`);
+
+          await actionService.run('moveCard', {
+            cardId,
+            toPlayerId: playerId,
+            to: { location: 'playerDeck' },
+            expectedFrom: { location: 'playerDiscard', playerId, requireTop: true },
+          });
+        }
 
         if (card.type.includes('VICTORY')) {
           loggerService.debug(`[REPLACE EFFECT] card is a victory card`);
@@ -1064,6 +1109,8 @@ const expansionModule: CardExpansionModule = {
               from: 'basicSupply',
               to: { location: 'playerDiscard' },
               logTag: 'replace effect',
+              // supplyGainService's own actionService bypasses the effect's auto-injected source.
+              source: args.cardId,
             });
 
             if (!gainedCurseId) {
@@ -1374,6 +1421,8 @@ const expansionModule: CardExpansionModule = {
             from: 'basicSupply',
             to: { location: 'playerHand' },
             logTag: 'torturer effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: args.cardId,
           });
 
           if (!gainedCurseId) {
@@ -1423,6 +1472,8 @@ const expansionModule: CardExpansionModule = {
             from: 'basicSupply',
             to: { location: 'playerHand' },
             logTag: 'trading post effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: args.cardId,
           });
 
           if (!gainedSilverId) {

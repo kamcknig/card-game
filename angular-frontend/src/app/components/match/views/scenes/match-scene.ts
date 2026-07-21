@@ -10,11 +10,13 @@ import {
   selectedCardStore,
   selectedPileStore
 } from '../../../../state/interactive-state';
-import {resolveCountSpec} from 'shared/resolve-count-spec';
+import {resolveCountSpec, resolveMaxSelectable} from 'shared/resolve-count-spec';
 import {validateCountSpec} from 'shared/validate-count-spec';
 import {currentPlayerTurnIdStore, turnNumberStore, turnPhaseStore} from '../../../../state/turn-state';
 import {SocketService} from '../../../../core/socket-service/socket.service';
-import {supplyPileTopCardIdsStore, waySelectableCardStore} from '../../../../state/interactive-logic';
+import {serverSelectableCardsStore, supplyPileTopCardIdsStore, waySelectableCardStore} from '../../../../state/interactive-logic';
+import {cardStore} from '../../../../state/card-state';
+import {cardSourceStore} from '../../../../state/card-source-store';
 import {SelectCardArgs} from '../../../../../types';
 import { PromptDialogCoordinatorService } from '../../../../core/prompt-dialog/prompt-dialog-coordinator.service';
 import { WayPickerOverlayService } from '../../../../core/way-picker/way-picker-overlay.service';
@@ -23,6 +25,7 @@ import {
   boardSelectionOverlayStore
 } from '../../../../state/board-selection-overlay-state';
 import { SoundService } from '../../../../core/sound.service';
+import { shouldRemindEndTurn } from './end-turn-reminder';
 
 export class MatchScene {
   private _cleanup: (() => void)[] = [];
@@ -36,6 +39,12 @@ export class MatchScene {
   // Tracks the turn number the start-of-turn sound has been played for so we
   // don't replay it when matchStore updates within the same turn.
   private _lastPlayedTurnNumber: number | undefined = undefined;
+  // Reminder-timer state for the end-of-turn nudge. Mirrors the server's
+  // waiting-on-player ping cadence (match-controller.ts: 30s first, then
+  // -10s per tick to a 10s floor) and onPing's escalating volume.
+  private _endTurnReminderTimeout: ReturnType<typeof setTimeout> | null = null;
+  private _endTurnReminderCount = 0;
+  private _endTurnReminderDelayMs = 30000;
 
   private get uiInteractive(): boolean {
     return !this._selecting && !this._selectingPiles && !awaitingServerLockReleaseStore.get();
@@ -95,6 +104,16 @@ export class MatchScene {
       }
     }));
 
+    // End-turn reminder: re-evaluate on any state that can change the
+    // "no plays left" verdict. serverSelectableCardsStore recomputes on every
+    // matchStore patch, so this stays live even when batched patches leave
+    // turnPhaseStore's value unchanged.
+    this._cleanup.push(serverSelectableCardsStore.subscribe(() => this.updateEndTurnReminder()));
+    this._cleanup.push(turnPhaseStore.subscribe(() => this.updateEndTurnReminder()));
+    this._cleanup.push(promptInteractionLockStore.subscribe(() => this.updateEndTurnReminder()));
+    this._cleanup.push(awaitingServerLockReleaseStore.subscribe(() => this.updateEndTurnReminder()));
+    this._cleanup.push(() => this.clearEndTurnReminder());
+
     setTimeout(() => {
       this._socketService.emit('clientReady', this._selfId, true);
     });
@@ -119,6 +138,60 @@ export class MatchScene {
     this._lastPlayedTurnNumber = turnNumber;
     if (currentPlayerTurnIdStore.get() !== this._selfId) return;
     await this._soundService.play('./assets/sounds/your-turn.mp3', 0.3);
+  }
+
+  /**
+   * Arms or disarms the end-turn reminder. Re-derives all state from the
+   * stores at call time (batched patches can compress several turns into one
+   * notification). While the player is in their buy phase with no plays left,
+   * a reminder sound plays on the server-ping cadence; any state change that
+   * invalidates the verdict cancels the timer and resets the cadence.
+   */
+  private updateEndTurnReminder(): void {
+    const selfId = this._selfId;
+    const armed = shouldRemindEndTurn({
+      isSelfTurn: currentPlayerTurnIdStore.get() === selfId,
+      turnPhase: turnPhaseStore.get(),
+      promptLocked: promptInteractionLockStore.get(),
+      awaitingServerLock: awaitingServerLockReleaseStore.get(),
+      selectableIds: serverSelectableCardsStore.get(),
+      selfHandCardIds: new Set(cardSourceStore.get()?.[`playerHand:${selfId}`] ?? []),
+      cardsById: cardStore.get() ?? {},
+    });
+
+    if (!armed) {
+      this.clearEndTurnReminder();
+      return;
+    }
+    if (this._endTurnReminderTimeout !== null) {
+      return; // already ticking — don't reset the cadence
+    }
+    this.scheduleEndTurnReminder();
+  }
+
+  /**
+   * Schedules the next reminder tick. Cadence mirrors the server prompt ping:
+   * first tick after 30s, each subsequent delay 10s shorter, floored at 10s.
+   * Volume ramps exactly like onPing (0.3 + 0.12 per tick, capped at 1).
+   */
+  private scheduleEndTurnReminder(): void {
+    this._endTurnReminderTimeout = setTimeout(async () => {
+      this._endTurnReminderCount++;
+      const volume = Math.min(0.3 + 0.12 * this._endTurnReminderCount, 1);
+      await this._soundService.play('./assets/sounds/your-turn.mp3', volume);
+      this._endTurnReminderDelayMs = Math.max(this._endTurnReminderDelayMs - 10000, 10000);
+      this.scheduleEndTurnReminder();
+    }, this._endTurnReminderDelayMs);
+  }
+
+  /** Cancels any pending reminder tick and resets the cadence and volume ramp. */
+  private clearEndTurnReminder(): void {
+    if (this._endTurnReminderTimeout !== null) {
+      clearTimeout(this._endTurnReminderTimeout);
+      this._endTurnReminderTimeout = null;
+    }
+    this._endTurnReminderCount = 0;
+    this._endTurnReminderDelayMs = 30000;
   }
 
   // Triggers the "next phase" action using the shared server-lock behavior.
@@ -176,7 +249,18 @@ export class MatchScene {
     if (currentPlayerTurnIdStore.get() !== this._selfId) {
       await this._soundService.play('./assets/sounds/your-turn.mp3', 0.3);
     }
-    if (waitForInput && args.content?.type === 'select-pile') {
+
+    if (!waitForInput) {
+      // Display-only prompt (boon/hex reveal, card showcase): routed to the
+      // coordinator's parallel display slot — no interaction lock, no
+      // reply. The floating promise resolves when the player closes the
+      // dialog (or a newer display prompt replaces it); no response is ever
+      // emitted for display prompts.
+      void this.openPromptUi(args).catch(() => undefined);
+      return;
+    }
+
+    if (args.content?.type === 'select-pile') {
       await this.doSelectPiles(signalId, args);
       return;
     }
@@ -186,9 +270,7 @@ export class MatchScene {
     promptInteractionLockStore.set(true);
     try {
       const result = await this.openPromptUi(args);
-      if (waitForInput) {
-        this._socketService.emit('userInputReceived', signalId, result);
-      }
+      this._socketService.emit('userInputReceived', signalId, result);
     } finally {
       this._selecting = false;
       promptInteractionLockStore.set(false);
@@ -366,6 +448,7 @@ export class MatchScene {
         submitEnabled: false,
         singleSelection: false,
         selectionKind: 'pile',
+        maxSelectable: 1,
       });
       boardSelectionOverlayActionStore.set(null);
       selectedCardStore.set([]);
@@ -417,6 +500,8 @@ export class MatchScene {
       submitEnabled: false,
       singleSelection: isSingleSelection,
       selectionKind: 'card',
+      // Hard cap from the count spec — board clicks beyond it are ignored.
+      maxSelectable: resolveMaxSelectable(selectCount),
     });
     boardSelectionOverlayActionStore.set(null);
 
@@ -478,6 +563,7 @@ export class MatchScene {
         submitEnabled: false,
         singleSelection: false,
         selectionKind: 'pile',
+        maxSelectable: 1,
       });
       boardSelectionOverlayActionStore.set(null);
       selectedPileStore.set([]);
@@ -519,6 +605,8 @@ export class MatchScene {
       submitEnabled: false,
       singleSelection: isSingleSelection,
       selectionKind: 'pile',
+      // Hard cap from the count spec — board clicks beyond it are ignored.
+      maxSelectable: resolveMaxSelectable(selectCount),
     });
     boardSelectionOverlayActionStore.set(null);
 

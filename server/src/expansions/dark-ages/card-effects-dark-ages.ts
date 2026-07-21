@@ -29,7 +29,7 @@ const resolveKnightAttack = async (
 
     const trashCandidates = revealed.filter(card => {
       const { cost } = cardEffectArgs.cardPriceController.applyRules(card, { playerId: targetPlayerId });
-      return cost.treasure >= 3 && cost.treasure <= 6;
+      return cost.treasure >= 3 && cost.treasure <= 6 && !cost.potion && !cost.debt;
     });
 
     let cardToTrash: Card | undefined;
@@ -477,6 +477,8 @@ const cardEffects: CardExpansionModule = {
             from: 'basicSupply',
             to: { location: 'playerDiscard' },
             logTag: 'count effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: cardEffectArgs.cardId,
           });
           if (!gainedCopperId) {
             loggerService.debug(`[count effect] no coppers in supply`);
@@ -522,6 +524,8 @@ const cardEffects: CardExpansionModule = {
             from: 'basicSupply',
             to: { location: 'playerDiscard' },
             logTag: 'count effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: cardEffectArgs.cardId,
           });
           if (!gainedDuchyId) {
             loggerService.debug(`[count effect] no duchies in supply`);
@@ -574,6 +578,7 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.actionService.run('trashCard', {
         playerId: cardEffectArgs.playerId,
         cardId: selectedCard.id,
+        expectedFrom: { location: 'playArea', playerId: cardEffectArgs.playerId },
       });
     },
   },
@@ -601,6 +606,8 @@ const cardEffects: CardExpansionModule = {
           from: 'kingdomSupply',
           to: { location: 'playerDiscard' },
           logTag: 'cultist effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: cardEffectArgs.cardId,
         });
 
         if (!gainedRuinsId) {
@@ -834,18 +841,17 @@ const cardEffects: CardExpansionModule = {
       });
 
       if (!selectedCardId) {
-        loggerService.debug(`[forager effect] no card selected`);
-        return;
+        loggerService.debug(`[forager effect] no card selected, skipping trash`);
+      } else {
+        const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
+
+        loggerService.debug(`[forager effect] trashing card ${selectedCard}`);
+
+        await cardEffectArgs.actionService.run('trashCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedCard.id,
+        });
       }
-
-      const selectedCard = cardEffectArgs.cardLibrary.getCard(selectedCardId);
-
-      loggerService.debug(`[forager effect] trashing card ${selectedCard}`);
-
-      await cardEffectArgs.actionService.run('trashCard', {
-        playerId: cardEffectArgs.playerId,
-        cardId: selectedCard.id,
-      });
 
       const trash = cardEffectArgs.cardSourceController.getSource('trash');
       const uniqueTreasuresInTrash = new Set(
@@ -868,10 +874,16 @@ const cardEffects: CardExpansionModule = {
         const loggerService = args.loggerService;
         loggerService.debug(`[fortress onTrashed effect] putting fortress back in hand`);
 
+        // Lose Track guard: cardTrashed reactions run before onTrashed, so a
+        // reaction may have already moved Fortress out of the trash. No
+        // playerId (shared zone) and no requireTop (covering does not apply
+        // to the trash).
         await args.actionService.run('moveCard', {
           cardId: eventArgs.cardId,
           toPlayerId: eventArgs.playerId,
           to: { location: 'playerHand' },
+          updateOwner: true,
+          expectedFrom: { location: 'trash' },
         });
       },
     }),
@@ -897,7 +909,7 @@ const cardEffects: CardExpansionModule = {
       if (result.action === 1) {
         const trashCards = cardEffectArgs.findCardService.findCards({ all: [{ location: 'trash' }] }).filter(card => {
           const cost = cardEffectArgs.cardPriceController.applyRules(card, { playerId: cardEffectArgs.playerId });
-          return cost.cost.treasure >= 3 && cost.cost.treasure <= 6;
+          return cost.cost.treasure >= 3 && cost.cost.treasure <= 6 && !cost.cost.potion && !cost.cost.debt;
         });
 
         if (!trashCards.length) {
@@ -1112,14 +1124,20 @@ const cardEffects: CardExpansionModule = {
 
           const turnHistoryIndex = conditionArgs.match.stats.turns.length - 1;
           const turnStatsIndex = turnHistoryIndex;
-          const cardIdsGained = conditionArgs.match.stats.cardsGainedByTurn[turnStatsIndex] ?? [];
 
-          const cardIdsGainedDuringBuyPhase = cardIdsGained.filter(cardId => {
-            const stats = conditionArgs.match.stats.cardsGained[cardId];
-            return stats.playerId === cardEffectArgs.playerId && stats.turnPhase === 'buy';
+          // The exchange is blocked only by an actual purchase this turn —
+          // gaining a card any other way (e.g. another card's on-play gain
+          // effect firing during the Buy phase) does not stop it. See the
+          // ruling at wiki.dominionstrategy.com/index.php/Hermit: "It does
+          // not matter whether or not you gained cards other ways, only
+          // whether or not you bought a card."
+          const cardIdsBought = conditionArgs.match.stats.cardsBoughtByTurn[turnStatsIndex] ?? [];
+          const boughtByThisPlayer = cardIdsBought.some(cardId => {
+            const stats = conditionArgs.match.stats.cardsBought[cardId];
+            return stats.playerId === cardEffectArgs.playerId;
           });
 
-          if (cardIdsGainedDuringBuyPhase.length > 0) return false;
+          if (boughtByThisPlayer) return false;
 
           return true;
         },
@@ -1137,10 +1155,23 @@ const cardEffects: CardExpansionModule = {
 
           loggerService.debug(`[hermit endTurnPhase effect] moving ${hermitCard} to supply`);
 
-          await cardEffectArgs.actionService.run('moveCard', {
+          // Lose Track guard: this is an exchange (return Hermit, gain
+          // Madman) triggered at end of Buy phase, not tied to Hermit's own
+          // play resolution — something else may have moved Hermit out of
+          // play in the meantime (e.g. Procession trashing it). If Hermit is
+          // no longer in play, the exchange does not happen at all: no
+          // return, no Madman.
+          const returned = await cardEffectArgs.actionService.run('moveCard', {
             cardId: hermitCard.id,
             to: { location: 'kingdomSupply' },
+            expectedFrom: { location: 'playArea' },
           });
+
+          if (!returned) {
+            loggerService.debug(`[hermit endTurnPhase effect] lost track of Hermit (not in play); no Madman`);
+            return;
+          }
+
           const card = madmanCards.slice(-1)[0];
 
           loggerService.debug(`[hermit endTurnPhase effect] gaining ${card}`);
@@ -1150,6 +1181,24 @@ const cardEffects: CardExpansionModule = {
             cardId: card.id,
             to: { location: 'playerDiscard' },
           });
+        },
+      });
+
+      // "This turn" scoping: if the buy-phase-end condition never fires (the
+      // player gained something in Buy phase), the once:true trigger above
+      // would otherwise stay registered forever and could fire on a future
+      // turn's empty Buy phase. Force it gone at the true end of this turn
+      // regardless of whether it already fired (a harmless no-op unregister
+      // if it did).
+      cardEffectArgs.reactionManager.registerReactionTemplate({
+        id: `hermit:${cardEffectArgs.cardId}:endTurn`,
+        listeningFor: 'endTurn',
+        playerId: cardEffectArgs.playerId,
+        once: true,
+        allowMultipleInstances: true,
+        condition: () => true,
+        triggeredEffectFn: async triggeredArgs => {
+          triggeredArgs.reactionManager.unregisterTrigger(`hermit:${cardEffectArgs.cardId}:endTurnPhase`);
         },
       });
     },
@@ -1218,6 +1267,8 @@ const cardEffects: CardExpansionModule = {
             from: 'basicSupply',
             to: { location: 'playerDiscard' },
             logTag: 'hunting-grounds onTrashed effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: eventArgs.cardId,
           });
         }
       },
@@ -1327,9 +1378,16 @@ const cardEffects: CardExpansionModule = {
 
       loggerService.debug(`[madman effect] moving ${thisCard} back to non supply`);
 
+      // Lose Track guard: without expectedFrom, moveCard returns truthy
+      // whenever the card is found in ANY zone, making the `if (result)`
+      // draw gate below inert — a Throne-Room'd Madman would "return" from
+      // nonSupplyCards on its second resolution and draw again. Requiring
+      // playArea activates the guard: the second resolution finds Madman
+      // already moved and skips the draw.
       const result = await cardEffectArgs.actionService.run('moveCard', {
         cardId: thisCard.id,
         to: { location: 'nonSupplyCards' },
+        expectedFrom: { location: 'playArea' },
       });
 
       if (result) {
@@ -1385,6 +1443,8 @@ const cardEffects: CardExpansionModule = {
           from: 'kingdomSupply',
           to: { location: 'playerDiscard' },
           logTag: 'marauder effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: cardEffectArgs.cardId,
         });
       }
     },
@@ -1405,10 +1465,7 @@ const cardEffects: CardExpansionModule = {
           allowMultipleInstances: true,
           condition: conditionArgs => {
             const trashedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
-            if (trashedCard.owner !== eventArgs.playerId) return false;
-            if (conditionArgs.trigger.args.previousLocation.location !== 'playerHand') return false;
-            if (conditionArgs.trigger.args.previousLocation.playerId !== eventArgs.playerId) return false;
-            return true;
+            return trashedCard.owner === eventArgs.playerId;
           },
           triggeredEffectFn: async triggeredArgs => {
             const marketSquareCard = triggeredArgs.cardLibrary.getCard(eventArgs.cardId);
@@ -1426,6 +1483,8 @@ const cardEffects: CardExpansionModule = {
               from: 'basicSupply',
               to: { location: 'playerDiscard' },
               logTag: 'market-square cardTrashed effect',
+              // supplyGainService's own actionService bypasses the effect's auto-injected source.
+              source: eventArgs.cardId,
             });
 
             if (!gainedGoldId) {
@@ -1452,10 +1511,11 @@ const cardEffects: CardExpansionModule = {
         playerId: cardEffectArgs.playerId,
         prompt: `Trash cards?`,
         restrict: hand,
-        count: {
-          kind: 'upTo',
-          count: Math.min(2, hand.length),
-        },
+        // "Trash 2 cards" is an atomic choice, not "up to 2" — with 2+ cards
+        // in hand the player must decline or trash exactly 2; only with
+        // exactly 1 card in hand is the smaller "trash the 1 available card"
+        // choice legal.
+        count: hand.length >= 2 ? { kind: 'exact', count: 2 } : { kind: 'upTo', count: 1 },
         optional: true,
       });
 
@@ -1580,10 +1640,16 @@ const cardEffects: CardExpansionModule = {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.debug(`[pillage effect] trashing pillage`);
 
-      await cardEffectArgs.actionService.run('trashCard', {
+      const trashed = await cardEffectArgs.actionService.run('trashCard', {
         playerId: cardEffectArgs.playerId,
         cardId: cardEffectArgs.cardId,
+        expectedFrom: { location: 'playArea', playerId: cardEffectArgs.playerId },
       });
+
+      if (!trashed) {
+        loggerService.debug(`[pillage effect] trash failed (lose track), skipping Spoils gain and attack`);
+        return;
+      }
 
       const spoilsCards = cardEffectArgs.findCardService.findCards({
         all: [{ location: 'nonSupplyCards' }, { kingdom: 'spoils' }],
@@ -1670,8 +1736,14 @@ const cardEffects: CardExpansionModule = {
         .map(cardEffectArgs.cardLibrary.getCard)
         .filter(card => card.type.includes('TREASURE'));
 
-      loggerService.debug(`[poor-house effect] losing ${treasureCardsInHand.length} treasure`);
-      await cardEffectArgs.actionService.run('gainTreasure', { count: -treasureCardsInHand.length });
+      // "-$1 per Treasure card in your hand. (You can't go below $0.)" —
+      // an adjustment, not a pay: set the pool to the floored target so the
+      // clamp lives here, where the rules text says it.
+      const target = Math.max(0, cardEffectArgs.match.playerTreasure - treasureCardsInHand.length);
+      loggerService.debug(
+        `[poor-house effect] ${treasureCardsInHand.length} treasure(s) in hand; setting treasure to ${target}`,
+      );
+      await cardEffectArgs.actionService.run('setTreasure', { count: target });
     },
   },
   procession: {
@@ -1715,6 +1787,7 @@ const cardEffects: CardExpansionModule = {
       await cardEffectArgs.actionService.run('trashCard', {
         playerId: cardEffectArgs.playerId,
         cardId: selectedCard.id,
+        expectedFrom: { location: 'playArea', playerId: cardEffectArgs.playerId },
       });
 
       const { cost } = cardEffectArgs.cardPriceController.applyRules(selectedCard, {
@@ -1724,6 +1797,7 @@ const cardEffects: CardExpansionModule = {
       const cards = cardEffectArgs.findCardService.findCards({
         all: [
           { location: 'kingdomSupply' },
+          { cardType: 'ACTION' },
           {
             kind: 'exact',
             playerId: cardEffectArgs.playerId,
@@ -1760,7 +1834,7 @@ const cardEffects: CardExpansionModule = {
       onTrashed: async (args, eventArgs) => {
         const loggerService = args.loggerService;
         const trashedCard = args.cardLibrary.getCard(eventArgs.cardId);
-        if (args.match.stats.trashedCards[eventArgs.cardId].playerId !== trashedCard.owner) {
+        if (eventArgs.playerId !== trashedCard.owner) {
           return;
         }
 
@@ -1782,11 +1856,12 @@ const cardEffects: CardExpansionModule = {
         from: 'kingdomSupply',
         to: { location: 'playerDiscard' },
         logTag: 'rats effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: cardEffectArgs.cardId,
       });
 
       if (!gainedRatId) {
-        loggerService.debug(`[rats effect] no rats in supply to gain`);
-        return;
+        loggerService.debug(`[rats effect] no rats in supply to gain, still trashing a card from hand`);
       }
 
       const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
@@ -2164,6 +2239,8 @@ const cardEffects: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'sir-vander onTrashed effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: eventArgs.cardId,
         });
 
         if (!gainedGoldId) {
@@ -2187,7 +2264,7 @@ const cardEffects: CardExpansionModule = {
         }
 
         const attackCards = args.findCardService.findCards({
-          all: [{ location: 'kingdomSupply' }, { cardType: 'ACTION' }],
+          all: [{ location: 'kingdomSupply' }, { cardType: 'ATTACK' }],
         });
 
         if (!attackCards.length) {
@@ -2248,6 +2325,8 @@ const cardEffects: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'squire effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: cardEffectArgs.cardId,
         });
 
         if (!gainedSilverId) {
@@ -2512,7 +2591,7 @@ const cardEffects: CardExpansionModule = {
     registerEffects: () => async cardEffectArgs => {
       const loggerService = cardEffectArgs.loggerService;
       loggerService.debug(`[ruined village effect] gaining 1 action`);
-      await cardEffectArgs.actionService.run('gainAction', { count: cardEffectArgs.playerId });
+      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
     },
   },
   spoils: {
@@ -2542,6 +2621,10 @@ const cardEffects: CardExpansionModule = {
       }
 
       const numToLookAt = Math.min(2, deck.length);
+      // Snapshot the looked-at card IDs once: `deck` mutates as we
+      // discard/move cards below, so re-slicing it inside the loop would
+      // pick up the wrong cards (mirrors the Catacombs implementation).
+      const cardsToLookAt = deck.slice(-numToLookAt);
 
       const result = (await cardEffectArgs.actionService.run('userPrompt', {
         prompt: 'Discard or put back on deck?',
@@ -2552,22 +2635,22 @@ const cardEffects: CardExpansionModule = {
         ],
         content: {
           type: 'display-cards',
-          cardIds: deck.slice(-numToLookAt),
+          cardIds: cardsToLookAt,
         },
       })) as { action: number; result: number[] };
 
       if (result.action === 1) {
-        loggerService.debug(`[survivors effect] discarding ${numToLookAt} cards`);
-        for (let i = 0; i < numToLookAt; i++) {
+        loggerService.debug(`[survivors effect] discarding ${cardsToLookAt.length} cards`);
+        for (const cardId of cardsToLookAt) {
           await cardEffectArgs.actionService.run('discardCard', {
-            cardId: deck.slice(-i - 1)[0],
+            cardId,
             playerId: cardEffectArgs.playerId,
           });
         }
       } else {
-        loggerService.debug(`[survivors effect] putting back ${numToLookAt} cards`);
+        loggerService.debug(`[survivors effect] putting back ${cardsToLookAt.length} cards`);
 
-        if (numToLookAt > 1) {
+        if (cardsToLookAt.length > 1) {
           loggerService.debug(`[survivors effect] rearranging cards`);
 
           const result = (await cardEffectArgs.actionService.run('userPrompt', {
@@ -2575,7 +2658,7 @@ const cardEffects: CardExpansionModule = {
             playerId: cardEffectArgs.playerId,
             content: {
               type: 'rearrange',
-              cardIds: deck.slice(-numToLookAt),
+              cardIds: cardsToLookAt,
             },
           })) as { action: number; result: number[] };
 

@@ -133,7 +133,13 @@ export type MatchStats = {
   /**
    * Keys are the card's ID that was played, and values are CardStats objects.
    */
-  playedCards: Record<CardId, CardStats>;
+  playedCards: Record<CardId, CardStats & {
+    // Where the card was played from, captured immediately before playCard
+    // moves it to playArea. Undefined if the prior source couldn't be
+    // resolved (defensive; should not happen in normal play).
+    sourceLocation?: CardLocation;
+    sourcePlayerId?: PlayerId;
+  }>;
   playedCardsByTurn: Record<number, CardId[] | undefined>;
 
   trashedCards: Record<CardId, CardStats>;
@@ -208,6 +214,12 @@ export interface Match {
   debt: Record<PlayerId, number>;
   // Tracks pending skipped turns by player (used by effects like Lich).
   skippedTurns: Record<PlayerId, number>;
+  // Per-player-per-turn flag for Empires' Fortune ("double your $ if you
+  // haven't yet this turn") — shared across all 5 Fortune copies, since
+  // per-card metadata can't track state that must be visible to other
+  // instances of the same pile. Reset to false by Fortune's own endTurn
+  // reaction.
+  fortuneDoubledThisTurn: Record<PlayerId, boolean>;
   config: ComputedMatchConfiguration,
   currentPlayerTurnIndex: number;
   events: Event[];
@@ -287,7 +299,10 @@ export type CardOverrides = Record<PlayerId, Record<CardId, Partial<Card>>>;
 
  ******************/
 
-export type LogEntrySource = CardId;
+// A log entry's cause: a match card instance, or a card-like (boon, hex,
+// event, project, ...) tagged so the client resolves it in the right
+// namespace — card-like ids never exist in the card library.
+export type LogEntrySource = CardId | { kind: 'cardLike'; id: CardLikeId };
 
 export type LogEntry =
   | { type: 'draw'; playerId: PlayerId; cardId: CardId; depth?: number; source?: LogEntrySource }
@@ -302,12 +317,17 @@ export type LogEntry =
   | { type: 'gainVictoryToken'; count: number; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   // Logs a card-like effect (boon/hex/state/artifact/event/landmark).
   | { type: 'cardLikeEffect'; playerId: PlayerId; cardLikeId: CardLikeId; effectText: string; depth?: number; source?: LogEntrySource }
+  // Logs a real-card effect that has no dedicated action/log entry (e.g. a state change with no
+  // card-agnostic loggable equivalent). Mirrors cardLikeEffect but for a Card rather than a card-like.
+  | { type: 'cardEffect'; playerId: PlayerId; cardId: CardId; effectText: string; depth?: number; source?: LogEntrySource }
   | { type: 'tokenEffect'; playerId: PlayerId; cardId: CardId; tokenId: TokenId; effectText: string; depth?: number; source?: LogEntrySource }
   // Token placement and consumption logs.
   | { type: 'tokenPlaced'; playerId: PlayerId; tokenId: TokenId; depth?: number; source?: LogEntrySource }
   | { type: 'tokenConsumed'; playerId: PlayerId; tokenId: TokenId; depth?: number; source?: LogEntrySource }
   // Logs when a player buys a Project.
   | { type: 'buyProject'; playerId: PlayerId; cardLikeId: CardLikeId; depth?: number; source?: LogEntrySource }
+  // Logs when a player receives a boon/hex (or other card-like) from a landscape deck.
+  | { type: 'receiveCardLike'; playerId: PlayerId; cardLikeId: CardLikeId; depth?: number; source?: LogEntrySource }
   | { type: 'gainCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'cardPlayed'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
   | { type: 'revealCard'; cardId: CardId; playerId: PlayerId; depth?: number; source?: LogEntrySource }
@@ -491,6 +511,9 @@ export type SelectableSearchCatalog = {
   prophecies: ProphecyNoId[];
 };
 
+// Discriminates which SelectableSearchCatalog bucket a search request targets.
+export type SearchCatalogKind = keyof SelectableSearchCatalog;
+
 // Represents one persisted match-configuration save file visible to clients.
 export type SavedMatchConfigurationEntry = {
   key: string;
@@ -526,6 +549,22 @@ export type MatchConfigurationDeleteResult = {
   ok: boolean;
   key: string;
   message?: string;
+};
+
+// One target's removal-vote tally, broadcast whenever vote state changes.
+export type RemovalVoteStateEntry = {
+  targetPlayerId: PlayerId;
+  // Players who currently have an active vote to remove the target.
+  voterIds: PlayerId[];
+};
+
+// Announces that a player permanently left an active match (voted out or
+// resigned). Carries the name because setPlayerList broadcasts erase the
+// player from client state before this can be resolved locally.
+export type PlayerRemovedFromMatchPayload = {
+  playerId: PlayerId;
+  playerName: string;
+  reason: 'voted' | 'resigned';
 };
 
 export type ServerEmitEvents = {
@@ -566,6 +605,12 @@ export type ServerEmitEvents = {
   playAllTreasureComplete: () => void;
   playerConnected: (player: Player) => void;
   playerDisconnected: (player: Player) => void;
+  // Full removal-vote snapshot; sent to the room on every vote change and
+  // to a reconnecting socket so Kick/Undo-kick state survives reloads.
+  removalVoteState: (entries: RemovalVoteStateEntry[]) => void;
+  // A player was permanently removed from the active match (voted out or
+  // resigned); clients show them as "(removed)" in the disconnect dialog.
+  playerRemovedFromMatch: (payload: PlayerRemovedFromMatchPayload) => void;
   playerNameUpdated: (playerId: PlayerId, name: string) => void;
   playerReady: (playerId: PlayerId, ready: boolean) => void;
   // Full game-lobby snapshot sent on connect and on explicit request.
@@ -615,6 +660,12 @@ export type ServerEmitEvents = {
   searchProjectResponse: (projectData: ProjectNoId[]) => void;
   // Sends way search results to the client.
   searchWayResponse: (wayData: WayNoId[]) => void;
+  // Sends trait search results to the client.
+  searchTraitResponse: (traitData: TraitNoId[]) => void;
+  // Sends ally search results to the client.
+  searchAllyResponse: (allyData: AllyNoId[]) => void;
+  // Sends prophecy search results to the client.
+  searchProphecyResponse: (prophecyData: ProphecyNoId[]) => void;
   selectCard: (signalId: string, selectCardArgs: SelectActionCardArgs & { selectableCardIds: CardId[] }) => void;
   setPlayerList: (players: Player[]) => void;
   // Sends the full ordered log history for clients to replace their local
@@ -691,6 +742,8 @@ export interface ServerListenEvents {
   editMatch: () => void;
   // Vote to remove a disconnected human player and resume the match.
   removeDisconnectedPlayer: (playerId: PlayerId) => void;
+  // Retracts this player's earlier vote to remove a disconnected player.
+  retractRemoveDisconnectedPlayer: (playerId: PlayerId) => void;
   // Originator clicks the undo button; server starts a vote round.
   undoRequested: () => void;
   // Originator clicks Cancel on their waiting dialog.
@@ -720,6 +773,12 @@ export interface ServerListenEvents {
   searchProjects: (playerId: PlayerId, searchStr: string) => void;
   // Requests way search results from the server.
   searchWays: (playerId: PlayerId, searchStr: string) => void;
+  // Requests trait search results from the server.
+  searchTraits: (playerId: PlayerId, searchStr: string) => void;
+  // Requests ally search results from the server.
+  searchAllies: (playerId: PlayerId, searchStr: string) => void;
+  // Requests prophecy search results from the server.
+  searchProphecies: (playerId: PlayerId, searchStr: string) => void;
   updatePlayerName: (playerId: PlayerId, name: string) => void;
   userInputReceived: (signalId: string, input: unknown) => void;
 }

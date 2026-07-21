@@ -2,100 +2,124 @@
   "alms": {
     "cost": {
       "treasure": 0
-    }
+    },
+    "abilityText": "Once per turn: If you have no Treasures in play, gain a card costing up to $4$4."
   },
   "ball": {
     "cost": {
       "treasure": 5
-    }
+    },
+    "abilityText": "Take your –$1 token. Gain 2 cards each costing up to $4."
   },
   "bonfire": {
     "cost": {
       "treasure": 3
-    }
+    },
+    "abilityText": "Trash up to 2 Coppers you have in play."
+  },
+  "borrow": {
+    "cost": {
+      "treasure": 0
+    },
+    "abilityText": "Once per turn: +1 Buy. If your –1 Card token isn't on your deck, put it there and +$1."
   },
   "expedition": {
     "cost": {
       "treasure": 3
-    }
+    },
+    "abilityText": "Draw 2 extra cards for your next hand."
   },
   "plan": {
     "cost": {
       "treasure": 3
-    }
+    },
+    "abilityText": "Move your Trashing token to an Action Supply pile. (When you gain a card from that pile, you may trash a card from your hand.)"
   },
   "ferry": {
     "cost": {
       "treasure": 3
-    }
+    },
+    "abilityText": "Move your –$2 cost token to an Action Supply pile. (Cards from that pile cost $2 less on your turns.)"
   },
   "inheritance": {
     "cost": {
       "treasure": 7
-    }
+    },
+    "abilityText": "Once per game: Set aside a non-Command non-Duration Action card from the Supply costing up to $4. Move your Estate token to it. (During your turns, Estates are also Command Actions with \"Play the card with your Estate token, leaving it there.\")"
   },
   "pilgrimage": {
     "cost": {
       "treasure": 4
-    }
+    },
+    "abilityText": "Once per turn: Turn your Journey token over (it starts face up); then if it's face up, choose up to 3 differently named cards you have in play and gain a copy of each."
   },
   "lost-arts": {
     "cardName": "Lost Arts",
     "cost": {
       "treasure": 6
-    }
+    },
+    "abilityText": "Move your +1 Action token to an Action Supply pile. (When you play a card from that pile, you first get +1 Action.)"
   },
   "mission": {
     "cost": {
       "treasure": 4
     },
-    "abilityText": "Take an extra turn after this one, in which you can't buy cards."
+    "abilityText": "Take an extra turn after this one (but not a 3rd turn in a row), during which you can't buy cards.\n(You can still buy Events.)"
   },
   "pathfinding": {
     "cost": {
       "treasure": 8
-    }
+    },
+    "abilityText": "Move your +1 Card token to an Action Supply pile. (When you play a card from that pile, you first get +1 Card.)"
   },
   "quest": {
     "cost": {
       "treasure": 0
-    }
+    },
+    "abilityText": "You may discard an Attack, two Curses, or six cards. If you do, gain a Gold."
   },
   "raid": {
     "cost": {
       "treasure": 5
-    }
+    },
+    "abilityText": "Gain a Silver per Silver you have in play. Each other player puts their –1 Card token on their deck."
   },
   "save": {
     "cost": {
       "treasure": 1
-    }
+    },
+    "abilityText": "Once per turn: +1 Buy. Set aside a card from your hand, and put it into your hand at end of turn (after drawing)."
   },
   "scouting-party": {
     "cardName": "Scouting Party",
     "cost": {
       "treasure": 2
-    }
+    },
+    "abilityText": "+1 Buy\nLook at the top 5 cards of your deck. Discard 3 and put the rest back in any order."
   },
   "seaway": {
     "cost": {
       "treasure": 5
-    }
+    },
+    "abilityText": "Gain an Action card costing up to $4. Move your +1 Buy token to its pile. (When you play a card from that pile, you first get +1 Buy.)"
   },
   "trade": {
     "cost": {
       "treasure": 5
-    }
+    },
+    "abilityText": "Trash up to 2 cards from your hand. Gain a Silver per card you trashed."
   },
   "training": {
     "cost": {
       "treasure": 6
-    }
+    },
+    "abilityText": "Move your +$1 token to an Action Supply pile. (When you play a card from that pile, you first get +$1.)"
   },
   "travelling-fair": {
     "cardName": "Travelling Fair",
     "cost": {
       "treasure": 2
-    }
+    },
+    "abilityText": "+2 Buys\nWhen you gain a card this turn, you may put it onto your deck."
   }
 }

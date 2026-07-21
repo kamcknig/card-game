@@ -49,6 +49,12 @@ export class DevBypassUserStore implements UserStore {
   /**
    * Returns the real record when present, otherwise a synthesized dev admin.
    *
+   * Email-shaped identifiers (sign-in-by-email sends the typed email through
+   * the username field) are resolved against the real store's email index
+   * before synthesizing, so a dev-bypass login with a registered email
+   * surfaces that account's canonical username/email instead of minting a
+   * fake identity named after the email address.
+   *
    * The synthetic identity carries a non-null email (so the lobby email gate
    * and the `needsEmail` flag pass), `isAdmin: true` (so the debug overlay and
    * admin-only endpoints are reachable in dev), and a null `supabaseAuthId`
@@ -58,6 +64,18 @@ export class DevBypassUserStore implements UserStore {
     const real = await this.inner.getByUsername(username);
     if (real) {
       return real;
+    }
+
+    // Sign-in-by-email routes the typed email through the username field;
+    // resolve it to the real account before falling back to synthesis.
+    if (username.includes('@')) {
+      const byEmail = await this.inner.getByEmail(username);
+      if (byEmail) {
+        this.loggerService.debug(
+          `[auth:dev-bypass] '${username}' resolved by email to account '${byEmail.username}'`,
+        );
+        return byEmail;
+      }
     }
 
     // No backing record — synthesize a throwaway admin identity for dev.
@@ -153,8 +171,13 @@ export class DevBypassUserStore implements UserStore {
    *
    * The email is derived deterministically from the username so the same dev
    * login always resolves to the same display values across page refreshes.
+   * Email-shaped identifiers (an unregistered email typed into the sign-in
+   * field) are reduced to their local part first so the synthetic email stays
+   * well-formed (`foo@dev.local`, never `foo@bar.com@dev.local`) and the
+   * derived username round-trips through session validation consistently.
    */
-  private makeSyntheticUser(username: string): UserRecord {
+  private makeSyntheticUser(identifier: string): UserRecord {
+    const username = identifier.includes('@') ? identifier.split('@')[0] : identifier;
     return {
       id: DEV_BYPASS_SYNTHETIC_USER_ID,
       username,

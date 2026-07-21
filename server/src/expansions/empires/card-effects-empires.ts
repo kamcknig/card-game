@@ -1,17 +1,26 @@
-import { CardEffectFunctionContext, CardExpansionModule } from '@server-types/index.ts';
-import { CardId, CardKey, CardLocation, PlayerId } from 'shared/types/index.ts';
+import {
+  CardEffectFunctionContext,
+  CardExpansionModule,
+  TriggeredEffectConditionContext,
+  TriggeredEffectContext,
+} from '@server-types/index.ts';
+import { CardId, CardKey, CardLocation, CostSpec, PlayerId } from 'shared/types/index.ts';
 import { compareCardCosts } from '@shared/compare-card-cost.ts';
+import { validateCostSpec } from '@shared/validate-cost-spec.ts';
 import { findOrderedTargets } from '../../utils/find-ordered-targets.ts';
 import { discardDownTo } from '../../utils/discard-down-to.ts';
 import { getCurrentPlayer } from '../../utils/get-current-player.ts';
 import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getAttackTargets } from '../../utils/get-attack-targets.ts';
+import { getCurrentTurnHistoryIndex } from '../../utils/get-current-turn-history-index.ts';
 import { getPileDefinitionCard } from '../../utils/get-pile-definition-card.ts';
 import { resolveChooseAbilities } from '../../utils/resolve-choose-abilities.ts';
 import { prosperityTokenIds } from '../prosperity/token-prosperity-ids.ts';
-import { FortuneMetadata } from '../prosperity/types.ts';
 import { getPlayerStartingFrom } from '@shared/get-player-position-utils.ts';
 import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
+import { isLocationInPlay } from '../../utils/is-in-play.ts';
+import { registerStartTurnEffect } from '../../utils/register-start-turn-effect.ts';
+import { isCardStillAtGainedLocation } from '../../utils/is-card-still-at-gained-location.ts';
 
 type ArchiveEffectContext = Pick<CardEffectFunctionContext, 'actionService' | 'cardLibrary' | 'cardSourceController'>;
 
@@ -32,6 +41,7 @@ const gainTopSupplyCard = async (
     location: 'basicSupply' | 'kingdomSupply';
     to: { location: 'playerDiscard' | 'playerDeck' | 'playerHand' };
     logTag: string;
+    cardId: CardId;
   },
 ) => {
   await context.supplyGainService.gainTopSupplyCardForPileKey({
@@ -40,22 +50,26 @@ const gainTopSupplyCard = async (
     from: args.location,
     to: args.to,
     logTag: args.logTag,
+    // supplyGainService's own actionService bypasses the effect's auto-injected source.
+    source: args.cardId,
   });
 };
 
 // Gain the current top Castle card to the player's discard pile.
-const gainTopCastleCard = async (context: GainTopSupplyContext, playerId: PlayerId) => {
+const gainTopCastleCard = async (context: GainTopSupplyContext, playerId: PlayerId, cardId: CardId) => {
   await context.supplyGainService.gainTopSupplyCardForPileKey({
     playerId,
     pileKey: 'castles',
     from: 'kingdomSupply',
     to: { location: 'playerDiscard' },
     logTag: 'castle pile',
+    // supplyGainService's own actionService bypasses the effect's auto-injected source.
+    source: cardId,
   });
 };
 
 // Apply the shared Crumbling Castle bonus (+1 VP and gain a Silver).
-const resolveCrumblingCastleBonus = async (context: GainTopSupplyContext, playerId: PlayerId) => {
+const resolveCrumblingCastleBonus = async (context: GainTopSupplyContext, playerId: PlayerId, cardId: CardId) => {
   context.loggerService.debug(`[crumbling castle bonus] gaining 1 VP token`);
   await context.actionService.run('gainVictoryToken', {
     playerId,
@@ -67,13 +81,17 @@ const resolveCrumblingCastleBonus = async (context: GainTopSupplyContext, player
     location: 'basicSupply',
     to: { location: 'playerDiscard' },
     logTag: 'crumbling castle bonus',
+    cardId,
   });
 };
 
 // Resolve the Rocks on-gain/on-trash Silver bonus with buy-phase routing.
 const resolveRocksSilverGain = async (
-  context: Pick<CardEffectFunctionContext, 'match' | 'findCardService' | 'actionService' | 'loggerService'>,
-  args: { playerId: PlayerId; source: 'gained' | 'trashed' },
+  context: Pick<
+    CardEffectFunctionContext,
+    'match' | 'findCardService' | 'actionService' | 'loggerService' | 'supplyGainService'
+  >,
+  args: { playerId: PlayerId; source: 'gained' | 'trashed'; cardId: CardId },
 ) => {
   // Determine whether the gain happens during the player's buy phase.
   const currentPlayerId = getCurrentPlayer(context.match).id;
@@ -92,7 +110,43 @@ const resolveRocksSilverGain = async (
     location: 'basicSupply',
     to: toLocation,
     logTag: `rocks ${args.source}`,
+    cardId: args.cardId,
   });
+};
+
+// Counts Action cards played by a player in the current turn-history index.
+const getActionPlayCountForPlayerThisTurn = (args: {
+  match: {
+    stats: {
+      playedCardsByTurn: Record<number, CardId[] | undefined>;
+      playedCards: Record<number, { playerId: PlayerId }>;
+    };
+  };
+  cardLibrary: {
+    getCard: (cardId: CardId) => { type: string[] };
+  };
+  playerId: PlayerId;
+  turnHistoryIndex: number;
+}): number => {
+  const playedCardIdsThisTurn = args.match.stats.playedCardsByTurn[args.turnHistoryIndex] ?? [];
+  return playedCardIdsThisTurn
+    .filter(playedCardId => args.match.stats.playedCards[playedCardId]?.playerId === args.playerId)
+    .filter(playedCardId => args.cardLibrary.getCard(playedCardId).type.includes('ACTION')).length;
+};
+
+// Returns true when the given card is currently in a play zone (playArea/activeDuration).
+const isCardStillInPlay = (args: {
+  cardId: CardId;
+  cardSourceController: {
+    findCardSource: (cardId: CardId) => { sourceKey: CardLocation };
+  };
+}): boolean => {
+  try {
+    const sourceKey = args.cardSourceController.findCardSource(args.cardId).sourceKey;
+    return isLocationInPlay(sourceKey);
+  } catch {
+    return false;
+  }
 };
 
 const expansion: CardExpansionModule = {
@@ -264,84 +318,98 @@ const expansion: CardExpansionModule = {
       // Register a one-time reaction for the next gained card this turn.
       loggerService.info(`[charm effect] registering next-gain reaction for player ${args.playerId}`);
       const charmCard = args.cardLibrary.getCard(args.cardId);
-      const reactionId = `charm:${args.cardId}:cardGained`;
+      // Unique per play-instance so replaying the same Charm copy this turn
+      // (e.g. via Crown) doesn't collide on the same auto-generated id —
+      // colliding ids would let the first reaction to fire unregister both.
+      const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: args.match }) ?? 0;
+      const playIndexThisTurn = (args.match.stats.playedCardsByTurn[turnHistoryIndex] ?? []).filter(
+        playedCardId => playedCardId === args.cardId,
+      ).length;
 
-      args.reactionManager.registerReactionTemplate({
-        id: reactionId,
-        listeningFor: 'cardGained',
-        playerId: args.playerId,
-        once: true,
-        compulsory: false,
-        allowMultipleInstances: true,
-        condition: conditionArgs => {
-          // Only trigger off the current player's gains.
-          return conditionArgs.trigger.args.playerId === args.playerId;
-        },
-        triggeredEffectFn: async triggeredArgs => {
-          const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
-          // Apply price rules to the gained card to determine the comparison cost.
-          const { cost: gainedCost } = triggeredArgs.cardPriceController.applyRules(gainedCard, {
-            playerId: args.playerId,
-          });
-
-          loggerService.debug(`[charm cardGained] gained ${gainedCard}, matching cost ${JSON.stringify(gainedCost)}`);
-
-          // Find supply cards with the exact same cost but a different name.
-          const matchingCards = triggeredArgs.findCardService
-            .findCards({
-              all: [
-                { location: ['basicSupply', 'kingdomSupply'] },
-                { playerId: args.playerId, kind: 'exact', amount: gainedCost },
-              ],
-            })
-            .filter(card => card.cardKey !== gainedCard.cardKey);
-
-          if (!matchingCards.length) {
-            loggerService.debug(`[charm cardGained] no differently named cards with same cost`);
-            return;
-          }
-
-          loggerService.debug(`[charm cardGained] prompting to gain one of ${matchingCards.length} cards`);
-          const selectedIds = await triggeredArgs.actionService.run('selectCard', {
-            playerId: args.playerId,
-            prompt: 'Gain a differently named card with the same cost',
-            restrict: matchingCards.map(card => card.id),
-            count: 1,
-            optional: true,
-          });
-
-          if (!selectedIds.length) {
-            loggerService.debug(`[charm cardGained] player chose not to gain a card`);
-            return;
-          }
-
-          const selectedCard = triggeredArgs.cardLibrary.getCard(selectedIds[0]);
-          loggerService.debug(`[charm cardGained] gaining ${selectedCard} to discard`);
-          await triggeredArgs.actionService.run(
-            'gainCard',
-            {
+      const cardGainedReactionId = args.reactionManager.registerReactionTemplate(
+        charmCard,
+        'cardGained',
+        {
+          playerId: args.playerId,
+          once: true,
+          compulsory: false,
+          allowMultipleInstances: true,
+          condition: conditionArgs => {
+            // Only trigger off the current player's gains.
+            return conditionArgs.trigger.args.playerId === args.playerId;
+          },
+          triggeredEffectFn: async triggeredArgs => {
+            const gainedCard = triggeredArgs.cardLibrary.getCard(triggeredArgs.trigger.args.cardId);
+            // Apply price rules to the gained card to determine the comparison cost.
+            const { cost: gainedCost } = triggeredArgs.cardPriceController.applyRules(gainedCard, {
               playerId: args.playerId,
-              cardId: selectedCard.id,
-              to: { location: 'playerDiscard' },
-            },
-            { source: args.cardId },
-          );
+            });
+
+            loggerService.debug(`[charm cardGained] gained ${gainedCard}, matching cost ${JSON.stringify(gainedCost)}`);
+
+            // Find supply cards with the exact same cost but a different name.
+            const matchingCards = triggeredArgs.findCardService
+              .findCards({
+                all: [
+                  { location: ['basicSupply', 'kingdomSupply'] },
+                  { playerId: args.playerId, kind: 'exact', amount: gainedCost },
+                ],
+              })
+              .filter(card => card.cardKey !== gainedCard.cardKey);
+
+            if (!matchingCards.length) {
+              loggerService.debug(`[charm cardGained] no differently named cards with same cost`);
+              return;
+            }
+
+            loggerService.debug(`[charm cardGained] prompting to gain one of ${matchingCards.length} cards`);
+            const selectedIds = await triggeredArgs.actionService.run('selectCard', {
+              playerId: args.playerId,
+              prompt: 'Gain a differently named card with the same cost',
+              restrict: matchingCards.map(card => card.id),
+              count: 1,
+              optional: true,
+            });
+
+            if (!selectedIds.length) {
+              loggerService.debug(`[charm cardGained] player chose not to gain a card`);
+              return;
+            }
+
+            const selectedCard = triggeredArgs.cardLibrary.getCard(selectedIds[0]);
+            loggerService.debug(`[charm cardGained] gaining ${selectedCard} to discard`);
+            await triggeredArgs.actionService.run(
+              'gainCard',
+              {
+                playerId: args.playerId,
+                cardId: selectedCard.id,
+                to: { location: 'playerDiscard' },
+              },
+              { source: args.cardId },
+            );
+          },
         },
-      });
+        { idSuffix: `${playIndexThisTurn}` },
+      );
 
       // Clean up the pending reaction at end of turn if it never triggers.
-      args.reactionManager.registerSystemTemplate(charmCard, 'endTurn', {
-        playerId: args.playerId,
-        once: true,
-        allowMultipleInstances: true,
-        compulsory: true,
-        autoResolve: true,
-        condition: conditionArgs => conditionArgs.trigger.args.playerId === args.playerId,
-        triggeredEffectFn: async triggeredArgs => {
-          loggerService.debug(`[charm endTurn] clearing pending next-gain reaction`);
-          triggeredArgs.reactionManager.unregisterTrigger(reactionId);
+      args.reactionManager.registerSystemTemplate(
+        charmCard,
+        'endTurn',
+        {
+          playerId: args.playerId,
+          once: true,
+          allowMultipleInstances: true,
+          compulsory: true,
+          autoResolve: true,
+          condition: conditionArgs => conditionArgs.trigger.args.playerId === args.playerId,
+          triggeredEffectFn: async triggeredArgs => {
+            loggerService.debug(`[charm endTurn] clearing pending next-gain reaction`);
+            triggeredArgs.reactionManager.unregisterTrigger(cardGainedReactionId);
+          },
         },
-      });
+        { idSuffix: `${playIndexThisTurn}` },
+      );
     },
   },
   catapult: {
@@ -404,6 +472,8 @@ const expansion: CardExpansionModule = {
             from: 'basicSupply',
             to: { location: 'playerDiscard' },
             logTag: 'catapult effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: args.cardId,
           });
 
           if (!gainedCurseId) {
@@ -629,13 +699,13 @@ const expansion: CardExpansionModule = {
         const loggerService = args.loggerService;
         // Apply the Crumbling Castle bonus when gained.
         loggerService.debug(`[crumbling castle onGained] player ${eventArgs.playerId} gained Crumbling Castle`);
-        await resolveCrumblingCastleBonus(args, eventArgs.playerId);
+        await resolveCrumblingCastleBonus(args, eventArgs.playerId, eventArgs.cardId);
       },
       onTrashed: async (args, eventArgs) => {
         const loggerService = args.loggerService;
         // Apply the Crumbling Castle bonus when trashed.
         loggerService.debug(`[crumbling castle onTrashed] player ${eventArgs.playerId} trashed Crumbling Castle`);
-        await resolveCrumblingCastleBonus(args, eventArgs.playerId);
+        await resolveCrumblingCastleBonus(args, eventArgs.playerId, eventArgs.cardId);
       },
     }),
   },
@@ -710,10 +780,102 @@ const expansion: CardExpansionModule = {
         await doSetAside();
         return;
       }
+
+      loggerService.debug(`[encampment effect] revealing ${selectedCardId}`);
+      await args.actionService.run('revealCard', {
+        playerId: args.playerId,
+        cardId: selectedCardId,
+      });
     },
   },
   enchantress: {
-    registerEffects: () => async args => {},
+    registerEffects: () => async args => {
+      const loggerService = args.loggerService;
+      const thisCard = args.cardLibrary.getCard(args.cardId);
+      // Resolve targets (and Moat-style immunity) once, right now — the FAQ
+      // requires reactions to be revealed at play time even though the attack
+      // only bites on the targets' own turns.
+      const targetPlayerIds = getAttackTargets(args.match, args.playerId, args.reactionContext);
+
+      loggerService.debug(`[enchantress effect] targeting players: ${targetPlayerIds.join(', ')}`);
+
+      const attackTriggerIds = targetPlayerIds.map(targetPlayerId => {
+        return args.reactionManager.registerReactionTemplate(thisCard, 'beforePlayedCardEffect', {
+          playerId: targetPlayerId,
+          once: false,
+          compulsory: true,
+          allowMultipleInstances: true,
+          autoResolve: true,
+          condition: (conditionArgs: TriggeredEffectConditionContext<'beforePlayedCardEffect'>) => {
+            if (conditionArgs.trigger.args.playerId !== targetPlayerId) return false;
+            // Another suppressor (e.g. a second Enchantress) already claimed
+            // this play — multiple Enchantresses never stack on one Action.
+            if (conditionArgs.trigger.args.skipPlayEffect) return false;
+
+            // Only Actions played on the target's OWN turn are enchanted —
+            // off-turn plays (e.g. Black Cat) are unaffected per the FAQ, and
+            // the +1 Action below mutates the current turn's shared action
+            // pool, so it must only fire on the target's turn.
+            if (getCurrentPlayer(conditionArgs.match).id !== targetPlayerId) return false;
+
+            const playedCard = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+            if (!playedCard.type.includes('ACTION')) return false;
+
+            // The just-played card is already recorded in the stats, so the
+            // first Action of the turn sees a count of exactly 1.
+            const turnHistoryIndex = getCurrentTurnHistoryIndex({ match: conditionArgs.match }) ?? 0;
+            const actionPlayCount = getActionPlayCountForPlayerThisTurn({
+              match: conditionArgs.match,
+              cardLibrary: conditionArgs.cardLibrary,
+              playerId: targetPlayerId,
+              turnHistoryIndex,
+            });
+            return actionPlayCount === 1;
+          },
+          triggeredEffectFn: async (triggeredArgs: TriggeredEffectContext<'beforePlayedCardEffect'>) => {
+            // Replace the Action's instructions with +1 Card / +1 Action.
+            triggeredArgs.trigger.args.skipPlayEffect = true;
+            loggerService.debug(
+              `[enchantress effect] player ${targetPlayerId} first Action this turn replaced with +1 Card +1 Action`,
+            );
+            await triggeredArgs.actionService.run('drawCard', { playerId: targetPlayerId, count: 1 });
+            await triggeredArgs.actionService.run('gainAction', { count: 1 });
+          },
+        });
+      });
+
+      // Tear the attack down if Enchantress leaves play early (e.g. trashed).
+      if (attackTriggerIds.length > 0) {
+        args.reactionManager.registerDurationTriggers(thisCard.id, attackTriggerIds);
+      }
+
+      // At the start of the owner's next turn: discard Enchantress from play
+      // and draw 2. The discard also unregisters the attack triggers above
+      // via the duration-trigger association, ending "until your next turn".
+      registerStartTurnEffect(
+        args,
+        thisCard,
+        async triggeredArgs => {
+          if (
+            isCardStillInPlay({
+              cardId: thisCard.id,
+              cardSourceController: triggeredArgs.cardSourceController,
+            })
+          ) {
+            await triggeredArgs.actionService.run('discardCard', {
+              playerId: args.playerId,
+              cardId: thisCard.id,
+            });
+            loggerService.debug('[enchantress startTurn effect] discarded Enchantress from play');
+          } else {
+            loggerService.debug('[enchantress startTurn effect] Enchantress not in play, skipping discard');
+          }
+
+          await triggeredArgs.actionService.run('drawCard', { playerId: args.playerId, count: 2 });
+        },
+        { system: true, autoResolve: true },
+      );
+    },
   },
   engineer: {
     registerEffects: () => async args => {
@@ -821,21 +983,35 @@ const expansion: CardExpansionModule = {
   },
   fortune: {
     registerLifeCycleMethods: () => ({
-      onGained: async args => {
+      onGained: async (args, eventArgs) => {
         const loggerService = args.loggerService;
         loggerService.debug(`[fortune onGained] running`);
 
-        const gladiatorsInPlay = args.findCardService.getCardsInPlay().filter(card => card.cardKey === 'gladiator');
+        const gladiatorsInPlay = args.findCardService
+          .getCardsInPlay()
+          .filter(card => card.cardKey === 'gladiator' && card.owner === eventArgs.playerId);
 
         if (!gladiatorsInPlay.length) {
           loggerService.debug(`[fortune onGained] no gladiators in play`);
           return;
         }
 
-        loggerService.debug(`[fortune onGained] gaining ${gladiatorsInPlay.length} treasure`);
-        await args.actionService.run('gainTreasure', {
-          count: gladiatorsInPlay.length,
-        });
+        loggerService.debug(`[fortune onGained] gaining ${gladiatorsInPlay.length} gold`);
+        for (let i = 0; i < gladiatorsInPlay.length; i++) {
+          const gainedGoldId = await args.supplyGainService.gainTopSupplyCardForPileKey({
+            playerId: eventArgs.playerId,
+            pileKey: 'gold',
+            from: 'basicSupply',
+            to: { location: 'playerDiscard' },
+            logTag: 'fortune onGained',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: eventArgs.cardId,
+          });
+          if (!gainedGoldId) {
+            loggerService.debug(`[fortune onGained] no gold left in supply`);
+            break;
+          }
+        }
       },
     }),
     registerEffects: () => async args => {
@@ -843,13 +1019,19 @@ const expansion: CardExpansionModule = {
       loggerService.debug(`[fortune effect] gaining 1 buy`);
       await args.actionService.run('gainBuy', { count: 1 });
 
-      const thisCard = args.cardLibrary.getCard<FortuneMetadata>(args.cardId);
-      if (!thisCard.metadata.doubled[args.playerId]) {
+      const thisCard = args.cardLibrary.getCard(args.cardId);
+      if (!args.match.fortuneDoubledThisTurn[args.playerId]) {
         loggerService.debug(`[fortune effect] doubling treasure`);
+        // "Double your $" is deliberately a gainTreasure of the current
+        // pool, NOT setTreasure(current * 2): official rulings treat the
+        // doubling as a treasure gain, so treasureGain reactions (e.g. the
+        // Adventures -$1 token) must apply to it.
         await args.actionService.run('gainTreasure', {
           count: args.match.playerTreasure,
         });
-        thisCard.metadata.doubled[args.playerId] = true;
+        args.match.fortuneDoubledThisTurn[args.playerId] = true;
+      } else {
+        loggerService.debug(`[fortune effect] already doubled this turn, skipping`);
       }
 
       args.reactionManager.registerReactionTemplate(thisCard, 'endTurn', {
@@ -863,9 +1045,9 @@ const expansion: CardExpansionModule = {
           if (fortuneCards.length > 0) return false;
           return conditionArgs.trigger.args.playerId === args.playerId;
         },
-        triggeredEffectFn: async () => {
+        triggeredEffectFn: async triggeredArgs => {
           loggerService.debug(`[fortune endTurn trigger] running`);
-          thisCard.metadata.doubled[args.playerId] = false;
+          triggeredArgs.match.fortuneDoubledThisTurn[args.playerId] = false;
         },
       });
     },
@@ -978,12 +1160,11 @@ const expansion: CardExpansionModule = {
           return;
         }
 
-        loggerService.debug(`[gladiator effect] gaining gladiator`);
+        loggerService.debug(`[gladiator effect] trashing gladiator from supply`);
 
-        await args.actionService.run('gainCard', {
+        await args.actionService.run('trashCard', {
           playerId: args.playerId,
           cardId: gladiators[0].id,
-          to: { location: 'playerDiscard' },
         });
       };
 
@@ -1132,11 +1313,12 @@ const expansion: CardExpansionModule = {
         topCardByPile.set(card.kingdom, card);
       }
 
-      const maxCost = { treasure: 5 };
+      const maxCost: CostSpec = { kind: 'upTo', amount: { treasure: 5 }, playerId: args.playerId };
       const eligibleCards = Array.from(topCardByPile.values()).filter(card => {
         if (!card.type.includes('ACTION')) return false;
         if (card.type.includes('COMMAND') || card.type.includes('DURATION')) return false;
-        return compareCardCosts(card.cost, maxCost) <= 0;
+        const { cost } = args.cardPriceController.applyRules(card, { playerId: args.playerId });
+        return validateCostSpec(maxCost, cost);
       });
 
       if (!eligibleCards.length) {
@@ -1190,6 +1372,7 @@ const expansion: CardExpansionModule = {
         await resolveRocksSilverGain(args, {
           playerId: eventArgs.playerId,
           source: 'gained',
+          cardId: eventArgs.cardId,
         });
       },
       onTrashed: async (args, eventArgs) => {
@@ -1199,6 +1382,7 @@ const expansion: CardExpansionModule = {
         await resolveRocksSilverGain(args, {
           playerId: eventArgs.playerId,
           source: 'trashed',
+          cardId: eventArgs.cardId,
         });
       },
     }),
@@ -1221,6 +1405,7 @@ const expansion: CardExpansionModule = {
           location: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'haunted castle onGained',
+          cardId: eventArgs.cardId,
         });
 
         const targetPlayerIds = findOrderedTargets({
@@ -1402,7 +1587,7 @@ const expansion: CardExpansionModule = {
 
       const { cost: revealedCost } = args.cardPriceController.applyRules(revealedCard, { playerId: args.playerId });
 
-      const qualifiesForDraw = compareCardCosts(revealedCost, { treasure: 5 }) >= 0;
+      const qualifiesForDraw = (revealedCost.treasure ?? 0) >= 5;
       if (!qualifiesForDraw) {
         loggerService.debug(`[patrician effect] revealed ${revealedCard.cardKey} costs less than $5`);
         return;
@@ -1695,6 +1880,8 @@ const expansion: CardExpansionModule = {
                 from: 'basicSupply',
                 to: { location: 'playerDiscard' },
                 logTag: 'wild hunt effect',
+                // supplyGainService's own actionService bypasses the effect's auto-injected source.
+                source: args.cardId,
               });
               if (!estateCardId) {
                 loggerService.debug('[wild hunt effect] no Estates left to gain, skipping VP tokens');
@@ -1739,12 +1926,20 @@ const expansion: CardExpansionModule = {
 
         const villaCard = args.cardLibrary.getCard(eventArgs.cardId);
 
-        loggerService.info(`[villa onGained] moving ${villaCard} to hand for player ${eventArgs.playerId}`);
-        await args.actionService.run('moveCard', {
-          cardId: eventArgs.cardId,
-          toPlayerId: eventArgs.playerId,
-          to: { location: 'playerHand' },
-        });
+        // Lose Track guard: only move Villa to hand if it is still at its
+        // gained location (not already moved or covered up by a later
+        // arrival). Per the official ruling, the +1 Action and the return
+        // to the Action phase below happen regardless.
+        if (isCardStillAtGainedLocation(args.cardSourceController, eventArgs.cardId, eventArgs.gainedLocation)) {
+          loggerService.info(`[villa onGained] moving ${villaCard} to hand for player ${eventArgs.playerId}`);
+          await args.actionService.run('moveCard', {
+            cardId: eventArgs.cardId,
+            toPlayerId: eventArgs.playerId,
+            to: { location: 'playerHand' },
+          });
+        } else {
+          loggerService.debug(`[villa onGained] lost track of Villa; hand move skipped`);
+        }
 
         const currentPlayerId = getCurrentPlayer(args.match).id;
         if (currentPlayerId !== eventArgs.playerId) {
@@ -1941,7 +2136,7 @@ const expansion: CardExpansionModule = {
       }
 
       // Gain the current top Castle if a Castle was trashed.
-      await gainTopCastleCard(args, playerId);
+      await gainTopCastleCard(args, playerId, args.cardId);
     },
   },
   'sprawling-castle': {
@@ -1966,6 +2161,7 @@ const expansion: CardExpansionModule = {
             location: 'basicSupply',
             to: { location: 'playerDiscard' },
             logTag: 'sprawling castle onGained',
+            cardId: eventArgs.cardId,
           });
           return;
         }

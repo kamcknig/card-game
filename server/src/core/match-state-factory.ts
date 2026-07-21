@@ -14,6 +14,8 @@ export function createInitialMatchState(): Match {
     debt: {},
     // Per-player pending skipped turns (e.g., from Lich).
     skippedTurns: {},
+    // Per-player-per-turn "doubled $ via Fortune" flag; see Match type.
+    fortuneDoubledThisTurn: {},
     config: {} as ComputedMatchConfiguration,
     currentPlayerTurnIndex: 0,
     events: [],

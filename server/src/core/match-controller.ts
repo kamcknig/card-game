@@ -806,6 +806,7 @@ export class MatchController extends EventEmitter<{ gameOver: [void] }> {
             match: this.match,
             cardLibrary: this.cardLibrary,
             ownerId: playerId,
+            cardId: card.id,
           });
         }
       }

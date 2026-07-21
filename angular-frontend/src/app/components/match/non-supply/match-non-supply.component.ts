@@ -299,6 +299,11 @@ export class MatchNonSupplyComponent {
         // highlighted at once, matching the dialog selection policy.
         selectedPileStore.set([pile.pileKey as CardKey]);
       } else {
+        // The count spec's maximum is a hard cap — ignore clicks beyond
+        // it; the player must deselect a pile before picking another.
+        if (selected.length >= this._boardSelectionOverlay().maxSelectable) {
+          return;
+        }
         selected.push(pile.pileKey as CardKey);
         selectedPileStore.set(selected);
       }

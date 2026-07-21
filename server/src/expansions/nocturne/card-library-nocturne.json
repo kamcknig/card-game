@@ -394,7 +394,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["BOON"]
+    "type": ["BOON"],
+    "abilityText": "You may discard a Treasure to gain a card costing up to $4."
   },
   "the-fields-gift": {
     "cardName": "The Field's Gift",
@@ -402,7 +403,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["BOON"]
+    "type": ["BOON"],
+    "abilityText": "+1 Action\n+$1\n(Keep this until Clean-up.)"
   },
   "the-flames-gift": {
     "cardName": "The Flame's Gift",
@@ -410,7 +412,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["BOON"]
+    "type": ["BOON"],
+    "abilityText": "You may trash a card from your hand."
   },
   "the-forests-gift": {
     "cardName": "The Forest's Gift",
@@ -418,7 +421,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["BOON"]
+    "type": ["BOON"],
+    "abilityText": "+1 Buy\n+$1\n(Keep this until Clean-up.)"
   },
   "the-moons-gift": {
     "cardName": "The Moon's Gift",
@@ -426,7 +430,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["BOON"]
+    "type": ["BOON"],
+    "abilityText": "Look through your discard pile. You may put a card from it onto your deck."
   },
   "the-mountains-gift": {
     "cardName": "The Mountain's Gift",
@@ -434,7 +439,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["BOON"]
+    "type": ["BOON"],
+    "abilityText": "Gain a Silver."
   },
   "the-rivers-gift": {
     "cardName": "The River's Gift",
@@ -442,7 +448,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["BOON"]
+    "type": ["BOON"],
+    "abilityText": "n+1 Card at the end of this turn.\n(Keep this until Clean-up.)"
   },
   "the-seas-gift": {
     "cardName": "The Sea's Gift",
@@ -450,7 +457,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["BOON"]
+    "type": ["BOON"],
+    "abilityText": "+1 Card."
   },
   "the-skys-gift": {
     "cardName": "The Sky's Gift",
@@ -458,7 +466,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["BOON"]
+    "type": ["BOON"],
+    "abilityText": "You may discard 3 cards to gain a Gold."
   },
   "the-suns-gift": {
     "cardName": "The Sun's Gift",
@@ -466,7 +475,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["BOON"]
+    "type": ["BOON"],
+    "abilityText": "Look at the top 4 cards of your deck. Discard any number of them and put the rest back in any order."
   },
   "the-swamps-gift": {
     "cardName": "The Swamp's Gift",
@@ -474,7 +484,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["BOON"]
+    "type": ["BOON"],
+    "abilityText": "Gain a Will-o'-Wisp."
   },
   "the-winds-gift": {
     "cardName": "The Wind's Gift",
@@ -482,7 +493,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["BOON"]
+    "type": ["BOON"],
+    "abilityText": "+2 Cards\nDiscard 2 cards."
   },
   "bad-omens": {
     "cardName": "Bad Omens",
@@ -643,7 +655,8 @@
       "treasure": 0
     },
     "kingdomSelectable": false,
-    "type": ["ACTION", "SPIRIT"]
+    "type": ["ACTION", "SPIRIT"],
+    "abilityText": "+1 Card\n+1 Action\nReveal the top card of your deck. If it costs $2 or less, put it into your hand.\n(This is not in the Supply.)"
   },
   "wish": {
     "cardName": "Wish",

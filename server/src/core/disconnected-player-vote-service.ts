@@ -1,4 +1,4 @@
-import { Player, PlayerId } from 'shared/types/index.ts';
+import { Player, PlayerId, RemovalVoteStateEntry } from 'shared/types/index.ts';
 
 export type RemovalVoteResult = {
   accepted: boolean;
@@ -72,12 +72,69 @@ export class DisconnectedPlayerVoteService {
     return { accepted: true, allVoted };
   }
 
+  // True when the player is currently queued for removal voting.
+  public isPendingRemoval(playerId: PlayerId): boolean {
+    return this._pendingRemovalQueue.includes(playerId);
+  }
+
+  // Removes one voter's vote for one target. Returns whether a vote was
+  // actually removed (false when no such vote existed).
+  public retractRemovalVote(voterId: PlayerId, targetPlayerId: PlayerId): boolean {
+    const votes = this._removalVotes.get(targetPlayerId);
+    if (!votes?.has(voterId)) {
+      return false;
+    }
+    votes.delete(voterId);
+    return true;
+  }
+
+  // Clears every vote cast BY the given player across all targets. Used
+  // when a voter permanently leaves the match (resign/vote-out) so stale
+  // voter ids do not linger in broadcast snapshots.
+  public clearVotesByVoter(voterId: PlayerId): void {
+    for (const votes of this._removalVotes.values()) {
+      votes.delete(voterId);
+    }
+  }
+
+  // Serializable snapshot of all pending targets and their current voters,
+  // in queue (player) order. Broadcast to clients after every change.
+  public getVoteSnapshot(): RemovalVoteStateEntry[] {
+    return this._pendingRemovalQueue.map(targetPlayerId => ({
+      targetPlayerId,
+      voterIds: [...(this._removalVotes.get(targetPlayerId) ?? [])],
+    }));
+  }
+
+  // Pending targets whose tally is currently complete: every connected
+  // human other than the target has an active vote. Re-checked whenever
+  // the connected set shrinks (voter disconnect/resign) because that can
+  // complete a tally without a new vote arriving.
+  public getCompletedTargetIds(players: Player[]): PlayerId[] {
+    return this._pendingRemovalQueue.filter(targetPlayerId => {
+      const votes = this._removalVotes.get(targetPlayerId);
+      if (!votes) return false;
+      const connectedHumans = players.filter(
+        player => player.connected && !player.isComputer && player.id !== targetPlayerId,
+      );
+      if (!connectedHumans.length) return false;
+      return connectedHumans.every(player => votes.has(player.id));
+    });
+  }
+
   // Keeps pending queue sorted by player order and removes invalid targets.
   private sortPendingRemovalQueue(players: Player[]) {
     const disconnectedHumans = new Set(
       players.filter(player => !player.connected && !player.isComputer).map(player => player.id),
     );
 
+    // Prune vote entries alongside queue entries so reconnected targets do
+    // not leak stale vote sets into later snapshots.
+    for (const id of this._pendingRemovalQueue) {
+      if (!disconnectedHumans.has(id)) {
+        this._removalVotes.delete(id);
+      }
+    }
     this._pendingRemovalQueue = this._pendingRemovalQueue.filter(id => disconnectedHumans.has(id));
 
     const orderById = new Map(players.map((player, index) => [player.id, index]));

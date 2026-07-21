@@ -28,6 +28,9 @@ const expansion: CardExpansionModule = {
         await args.actionService.run('playCard', {
           playerId: eventArgs.playerId,
           cardId: eventArgs.cardId,
+          overrides: {
+            actionCost: 0,
+          },
         });
       },
     }),
@@ -226,8 +229,6 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainTreasure', { count: 2 });
       await cardEffectArgs.actionService.run('gainBuy', { count: 1 });
 
-      let actionGainCount = 0;
-
       cardEffectArgs.reactionManager.registerReactionTemplate({
         id: `cauldron:${cardEffectArgs.cardId}:cardGained`,
         listeningFor: 'cardGained',
@@ -236,14 +237,22 @@ const expansion: CardExpansionModule = {
         compulsory: true,
         allowMultipleInstances: true,
         condition: conditionArgs => {
+          if (conditionArgs.trigger.args.playerId !== cardEffectArgs.playerId) return false;
+
           const card = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
-          if (card.type.includes('ACTION')) {
-            actionGainCount++;
-            loggerService.debug(
-              `[cauldron triggered condition] incrementing action gains for cauldron card ${cardEffectArgs.cardId} to ${actionGainCount}`,
-            );
-          }
-          return actionGainCount === 3;
+          if (!card.type.includes('ACTION')) return false;
+
+          const turnHistoryIndex = conditionArgs.match.stats.turns.length - 1;
+          const actionGainsThisTurn = (conditionArgs.match.stats.cardsGainedByTurn[turnHistoryIndex] ?? [])
+            .filter(gainedCardId => conditionArgs.match.stats.cardsGained[gainedCardId]?.playerId === cardEffectArgs.playerId)
+            .map(gainedCardId => conditionArgs.cardLibrary.getCard(gainedCardId))
+            .filter(gainedCard => gainedCard.type.includes('ACTION')).length;
+
+          loggerService.debug(
+            `[cauldron triggered condition] ${actionGainsThisTurn} action cards gained this turn for cauldron card ${cardEffectArgs.cardId}`,
+          );
+
+          return actionGainsThisTurn === 3;
         },
         triggeredEffectFn: async () => {
           cardEffectArgs.reactionManager.unregisterTrigger(`cauldron:${cardEffectArgs.cardId}:cardGained`);
@@ -258,6 +267,8 @@ const expansion: CardExpansionModule = {
               from: 'basicSupply',
               to: { location: 'playerDiscard' },
               logTag: 'cauldron triggered effect',
+              // supplyGainService's own actionService bypasses the effect's auto-injected source.
+              source: cardEffectArgs.cardId,
             });
 
             if (!gainedCurseId) {
@@ -377,6 +388,12 @@ const expansion: CardExpansionModule = {
         return;
       }
 
+      await cardEffectArgs.actionService.run('gainCard', {
+        playerId: cardEffectArgs.playerId,
+        cardId: selectedCardId,
+        to: { location: 'playerDeck' },
+      });
+
       combined = [];
 
       let nextPrompt = '';
@@ -410,7 +427,7 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainCard', {
         playerId: cardEffectArgs.playerId,
         cardId: selectedCardId,
-        to: { location: 'playerDiscard' },
+        to: { location: 'playerDeck' },
       });
     },
   },
@@ -512,7 +529,7 @@ const expansion: CardExpansionModule = {
           triggeredEffectFn: async triggeredEffectArgs => {
             loggerService.debug(`[fools-gold triggered effect] trashing fools gold`);
             await triggeredEffectArgs.actionService.run('trashCard', {
-              playerId: triggeredEffectArgs.trigger.args.playerId,
+              playerId: eventArgs.playerId,
               cardId: eventArgs.cardId,
             });
 
@@ -522,6 +539,8 @@ const expansion: CardExpansionModule = {
               from: 'basicSupply',
               to: { location: 'playerDeck' },
               logTag: 'fools-gold triggered effect',
+              // supplyGainService's own actionService bypasses the effect's auto-injected source.
+              source: eventArgs.cardId,
             });
 
             if (!gainedGoldId) {
@@ -677,36 +696,53 @@ const expansion: CardExpansionModule = {
     },
   },
   highway: {
-    registerEffects: () => async cardEffectArgs => {
-      const loggerService = cardEffectArgs.loggerService;
-      loggerService.debug(`[highway effect] drawing 1 card, and gaining 1 action`);
-      await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
-      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
+    registerEffects: () => {
+      // Turn-scoped, cross-play accumulator keyed by card id (mirrors the Quarry
+      // fix in prosperity) so replaying the same physical Highway (King's
+      // Court/Throne Room) doesn't leak duplicate endTurn cleanup reactions.
+      const unsubsByCardId: Record<CardId, (() => void)[]> = {};
 
-      const cards = cardEffectArgs.cardLibrary.getAllCardsAsArray();
+      return async cardEffectArgs => {
+        const loggerService = cardEffectArgs.loggerService;
+        loggerService.debug(`[highway effect] drawing 1 card, and gaining 1 action`);
+        await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
+        await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
-      const unsubs: (() => void)[] = [];
+        const cards = cardEffectArgs.cardLibrary.getAllCardsAsArray();
+        const cardId = cardEffectArgs.cardId;
+        const alreadyActiveThisTurn = (unsubsByCardId[cardId]?.length ?? 0) > 0;
 
-      const rule: CardPriceRule = (card, context) => {
-        return { restricted: false, cost: { treasure: -1, potion: 0 } };
+        const rule: CardPriceRule = () => ({ restricted: false, cost: { treasure: -1, potion: 0 } });
+
+        unsubsByCardId[cardId] ??= [];
+        for (const card of cards) {
+          unsubsByCardId[cardId].push(cardEffectArgs.cardPriceController.registerRule(card, rule));
+        }
+
+        if (alreadyActiveThisTurn) {
+          // Same physical Highway replayed this turn (Throne Room/King's Court) —
+          // the endTurn cleanup below is already registered for this card id and
+          // will unsubscribe every accumulated rule, including this play's.
+          loggerService.debug(
+            `[highway effect] card ${cardId} already active this turn, skipping cleanup registration`,
+          );
+          return;
+        }
+
+        cardEffectArgs.reactionManager.registerReactionTemplate({
+          id: `highway:${cardId}:endTurn`,
+          listeningFor: 'endTurn',
+          condition: () => true,
+          once: true,
+          compulsory: true,
+          playerId: cardEffectArgs.playerId,
+          allowMultipleInstances: true,
+          triggeredEffectFn: async () => {
+            unsubsByCardId[cardId].forEach(c => c());
+            delete unsubsByCardId[cardId];
+          },
+        });
       };
-
-      for (const card of cards) {
-        unsubs.push(cardEffectArgs.cardPriceController.registerRule(card, rule));
-      }
-
-      cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: `highway:${cardEffectArgs.cardId}:endTurn`,
-        listeningFor: 'endTurn',
-        condition: () => true,
-        once: true,
-        compulsory: true,
-        playerId: cardEffectArgs.playerId,
-        allowMultipleInstances: true,
-        triggeredEffectFn: async () => {
-          unsubs.forEach(c => c());
-        },
-      });
     },
   },
   inn: {
@@ -752,18 +788,24 @@ const expansion: CardExpansionModule = {
             playerId: eventArgs.playerId,
           });
 
+          // Lose Track guard: the reveal above can trigger reveal-reactive
+          // effects that move a not-yet-processed selection out of the
+          // discard between loop iterations. No requireTop — Inn selects
+          // from anywhere in the discard, so covering does not invalidate
+          // the selection, only leaving the discard entirely does.
           await args.actionService.run('moveCard', {
             cardId: cardId,
             toPlayerId: eventArgs.playerId,
             to: { location: 'playerDeck' },
+            expectedFrom: { location: 'playerDiscard', playerId: eventArgs.playerId },
           });
         }
 
-        loggerService.debug(`[inn onGained effect] shuffling player deck`);
+        loggerService.debug(`[inn onGained effect] shuffling player deck (excluding remaining discard pile)`);
 
         // Route through the engine action so the shuffle uses the injected RNG
         // instead of the shuffler's (now removed) Math.random default.
-        await args.actionService.run('shuffleDeck', { playerId: eventArgs.playerId });
+        await args.actionService.run('shuffleDeck', { playerId: eventArgs.playerId, includeDiscard: false });
       },
     }),
     registerEffects: () => async cardEffectArgs => {
@@ -810,6 +852,8 @@ const expansion: CardExpansionModule = {
         pileKey: 'silver',
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: cardEffectArgs.cardId,
         logTag: 'jack-of-all-trades effect',
       });
 
@@ -849,9 +893,13 @@ const expansion: CardExpansionModule = {
       }
 
       const hand = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId);
-      while (deck.length > 0 && hand.length < 5) {
+      while (hand.length < 5) {
         loggerService.debug(`[jack-of-all-trades effect] drawing card`);
-        await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
+        const drawnCardId = await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
+        if (!drawnCardId) {
+          loggerService.debug(`[jack-of-all-trades effect] no card drawn, deck and discard both empty`);
+          break;
+        }
       }
 
       const nonTreasureCardsInHand = hand
@@ -985,50 +1033,83 @@ const expansion: CardExpansionModule = {
     },
   },
   scheme: {
-    registerEffects: () => async cardEffectArgs => {
-      const loggerService = cardEffectArgs.loggerService;
-      loggerService.debug(`[scheme effect] drawing 1 card, and gaining 1 action`);
-      await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
-      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
+    registerEffects: () => {
+      const playCountByCardId: Record<CardId, number> = {};
 
-      cardEffectArgs.reactionManager.registerReactionTemplate({
-        id: `scheme:${cardEffectArgs.cardId}:discardCard`,
-        listeningFor: 'discardCard',
-        playerId: cardEffectArgs.playerId,
-        once: true,
-        compulsory: true,
-        allowMultipleInstances: true,
-        condition: async conditionArgs => {
-          if (!conditionArgs.trigger.args.previousLocation) return false;
-          if (!isLocationInPlay(conditionArgs.trigger.args.previousLocation.location)) return false;
-          const card = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
-          if (card.owner !== cardEffectArgs.playerId) return false;
-          if (!card.type.includes('ACTION')) return false;
+      return async cardEffectArgs => {
+        const loggerService = cardEffectArgs.loggerService;
+        loggerService.debug(`[scheme effect] drawing 1 card, and gaining 1 action`);
+        await cardEffectArgs.actionService.run('drawCard', { playerId: cardEffectArgs.playerId });
+        await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
-          const action = await conditionArgs.promptService.requestAction({
-            prompt: `Top-deck ${card.cardName}?`,
-            playerId: conditionArgs.trigger.args.playerId,
-            actionButtons: [
-              { label: 'CANCEL', action: 1 },
-              { label: 'CONFIRM', action: 2 },
-            ],
-          });
-          if (action === 1 || action === null) return false;
+        const cardId = cardEffectArgs.cardId;
+        const playInstance = (playCountByCardId[cardId] ?? 0) + 1;
+        playCountByCardId[cardId] = playInstance;
 
-          return true;
-        },
-        triggeredEffectFn: async triggeredEffectArgs => {
-          const card = triggeredEffectArgs.cardLibrary.getCard(triggeredEffectArgs.trigger.args.cardId);
+        const discardReactionId = `scheme:${cardId}:${playInstance}:discardCard`;
 
-          loggerService.debug(`[scheme triggered effect] moving ${card} to deck`);
+        cardEffectArgs.reactionManager.registerReactionTemplate({
+          id: discardReactionId,
+          listeningFor: 'discardCard',
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          condition: async conditionArgs => {
+            if (!conditionArgs.trigger.args.previousLocation) return false;
+            if (!isLocationInPlay(conditionArgs.trigger.args.previousLocation.location)) return false;
+            const card = conditionArgs.cardLibrary.getCard(conditionArgs.trigger.args.cardId);
+            if (card.owner !== cardEffectArgs.playerId) return false;
+            if (!card.type.includes('ACTION')) return false;
 
-          await triggeredEffectArgs.actionService.run('moveCard', {
-            cardId: triggeredEffectArgs.trigger.args.cardId,
-            toPlayerId: cardEffectArgs.playerId,
-            to: { location: 'playerDeck' },
-          });
-        },
-      });
+            const action = await conditionArgs.promptService.requestAction({
+              prompt: `Top-deck ${card.cardName}?`,
+              playerId: conditionArgs.trigger.args.playerId,
+              actionButtons: [
+                { label: 'CANCEL', action: 1 },
+                { label: 'CONFIRM', action: 2 },
+              ],
+            });
+            if (action === 1 || action === null) return false;
+
+            return true;
+          },
+          triggeredEffectFn: async triggeredEffectArgs => {
+            const card = triggeredEffectArgs.cardLibrary.getCard(triggeredEffectArgs.trigger.args.cardId);
+
+            loggerService.debug(`[scheme triggered effect] moving ${card} to deck`);
+
+            // Lose Track guard: by the time this reaction fires, discardCard
+            // has already discarded the card, so an earlier-firing reaction
+            // in the same pass (e.g. a second Scheme topdecking it, or
+            // Tunnel gaining a Gold on top of it) may have moved or covered
+            // it before this one runs.
+            await triggeredEffectArgs.actionService.run('moveCard', {
+              cardId: triggeredEffectArgs.trigger.args.cardId,
+              toPlayerId: cardEffectArgs.playerId,
+              to: { location: 'playerDeck' },
+              expectedFrom: {
+                location: 'playerDiscard',
+                playerId: cardEffectArgs.playerId,
+                requireTop: true,
+              },
+            });
+          },
+        });
+
+        cardEffectArgs.reactionManager.registerReactionTemplate({
+          id: `scheme:${cardId}:${playInstance}:endTurn`,
+          listeningFor: 'endTurn',
+          playerId: cardEffectArgs.playerId,
+          once: true,
+          compulsory: true,
+          allowMultipleInstances: true,
+          condition: () => true,
+          triggeredEffectFn: async () => {
+            cardEffectArgs.reactionManager.unregisterTrigger(discardReactionId);
+          },
+        });
+      };
     },
   },
   souk: {
@@ -1069,9 +1150,13 @@ const expansion: CardExpansionModule = {
       await cardEffectArgs.actionService.run('gainTreasure', { count: 7 });
 
       const handSize = cardEffectArgs.cardSourceController.getSource('playerHand', cardEffectArgs.playerId).length;
-      const numToLose = Math.min(cardEffectArgs.match.playerTreasure, handSize);
-      loggerService.debug(`[souk effect] losing ${numToLose} treasure`);
-      await cardEffectArgs.actionService.run('gainTreasure', { count: -handSize });
+      // "-$1 per card in your hand (you can't go below $0)" — an
+      // adjustment, not a pay: set the pool to the floored target. This
+      // also fixes the old mismatch where the logged loss (numToLose) and
+      // the spent amount (handSize) came from different computations.
+      const target = Math.max(0, cardEffectArgs.match.playerTreasure - handSize);
+      loggerService.debug(`[souk effect] ${handSize} card(s) in hand; setting treasure to ${target}`);
+      await cardEffectArgs.actionService.run('setTreasure', { count: target });
     },
   },
   'spice-merchant': {
@@ -1191,6 +1276,15 @@ const expansion: CardExpansionModule = {
             return true;
           },
           triggeredEffectFn: async triggerArgs => {
+            const silverCardIds = triggerArgs.findCardService.findCards({
+              all: [{ location: 'basicSupply' }, { cardKeys: 'silver' }],
+            });
+
+            if (!silverCardIds.length) {
+              loggerService.debug(`[trader onEnterHand event] no silvers in supply, exchange fails`);
+              return;
+            }
+
             const traderCard = triggerArgs.cardLibrary.getCard(eventArgs.cardId);
 
             loggerService.debug(`[trader onEnterHand event] revealing trader`);
@@ -1209,17 +1303,9 @@ const expansion: CardExpansionModule = {
                 toPlayerId: triggerArgs.trigger.args.previousLocation.playerId,
                 to: { location: triggerArgs.trigger.args.previousLocation.location },
               });
+              gainedCard.owner = null;
             } else {
               loggerService.warn(`[trader onEnterHand event] gained ${gainedCard} has no previous location`);
-            }
-
-            const silverCardIds = triggerArgs.findCardService.findCards({
-              all: [{ location: 'basicSupply' }, { cardKeys: 'silver' }],
-            });
-
-            if (!silverCardIds.length) {
-              loggerService.debug(`[trader onEnterHand event] no silvers in supply`);
-              return;
             }
 
             const silverCard = silverCardIds[0];
@@ -1229,6 +1315,7 @@ const expansion: CardExpansionModule = {
               cardId: silverCard.id,
               toPlayerId: eventArgs.playerId,
               to: { location: 'playerDiscard' },
+              updateOwner: true,
             });
           },
         });
@@ -1376,6 +1463,8 @@ const expansion: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'tunnel onDiscarded event',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: eventArgs.cardId,
         });
 
         if (!gainedGoldId) {
@@ -1412,6 +1501,9 @@ const expansion: CardExpansionModule = {
         await args.actionService.run('playCard', {
           playerId: eventArgs.playerId,
           cardId: eventArgs.cardId,
+          overrides: {
+            actionCost: 0,
+          },
         });
       },
     }),
@@ -1468,6 +1560,12 @@ const expansion: CardExpansionModule = {
           loggerService.warn(`[weaver effect] no card selected`);
           return;
         }
+
+        await cardEffectArgs.actionService.run('gainCard', {
+          playerId: cardEffectArgs.playerId,
+          cardId: selectedCardId,
+          to: { location: 'playerDiscard' },
+        });
       }
     },
   },
@@ -1587,6 +1685,8 @@ const expansion: CardExpansionModule = {
               from: 'basicSupply',
               to: { location: 'playerDiscard' },
               logTag: 'witchs-hut effect',
+              // supplyGainService's own actionService bypasses the effect's auto-injected source.
+              source: cardEffectArgs.cardId,
             });
 
             if (!gainedCurseId) {

@@ -1,4 +1,4 @@
-import { CardId, CardKey, CardLocation, PlayerId, TokenInstanceId } from 'shared/types/index.ts';
+import { CardId, CardKey, CardLike, CardLocation, PlayerId, TokenInstanceId } from 'shared/types/index.ts';
 import {
   CardEffectFunctionContext,
   CardExpansionModule,
@@ -29,20 +29,24 @@ const gainTopSupplyCardToDiscard = async (args: {
   playerId: PlayerId;
   pileKey: CardKey;
   logTag: string;
+  source: CardId;
   supplyGainService: {
     gainTopSupplyCardForPileKey: (gainArgs: {
       playerId: PlayerId;
       pileKey: CardKey;
       to: { location: 'playerDiscard' };
       logTag?: string;
+      source?: CardId;
     }) => Promise<CardId | undefined>;
   };
 }) => {
+  // supplyGainService's own actionService bypasses the effect's auto-injected source.
   await args.supplyGainService.gainTopSupplyCardForPileKey({
     playerId: args.playerId,
     pileKey: args.pileKey,
     to: { location: 'playerDiscard' },
     logTag: args.logTag,
+    source: args.source,
   });
 };
 
@@ -108,9 +112,16 @@ const getCoinTokenInstanceIdsOnCard = (args: {
 // Finds trash cards that currently cost strictly less than the source card.
 const getCheaperTrashCardIds = <
   T extends {
-    cardLibrary: { getCard: (cardId: CardId) => unknown };
+    cardLibrary: { getCard: (cardId: CardId) => CardLike };
     cardPriceController: {
-      applyRules: (...args: unknown[]) => { cost: { treasure: number; potion?: number; debt?: number } };
+      // Mirrors CardPriceRulesController.applyRules's real signature — a rest-args
+      // (...args: unknown[]) constraint here doesn't structurally match it (a function
+      // expecting specific typed params is not assignable to one expecting arbitrary
+      // unknown args), which silently broke type-checking for every caller of this helper.
+      applyRules: (
+        card: CardLike,
+        args: { playerId: PlayerId },
+      ) => { restricted: boolean; cost: { treasure: number; potion?: number; debt?: number } };
     };
     cardSourceController: { getSource: (source: 'trash') => CardId[] };
   },
@@ -311,6 +322,7 @@ const cardEffects: CardExpansionModule = {
             playerId,
             pileKey: 'gold',
             logTag: 'acolyte gain gold',
+            source: cardEffectArgs.cardId,
             supplyGainService: cardEffectArgs.supplyGainService,
           });
         }
@@ -341,6 +353,7 @@ const cardEffects: CardExpansionModule = {
         playerId,
         pileKey: AUGURS_PILE_KEY,
         logTag: 'acolyte gain augur',
+        source: cardEffectArgs.cardId,
         supplyGainService: cardEffectArgs.supplyGainService,
       });
     },
@@ -392,6 +405,7 @@ const cardEffects: CardExpansionModule = {
           playerId: targetPlayerId,
           pileKey: 'curse',
           logTag: 'sorceress attack',
+          source: cardEffectArgs.cardId,
           supplyGainService: cardEffectArgs.supplyGainService,
         });
       }
@@ -622,6 +636,7 @@ const cardEffects: CardExpansionModule = {
           playerId: targetPlayerId,
           pileKey: 'curse',
           logTag: 'sorcerer attack',
+          source: cardEffectArgs.cardId,
           supplyGainService: cardEffectArgs.supplyGainService,
         });
       }
@@ -713,6 +728,7 @@ const cardEffects: CardExpansionModule = {
                 playerId,
                 pileKey: 'silver',
                 logTag: 'town-crier gain silver',
+                source: cardEffectArgs.cardId,
                 supplyGainService: cardEffectArgs.supplyGainService,
               });
             },
@@ -1589,6 +1605,7 @@ const cardEffects: CardExpansionModule = {
             playerId: targetPlayerId,
             pileKey: 'curse',
             logTag: 'barbarian attack',
+            source: cardEffectArgs.cardId,
             supplyGainService: cardEffectArgs.supplyGainService,
           });
           continue;
@@ -1608,6 +1625,7 @@ const cardEffects: CardExpansionModule = {
             playerId: targetPlayerId,
             pileKey: 'curse',
             logTag: 'barbarian attack',
+            source: cardEffectArgs.cardId,
             supplyGainService: cardEffectArgs.supplyGainService,
           });
           continue;
@@ -1621,7 +1639,7 @@ const cardEffects: CardExpansionModule = {
                 playerId: targetPlayerId,
                 kind: 'upTo',
                 amount: {
-                  treasure: Math.max((trashedCardCost.treasure ?? 0) - 1, 0),
+                  treasure: trashedCardCost.treasure ?? 0,
                   potion: trashedCardCost.potion ?? 0,
                   debt: trashedCardCost.debt ?? 0,
                 },
@@ -1750,10 +1768,9 @@ const cardEffects: CardExpansionModule = {
         const hand = cardEffectArgs.cardSourceController.getSource('playerHand', playerId);
         const selectedDiscardIds = await cardEffectArgs.actionService.run('selectCard', {
           playerId,
-          prompt: 'Choose up to 2 cards to discard',
+          prompt: 'Discard 2 cards',
           restrict: hand,
-          count: { kind: 'upTo', count: 2 },
-          optional: true,
+          count: { kind: 'exact', count: Math.min(2, hand.length) },
         });
         for (const selectedDiscardId of selectedDiscardIds) {
           await cardEffectArgs.actionService.run('discardCard', {
@@ -1995,6 +2012,7 @@ const cardEffects: CardExpansionModule = {
         playerId,
         pileKey: 'estate',
         logTag: 'distant-shore gain estate',
+        source: cardEffectArgs.cardId,
         supplyGainService: cardEffectArgs.supplyGainService,
       });
     },
@@ -2605,17 +2623,28 @@ const cardEffects: CardExpansionModule = {
       const lookedAtCardIds: CardId[] = [];
 
       // Use set-aside as a stable holding zone while trash/reorder choices
-      // resolve; revealTopDeckCards shuffles the discard in automatically
-      // whenever the deck runs dry mid-reveal.
+      // resolve. "Look at" is private information, so cards move straight
+      // from deck to set-aside without the public revealCard action (mirrors
+      // Miller's look-at pattern), shuffling the discard in automatically
+      // whenever the deck runs dry mid-look.
       for (let i = 0; i < 5; i++) {
-        const revealed = await revealTopDeckCards(cardEffectArgs, playerId, 1);
-        const card = revealed[0];
-        if (!card) {
-          break;
+        let deck = cardEffectArgs.cardSourceController.getSource('playerDeck', playerId);
+        if (deck.length < 1) {
+          const discard = cardEffectArgs.cardSourceController.getSource('playerDiscard', playerId);
+          if (discard.length < 1) {
+            break;
+          }
+          await cardEffectArgs.actionService.run('shuffleDeck', { playerId });
+          deck = cardEffectArgs.cardSourceController.getSource('playerDeck', playerId);
+          if (deck.length < 1) {
+            break;
+          }
         }
-        lookedAtCardIds.push(card.id);
+
+        const cardId = deck.slice(-1)[0];
+        lookedAtCardIds.push(cardId);
         await cardEffectArgs.actionService.run('moveCard', {
-          cardId: card.id,
+          cardId,
           toPlayerId: playerId,
           to: { location: 'set-aside' },
         });
@@ -3050,8 +3079,12 @@ const cardEffects: CardExpansionModule = {
               return { canPlay: true };
             }
 
-            const playedCardsThisTurn = triggeredArgs.match.stats.playedCardsByTurn[extraTurnHistoryIndex] ?? [];
-            if (playedCardsThisTurn.length < 3) {
+            const playedCardIdsThisTurn = triggeredArgs.match.stats.playedCardsByTurn[extraTurnHistoryIndex] ?? [];
+            const handPlaysThisTurn = playedCardIdsThisTurn.filter(playedCardId => {
+              const playedStats = triggeredArgs.match.stats.playedCards[playedCardId];
+              return playedStats?.sourceLocation === 'playerHand' && playedStats?.sourcePlayerId === playerId;
+            });
+            if (handPlaysThisTurn.length < 3) {
               return { canPlay: true };
             }
 
@@ -3107,6 +3140,9 @@ const cardEffects: CardExpansionModule = {
             playerId: eventArgs.playerId,
             pileKey: 'gold',
             logTag: 'territory onGained gain gold',
+            // Lifecycle contexts (CardLifecycleCallbackContext) carry no cardId of their own;
+            // the gained card's id lives on the lifecycle event payload instead.
+            source: eventArgs.cardId,
             supplyGainService: cardEffectArgs.supplyGainService,
           });
         }

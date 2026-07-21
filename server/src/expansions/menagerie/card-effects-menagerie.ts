@@ -10,6 +10,7 @@ import { getTurnPhase } from '../../utils/get-turn-phase.ts';
 import { getAttackTargets } from '../../utils/get-attack-targets.ts';
 import { revealTopDeckCards } from '../../utils/reveal-top-deck-cards.ts';
 import { registerStartTurnEffect } from '../../utils/register-start-turn-effect.ts';
+import { isCardStillAtGainedLocation } from '../../utils/is-card-still-at-gained-location.ts';
 
 const expansion: CardExpansionModule = {
   'animal-fair': {
@@ -230,6 +231,8 @@ const expansion: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'black-cat effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: cardEffectArgs.cardId,
         });
         if (!gainedCurseId) {
           loggerService.debug('[black-cat effect] no Curse remaining in supply');
@@ -368,7 +371,12 @@ const expansion: CardExpansionModule = {
           const revealedCost = cardEffectArgs.cardPriceController.applyRules(revealedCard, {
             playerId: targetPlayerId,
           }).cost;
-          return revealedCost.treasure >= 3 && revealedCost.treasure <= 6;
+          return (
+            revealedCost.treasure >= 3 &&
+            revealedCost.treasure <= 6 &&
+            (revealedCost.potion ?? 0) === 0 &&
+            (revealedCost.debt ?? 0) === 0
+          );
         });
 
         let exileCardId: CardId | undefined;
@@ -710,7 +718,9 @@ const expansion: CardExpansionModule = {
       onLeavePlay: async ({ reactionManager, cardLibrary }, { cardId }) => {
         const gatekeeperCard = cardLibrary.getCard(cardId);
         // Ensure the attack reaction is cleaned if Gatekeeper leaves play early.
-        reactionManager.unregisterTrigger(`${gatekeeperCard.cardName}:${cardId}:cardGained`);
+        // Must match registerSystemTemplate's actual generated id exactly
+        // (cardKey, not cardName, plus the ":system" suffix).
+        reactionManager.unregisterTrigger(`${gatekeeperCard.cardKey}:${cardId}:cardGained:system`);
       },
     }),
     registerEffects: () => async cardEffectArgs => {
@@ -755,22 +765,11 @@ const expansion: CardExpansionModule = {
             return;
           }
 
-          // Stop-moving check: the card can only be exiled if it has not moved since being gained.
+          // Stop-moving check: the card can only be exiled if it has not moved (or been covered) since being gained.
           const gainedLocation = triggeredArgs.trigger.args.gainedLocation;
-          if (gainedLocation) {
-            try {
-              const currentSource = triggeredArgs.cardSourceController.findCardSource(gainedCard.id);
-              if (
-                currentSource.sourceKey !== gainedLocation.location ||
-                currentSource.playerId !== gainedLocation.playerId
-              ) {
-                loggerService.debug(`[gatekeeper effect] gained card ${gainedCard} moved since gain, skipping exile`);
-                return;
-              }
-            } catch {
-              loggerService.debug(`[gatekeeper effect] gained card ${gainedCard} source not found, skipping exile`);
-              return;
-            }
+          if (!isCardStillAtGainedLocation(triggeredArgs.cardSourceController, gainedCard.id, gainedLocation)) {
+            loggerService.debug(`[gatekeeper effect] gained card ${gainedCard} moved since gain, skipping exile`);
+            return;
           }
 
           let exileCards: CardId[] = [];
@@ -944,6 +943,8 @@ const expansion: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'groom effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: cardEffectArgs.cardId,
         });
         if (!gainedSilverId) {
           loggerService.debug('[groom effect] no Silver cards remain to gain for Treasure bonus');
@@ -1100,7 +1101,7 @@ const expansion: CardExpansionModule = {
         {
           playerId: cardEffectArgs.playerId,
           once: true,
-          compulsory: false,
+          compulsory: true,
           allowMultipleInstances: true,
           condition: ({ trigger }) => trigger.args.playerId === cardEffectArgs.playerId,
           triggeredEffectFn: async triggeredArgs => {
@@ -1143,6 +1144,8 @@ const expansion: CardExpansionModule = {
               from: ['basicSupply', 'kingdomSupply'],
               to: { location: 'playerDiscard' },
               logTag: 'kiln effect',
+              // supplyGainService's own actionService bypasses the effect's auto-injected source.
+              source: cardEffectArgs.cardId,
             });
           },
         },
@@ -1549,6 +1552,8 @@ const expansion: CardExpansionModule = {
             from: 'basicSupply',
             to: { location: 'playerDiscard' },
             logTag: 'scrap effect',
+            // supplyGainService's own actionService bypasses the effect's auto-injected source.
+            source: cardEffectArgs.cardId,
           });
           if (!gainedSilverId) {
             loggerService.debug('[scrap effect] no Silver cards remain to gain');
@@ -1610,8 +1615,11 @@ const expansion: CardExpansionModule = {
           once: false,
           compulsory: false,
           allowMultipleInstances: true,
-          condition: ({ cardSourceController }) => {
-            // Sheepdog must still be in hand to be reactable.
+          condition: ({ trigger, cardSourceController }) => {
+            // Sheepdog only reacts to gains by its owner and only while this copy remains in hand.
+            if (trigger.args.playerId !== playerId) {
+              return false;
+            }
             try {
               const source = cardSourceController.findCardSource(cardId);
               return source.sourceKey === 'playerHand' && source.playerId === playerId;
@@ -1727,18 +1735,9 @@ const expansion: CardExpansionModule = {
               return;
             }
 
-            // Stop-moving/lose-track guard: only move if the gained card is still where it was gained to.
-            try {
-              const currentSource = triggeredArgs.cardSourceController.findCardSource(gainedCard.id);
-              if (
-                currentSource.sourceKey !== gainedLocation.location ||
-                currentSource.playerId !== gainedLocation.playerId
-              ) {
-                loggerService.debug('[sleigh reaction] gained card moved since gain, skipping move');
-                return;
-              }
-            } catch {
-              loggerService.debug('[sleigh reaction] gained card source no longer exists, skipping move');
+            // Stop-moving/lose-track guard: only move if the gained card is still where it was gained to (uncovered).
+            if (!isCardStillAtGainedLocation(triggeredArgs.cardSourceController, gainedCard.id, gainedLocation)) {
+              loggerService.debug('[sleigh reaction] gained card moved since gain, skipping move');
               return;
             }
 
@@ -2016,16 +2015,20 @@ const expansion: CardExpansionModule = {
         from: 'basicSupply',
         to: { location: 'playerDiscard' },
         logTag: 'wayfarer effect',
+        // supplyGainService's own actionService bypasses the effect's auto-injected source.
+        source: cardEffectArgs.cardId,
       });
     },
   },
   horse: {
     registerEffects: () => async cardEffectArgs => {
-      // Horse draws 2 cards and then returns itself to the Horse pile.
+      // Horse draws 2 cards, gains 1 action, and then returns itself to the Horse pile.
       await cardEffectArgs.actionService.run('drawCard', {
         playerId: cardEffectArgs.playerId,
         count: 2,
       });
+
+      await cardEffectArgs.actionService.run('gainAction', { count: 1 });
 
       await cardEffectArgs.actionService.run('moveCard', {
         cardId: cardEffectArgs.cardId,

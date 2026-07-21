@@ -1,8 +1,10 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  OnDestroy,
   OnInit,
   computed,
+  effect,
   inject,
   input,
   output,
@@ -16,8 +18,10 @@ import {
   CardType,
   EventNoId,
   LandmarkNoId,
+  PlayerId,
   ProphecyNoId,
   ProjectNoId,
+  SearchCatalogKind,
   SelectableSearchCatalog,
   TraitNoId,
   WayNoId,
@@ -25,6 +29,8 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { selectableSearchCatalogStore } from '../../../state/selectable-search-state';
 import { expansionListStore } from '../../../state/expansion-list-state';
+import { selfPlayerIdStore } from '../../../state/player-state';
+import { SocketService } from '../../../core/socket-service/socket.service';
 import { Subject, debounceTime, startWith } from 'rxjs';
 import { LucideAngularModule, Check } from 'lucide-angular';
 import { CardComponent } from '../../card/card.component';
@@ -42,7 +48,7 @@ export type SelectableCardLikeNoId =
   | AllyNoId
   | ProphecyNoId;
 export type SelectableSearchResult = CardNoId | SelectableCardLikeNoId;
-export type SearchCatalogKind = keyof SelectableSearchCatalog;
+export type { SearchCatalogKind };
 
 // Maps a non-card catalog kind to the CardLikeKind input expected by
 // <app-card-like>. The 'cards' catalog renders via <app-card> instead and
@@ -73,9 +79,11 @@ const CATALOG_KINDS_WITH_COST: ReadonlySet<SearchCatalogKind> = new Set<SearchCa
   styleUrl: './select-card-like-modal.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class SelectCardLikeModalComponent implements OnInit {
+export class SelectCardLikeModalComponent implements OnInit, OnDestroy {
   private readonly _nanoService = inject(NanostoresService);
+  private readonly _socketService = inject(SocketService);
   private readonly _searchInput$ = new Subject<string>();
+  private _unbindSearchResponse: (() => void) | null = null;
 
   /** Card keys that should appear pre-selected when the modal opens. */
   initialSelectionKeys = input<string[]>([]);
@@ -129,6 +137,20 @@ export class SelectCardLikeModalComponent implements OnInit {
     { initialValue: expansionListStore.get() }
   );
 
+  private readonly _selfPlayerId = toSignal(
+    this._nanoService.useStore(selfPlayerIdStore),
+    { initialValue: selfPlayerIdStore.get() }
+  );
+
+  /**
+   * Server-authoritative fuzzy search results for the active catalog kind.
+   * The server is the single source of truth for fuzzy matching (mirrors
+   * the "Name a Card" prompt's search — see prompt-name-card-content.component.ts
+   * and expansion-search-service.ts) so both search entry points always agree.
+   * Empty until the first non-empty search term resolves.
+   */
+  private readonly _serverSearchResults = signal<readonly SelectableSearchResult[]>([]);
+
   /** Full unfiltered result list for the active catalog kind, minus basic cards when requested. */
   readonly allCatalogResults = computed<readonly SelectableSearchResult[]>(() => {
     const catalog = this._searchCatalog();
@@ -166,11 +188,18 @@ export class SelectCardLikeModalComponent implements OnInit {
 
   /** Filtered result list driven by search term, type filter, and expansion filter. */
   readonly displaySearchResults = computed<readonly SelectableSearchResult[]>(() => {
-    const searchTerm = this.searchTermValue().trim().toLowerCase();
+    const searchTerm = this.searchTermValue().trim();
     const typeFilter = this.activeTypeFilter();
     const expansionFilter = this.activeExpansionFilter();
 
-    return this.allCatalogResults().filter((result) => {
+    // Empty term shows the full local catalog (no round trip needed); a
+    // non-empty term shows the server's fuzzy search results for it (split-pile
+    // representatives like "Clashes"/"Castles" match via searchAliases there).
+    const base = searchTerm.length < 1
+      ? this.allCatalogResults()
+      : this._serverSearchResults();
+
+    return base.filter((result) => {
       if (typeFilter.size > 0) {
         const types = 'type' in result ? (result.type as CardType[]) : [];
         if (!types.some((t) => typeFilter.has(t))) return false;
@@ -179,22 +208,7 @@ export class SelectCardLikeModalComponent implements OnInit {
         const expansionName = 'expansionName' in result ? (result.expansionName as string) : '';
         if (!expansionFilter.has(expansionName)) return false;
       }
-      if (searchTerm.length < 1) return true;
-      if (result.cardName.toLowerCase().includes(searchTerm)) return true;
-      if (result.cardKey.toLowerCase().includes(searchTerm)) return true;
-      if ('type' in result && Array.isArray(result.type)) {
-        if ((result.type as string[]).some((t) => t.toLowerCase().includes(searchTerm))) return true;
-      }
-      if ('expansionName' in result && typeof result.expansionName === 'string') {
-        if (result.expansionName.toLowerCase().includes(searchTerm)) return true;
-      }
-      // Split-pile representatives (e.g. "Clashes", "Castles") carry every
-      // individual member's own name here — lets a search for "Battle
-      // Plan" or "Humble Castle" surface the single deduped pile row.
-      if ('searchAliases' in result && Array.isArray(result.searchAliases)) {
-        if ((result.searchAliases as string[]).some((alias) => alias.toLowerCase().includes(searchTerm))) return true;
-      }
-      return false;
+      return true;
     });
   });
 
@@ -242,8 +256,29 @@ export class SelectCardLikeModalComponent implements OnInit {
   /** Total number of cards in the full (unfiltered) catalog for the footer count. */
   readonly totalCount = computed(() => this.allCatalogResults().length);
 
+  // Requests server-side fuzzy search results whenever the debounced search
+  // term changes. Empty terms are skipped — displaySearchResults() falls
+  // back to the already-loaded local catalog for those, avoiding a round trip.
+  private readonly _requestServerSearch = effect(() => {
+    const term = this.searchTermValue().trim();
+    if (term.length < 1) {
+      return;
+    }
+    const playerId = this._selfPlayerId();
+    if (playerId === undefined) {
+      return;
+    }
+    this.emitCatalogSearch(this.catalogKind(), playerId, term);
+  });
+
   ngOnInit(): void {
     this.selectedCardKeys.set(new Set(this.initialSelectionKeys()));
+    this._unbindSearchResponse = this.bindCatalogSearchResponse(this.catalogKind());
+  }
+
+  ngOnDestroy(): void {
+    this._unbindSearchResponse?.();
+    this._unbindSearchResponse = null;
   }
 
   /** Updates the live search term (debounced) and the raw term (immediate). */
@@ -336,6 +371,81 @@ export class SelectCardLikeModalComponent implements OnInit {
   /** Returns the display label for an expansion name (falls back to the raw name). */
   toExpansionLabel(expansionName: string): string {
     return this._expansionList().find((e) => e.name === expansionName)?.title ?? expansionName;
+  }
+
+  // Emits the server search request for the given catalog kind. Each search
+  // event carries a distinct compile-time-checked signature via
+  // ServerListenEvents (SocketService.emit), so this is a switch rather
+  // than a lookup table — a table typed loosely enough to hold all nine
+  // event names would widen the emit() call's inferred parameter tuple to
+  // the union of every socket event's args, not just these matching ones.
+  private emitCatalogSearch(catalogKind: SearchCatalogKind, playerId: PlayerId, term: string): void {
+    switch (catalogKind) {
+      case 'cards': this._socketService.emit('searchCards', playerId, term); return;
+      case 'events': this._socketService.emit('searchEvents', playerId, term); return;
+      case 'landmarks': this._socketService.emit('searchLandmarks', playerId, term); return;
+      case 'artifacts': this._socketService.emit('searchArtifacts', playerId, term); return;
+      case 'projects': this._socketService.emit('searchProjects', playerId, term); return;
+      case 'ways': this._socketService.emit('searchWays', playerId, term); return;
+      case 'traits': this._socketService.emit('searchTraits', playerId, term); return;
+      case 'allies': this._socketService.emit('searchAllies', playerId, term); return;
+      case 'prophecies': this._socketService.emit('searchProphecies', playerId, term); return;
+    }
+  }
+
+  // Subscribes to the response event matching the given catalog kind and
+  // returns an unsubscribe function. A modal instance only ever searches one
+  // catalog kind for its lifetime — match-configuration.component.html
+  // creates a fresh instance per open via `@if` — so a single fixed listener
+  // bound at ngOnInit is sufficient; catalogKind changing mid-life is not supported.
+  private bindCatalogSearchResponse(catalogKind: SearchCatalogKind): () => void {
+    switch (catalogKind) {
+      case 'cards': {
+        const handler = (results: CardNoId[]) => this._serverSearchResults.set(results ?? []);
+        this._socketService.on('searchCardResponse', handler);
+        return () => this._socketService.off('searchCardResponse', handler);
+      }
+      case 'events': {
+        const handler = (results: EventNoId[]) => this._serverSearchResults.set(results ?? []);
+        this._socketService.on('searchEventResponse', handler);
+        return () => this._socketService.off('searchEventResponse', handler);
+      }
+      case 'landmarks': {
+        const handler = (results: LandmarkNoId[]) => this._serverSearchResults.set(results ?? []);
+        this._socketService.on('searchLandmarkResponse', handler);
+        return () => this._socketService.off('searchLandmarkResponse', handler);
+      }
+      case 'artifacts': {
+        const handler = (results: ArtifactNoId[]) => this._serverSearchResults.set(results ?? []);
+        this._socketService.on('searchArtifactResponse', handler);
+        return () => this._socketService.off('searchArtifactResponse', handler);
+      }
+      case 'projects': {
+        const handler = (results: ProjectNoId[]) => this._serverSearchResults.set(results ?? []);
+        this._socketService.on('searchProjectResponse', handler);
+        return () => this._socketService.off('searchProjectResponse', handler);
+      }
+      case 'ways': {
+        const handler = (results: WayNoId[]) => this._serverSearchResults.set(results ?? []);
+        this._socketService.on('searchWayResponse', handler);
+        return () => this._socketService.off('searchWayResponse', handler);
+      }
+      case 'traits': {
+        const handler = (results: TraitNoId[]) => this._serverSearchResults.set(results ?? []);
+        this._socketService.on('searchTraitResponse', handler);
+        return () => this._socketService.off('searchTraitResponse', handler);
+      }
+      case 'allies': {
+        const handler = (results: AllyNoId[]) => this._serverSearchResults.set(results ?? []);
+        this._socketService.on('searchAllyResponse', handler);
+        return () => this._socketService.off('searchAllyResponse', handler);
+      }
+      case 'prophecies': {
+        const handler = (results: ProphecyNoId[]) => this._serverSearchResults.set(results ?? []);
+        this._socketService.on('searchProphecyResponse', handler);
+        return () => this._socketService.off('searchProphecyResponse', handler);
+      }
+    }
   }
 
   /** Retrieves the raw result array for the requested catalog kind. */

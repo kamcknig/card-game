@@ -48,6 +48,18 @@ const expansion: CardExpansionModule = {
             return false;
           }
 
+          // "if you have this ... in play" — skip offering the choice once
+          // Alchemist itself has left play (e.g. trashed mid-turn).
+          let alchemistSourceKey: string | undefined;
+          try {
+            alchemistSourceKey = conditionArgs.cardSourceController.findCardSource(args.cardId).sourceKey;
+          } catch {
+            // Card is in no registered zone.
+          }
+          if (alchemistSourceKey !== 'playArea') {
+            return false;
+          }
+
           const cardsInPlay = args.findCardService.getCardsInPlay();
           const ownedCardsInPlay = cardsInPlay.filter(card => card.owner === args.playerId);
           const potionCardsInPlay = ownedCardsInPlay.filter(card => card.cardKey === 'potion');
@@ -66,11 +78,16 @@ const expansion: CardExpansionModule = {
 
           if (result.action === 2) {
             loggerService.debug(`[alchemist triggered effect] player chose to top-deck alchemist`);
-            await triggerEffectArgs.actionService.run('moveCard', {
+            const moved = await triggerEffectArgs.actionService.run('moveCard', {
               cardId: args.cardId,
               toPlayerId: args.playerId,
               to: { location: 'playerDeck' },
+              expectedFrom: { location: 'playArea', playerId: args.playerId },
             });
+
+            if (!moved) {
+              loggerService.debug('[alchemist triggered effect] lose track: alchemist no longer in play, not moved');
+            }
           } else {
             loggerService.debug(`[alchemist triggered effect] player chose not to top-deck alchemist`);
           }
@@ -120,8 +137,8 @@ const expansion: CardExpansionModule = {
       }
 
       const result =
-        setAside.length === 1
-          ? { cardIds: setAside.map(card => card.id) }
+        setAside.length <= 1
+          ? { result: setAside.map(card => card.id) }
           : ((await args.actionService.run('userPrompt', {
               prompt: 'Put on top of deck in any order',
               playerId: args.playerId,
@@ -130,13 +147,13 @@ const expansion: CardExpansionModule = {
                 type: 'rearrange',
                 cardIds: setAside.map(card => card.id),
               },
-            })) as { action: number; cardIds: number[] });
+            })) as { action: number; result: CardId[] });
 
-      if (result.cardIds.length > 0) {
+      if (result.result.length > 0) {
         loggerService.debug(
-          `[apothecary effect] putting cards back on top of deck ${result.cardIds.map(args.cardLibrary.getCard)}`,
+          `[apothecary effect] putting cards back on top of deck ${result.result.map(args.cardLibrary.getCard)}`,
         );
-        for (const cardId of result.cardIds) {
+        for (const cardId of result.result) {
           await args.actionService.run('moveCard', {
             cardId: cardId,
             toPlayerId: args.playerId,
@@ -181,7 +198,7 @@ const expansion: CardExpansionModule = {
 
       const { cost } = args.cardPriceController.applyRules(card, { playerId: args.playerId });
 
-      const numCardsToDraw = cost.treasure + (cost.potion !== undefined ? 2 : 0);
+      const numCardsToDraw = cost.treasure + ((cost.potion ?? 0) > 0 ? 2 : 0);
 
       loggerService.debug(`[apprentice effect] drawing ${numCardsToDraw} cards`);
 
@@ -414,7 +431,7 @@ const expansion: CardExpansionModule = {
         const card = revealed[0];
         if (!card) {
           loggerService.debug(`[scrying-pool effect] still no cards in deck`);
-          return;
+          break;
         }
 
         cardsRevealed.push(card);
@@ -465,6 +482,8 @@ const expansion: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'transmute effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: args.cardId,
         });
       }
 
@@ -477,6 +496,8 @@ const expansion: CardExpansionModule = {
           from: 'kingdomSupply',
           to: { location: 'playerDiscard' },
           logTag: 'transmute effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: args.cardId,
         });
       }
 
@@ -489,6 +510,8 @@ const expansion: CardExpansionModule = {
           from: 'basicSupply',
           to: { location: 'playerDiscard' },
           logTag: 'transmute effect',
+          // supplyGainService's own actionService bypasses the effect's auto-injected source.
+          source: args.cardId,
         });
       }
     },

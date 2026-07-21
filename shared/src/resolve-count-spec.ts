@@ -18,3 +18,11 @@ export const resolveCountSpec = (spec: CountSpec | undefined): ResolvedCountSpec
 
   return { kind: 'fixed', count: resolvedSpec.count };
 };
+
+// Maximum number of simultaneous selections a CountSpec permits. Selection
+// UIs use this as a hard cap: once reached, further picks are ignored until
+// the player deselects something.
+export const resolveMaxSelectable = (spec: CountSpec | undefined): number => {
+  const resolved = resolveCountSpec(spec);
+  return resolved.kind === 'fixed' ? resolved.count : resolved.max;
+};

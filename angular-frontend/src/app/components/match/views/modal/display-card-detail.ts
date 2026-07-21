@@ -18,6 +18,7 @@ type CardDetailArg =
       detailImagePath: string;
       kingdom?: string;
       cardId?: CardId;
+      cardKey?: string;
       expansionName?: string;
       pileMembers?: { cardKey: string; cardName: string; cost: CardCost }[];
     };
@@ -47,8 +48,12 @@ export async function displayCardDetail(arg: CardDetailArg) {
   // cardId (lobby/match-configuration catalog entries) fall back to the
   // catalog's own pileMembers list instead.
   const siblings = primary.cardId !== undefined && pileKey
-    ? [...findLivePileSiblings(pileKey, primary.cardId), ...findLinkedSiblings(pileKey, primary.cardId)]
-    : resolveCatalogPileSiblings(arg);
+    ? [
+        ...findLivePileSiblings(pileKey, primary.cardId),
+        ...findLinkedSiblings(pileKey, primary.cardId),
+        ...findTravellerLineSiblings(primary.cardId),
+      ]
+    : [...resolveCatalogPileSiblings(arg), ...resolveCatalogTravellerLineSiblings(arg)];
 
   const extras: CardDetailDialogEntry[] = [];
   if (pileKey) {
@@ -101,10 +106,71 @@ function findLivePileSiblings(pileKey: string, excludeCardId?: CardId): CardDeta
     .map((card) => ({ cardId: card.id, detailImagePath: card.detailImagePath }));
 }
 
+// Adventures traveller lines: each of the two 5-card upgrade chains
+// (Page -> Treasure Hunter -> Warrior -> Hero -> Champion; Peasant ->
+// Soldier -> Fugitive -> Disciple -> Teacher) is static card-definition
+// data, not something derived from live pile/link relationships, so it's
+// hardcoded here rather than threaded through the server.
+const TRAVELLER_LINES: Record<string, string[]> = {
+  page: ['page', 'treasure-hunter', 'warrior', 'hero', 'champion'],
+  'treasure-hunter': ['page', 'treasure-hunter', 'warrior', 'hero', 'champion'],
+  warrior: ['page', 'treasure-hunter', 'warrior', 'hero', 'champion'],
+  hero: ['page', 'treasure-hunter', 'warrior', 'hero', 'champion'],
+  champion: ['page', 'treasure-hunter', 'warrior', 'hero', 'champion'],
+  peasant: ['peasant', 'soldier', 'fugitive', 'disciple', 'teacher'],
+  soldier: ['peasant', 'soldier', 'fugitive', 'disciple', 'teacher'],
+  fugitive: ['peasant', 'soldier', 'fugitive', 'disciple', 'teacher'],
+  disciple: ['peasant', 'soldier', 'fugitive', 'disciple', 'teacher'],
+  teacher: ['peasant', 'soldier', 'fugitive', 'disciple', 'teacher'],
+};
+
+// Finds one representative live Card per distinct cardKey in the primary
+// card's traveller line (if it belongs to one), excluding the primary's own
+// cardKey. Sorted by cost ascending, matching the other resolvers' order.
+function findTravellerLineSiblings(excludeCardId?: CardId): CardDetailDialogEntry[] {
+  const cardsById = cardStore.get();
+  const primaryCard = excludeCardId !== undefined ? cardsById[excludeCardId] : undefined;
+  const line = primaryCard ? TRAVELLER_LINES[primaryCard.cardKey] : undefined;
+  if (!primaryCard || !line) return [];
+
+  const seenCardKeys = new Set<string>([primaryCard.cardKey]);
+  const matches: Card[] = [];
+  for (const card of Object.values(cardsById)) {
+    if (!line.includes(card.cardKey) || seenCardKeys.has(card.cardKey)) continue;
+    seenCardKeys.add(card.cardKey);
+    matches.push(card);
+  }
+  return matches
+    .sort((a, b) => compareCardCosts(a.cost, b.cost))
+    .map((card) => ({ cardId: card.id, detailImagePath: card.detailImagePath }));
+}
+
+// Catalog-context counterpart to findTravellerLineSiblings: the
+// lobby/match-configuration screens have no live cardStore entry, so
+// sibling detail images are derived the same way resolveCatalogPileSiblings
+// derives them (expansionName + cardKey), using the static TRAVELLER_LINES
+// table instead of server-supplied pileMembers.
+function resolveCatalogTravellerLineSiblings(arg: CardDetailArg): CardDetailDialogEntry[] {
+  if (typeof arg === 'number' || !arg.cardKey || !arg.expansionName) {
+    return [];
+  }
+  const line = TRAVELLER_LINES[arg.cardKey];
+  if (!line) return [];
+
+  return line
+    .filter((cardKey) => cardKey !== arg.cardKey)
+    .map((cardKey) => ({
+      detailImagePath: `/assets/card-images/${arg.expansionName}/${cardKey}-detail.jpg`,
+    }));
+}
+
 // Finds "caused by" siblings in both directions:
 // - If the primary card is a TRIGGER (its own linkedPileKey is set),
-//   include a representative of the target pile it causes to exist (e.g.
-//   Young Witch -> its chosen Bane card).
+//   include one representative per distinct cardKey in the target pile it
+//   causes to exist — usually a single card (Young Witch -> its chosen
+//   Bane card), but the target pile can hold several distinct types (Joust
+//   -> all six Reward types; Looter -> all five Ruins types), so every
+//   distinct cardKey there is included, sorted by cost ascending.
 // - If the primary card belongs to a TARGET pile, include every TRIGGER
 //   currently in the kingdom whose linkedPileKey points at this pile
 //   (naturally covers many:1 — e.g. every Looter present when viewing
@@ -115,14 +181,17 @@ function findLinkedSiblings(pileKey: string, excludeCardId?: CardId): CardDetail
   const seenCardKeys = new Set<string>(primaryCard ? [primaryCard.cardKey] : []);
   const entries: CardDetailDialogEntry[] = [];
 
-  // Forward: I am a trigger — show my target (single representative card).
+  // Forward: I am a trigger — show every distinct card type in my target pile.
   if (primaryCard?.linkedPileKey) {
+    const targets: Card[] = [];
     for (const card of Object.values(cardsById)) {
       if (card.kingdom !== primaryCard.linkedPileKey || seenCardKeys.has(card.cardKey)) continue;
       seenCardKeys.add(card.cardKey);
-      entries.push({ cardId: card.id, detailImagePath: card.detailImagePath });
-      break;
+      targets.push(card);
     }
+    targets
+      .sort((a, b) => compareCardCosts(a.cost, b.cost))
+      .forEach((card) => entries.push({ cardId: card.id, detailImagePath: card.detailImagePath }));
   }
 
   // Reverse: I belong to a target pile — show every trigger pointing at me.
